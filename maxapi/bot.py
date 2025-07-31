@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
 
+from maxapi.methods.get_message import GetMessage
+
 from .client.default import DefaultConnectionProperties
 from .types.errors import Error
 
@@ -310,9 +312,10 @@ class Bot(BaseConnection):
         :return: Объект сообщения
         """
         
-        return await self.get_messages(
-            message_ids=[message_id]
-        )
+        return await GetMessage(
+            bot=self,
+            message_id=message_id
+        ).fetch()
 
     async def get_me(self) -> User:
         
