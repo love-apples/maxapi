@@ -29,7 +29,7 @@ from ..types.attachments.buttons.open_app_button import OpenAppButton
 from ..types.attachments.buttons.request_geo_location_button import RequestGeoLocationButton
 from ..types.attachments.buttons.message_button import MessageButton
 from ..types.attachments.image import PhotoAttachmentRequestPayload
-from ..types.message import Message
+from ..types.message import Message, NewMessageLink
 
 from ..types.command import Command, BotCommand, CommandStart
 
@@ -37,6 +37,7 @@ from .input_media import InputMedia
 from .input_media import InputMediaBuffer
 
 __all__ = [
+    'NewMessageLink',
     'PhotoAttachmentRequestPayload',
     'DialogUnmuted',
     'DialogMuted',

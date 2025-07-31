@@ -18,6 +18,7 @@ from ...types.updates.user_removed import UserRemoved
 from ...types.updates.dialog_cleared import DialogCleared
 from ...types.updates.dialog_muted import DialogMuted
 from ...types.updates.dialog_unmuted import DialogUnmuted
+from ...types.updates.dialog_removed import DialogRemoved
 
 if TYPE_CHECKING:
     from ...bot import Bot
@@ -38,7 +39,8 @@ UPDATE_MODEL_MAPPING = {
     UpdateType.BOT_STOPPED: BotStopped,
     UpdateType.DIALOG_CLEARED: DialogCleared,
     UpdateType.DIALOG_MUTED: DialogMuted,
-    UpdateType.DIALOG_UNMUTED: DialogUnmuted
+    UpdateType.DIALOG_UNMUTED: DialogUnmuted,
+    UpdateType.DIALOG_REMOVED: DialogRemoved
 }
 
 

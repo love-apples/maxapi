@@ -85,6 +85,7 @@ class Dispatcher:
         self.dialog_cleared = Event(update_type=UpdateType.DIALOG_CLEARED, router=self)
         self.dialog_muted = Event(update_type=UpdateType.DIALOG_MUTED, router=self)
         self.dialog_unmuted = Event(update_type=UpdateType.DIALOG_UNMUTED, router=self)
+        self.dialog_removed = Event(update_type=UpdateType.DIALOG_REMOVED, router=self)
         self.chat_title_changed = Event(update_type=UpdateType.CHAT_TITLE_CHANGED, router=self)
         self.message_callback = Event(update_type=UpdateType.MESSAGE_CALLBACK, router=self)
         self.message_chat_created = Event(update_type=UpdateType.MESSAGE_CHAT_CREATED, router=self)
