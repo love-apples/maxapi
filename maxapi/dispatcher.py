@@ -200,7 +200,10 @@ class Dispatcher:
         func_args = handler.func_event.__annotations__.keys()
         kwargs_filtered = {k: v for k, v in data.items() if k in func_args}
         
-        await handler.func_event(event_object, **kwargs_filtered)
+        if kwargs_filtered:
+            await handler.func_event(event_object, **kwargs_filtered)
+        else:
+            await handler.func_event(event_object)
         
 
     async def handle(self, event_object: UpdateUnion):

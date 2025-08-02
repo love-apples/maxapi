@@ -302,7 +302,7 @@ class Bot(BaseConnection):
     async def get_message(
             self, 
             message_id: str
-        ) -> Messages:
+        ) -> Message:
         
         """
         Получает одно сообщение по ID.
@@ -320,6 +320,7 @@ class Bot(BaseConnection):
     async def get_me(self) -> User:
         
         """
+        https://dev.max.ru/docs-api/methods/GET/me\n
         Получает информацию о текущем боте.
 
         :return: Объект пользователя бота
