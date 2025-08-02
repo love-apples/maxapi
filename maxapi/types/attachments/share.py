@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Literal, Optional
 
 from ...enums.attachment import AttachmentType
 
@@ -17,7 +17,7 @@ class Share(Attachment):
         image_url (Optional[str]): URL изображения для предпросмотра.
     """
     
-    type: AttachmentType = AttachmentType.SHARE
+    type: Literal[AttachmentType.SHARE]
     title: Optional[str] = None
     description: Optional[str] = None
     image_url: Optional[str] = None

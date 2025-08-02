@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
-from typing import Any, Optional, List, Union, TYPE_CHECKING
+from typing import Annotated, Any, Optional, List, Union, TYPE_CHECKING
+
+from ..types.attachments.contact import Contact
 
 from ..enums.text_style import TextStyle
 from ..enums.parse_mode import ParseMode
@@ -24,6 +26,19 @@ from .users import User
 if TYPE_CHECKING:
     from ..bot import Bot
     from ..types.input_media import InputMedia, InputMediaBuffer
+    
+    
+Attachments = Annotated[Union[
+    Audio,
+    Video,
+    File,
+    Image,
+    Sticker,
+    Share,
+    Location,
+    AttachmentButton,
+    Contact
+], Field(discriminator='type')]
 
 
 class MarkupElement(BaseModel):
@@ -91,18 +106,7 @@ class MessageBody(BaseModel):
     seq: int
     text: Optional[str] = None
     attachments: Optional[
-        List[
-            Union[
-                AttachmentButton,
-                Audio,
-                Video,
-                File,
-                Image,
-                Sticker,
-                Share,
-                Location
-            ]
-        ]
+        List[Attachments]
     ] = Field(default_factory=list) # type: ignore
 
     markup: Optional[

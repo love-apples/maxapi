@@ -1,10 +1,11 @@
 from typing import Literal
-from pydantic import BaseModel
 
-from ..attachment import ButtonsPayload
+from ....enums.attachment import AttachmentType
+
+from ..attachment import Attachment
 
 
-class AttachmentButton(BaseModel):
+class AttachmentButton(Attachment):
     
     """
     Модель кнопки вложения для сообщения.
@@ -14,5 +15,4 @@ class AttachmentButton(BaseModel):
         payload: Полезная нагрузка кнопки (массив рядов кнопок)
     """
     
-    type: Literal['inline_keyboard'] = 'inline_keyboard'
-    payload: ButtonsPayload
+    type: Literal[AttachmentType.INLINE_KEYBOARD]

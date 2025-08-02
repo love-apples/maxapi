@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Literal, Optional
 
 from ...enums.attachment import AttachmentType
 
@@ -16,6 +16,6 @@ class Location(Attachment):
         longitude (Optional[float]): Долгота.
     """
     
-    type: AttachmentType = AttachmentType.LOCATION
+    type: Literal[AttachmentType.LOCATION]
     latitude: Optional[float] = None
     longitude: Optional[float] = None

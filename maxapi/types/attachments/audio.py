@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Literal, Optional
 
 from ...enums.attachment import AttachmentType
 
@@ -15,5 +15,5 @@ class Audio(Attachment):
         transcription (Optional[str]): Транскрипция аудио (если есть).
     """
     
-    type: AttachmentType = AttachmentType.AUDIO
+    type: Literal[AttachmentType.AUDIO]
     transcription: Optional[str] = None
