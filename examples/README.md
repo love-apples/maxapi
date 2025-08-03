@@ -9,3 +9,4 @@
  - [Вебхуки](https://github.com/love-apples/maxapi/tree/main/examples/webhook) 
  - [Клавиатуры](https://github.com/love-apples/maxapi/tree/main/examples/keyboard/main.py) 
  - [Миддлварь в роутерах](https://github.com/love-apples/maxapi/tree/main/examples/middleware_for_router/main.py) 
+ - [BaseFilter](https://github.com/love-apples/maxapi/tree/main/examples/base_filter/main.py) 
