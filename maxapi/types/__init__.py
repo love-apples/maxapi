@@ -31,7 +31,8 @@ from ..types.attachments.buttons.message_button import MessageButton
 from ..types.attachments.image import PhotoAttachmentRequestPayload
 from ..types.message import Message, NewMessageLink
 
-from ..types.command import Command, BotCommand, CommandStart
+from ..filters.command import Command, CommandStart
+from ..types.command import BotCommand
 
 from .input_media import InputMedia
 from .input_media import InputMediaBuffer
