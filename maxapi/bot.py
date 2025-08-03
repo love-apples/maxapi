@@ -3,8 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
 
-from maxapi.methods.get_message import GetMessage
-
 from .client.default import DefaultConnectionProperties
 from .types.errors import Error
 
@@ -52,6 +50,7 @@ from .methods.subscribe_webhook import SubscribeWebhook
 from .methods.types.subscribed import Subscribed
 from .methods.types.unsubscribed import Unsubscribed
 from .methods.unsubscribe_webhook import UnsubscribeWebhook
+from .methods.get_message import GetMessage
 
 if TYPE_CHECKING:
     from .types.attachments.attachment import Attachment
