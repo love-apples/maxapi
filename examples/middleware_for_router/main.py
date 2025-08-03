@@ -32,9 +32,8 @@ async def custom_data(event: MessageCreated, custom_data: str):
     
     
 async def main():
-    dp.middlewares = [
-        CustomDataForRouterMiddleware()
-    ]
+    dp.middleware(CustomDataForRouterMiddleware())
+    
     await dp.start_polling(bot)
 
 
