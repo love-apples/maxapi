@@ -3,11 +3,12 @@ from __future__ import annotations
 import asyncio
 
 import functools
-from typing import Any, Awaitable, Callable, Dict, List, TYPE_CHECKING, Optional
+from typing import Any, Awaitable, Callable, Dict, List, TYPE_CHECKING, Literal, Optional
 from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
 
 from aiohttp import ClientConnectorError
 
+from .filters.filter import BaseFilter
 from .filters.middleware import BaseMiddleware
 from .filters.handler import Handler
 
@@ -70,6 +71,7 @@ class Dispatcher:
         self.contexts: List[MemoryContext] = []
         self.routers: List[Router | Dispatcher] = []
         self.filters: List[MagicFilter] = []
+        self.base_filters: List[BaseFilter] = []
         self.middlewares: List[BaseMiddleware] = []
         
         self.bot: Optional[Bot] = None
@@ -144,6 +146,36 @@ class Dispatcher:
         """
         
         self.routers += [r for r in routers]
+        
+    def outer_middleware(self, middleware: BaseMiddleware) -> None:
+        
+        """
+        Добавляет Middleware на первое место в списке
+        
+        :param: middleware: Middleware
+        """
+        
+        self.middlewares.insert(0, middleware)
+        
+    def middleware(self, middleware: BaseMiddleware) -> None:
+        
+        """
+        Добавляет Middleware в список
+        
+        :param middleware: Middleware
+        """
+        
+        self.middlewares.append(middleware)
+        
+    def filter(self, base_filter: BaseFilter) -> None:
+        
+        """
+        Добавляет фильтр в список
+        
+        :param base_filter: Фильтр
+        """
+        
+        self.base_filters.append(base_filter)
             
     async def __ready(self, bot: Bot):
         
@@ -205,6 +237,24 @@ class Dispatcher:
         else:
             await handler.func_event(event_object)
         
+    async def process_base_filters(
+            self, 
+            event: UpdateUnion, 
+            filters: List[BaseFilter]
+        ) -> Optional[Dict[str, Any]] | Literal[False]:
+        
+        data = {}
+        
+        for _filter in filters:
+            result = await _filter(event)
+            
+            if isinstance(result, dict):
+                data.update(result)
+                
+            elif not result:
+                return result
+            
+        return data
 
     async def handle(self, event_object: UpdateUnion):
         
@@ -236,6 +286,17 @@ class Dispatcher:
                     if not filter_attrs(event_object, *router.filters):
                         continue
                     
+                result_router_filter = await self.process_base_filters(
+                    event=event_object,
+                    filters=router.base_filters
+                )
+                
+                if isinstance(result_router_filter, dict):
+                    kwargs.update(result_router_filter)
+                    
+                elif not result_router_filter:
+                    continue
+                    
                 for handler in router.event_handlers:
 
                     if not handler.update_type == event_object.update_type:
@@ -248,9 +309,21 @@ class Dispatcher:
                     if handler.states:
                         if current_state not in handler.states:
                             continue
-                    
+                        
                     func_args = handler.func_event.__annotations__.keys()
-                    
+                        
+                    if handler.base_filters:
+                        result_filter = await self.process_base_filters(
+                            event=event_object,
+                            filters=handler.base_filters
+                        )
+                        
+                        if isinstance(result_filter, dict):
+                            kwargs.update(result_filter)
+                            
+                        elif not result_filter:
+                            continue
+                        
                     if isinstance(router, Router):
                         full_middlewares = self.middlewares + router.middlewares + handler.middlewares
                     elif isinstance(router, Dispatcher):
@@ -260,7 +333,7 @@ class Dispatcher:
                         full_middlewares,
                         functools.partial(self.call_handler, handler)
                     )
-
+                    
                     kwargs_filtered = {k: v for k, v in kwargs.items() if k in func_args}
                         
                     await handler_chain(event_object, kwargs_filtered)

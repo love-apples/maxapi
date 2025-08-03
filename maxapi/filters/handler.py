@@ -1,10 +1,9 @@
 from typing import Callable, List, Optional
 
-from magic_filter import F, MagicFilter
+from magic_filter import MagicFilter
 
+from ..filters.filter import BaseFilter
 from ..filters.middleware import BaseMiddleware
-
-from ..types.command import Command, CommandStart
 
 from ..context.state_machine import State
 
@@ -43,7 +42,8 @@ class Handler:
         
         self.func_event: Callable = func_event
         self.update_type: UpdateType = update_type
-        self.filters = []
+        self.filters: Optional[List[MagicFilter]] = []
+        self.base_filters: Optional[List[BaseFilter]] = []
         self.states: Optional[List[State]] = []
         self.middlewares: List[BaseMiddleware] = []
 
@@ -52,10 +52,10 @@ class Handler:
                 self.filters.append(arg)
             elif isinstance(arg, State):
                 self.states.append(arg)
-            elif isinstance(arg, (Command, CommandStart)):
-                self.filters.insert(0, F.message.body.text.split()[0] == arg.command)
             elif isinstance(arg, BaseMiddleware):
                 self.middlewares.append(arg)
+            elif isinstance(arg, BaseFilter):
+                self.base_filters.append(arg)
             else:
                 logger_dp.info(f'Обнаружен неизвестный фильтр `{arg}` при ' 
                                f'регистрации функции `{func_event.__name__}`')
