@@ -1,24 +1,17 @@
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from ...types.attachments.location import Location
+from ...types.attachments import Attachments
+
 
 from .update import Update
 
 from ...enums.parse_mode import ParseMode
 
 from ...types.message import NewMessageLink
-from ...types.attachments.share import Share
 from ...types.callback import Callback
 from ...types.message import Message
-
-from ..attachments.buttons.attachment_button import AttachmentButton
-from ..attachments.sticker import Sticker
-from ..attachments.file import File
-from ..attachments.image import Image
-from ..attachments.video import Video
-from ..attachments.audio import Audio
 
 
 class MessageForCallback(BaseModel):
@@ -37,18 +30,7 @@ class MessageForCallback(BaseModel):
     
     text: Optional[str] = None
     attachments: Optional[
-        List[
-            Union[
-                AttachmentButton,
-                Audio,
-                Video,
-                File,
-                Image,
-                Sticker,
-                Share,
-                Location
-            ]
-        ]
+        List[Attachments]
     ] = Field(default_factory=list) # type: ignore
     link: Optional[NewMessageLink] = None
     notify: Optional[bool] = True
