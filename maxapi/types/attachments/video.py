@@ -51,7 +51,6 @@ class Video(Attachment):
     Вложение с типом видео.
 
     Attributes:
-        type (Optional[Literal['video']]): Тип вложения, всегда 'video'.
         token (Optional[str]): Токен видео.
         urls (Optional[VideoUrl]): URLs видео разных разрешений.
         thumbnail (VideoThumbnail): Миниатюра видео.

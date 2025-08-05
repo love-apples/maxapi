@@ -8,9 +8,6 @@ class Contact(Attachment):
     
     """
     Вложение с типом контакта.
-
-    Attributes:
-        type (Literal['contact']): Тип вложения, всегда 'contact'.
     """
     
     type: Literal[AttachmentType.CONTACT]

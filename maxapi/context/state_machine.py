@@ -1,4 +1,8 @@
+from typing import List
+
+
 class State:
+    
     """
     Представляет отдельное состояние в FSM-группе.
 
@@ -16,6 +20,7 @@ class State:
 
 
 class StatesGroup:
+    
     """
     Базовый класс для описания группы состояний FSM.
 
@@ -23,7 +28,8 @@ class StatesGroup:
     """
     
     @classmethod
-    def states(cls) -> list[str]:
+    def states(cls) -> List[str]:
+        
         """
         Получить список всех состояний в формате 'ИмяКласса:имя_состояния'.
 

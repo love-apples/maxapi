@@ -11,7 +11,6 @@ class Share(Attachment):
     Вложение с типом "share" (поделиться).
 
     Attributes:
-        type (Literal['share']): Тип вложения, всегда 'share'.
         title (Optional[str]): Заголовок для шаринга.
         description (Optional[str]): Описание.
         image_url (Optional[str]): URL изображения для предпросмотра.

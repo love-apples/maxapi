@@ -5,7 +5,8 @@ from ..types.attachments.attachment import Attachment, ButtonsPayload
 
 class InlineKeyboardBuilder:
     
-    """Конструктор инлайн-клавиатур.  
+    """
+    Конструктор инлайн-клавиатур.  
 
     Позволяет удобно собирать кнопки в ряды и формировать из них клавиатуру  
     для отправки в сообщениях.  
@@ -16,7 +17,8 @@ class InlineKeyboardBuilder:
 
     def row(self, *buttons: InlineButtonUnion):
         
-        """Добавить новый ряд кнопок в клавиатуру.
+        """
+        Добавить новый ряд кнопок в клавиатуру.
         
         Args:
             *buttons: Произвольное количество кнопок для добавления в ряд.
@@ -26,7 +28,8 @@ class InlineKeyboardBuilder:
         
     def add(self, button: InlineButtonUnion):
         
-        """Добавить кнопку в последний ряд клавиатуры.
+        """
+        Добавить кнопку в последний ряд клавиатуры.
         
         Args:
             button: Кнопка для добавления.
@@ -36,7 +39,8 @@ class InlineKeyboardBuilder:
 
     def as_markup(self):
         
-        """Собрать клавиатуру в объект для отправки.
+        """
+        Собрать клавиатуру в объект для отправки.
         
         Returns:
             Объект вложения с типом INLINE_KEYBOARD.

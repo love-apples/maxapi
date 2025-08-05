@@ -11,7 +11,6 @@ class Audio(Attachment):
     Вложение с типом аудио.
 
     Attributes:
-        type (Literal['audio']): Тип вложения, всегда 'audio'.
         transcription (Optional[str]): Транскрипция аудио (если есть).
     """
     

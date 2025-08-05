@@ -21,9 +21,20 @@ from ..enums.chat_type import ChatType
 if TYPE_CHECKING:
     from ..bot import Bot
     
-    
 
 async def enrich_event(event_object: Any, bot: Bot) -> Any:
+    
+    """
+    Дополняет объект события данными чата, пользователя и ссылкой на бота.
+
+    Args:
+        event_object (Any): Событие, которое нужно дополнить.
+        bot (Bot): Экземпляр бота.
+
+    Returns:
+        Any: Обновлённый объект события.
+    """
+    
     if not bot.auto_requests:
         return event_object
 

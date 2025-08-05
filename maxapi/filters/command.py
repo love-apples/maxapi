@@ -12,12 +12,12 @@ class Command(BaseFilter):
     Фильтр сообщений на соответствие команде.
 
     Args:
-        commands (str | list[str]): Ожидаемая команда или список команд без префикса.
+        commands (str | List[str]): Ожидаемая команда или список команд без префикса.
         prefix (str, optional): Префикс команды (по умолчанию '/').
         check_case (bool, optional): Учитывать регистр при сравнении (по умолчанию False).
 
     Attributes:
-        commands (list[str]): Список команд без префикса.
+        commands (List[str]): Список команд без префикса.
         prefix (str): Префикс команды.
         check_case (bool): Флаг чувствительности к регистру.
     """

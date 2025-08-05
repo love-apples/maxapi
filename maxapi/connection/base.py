@@ -30,9 +30,7 @@ class BaseConnection:
     """
     Базовый класс для всех методов API.
 
-    Содержит общую логику выполнения запроса (например, сериализацию, отправку HTTP-запроса, обработку ответа).
-
-    Метод request() может быть переопределён в потомках при необходимости.
+    Содержит общую логику выполнения запроса (сериализация, отправка HTTP-запроса, обработка ответа).
     """
 
     API_URL = 'https://botapi.max.ru'
@@ -41,53 +39,67 @@ class BaseConnection:
     AFTER_MEDIA_INPUT_DELAY = 2.0
 
     def __init__(self) -> None:
+        
+        """
+        Инициализация BaseConnection.
+
+        Атрибуты:
+            bot (Optional[Bot]): Экземпляр бота.
+            session (Optional[ClientSession]): aiohttp-сессия.
+            after_input_media_delay (float): Задержка после ввода медиа.
+        """
+        
         self.bot: Optional[Bot] = None
         self.session: Optional[ClientSession] = None
         self.after_input_media_delay: float = self.AFTER_MEDIA_INPUT_DELAY
 
     async def request(
-            self,
-            method: HTTPMethod,
-            path: ApiPath | str,
-            model: BaseModel | Any = None,
-            is_return_raw: bool = False,
-            **kwargs
-        ):
+        self,
+        method: HTTPMethod,
+        path: ApiPath | str,
+        model: BaseModel | Any = None,
+        is_return_raw: bool = False,
+        **kwargs
+    ):
         
         """
-        Выполняет HTTP-запрос к API, используя указанные параметры.
+        Выполняет HTTP-запрос к API.
 
-        :param method: HTTP-метод запроса (GET, POST и т.д.)
-        :param path: Путь к конечной точке API
-        :param model: Pydantic-модель, в которую будет десериализован ответ (если is_return_raw=False)
-        :param is_return_raw: Если True — вернуть "сырое" тело ответа, иначе — результат десериализации в model
-        :param kwargs: Дополнительные параметры (например, query, headers, json)
+        Args:
+            method (HTTPMethod): HTTP-метод (GET, POST и т.д.).
+            path (ApiPath | str): Путь до конечной точки.
+            model (BaseModel | Any, optional): Pydantic-модель для десериализации ответа, если is_return_raw=False.
+            is_return_raw (bool, optional): Если True — вернуть сырой ответ, иначе — результат десериализации.
+            **kwargs: Дополнительные параметры (query, headers, json).
 
-        :return:
-            - Объект model (если is_return_raw=False и model задан)
-            
-            - dict (если is_return_raw=True)
+        Returns:
+            model | dict | Error: Объект модели, dict или ошибка.
+
+        Raises:
+            RuntimeError: Если бот не инициализирован.
+            MaxConnection: Ошибка соединения.
+            InvalidToken: Ошибка авторизации (401).
         """
         
         if self.bot is None:
             raise RuntimeError('Bot не инициализирован')
-        
+
         if not self.bot.session:
             self.bot.session = ClientSession(
-                base_url=self.bot.API_URL, 
-                timeout=self.bot.default_connection.timeout, 
+                base_url=self.bot.API_URL,
+                timeout=self.bot.default_connection.timeout,
                 **self.bot.default_connection.kwargs
             )
 
         try:
             r = await self.bot.session.request(
-                method=method.value, 
-                url=path.value if isinstance(path, ApiPath) else path, 
+                method=method.value,
+                url=path.value if isinstance(path, ApiPath) else path,
                 **kwargs
             )
         except ClientConnectionError as e:
             raise MaxConnection(f'Ошибка при отправке запроса: {e}')
-        
+
         if r.status == 401:
             await self.bot.session.close()
             raise InvalidToken('Неверный токен!')
@@ -97,38 +109,41 @@ class BaseConnection:
             error = Error(code=r.status, raw=raw)
             logger_bot.error(error)
             return error
-        
+
         raw = await r.json()
 
-        if is_return_raw: 
+        if is_return_raw:
             return raw
 
-        model = model(**raw) # type: ignore
-        
+        model = model(**raw)  # type: ignore
+
         if hasattr(model, 'message'):
             attr = getattr(model, 'message')
             if hasattr(attr, 'bot'):
                 attr.bot = self.bot
-        
+
         if hasattr(model, 'bot'):
             model.bot = self.bot
 
         return model
-    
+
     async def upload_file(
-            self,
-            url: str,
-            path: str,
-            type: UploadType
+        self,
+        url: str,
+        path: str,
+        type: UploadType
     ):
+        
         """
-        Загружает файл на указанный URL.
+        Загружает файл на сервер.
 
-        :param url: Конечная точка загрузки файла
-        :param path: Путь к локальному файлу
-        :param type: Тип файла (video, image, audio, file)
+        Args:
+            url (str): URL загрузки.
+            path (str): Путь к файлу.
+            type (UploadType): Тип файла.
 
-        :return: Сырой .text() ответ от сервера после загрузки файла
+        Returns:
+            str: Сырой .text() ответ от сервера.
         """
         
         async with aiofiles.open(path, 'rb') as f:
@@ -147,12 +162,12 @@ class BaseConnection:
 
         async with ClientSession() as session:
             response = await session.post(
-                url=url, 
+                url=url,
                 data=form
             )
 
             return await response.text()
-        
+
     async def upload_file_buffer(
         self,
         filename: str,
@@ -160,16 +175,20 @@ class BaseConnection:
         buffer: bytes,
         type: UploadType
     ):
+        
         """
         Загружает файл из буфера.
 
-        :param url: Конечная точка загрузки файла
-        :param buffer: Буфер (bytes)
-        :param type: Тип файла (video, image, audio, file)
+        Args:
+            filename (str): Имя файла.
+            url (str): URL загрузки.
+            buffer (bytes): Буфер данных.
+            type (UploadType): Тип файла.
 
-        :return: Сырой .text() ответ от сервера после загрузки файла
+        Returns:
+            str: Сырой .text() ответ от сервера.
         """
-
+        
         try:
             matches = puremagic.magic_string(buffer[:4096])
             if matches:
@@ -194,36 +213,7 @@ class BaseConnection:
 
         async with ClientSession() as session:
             response = await session.post(
-                url=url, 
+                url=url,
                 data=form
             )
             return await response.text()
-        
-    async def download_file(
-            self,
-            path: str,
-            url: str,
-            token: str,
-    ):
-        """
-        Скачивает медиа с указанной ссылки по токену, сохраняя по определенному пути
-
-        :param path: Путь сохранения медиа
-        :param url: Ссылка на медиа
-        :param token: Токен медиа
-
-        :return: Числовой статус
-        """
-        
-        headers = {
-            'Authorization': f'Bearer {token}'
-        }
-
-        async with ClientSession() as session:
-            async with session.get(url, headers=headers) as response:
-                
-                if response.status == 200:
-                    async with aiofiles.open(path, 'wb') as f:
-                        await f.write(await response.read())
-                        
-                return response.status

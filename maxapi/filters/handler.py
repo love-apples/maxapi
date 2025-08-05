@@ -17,27 +17,24 @@ class Handler:
     """
     Обработчик события.
 
-    Позволяет связать функцию-обработчик с типом обновления, состоянием и набором фильтров.
+    Связывает функцию-обработчик с типом события, состояниями и фильтрами.
     """
 
     def __init__(
-            self,
-            *args,
-            func_event: Callable,
-            update_type: UpdateType,
-            **kwargs
-        ):
+        self,
+        *args,
+        func_event: Callable,
+        update_type: UpdateType,
+        **kwargs
+    ):
         
         """
-        Инициализация обработчика.
+        Создаёт обработчик события.
 
-        :param args: Список фильтров и состояний, в том числе:
-            - MagicFilter — фильтр события,
-            - State — состояние FSM,
-            - Command — команда для фильтрации по началу текста сообщения.
-        :param func_event: Функция-обработчик события
-        :param update_type: Тип обновления (события), на которое подписан обработчик
-        :param kwargs: Дополнительные параметры (не используются)
+        Args:
+            *args: Список фильтров (MagicFilter, State, Command, BaseFilter, BaseMiddleware).
+            func_event (Callable): Функция-обработчик.
+            update_type (UpdateType): Тип обновления.
         """
         
         self.func_event: Callable = func_event
@@ -57,5 +54,6 @@ class Handler:
             elif isinstance(arg, BaseFilter):
                 self.base_filters.append(arg)
             else:
-                logger_dp.info(f'Обнаружен неизвестный фильтр `{arg}` при ' 
-                               f'регистрации функции `{func_event.__name__}`')
+                logger_dp.info(
+                    f'Неизвестный фильтр `{arg}` при регистрации `{func_event.__name__}`'
+                )

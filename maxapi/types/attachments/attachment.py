@@ -114,29 +114,3 @@ class Attachment(BaseModel):
         
     class Config:
         use_enum_values = True
-    
-    # async def download(
-    #     self,
-    #     path: str
-    # ):
-        
-    #     """
-    #     Скачивает медиа, сохраняя по определенному пути
-
-    #     :param path: Путь сохранения медиа
-
-    #     :return: Числовой статус
-    #     """
-        
-    #     if not hasattr(self.payload, 'token') or \
-    #         not hasattr(self.payload, 'url'):
-    #             raise NotAvailableForDownload()
-            
-    #     elif not self.payload.token or not self.payload.url:
-    #         raise NotAvailableForDownload(f'Медиа типа `{self.type}` недоступно для скачивания')
-            
-    #     return await self.bot.download_file(
-    #         path=path,
-    #         url=self.payload.url,
-    #         token=self.payload.token,
-    #     )

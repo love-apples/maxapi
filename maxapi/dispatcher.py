@@ -8,6 +8,8 @@ from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
 
 from aiohttp import ClientConnectorError
 
+from maxapi.exceptions.dispatcher import HandlerException
+
 from .filters.filter import BaseFilter
 from .filters.middleware import BaseMiddleware
 from .filters.handler import Handler
@@ -60,9 +62,9 @@ class Dispatcher:
         
         """
         Инициализация диспетчера.
-        
-        :param router_id: Идентификатор роутера, используется при логгировании. 
-            По умолчанию индекс зарегистированного роутера в списке 
+
+        Args:
+            router_id (str | None): Идентификатор роутера для логов.
         """
         
         self.router_id = router_id
@@ -132,6 +134,17 @@ class Dispatcher:
         handler: Callable[[Any, dict[str, Any]], Awaitable[Any]]
     ) -> Callable[[Any, dict[str, Any]], Awaitable[Any]]:
         
+        """
+        Формирует цепочку вызова middleware вокруг хендлера.
+
+        Args:
+            middlewares (list[BaseMiddleware]): Список middleware.
+            handler (Callable): Финальный обработчик.
+
+        Returns:
+            Callable: Обёрнутый обработчик.
+        """
+        
         for mw in reversed(middlewares):
             handler = functools.partial(mw, handler)
             
@@ -142,7 +155,8 @@ class Dispatcher:
         """
         Добавляет указанные роутеры в диспетчер.
 
-        :param routers: Роутеры для добавления.
+        Args:
+            *routers (Router): Роутеры для добавления.
         """
         
         self.routers += [r for r in routers]
@@ -150,9 +164,10 @@ class Dispatcher:
     def outer_middleware(self, middleware: BaseMiddleware) -> None:
         
         """
-        Добавляет Middleware на первое место в списке
-        
-        :param: middleware: Middleware
+        Добавляет Middleware на первое место в списке.
+
+        Args:
+            middleware (BaseMiddleware): Middleware.
         """
         
         self.middlewares.insert(0, middleware)
@@ -160,9 +175,10 @@ class Dispatcher:
     def middleware(self, middleware: BaseMiddleware) -> None:
         
         """
-        Добавляет Middleware в список
-        
-        :param middleware: Middleware
+        Добавляет Middleware в конец списка.
+
+        Args:
+            middleware (BaseMiddleware): Middleware.
         """
         
         self.middlewares.append(middleware)
@@ -170,9 +186,10 @@ class Dispatcher:
     def filter(self, base_filter: BaseFilter) -> None:
         
         """
-        Добавляет фильтр в список
-        
-        :param base_filter: Фильтр
+        Добавляет фильтр в список.
+
+        Args:
+            base_filter (BaseFilter): Фильтр.
         """
         
         self.base_filters.append(base_filter)
@@ -182,7 +199,8 @@ class Dispatcher:
         """
         Подготавливает диспетчер: сохраняет бота, регистрирует обработчики, вызывает on_started.
 
-        :param bot: Экземпляр бота.
+        Args:
+            bot (Bot): Экземпляр бота.
         """
         
         self.bot = bot
@@ -208,11 +226,14 @@ class Dispatcher:
     def __get_memory_context(self, chat_id: int, user_id: int):
         
         """
-        Возвращает существующий или создает новый контекст по chat_id и user_id.
+        Возвращает существующий или создаёт новый MemoryContext по chat_id и user_id.
 
-        :param chat_id: Идентификатор чата.
-        :param user_id: Идентификатор пользователя.
-        :return: Объект MemoryContext.
+        Args:
+            chat_id (int): Идентификатор чата.
+            user_id (int): Идентификатор пользователя.
+
+        Returns:
+            MemoryContext: Контекст.
         """
 
         for ctx in self.contexts:
@@ -223,10 +244,23 @@ class Dispatcher:
         self.contexts.append(new_ctx)
         return new_ctx
     
-    async def call_handler(self, handler, event_object, data):
+    async def call_handler(
+        self, 
+        handler: Callable[[Any, dict[str, Any]], Awaitable[Any]], 
+        event_object: UpdateType, 
+        data: Dict[str, Any]
+    ):
         
         """
-        Правка аргументов конечной функции хендлера и ее вызов 
+        Вызывает хендлер с нужными аргументами.
+
+        Args:
+            handler: Handler.
+            event_object: Объект события.
+            data: Данные для хендлера.
+
+        Returns:
+            None
         """
         
         func_args = handler.func_event.__annotations__.keys()
@@ -242,6 +276,17 @@ class Dispatcher:
             event: UpdateUnion, 
             filters: List[BaseFilter]
         ) -> Optional[Dict[str, Any]] | Literal[False]:
+        
+        """
+        Асинхронно применяет фильтры к событию.
+
+        Args:
+            event (UpdateUnion): Событие.
+            filters (List[BaseFilter]): Список фильтров.
+
+        Returns:
+            Optional[Dict[str, Any]] | Literal[False]: Словарь с результатом или False.
+        """
         
         data = {}
         
@@ -259,9 +304,10 @@ class Dispatcher:
     async def handle(self, event_object: UpdateUnion):
         
         """
-        Основной обработчик события. Применяет фильтры, middleware и вызывает подходящий handler.
+        Основной обработчик события. Применяет фильтры, middleware и вызывает нужный handler.
 
-        :param event_object: Событие, пришедшее в бот.
+        Args:
+            event_object (UpdateUnion): Событие.
         """
         
         try:
@@ -335,26 +381,36 @@ class Dispatcher:
                     )
                     
                     kwargs_filtered = {k: v for k, v in kwargs.items() if k in func_args}
-                        
-                    await handler_chain(event_object, kwargs_filtered)
+                    
+                    try:
+                        await handler_chain(event_object, kwargs_filtered)
+                    except:
+                        raise HandlerException(
+                            handler_title=handler.func_event.__name__, 
+                            memory_context={
+                                'data': await memory_context.get_data(),
+                                'state': current_state
+                                }
+                            )
 
-                    logger_dp.info(f'Обработано: {router_id} | {process_info}')
+                    logger_dp.info(f'Обработано: router_id: {router_id} | {process_info}')
 
                     is_handled = True
                     break
 
             if not is_handled:
-                logger_dp.info(f'Проигнорировано: {router_id} | {process_info}')
+                logger_dp.info(f'Проигнорировано: router_id: {router_id} | {process_info}')
             
         except Exception as e:
-            logger_dp.error(f"Ошибка при обработке события: {router_id} | {process_info} | {e} ")
+            logger_dp.error(f"Ошибка при обработке события: router_id: {router_id} | {process_info} | {e} ")
 
     async def start_polling(self, bot: Bot):
         
         """
-        Запускает цикл получения обновлений с сервера (long polling).
+        Запускает цикл получения обновлений (long polling).
 
-        :param bot: Экземпляр бота.
+        Args:
+            bot (Bot): Экземпляр бота.
         """
         
         self.polling = True
@@ -399,9 +455,10 @@ class Dispatcher:
         """
         Запускает FastAPI-приложение для приёма обновлений через вебхук.
 
-        :param bot: Экземпляр бота.
-        :param host: Хост, на котором запускается сервер.
-        :param port: Порт сервера.
+        Args:
+            bot (Bot): Экземпляр бота.
+            host (str): Хост сервера.
+            port (int): Порт сервера.
         """
         
         if not FASTAPI_INSTALLED:
@@ -421,19 +478,6 @@ class Dispatcher:
                 '\n\t Или сразу все зависимости для работы вебхука:'
                 '\n\t pip install maxapi[webhook]'
             )
-        
-        # try:
-        #     from fastapi import Request
-        #     from fastapi.responses import JSONResponse
-        # except ImportError:
-        #     raise ImportError(
-        #         '\n\t Не установлен fastapi!'
-        #         '\n\t Выполните команду для установки fastapi: '
-        #         '\n\t pip install fastapi>=0.68.0'
-        #         '\n\t Или сразу все зависимости для работы вебхука:'
-        #         '\n\t pip install maxapi[webhook]'
-        #     )
-            
         
         @self.webhook_post('/')
         async def _(request: Request):
@@ -457,23 +501,13 @@ class Dispatcher:
     async def init_serve(self, bot: Bot, host: str = 'localhost', port: int = 8080, **kwargs):
     
         """
-        Запускает сервер для обработки входящих вебхуков.
+        Запускает сервер для обработки вебхуков.
 
-        :param bot: Экземпляр бота.
-        :param host: Хост, на котором запускается сервер.
-        :param port: Порт сервера.
+        Args:
+            bot (Bot): Экземпляр бота.
+            host (str): Хост.
+            port (int): Порт.
         """
-        
-        # try:
-        #     from uvicorn import Config, Server
-        # except ImportError:
-        #     raise ImportError(
-        #         '\n\t Не установлен uvicorn!'
-        #         '\n\t Выполните команду для установки uvicorn: '
-        #         '\n\t pip install uvicorn>=0.15.0'
-        #         '\n\t Или сразу все зависимости для работы вебхука:'
-        #         '\n\t pip install maxapi[webhook]'
-        #     )
         
         if not UVICORN_INSTALLED:
             raise ImportError(
@@ -504,10 +538,10 @@ class Router(Dispatcher):
     def __init__(self, router_id: str | None = None):
         
         """
-        Инициализация диспетчера.
-        
-        :param router_id: Идентификатор роутера, используется при логгировании. 
-            По умолчанию индекс зарегистированного роутера в списке 
+        Инициализация роутера.
+
+        Args:
+            router_id (str | None): Идентификатор роутера для логов.
         """
         
         super().__init__(router_id)
@@ -524,8 +558,9 @@ class Event:
         """
         Инициализирует событие-декоратор.
 
-        :param update_type: Тип события (UpdateType).
-        :param router: Роутер или диспетчер, в который регистрируется обработчик.
+        Args:
+            update_type (UpdateType): Тип события.
+            router (Dispatcher | Router): Экземпляр роутера или диспетчера.
         """
         
         self.update_type = update_type
@@ -536,7 +571,8 @@ class Event:
         """
         Регистрирует функцию как обработчик события.
 
-        :return: Исходная функция.
+        Returns:
+            Callable: Исходная функция.
         """
         
         def decorator(func_event: Callable):
