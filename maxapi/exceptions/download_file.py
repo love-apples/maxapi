@@ -1,4 +1,4 @@
 
 
-class NotAvailableForDownload(BaseException):
+class NotAvailableForDownload(Exception):
     ...

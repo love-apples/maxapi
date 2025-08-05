@@ -1,4 +1,4 @@
 
 
-class InvalidToken(BaseException):
+class InvalidToken(Exception):
     ...

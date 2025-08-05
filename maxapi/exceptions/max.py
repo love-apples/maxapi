@@ -1,11 +1,11 @@
 
-class MaxConnection(BaseException):
+class MaxConnection(Exception):
     ...
     
     
-class MaxUploadFileFailed(BaseException):
+class MaxUploadFileFailed(Exception):
     ...
     
 
-class MaxIconParamsException(BaseException):
+class MaxIconParamsException(Exception):
     ...
