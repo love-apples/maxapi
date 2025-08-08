@@ -216,6 +216,9 @@ class Dispatcher:
         
         self.routers += [self]
         
+        for router in self.routers:
+            router.bot = bot
+        
         handlers_count = sum(len(router.event_handlers) for router in self.routers)
 
         logger_dp.info(f'{handlers_count} событий на обработку')
@@ -310,6 +313,9 @@ class Dispatcher:
             event_object (UpdateUnion): Событие.
         """
         
+        router_id = None
+        process_info = 'нет данных'
+        
         try:
             ids = event_object.get_ids()
             memory_context = self.__get_memory_context(*ids)
@@ -320,89 +326,97 @@ class Dispatcher:
             process_info = f'{event_object.update_type} | chat_id: {ids[0]}, user_id: {ids[1]}'
             
             is_handled = False
-            
-            for index, router in enumerate(self.routers):
-                
-                if is_handled:
-                    break
-                
-                router_id = router.router_id or index
-                
-                if router.filters:
-                    if not filter_attrs(event_object, *router.filters):
-                        continue
-                    
-                result_router_filter = await self.process_base_filters(
-                    event=event_object,
-                    filters=router.base_filters
-                )
-                
-                if isinstance(result_router_filter, dict):
-                    kwargs.update(result_router_filter)
-                    
-                elif not result_router_filter:
-                    continue
-                    
-                for handler in router.event_handlers:
 
-                    if not handler.update_type == event_object.update_type:
-                        continue
-
-                    if handler.filters:
-                        if not filter_attrs(event_object, *handler.filters):
-                            continue
+            async def _process_event(_: UpdateUnion, data: Dict[str, Any]) -> None:
+                
+                nonlocal router_id, is_handled
+                
+                for index, router in enumerate(self.routers):
                     
-                    if handler.states:
-                        if current_state not in handler.states:
-                            continue
-                        
-                    func_args = handler.func_event.__annotations__.keys()
-                        
-                    if handler.base_filters:
-                        result_filter = await self.process_base_filters(
-                            event=event_object,
-                            filters=handler.base_filters
-                        )
-                        
-                        if isinstance(result_filter, dict):
-                            kwargs.update(result_filter)
-                            
-                        elif not result_filter:
-                            continue
-                        
-                    if isinstance(router, Router):
-                        full_middlewares = self.middlewares + router.middlewares + handler.middlewares
-                    elif isinstance(router, Dispatcher):
-                        full_middlewares = self.middlewares + handler.middlewares
+                    if is_handled:
+                        break
                     
-                    handler_chain = self.build_middleware_chain(
-                        full_middlewares,
-                        functools.partial(self.call_handler, handler)
+                    router_id = router.router_id or index
+                    
+                    if router.filters:
+                        if not filter_attrs(event_object, *router.filters):
+                            continue
+                        
+                    result_router_filter = await self.process_base_filters(
+                        event=event_object,
+                        filters=router.base_filters
                     )
                     
-                    kwargs_filtered = {k: v for k, v in kwargs.items() if k in func_args}
-                    
-                    try:
-                        await handler_chain(event_object, kwargs_filtered)
-                    except:
-                        raise HandlerException(
-                            handler_title=handler.func_event.__name__, 
-                            memory_context={
-                                'data': await memory_context.get_data(),
-                                'state': current_state
-                                }
+                    if isinstance(result_router_filter, dict):
+                        data.update(result_router_filter)
+                        
+                    elif not result_router_filter:
+                        continue
+                        
+                    for handler in router.event_handlers:
+
+                        if not handler.update_type == event_object.update_type:
+                            continue
+
+                        if handler.filters:
+                            if not filter_attrs(event_object, *handler.filters):
+                                continue
+                        
+                        if handler.states:
+                            if current_state not in handler.states:
+                                continue
+                            
+                        func_args = handler.func_event.__annotations__.keys()
+                            
+                        if handler.base_filters:
+                            result_filter = await self.process_base_filters(
+                                event=event_object,
+                                filters=handler.base_filters
                             )
+                            
+                            if isinstance(result_filter, dict):
+                                data.update(result_filter)
+                                
+                            elif not result_filter:
+                                continue
+                        
+                        if isinstance(router, Router):
+                            local_middlewares = router.middlewares + handler.middlewares
+                        elif isinstance(router, Dispatcher):
+                            local_middlewares = handler.middlewares
+                        
+                        handler_chain = self.build_middleware_chain(
+                            local_middlewares,
+                            functools.partial(self.call_handler, handler)
+                        )
+                        
+                        kwargs_filtered = {k: v for k, v in data.items() if k in func_args}
+                        
+                        try:
+                            await handler_chain(event_object, kwargs_filtered)
+                        except Exception as e:
+                            raise HandlerException(
+                                handler_title=handler.func_event.__name__, 
+                                memory_context={
+                                    'data': await memory_context.get_data(),
+                                    'state': current_state
+                                    }
+                                ) from e
 
-                    logger_dp.info(f'Обработано: router_id: {router_id} | {process_info}')
+                        logger_dp.info(f'Обработано: router_id: {router_id} | {process_info}')
 
-                    is_handled = True
-                    break
+                        is_handled = True
+                        break
+
+            global_chain = self.build_middleware_chain(self.middlewares, _process_event)
+            await global_chain(event_object, kwargs)
 
             if not is_handled:
                 logger_dp.info(f'Проигнорировано: router_id: {router_id} | {process_info}')
             
         except Exception as e:
-            logger_dp.error(f"Ошибка при обработке события: router_id: {router_id} | {process_info} | {e} ")
+            logger_dp.error(f'Ошибка при обработке события: router_id: {router_id} | {process_info} | {e} ')
+
 
     async def start_polling(self, bot: Bot):
         
