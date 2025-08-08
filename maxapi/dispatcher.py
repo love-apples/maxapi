@@ -437,7 +437,7 @@ class Dispatcher:
         while self.polling:
                 
             try:
-                events: Dict = await self.bot.get_updates()
+                events: Dict = await self.bot.get_updates(marker=self.bot.marker_updates)
             except AsyncioTimeoutError:
                 continue
         

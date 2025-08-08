@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Sequence, Union, TYPE_CHECKING
 
 from .client.default import DefaultConnectionProperties
 from .types.errors import Error
@@ -826,6 +826,11 @@ class Bot(BaseConnection):
 
     async def get_updates(
         self,
+        limit: int = 100,
+        timeout: int = 30,
+        marker: Optional[int] = None,
+        types: Optional[Sequence[UpdateType]] = None
+        
     ) -> Dict:
 
         """
@@ -837,6 +842,10 @@ class Bot(BaseConnection):
 
         return await GetUpdates(
             bot=self,
+            limit=limit,
+            marker=marker,
+            types=types,
+            timeout=timeout
         ).fetch()
 
     async def get_upload_url(
