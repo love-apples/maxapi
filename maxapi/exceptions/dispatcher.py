@@ -24,12 +24,6 @@ class HandlerException(Exception):
         return 'HandlerException(' + ', '.join(parts) + ')'
 
 
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import Any, Dict, Optional
-
-
 @dataclass(slots=True)
 class MiddlewareException(Exception):
     middleware_title: str
