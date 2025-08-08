@@ -8,7 +8,7 @@ from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
 
 from aiohttp import ClientConnectorError
 
-from maxapi.exceptions.dispatcher import HandlerException
+from .exceptions.dispatcher import HandlerException, MiddlewareException
 
 from .filters.filter import BaseFilter
 from .filters.middleware import BaseMiddleware
@@ -395,21 +395,38 @@ class Dispatcher:
                         try:
                             await handler_chain(event_object, kwargs_filtered)
                         except Exception as e:
+                            mem_data = await memory_context.get_data()
                             raise HandlerException(
-                                handler_title=handler.func_event.__name__, 
+                                handler_title=handler.func_event.__name__,
+                                router_id=router_id,
+                                process_info=process_info,
                                 memory_context={
-                                    'data': await memory_context.get_data(),
-                                    'state': current_state
-                                    }
-                                ) from e
+                                    'data': mem_data,
+                                    'state': current_state,
+                                },
+                                cause=e,
+                            ) from e
 
                         logger_dp.info(f'Обработано: router_id: {router_id} | {process_info}')
 
                         is_handled = True
                         break
 
-            global_chain = self.build_middleware_chain(self.middlewares, _process_event)
-            await global_chain(event_object, kwargs)
+            global_chain: functools.partial = self.build_middleware_chain(self.middlewares, _process_event)
+            try:
+                await global_chain(event_object, kwargs)
+            except Exception as e:
+                mem_data = await memory_context.get_data()
+                raise MiddlewareException(
+                    middleware_title=global_chain.func.__class__.__name__,
+                    router_id=router_id,
+                    process_info=process_info,
+                    memory_context={
+                        'data': mem_data,
+                        'state': current_state,
+                    },
+                    cause=e,
+                ) from e
 
             if not is_handled:
                 logger_dp.info(f'Проигнорировано: router_id: {router_id} | {process_info}')
