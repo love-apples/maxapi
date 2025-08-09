@@ -18,18 +18,14 @@ class SendCallback(BaseConnection):
     
     """
     Класс для отправки callback-ответа с опциональным сообщением и уведомлением.
-
-    Args:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        callback_id (str): Идентификатор callback.
-        message (Message, optional): Сообщение для отправки в ответе.
-        notification (str, optional): Текст уведомления.
+    
+    https://dev.max.ru/docs-api/methods/POST/answers
 
     Attributes:
         bot (Bot): Экземпляр бота.
         callback_id (str): Идентификатор callback.
-        message (Message | None): Сообщение для отправки.
-        notification (str | None): Текст уведомления.
+        message (Optional[Message]): Сообщение для отправки.
+        notification (Optional[str]): Текст уведомления.
     """
     
     def __init__(

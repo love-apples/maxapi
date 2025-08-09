@@ -16,8 +16,10 @@ class DeleteMeFromMessage(BaseConnection):
     
     """
     Класс для удаления бота из участников указанного чата.
+    
+    https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-/members/me
 
-    Args:
+    Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
         chat_id (int): Идентификатор чата, из которого нужно удалить бота.
     """

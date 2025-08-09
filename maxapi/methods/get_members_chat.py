@@ -16,20 +16,16 @@ class GetMembersChat(BaseConnection):
     
     """
     Класс для получения списка участников чата через API.
-
-    Args:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        chat_id (int): Идентификатор чата.
-        user_ids (List[str], optional): Список ID пользователей для фильтрации. По умолчанию None.
-        marker (int, optional): Маркер для пагинации (начальная позиция). По умолчанию None.
-        count (int, optional): Максимальное количество участников для получения. По умолчанию None.
+    
+    https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members
 
     Attributes:
-        bot (Bot): Экземпляр бота.
+        bot (Bot): Экземпляр бота для выполнения запроса.
         chat_id (int): Идентификатор чата.
-        user_ids (List[int] | None): Список ID пользователей для фильтра.
-        marker (int | None): Позиция для пагинации.
-        count (int | None): Максимальное количество участников.
+        user_ids (Optional[List[str]]): Список ID пользователей для фильтрации. По умолчанию None.
+        marker (Optional[int]): Маркер для пагинации (начальная позиция). По умолчанию None.
+        count (Optional[int]): Максимальное количество участников для получения. По умолчанию None.
+
     """
 
     def __init__(
@@ -41,6 +37,10 @@ class GetMembersChat(BaseConnection):
             count: Optional[int] = None,
 
         ):
+        
+        if count is not None and not (1 <= count <= 100):
+            raise ValueError('count не должен быть меньше 1 или больше 100')
+        
         self.bot = bot
         self.chat_id = chat_id
         self.user_ids = user_ids

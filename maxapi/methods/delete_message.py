@@ -15,8 +15,10 @@ class DeleteMessage(BaseConnection):
     
     """
     Класс для удаления сообщения через API.
+    
+    https://dev.max.ru/docs-api/methods/DELETE/messages
 
-    Args:
+    Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
         message_id (str): Идентификатор сообщения, которое нужно удалить.
     """
@@ -26,6 +28,10 @@ class DeleteMessage(BaseConnection):
             bot: 'Bot',
             message_id: str,
         ):
+
+            if len(message_id) < 1:
+                raise ValueError('message_id не должен быть меньше 1 символа')
+        
             self.bot = bot
             self.message_id = message_id
 

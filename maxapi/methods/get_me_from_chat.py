@@ -16,10 +16,8 @@ class GetMeFromChat(BaseConnection):
     
     """
     Класс для получения информации о текущем боте в конкретном чате.
-
-    Args:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        chat_id (int): Идентификатор чата.
+    
+    https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members/me
 
     Attributes:
         bot (Bot): Экземпляр бота.

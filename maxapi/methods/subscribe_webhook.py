@@ -20,11 +20,12 @@ class SubscribeWebhook(BaseConnection):
     После вызова этого метода бот будет получать уведомления о новых событиях в чатах на указанный URL. 
     Ваш сервер должен прослушивать один из следующих портов: `80`, `8080`, `443`, `8443`, `16384`-`32383`.
     
-    Args:
+    Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
         url (str): URL HTTP(S)-эндпойнта вашего бота. Должен начинаться с http(s)://
         update_types (Optional[List[str]]): Список типов обновлений, которые ваш бот хочет получать. Для полного списка типов см. объект
-        secret (str): От 5 до 256 символов. Cекрет, который должен быть отправлен в заголовке X-Max-Bot-Api-Secret в каждом запросе Webhook. Разрешены только символы A-Z, a-z, 0-9, и дефис. Заголовок рекомендован, чтобы запрос поступал из установленного веб-узла
+        secret (Optional[str]): От 5 до 256 символов. Cекрет, который должен быть отправлен в заголовке X-Max-Bot-Api-Secret в каждом запросе Webhook. 
+            Разрешены только символы A-Z, a-z, 0-9, и дефис. Заголовок рекомендован, чтобы запрос поступал из установленного веб-узла
     """
     
     def __init__(
@@ -34,6 +35,10 @@ class SubscribeWebhook(BaseConnection):
             update_types: Optional[List[UpdateType]] = None,
             secret: Optional[str] = None
         ):
+
+            if secret is not None and not (5 <= len(secret) <= 256):
+                raise ValueError('secret не должен быть меньше 5 или больше 256 символов')
+        
             self.bot = bot
             self.url = url
             self.update_types = update_types

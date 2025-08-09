@@ -27,16 +27,20 @@ class SendMessage(BaseConnection):
     
     """
     Класс для отправки сообщения в чат или пользователю с поддержкой вложений и форматирования.
+    
+    https://dev.max.ru/docs-api/methods/POST/messages
 
-    Args:
+    Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
-        chat_id (int, optional): Идентификатор чата, куда отправлять сообщение.
-        user_id (int, optional): Идентификатор пользователя, если нужно отправить личное сообщение.
-        text (str, optional): Текст сообщения.
-        attachments (List[Attachment | InputMedia | InputMediaBuffer], optional): Список вложений к сообщению.
-        link (NewMessageLink, optional): Связь с другим сообщением (например, ответ или пересылка).
-        notify (bool, optional): Отправлять ли уведомление о сообщении. По умолчанию True.
-        parse_mode (ParseMode, optional): Режим разбора текста (например, Markdown, HTML).
+        chat_id (Optional[int]): Идентификатор чата, куда отправлять сообщение.
+        user_id (Optional[int]): Идентификатор пользователя, если нужно отправить личное сообщение.
+        text (Optional[str]): Текст сообщения.
+        attachments (Optional[List[Attachment | InputMedia | InputMediaBuffer]]): 
+            Список вложений к сообщению.
+        link (Optional[NewMessageLink]): Связь с другим сообщением (например, ответ или пересылка).
+        notify (Optional[bool]): Отправлять ли уведомление о сообщении. По умолчанию True.
+        parse_mode (Optional[ParseMode]): Режим разбора текста (например, Markdown, HTML).
+        disable_link_preview (Optional[bool]): Флаг генерации превью.
     """
     
     def __init__(
@@ -48,8 +52,13 @@ class SendMessage(BaseConnection):
             attachments: Optional[List[Attachment | InputMedia | InputMediaBuffer]] = None,
             link: Optional[NewMessageLink] = None,
             notify: Optional[bool] = None,
-            parse_mode: Optional[ParseMode] = None
+            parse_mode: Optional[ParseMode] = None,
+            disable_link_preview: Optional[bool] = None,
         ):
+        
+            if text is not None and not (len(text) < 4000):
+                raise ValueError('text должен быть меньше 4000 символов')
+            
             self.bot = bot
             self.chat_id = chat_id
             self.user_id = user_id
@@ -58,6 +67,7 @@ class SendMessage(BaseConnection):
             self.link = link
             self.notify = notify
             self.parse_mode = parse_mode
+            self.disable_link_preview = disable_link_preview
 
     async def fetch(self) -> Optional[SendedMessage | Error]:
         
@@ -81,7 +91,7 @@ class SendMessage(BaseConnection):
             params['chat_id'] = self.chat_id
         elif self.user_id: 
             params['user_id'] = self.user_id
-
+        
         json['text'] = self.text
         
         HAS_INPUT_MEDIA = False
@@ -106,8 +116,12 @@ class SendMessage(BaseConnection):
         
         if self.link is not None: 
             json['link'] = self.link.model_dump()
+        
+        if self.notify:
+            json['notify'] = self.notify
             
-        json['notify'] = self.notify
+        if self.disable_link_preview:
+            json['disable_link_preview'] = self.disable_link_preview
         
         if self.parse_mode is not None: 
             json['format'] = self.parse_mode.value

@@ -17,10 +17,8 @@ class GetChatByLink(BaseConnection):
     
     """
     Класс для получения информации о чате по ссылке.
-
-    Args:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        link (str): Ссылка на чат (с содержанием @ или без).
+    
+    https://dev.max.ru/docs-api/methods/GET/chats/-chatLink-
 
     Attributes:
         link (list[str]): Список валидных частей ссылки.
@@ -38,7 +36,7 @@ class GetChatByLink(BaseConnection):
         self.link = findall(self.PATTERN_LINK, link)
 
         if not self.link:
-            return
+            raise ValueError(f'link не соответствует {self.PATTERN_LINK!r}')
 
     async def fetch(self) -> Chat:
         

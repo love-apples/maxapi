@@ -15,14 +15,8 @@ class GetMessages(BaseConnection):
     
     """
     Класс для получения сообщений из чата через API.
-
-    Args:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        chat_id (int): Идентификатор чата.
-        message_ids (List[str], optional): Список идентификаторов сообщений для выборки. По умолчанию None.
-        from_time (datetime | int, optional): Временная метка начала выборки сообщений (timestamp или datetime). По умолчанию None.
-        to_time (datetime | int, optional): Временная метка конца выборки сообщений (timestamp или datetime). По умолчанию None.
-        count (int, optional): Максимальное количество сообщений для получения. По умолчанию 50.
+    
+    https://dev.max.ru/docs-api/methods/GET/messages
 
     Attributes:
         bot (Bot): Экземпляр бота.
@@ -40,8 +34,12 @@ class GetMessages(BaseConnection):
             message_ids: Optional[List[str]] = None,
             from_time: Optional[Union[datetime, int]] = None,
             to_time: Optional[Union[datetime, int]] = None,
-            count: int = 50,
+            count: Optional[int] = None,
         ):
+        
+        if count is not None and not (1 <= count <= 100):
+            raise ValueError('count не должен быть меньше 1 или больше 100')
+        
         self.bot = bot
         self.chat_id = chat_id
         self.message_ids = message_ids

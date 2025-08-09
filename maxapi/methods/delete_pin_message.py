@@ -16,8 +16,10 @@ class DeletePinMessage(BaseConnection):
     
     """
     Класс для удаления закреплённого сообщения в чате через API.
+    
+    https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-/pin
 
-    Args:
+    Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
         chat_id (int): Идентификатор чата, из которого нужно удалить закреплённое сообщение.
     """

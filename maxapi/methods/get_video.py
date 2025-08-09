@@ -16,8 +16,10 @@ class GetVideo(BaseConnection):
     
     """
     Класс для получения информации о видео по его токену.
+    
+    https://dev.max.ru/docs-api/methods/GET/videos/-videoToken-
 
-    Args:
+    Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
         video_token (str): Токен видео для запроса.
     """

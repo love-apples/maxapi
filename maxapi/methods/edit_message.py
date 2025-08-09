@@ -26,15 +26,18 @@ class EditMessage(BaseConnection):
     
     """
     Класс для редактирования существующего сообщения через API.
+    
+    https://dev.max.ru/docs-api/methods/PUT/messages
 
-    Args:
+    Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
         message_id (str): Идентификатор сообщения для редактирования.
-        text (str, optional): Новый текст сообщения.
-        attachments (List[Attachment | InputMedia | InputMediaBuffer], optional): Список вложений для сообщения.
-        link (NewMessageLink, optional): Связь с другим сообщением (ответ или пересылка).
-        notify (bool, optional): Отправлять ли уведомление о сообщении (по умолчанию True).
-        parse_mode (ParseMode, optional): Формат разметки текста (markdown, html и т.д.).
+        text (Optional[str]): Новый текст сообщения.
+        attachments (Optional[List[Attachment | InputMedia | InputMediaBuffer]]): 
+            Список вложений для сообщения.
+        link (Optional[NewMessageLink]): Связь с другим сообщением (например, ответ или пересылка).
+        notify (Optional[bool]): Отправлять ли уведомление о сообщении. По умолчанию True.
+        parse_mode (Optional[ParseMode]): Формат разметки текста (например, Markdown, HTML).
     """
     
     def __init__(
@@ -47,6 +50,10 @@ class EditMessage(BaseConnection):
             notify: Optional[bool] = None,
             parse_mode: Optional[ParseMode] = None
         ):
+
+            if text is not None and not (len(text) < 4000):
+                raise ValueError('text должен быть меньше 4000 символов')
+        
             self.bot = bot
             self.message_id = message_id
             self.text = text

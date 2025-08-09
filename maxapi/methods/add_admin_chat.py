@@ -17,8 +17,10 @@ class AddAdminChat(BaseConnection):
     
     """
     Класс для добавления списка администраторов в чат через API.
+    
+    https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members/admins
 
-    Args:
+    Attributes:
         bot (Bot): Экземпляр бота, через который выполняется запрос.
         chat_id (int): Идентификатор чата.
         admins (List[ChatAdmin]): Список администраторов для добавления.

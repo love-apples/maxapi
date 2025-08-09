@@ -15,25 +15,26 @@ if TYPE_CHECKING:
 class GetChats(BaseConnection):
     
     """
-    Класс для получения списка чатов через API.
-
-    Args:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        count (int, optional): Максимальное количество чатов для получения. По умолчанию 50.
-        marker (int, optional): Маркер для постраничной навигации. По умолчанию None.
+    Класс для получения списка чатов.
+    
+    https://dev.max.ru/docs-api/methods/GET/chats
 
     Attributes:
-        bot (Bot): Экземпляр бота.
-        count (int): Количество чатов для запроса.
-        marker (int | None): Маркер для пагинации.
+        bot (Bot): Инициализированный клиент бота.
+        count (Optional[int]): Максимальное количество чатов, возвращаемых за один запрос.
+        marker (Optional[int]): Маркер для продолжения пагинации.
     """
     
     def __init__(
             self, 
             bot: 'Bot',
-            count: int = 50,
+            count: Optional[int] = None,
             marker: Optional[int] = None
         ):
+        
+        if count is not None and not (1 <= count <= 100):
+            raise ValueError('count не должен быть меньше 1 или больше 100')
+        
         self.bot = bot
         self.count = count
         self.marker = marker
@@ -52,7 +53,8 @@ class GetChats(BaseConnection):
         
         params = self.bot.params.copy()
 
-        params['count'] = self.count
+        if self.count: 
+            params['count'] = self.count
 
         if self.marker: 
             params['marker'] = self.marker

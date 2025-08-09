@@ -18,33 +18,57 @@ if TYPE_CHECKING:
 class ChangeInfo(BaseConnection):
     
     """
-    Класс для изменения информации о боте.
+    Класс для изменения данных текущего бота.
+    
+    https://dev.max.ru/docs-api/methods/PATCH/me
 
     Args:
-        bot (Bot): Объект бота
-        name (str, optional): Новое имя бота
-        description (str, optional): Новое описание
-        commands (List[BotCommand], optional): Список команд
-        photo (PhotoAttachmentRequestPayload, optional): Данные фото
+        first_name (str, optional): Имя бота (1–64 символа).
+        last_name (str, optional): Второе имя бота (1–64 символа).
+        description (str, optional): Описание бота (1–16000 символов).
+        commands (list[BotCommand], optional): Список команд (до 32 элементов).
+        photo (PhotoAttachmentRequestPayload, optional): Фото бота.
+
+    Returns:
+        User:  Объект с обновленными данными бота
     """
     
     def __init__(
             self,
             bot: 'Bot',
-            name: Optional[str] = None, 
+            first_name: Optional[str] = None, 
+            last_name: Optional[str] = None, 
             description: Optional[str] = None,
             commands: Optional[List[BotCommand]] = None,
             photo: Optional[PhotoAttachmentRequestPayload] = None
         ):
+        
+            if not any([first_name, last_name, description, commands, photo]):
+                raise ValueError('Нужно указать хотя бы один параметр для изменения')
+
+            if first_name is not None and not (1 <= len(first_name) <= 64):
+                raise ValueError('first_name должен быть от 1 до 64 символов')
+
+            if last_name is not None and not (1 <= len(last_name) <= 64):
+                raise ValueError('last_name должен быть от 1 до 64 символов')
+
+            if description is not None and not (1 <= len(description) <= 16000):
+                raise ValueError('description должен быть от 1 до 16000 символов')
+
+            if commands is not None and len(commands) > 32:
+                raise ValueError('commands не может содержать больше 32 элементов')
+            
             self.bot = bot
-            self.name = name
+            self.first_name = first_name
+            self.last_name = last_name
             self.description = description
             self.commands = commands
             self.photo = photo
 
     async def fetch(self) -> User:
         
-        """Отправляет запрос на изменение информации о боте.
+        """
+        Отправляет запрос на изменение информации о боте.
 
         Returns:
             User: Объект с обновленными данными бота
@@ -55,8 +79,10 @@ class ChangeInfo(BaseConnection):
         
         json: Dict[str, Any] = {}
 
-        if self.name: 
-            json['name'] = self.name
+        if self.first_name: 
+            json['first_name'] = self.first_name
+        if self.last_name: 
+            json['last_name'] = self.last_name
         if self.description: 
             json['description'] = self.description
         if self.commands: 

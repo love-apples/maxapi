@@ -16,10 +16,8 @@ class GetListAdminChat(BaseConnection):
     
     """
     Класс для получения списка администраторов чата через API.
-
-    Args:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        chat_id (int): Идентификатор чата.
+    
+    https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members/admins
 
     Attributes:
         bot (Bot): Экземпляр бота.

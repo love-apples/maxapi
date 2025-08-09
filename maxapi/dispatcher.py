@@ -130,15 +130,15 @@ class Dispatcher:
         
     def build_middleware_chain(
         self,
-        middlewares: list[BaseMiddleware],
-        handler: Callable[[Any, dict[str, Any]], Awaitable[Any]]
-    ) -> Callable[[Any, dict[str, Any]], Awaitable[Any]]:
+        middlewares: List[BaseMiddleware],
+        handler: Callable[[Any, Dict[str, Any]], Awaitable[Any]]
+    ) -> Callable[[Any, Dict[str, Any]], Awaitable[Any]]:
         
         """
         Формирует цепочку вызова middleware вокруг хендлера.
 
         Args:
-            middlewares (list[BaseMiddleware]): Список middleware.
+            middlewares (List[BaseMiddleware]): Список middleware.
             handler (Callable): Финальный обработчик.
 
         Returns:
@@ -249,7 +249,7 @@ class Dispatcher:
     
     async def call_handler(
         self, 
-        handler: Callable[[Any, dict[str, Any]], Awaitable[Any]], 
+        handler: Handler, 
         event_object: UpdateType, 
         data: Dict[str, Any]
     ):
@@ -412,13 +412,14 @@ class Dispatcher:
                         is_handled = True
                         break
 
-            global_chain: functools.partial = self.build_middleware_chain(self.middlewares, _process_event)
+            global_chain = self.build_middleware_chain(self.middlewares, _process_event)
+            
             try:
                 await global_chain(event_object, kwargs)
             except Exception as e:
                 mem_data = await memory_context.get_data()
                 raise MiddlewareException(
-                    middleware_title=global_chain.func.__class__.__name__,
+                    middleware_title=global_chain.func.__class__.__name__, # type: ignore
                     router_id=router_id,
                     process_info=process_info,
                     memory_context={

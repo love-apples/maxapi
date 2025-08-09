@@ -19,8 +19,10 @@ class GetUploadURL(BaseConnection):
     
     """
     Класс для получения URL загрузки файла определённого типа.
+    
+    https://dev.max.ru/docs-api/methods/POST/uploads
 
-    Args:
+    Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
         type (UploadType): Тип загружаемого файла (например, image, video и т.д.).
     """

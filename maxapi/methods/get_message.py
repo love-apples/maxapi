@@ -1,5 +1,4 @@
-from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING
 
 from ..types.message import Message
 from ..enums.http_method import HTTPMethod
@@ -15,16 +14,18 @@ class GetMessage(BaseConnection):
     
     """
     Класс для получения сообщения.
+    
+    https://dev.max.ru/docs-api/methods/GET/messages/-messageId-
 
-    Args:
+    Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
-        message_id (str, optional): ID сообщения (mid), чтобы получить одно сообщение в чате.
+        message_id (Optional[str]): ID сообщения (mid), чтобы получить одно сообщение в чате.
     """
     
     def __init__(
             self,
             bot: 'Bot', 
-            message_id: Optional[str] = None,
+            message_id: str,
         ):
         self.bot = bot
         self.message_id = message_id

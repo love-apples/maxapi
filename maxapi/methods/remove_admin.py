@@ -16,11 +16,8 @@ class RemoveAdmin(BaseConnection):
     
     """
     Класс для отмены прав администратора в чате.
-
-    Args:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        chat_id (int): Идентификатор чата.
-        user_id (int): Идентификатор пользователя.
+    
+    https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-/members/admins/-userId-
 
     Attributes:
         bot (Bot): Экземпляр бота.

@@ -16,18 +16,14 @@ class PinMessage(BaseConnection):
     
     """
     Класс для закрепления сообщения в чате.
+    
+    https://dev.max.ru/docs-api/methods/PUT/chats/-chatId-/pin
 
-    Args:
+    Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
         chat_id (int): Идентификатор чата, в котором закрепляется сообщение.
         message_id (str): Идентификатор сообщения для закрепления.
         notify (bool, optional): Отправлять ли уведомление о закреплении (по умолчанию True).
-
-    Attributes:
-        bot (Bot): Экземпляр бота.
-        chat_id (int): Идентификатор чата.
-        message_id (str): Идентификатор закрепляемого сообщения.
-        notify (bool): Флаг отправки уведомления.
     """
     
     def __init__(

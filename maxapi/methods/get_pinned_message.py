@@ -15,8 +15,10 @@ class GetPinnedMessage(BaseConnection):
     
     """
     Класс для получения закреплённого сообщения в указанном чате.
+    
+    https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/pin
 
-    Args:
+    Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
         chat_id (int): Идентификатор чата.
     """

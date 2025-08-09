@@ -15,8 +15,10 @@ class DeleteChat(BaseConnection):
     
     """
     Класс для удаления чата через API.
+    
+    https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-
 
-    Args:
+    Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
         chat_id (int): Идентификатор чата, который необходимо удалить.
     """

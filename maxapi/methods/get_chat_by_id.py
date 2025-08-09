@@ -16,8 +16,10 @@ class GetChatById(BaseConnection):
 
     """
     Класс для получения информации о чате по его идентификатору.
+    
+    https://dev.max.ru/docs-api/methods/GET/chats/-chatId-
 
-    Args:
+    Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
         id (int): Идентификатор чата.
     """

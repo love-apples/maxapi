@@ -25,8 +25,10 @@ class EditChat(BaseConnection):
     
     """
     Класс для редактирования информации о чате через API.
+    
+    https://dev.max.ru/docs-api/methods/PATCH/chats/-chatId-
 
-    Args:
+    Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
         chat_id (int): Идентификатор чата для редактирования.
         icon (PhotoAttachmentRequestPayload, optional): Новый значок (иконка) чата.
@@ -44,6 +46,10 @@ class EditChat(BaseConnection):
             pin: Optional[str] = None,
             notify: Optional[bool] = None,
         ):
+        
+            if title is not None and not (1 <= len(title) <= 200):
+                raise ValueError('title не должен быть меньше 1 или больше 200 символов')
+            
             self.bot = bot
             self.chat_id = chat_id
             self.icon = icon

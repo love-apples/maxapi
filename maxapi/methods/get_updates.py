@@ -15,25 +15,11 @@ if TYPE_CHECKING:
 class GetUpdates(BaseConnection):
     """
     Класс для получения обновлений (updates) от API.
+    
+    https://dev.max.ru/docs-api/methods/GET/updates
 
     Запрашивает новые события для бота через long polling
     с возможностью фильтрации по типам и маркеру последнего обновления.
-
-    Args:
-        bot (Bot): Экземпляр бота, через который выполняется запрос.
-
-        limit (int, optional): Максимальное количество обновлений для получения.
-            Диапазон: 1–1000. По умолчанию — 100.
-
-        timeout (int, optional): Тайм-аут ожидания (long polling) в секундах.
-            Диапазон: 0–90. По умолчанию — 30.
-
-        marker (Optional[int], optional): Если указан, API вернёт события,
-            которые идут после этого ID. Если None — вернутся все новые события.
-
-        types (Optional[Sequence[UpdateType]], optional): Список типов событий,
-            которые требуется получить (например: ``[UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK]``).
-            Если None — вернутся все типы событий.
 
     Attributes:
         bot (Bot): Экземпляр бота.
@@ -46,11 +32,18 @@ class GetUpdates(BaseConnection):
     def __init__(
         self,
         bot: Bot,
-        limit: int = 100,
-        timeout: int = 30,
+        limit: Optional[int],
+        timeout: Optional[int],
         marker: Optional[int] = None,
         types: Optional[Sequence[UpdateType]] = None
     ):
+        
+        if limit is not None and not (1 <= limit <= 1000):
+            raise ValueError('limit не должен быть меньше 1 и больше 1000')
+        
+        if timeout is not None and not (0 <= timeout <= 90):
+            raise ValueError('timeout не должен быть меньше 0 и больше 90')
+        
         self.bot = bot
         self.limit = limit
         self.timeout = timeout
@@ -61,25 +54,16 @@ class GetUpdates(BaseConnection):
         """
         Выполняет GET-запрос к API для получения новых событий.
 
-        Формирует параметры запроса в соответствии со спецификацией:
-        - ``limit`` — максимальное количество обновлений (1–1000, по умолчанию 100);
-        - ``timeout`` — тайм-аут ожидания (0–90 секунд, по умолчанию 30);
-        - ``marker`` — ID последнего полученного события (если указан);
-        - ``types`` — список типов событий (например: ``message_created,message_callback``).
-
         Returns:
             Dict: Сырой JSON-ответ от API с новыми событиями.
-
-        Raises:
-            RuntimeError: Если бот (`self.bot`) не был инициализирован.
-            HTTPException: Если API вернул ошибку.
         """
         if self.bot is None:
             raise RuntimeError('Bot не инициализирован')
 
         params = self.bot.params.copy()
-        params['limit'] = self.limit
-
+        
+        if self.limit:
+            params['limit'] = self.limit
         if self.marker is not None:
             params['marker'] = self.marker
         if self.timeout is not None:
