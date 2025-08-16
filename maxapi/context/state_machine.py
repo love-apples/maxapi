@@ -12,7 +12,7 @@ class State:
     def __init__(self):
         self.name = None
 
-    def __set_name__(self, owner, attr_name):
+    def __set_name__(self, owner: type, attr_name: str):
         self.name = f'{owner.__name__}:{attr_name}'
 
     def __str__(self):

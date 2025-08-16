@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Dict, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence
 
 from ..enums.update import UpdateType
 from ..enums.http_method import HTTPMethod
@@ -50,7 +50,7 @@ class GetUpdates(BaseConnection):
         self.marker = marker
         self.types = types
 
-    async def fetch(self) -> Dict:
+    async def fetch(self) -> Dict[str, Any]:
         """
         Выполняет GET-запрос к API для получения новых событий.
 

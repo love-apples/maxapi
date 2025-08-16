@@ -59,8 +59,8 @@ class BaseConnection:
         path: ApiPath | str,
         model: BaseModel | Any = None,
         is_return_raw: bool = False,
-        **kwargs
-    ):
+        **kwargs: Any
+    ) -> Error | Any | BaseModel:
         
         """
         Выполняет HTTP-запрос к API.

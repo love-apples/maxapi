@@ -46,7 +46,7 @@ class MemoryContext:
         async with self._lock:
             self._context = data
 
-    async def update_data(self, **kwargs):
+    async def update_data(self, **kwargs: Any) -> None:
         
         """
         Обновляет контекст данных новыми значениями.
@@ -70,7 +70,7 @@ class MemoryContext:
         async with self._lock:
             self._state = state
 
-    async def get_state(self):
+    async def get_state(self) -> Optional[State | str]:
         
         """
         Возвращает текущее состояние.

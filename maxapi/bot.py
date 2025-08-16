@@ -133,7 +133,7 @@ class Bot(BaseConnection):
         self._me: User | None = None
 
     @property
-    def me(self):
+    def me(self) -> Optional[User]:
 
         """
         Возвращает объект пользователя (бота).
@@ -1033,7 +1033,7 @@ class Bot(BaseConnection):
             url=url,
         ).fetch()
 
-    async def delete_webhook(self):
+    async def delete_webhook(self) -> None:
 
         """
         Удаляет все подписки на Webhook.
