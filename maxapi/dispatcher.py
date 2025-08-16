@@ -58,13 +58,14 @@ class Dispatcher:
     применение middleware, фильтров и вызов соответствующих обработчиков.
     """
     
-    def __init__(self, router_id: str | None = None) -> None:
+    def __init__(self, router_id: str | None = None, use_create_task: bool = False) -> None:
         
         """
         Инициализация диспетчера.
 
         Args:
             router_id (str | None): Идентификатор роутера для логов.
+            use_create_task (bool): Флаг отвечающий за параллелизацию обработок событий.
         """
         
         self.router_id = router_id
@@ -80,6 +81,7 @@ class Dispatcher:
         self.webhook_app: Optional[FastAPI] = None
         self.on_started_func: Optional[Callable] = None
         self.polling = False
+        self.use_create_task = use_create_task
 
         self.message_created = Event(update_type=UpdateType.MESSAGE_CREATED, router=self)
         self.bot_added = Event(update_type=UpdateType.BOT_ADDED, router=self)
@@ -252,7 +254,7 @@ class Dispatcher:
         handler: Handler, 
         event_object: UpdateType, 
         data: Dict[str, Any]
-    ):
+    ) -> None:
         
         """
         Вызывает хендлер с нужными аргументами.
@@ -474,7 +476,10 @@ class Dispatcher:
                 )
                 
                 for event in processed_events:
-                    await self.handle(event)
+                    if self.use_create_task:
+                        asyncio.create_task(self.handle(event))
+                    else:
+                        await self.handle(event)
                     
             except ClientConnectorError:
                 logger_dp.error(f'Ошибка подключения, жду {CONNECTION_RETRY_DELAY} секунд')
@@ -519,7 +524,10 @@ class Dispatcher:
                 bot=bot
             )
             
-            await self.handle(event_object)
+            if self.use_create_task:
+                asyncio.create_task(self.handle(event_object))
+            else:
+                await self.handle(event_object)
             return JSONResponse(content={'ok': True}, status_code=200)
         
         
