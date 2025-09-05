@@ -41,12 +41,19 @@ async def enrich_event(event_object: Any, bot: Bot) -> Any:
     if hasattr(event_object, 'chat_id'):
         event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
 
-    if isinstance(event_object, (MessageCreated, MessageEdited, MessageCallback)):
+    if isinstance(event_object, (MessageCreated, MessageEdited)):
         
         if event_object.message.recipient.chat_id is not None:
             event_object.chat = await bot.get_chat_by_id(event_object.message.recipient.chat_id)
             
         event_object.from_user = getattr(event_object.message, 'sender', None)
+        
+    elif isinstance(event_object, MessageCallback):
+        
+        if event_object.message.recipient.chat_id is not None:
+            event_object.chat = await bot.get_chat_by_id(event_object.message.recipient.chat_id)
+            
+        event_object.from_user = getattr(event_object.callback, 'user', None)
 
     elif isinstance(event_object, MessageRemoved):
         event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
