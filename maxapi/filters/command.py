@@ -1,8 +1,7 @@
 from typing import List, Tuple
 
-from ..types.updates import UpdateUnion
 from ..filters.filter import BaseFilter
-
+from ..types.updates import UpdateUnion
 from ..types.updates.message_created import MessageCreated
 
 
@@ -15,14 +14,18 @@ class Command(BaseFilter):
         commands (str | List[str]): Ожидаемая команда или список команд без префикса.
         prefix (str, optional): Префикс команды (по умолчанию '/').
         check_case (bool, optional): Учитывать регистр при сравнении (по умолчанию False).
-
-    Attributes:
-        commands (List[str]): Список команд без префикса.
-        prefix (str): Префикс команды.
-        check_case (bool): Флаг чувствительности к регистру.
+        ignore_symbol_at_sign (bool, optional): Учитывать символ "@" при отправке команды с упоминанием бота (по умолчанию False).
+        only_with_bot_username (bool, optional): Обязательно упоминать бота при отправке команды (по умолчанию False).
     """
     
-    def __init__(self, commands: str | List[str], prefix: str = '/', check_case: bool = False):
+    def __init__(
+            self, 
+            commands: str | List[str], 
+            prefix: str = '/', 
+            check_case: bool = False, 
+            ignore_symbol_at_sign: bool = False,
+            only_with_bot_username: bool = False
+        ):
         
         """
         Инициализация фильтра команд.
@@ -35,29 +38,68 @@ class Command(BaseFilter):
             
         self.prefix = prefix
         self.check_case = check_case
+        self.ignore_symbol_at_sign = ignore_symbol_at_sign
+        self.only_with_bot_username = only_with_bot_username
         
         if not check_case:
             self.commands = [cmd.lower() for cmd in self.commands]
-        
-    def parse_command(self, text: str) -> Tuple[str, List[str]]:
+            
+    def parse_command(self, text: str, bot_username: str) -> Tuple[str, List[str]]:
         
         """
         Извлекает команду из текста.
 
         Args:
             text (str): Текст сообщения.
+            bot_username (str): Имя пользователя бота.
 
         Returns:
-            Optional[str]: Найденная команда с префиксом, либо None.
+            Tuple[str, List[str]]: Кортеж из команды без префикса и списка аргументов,
+            либо ('', []) если команда не найдена или текст не соответствует формату.
         """
 
+        if not text.strip():
+            return '', []
+
         args = text.split()
+
+        if not args:
+            return '', []
+
         first = args[0]
         
-        if not first.startswith(self.prefix):
-            return '', []
-        
-        return first[len(self.prefix):], args
+        if self.ignore_symbol_at_sign:
+            if first == bot_username:
+                first = '@' + first
+
+        if first.startswith('@'):
+            if len(args) < 2:
+                return '', []
+            
+            if not first[1:] == bot_username:
+                return '', []
+            
+            command_part = args[1]
+            
+            if not command_part.startswith(self.prefix):
+                return '', []
+            
+            command = command_part[len(self.prefix):]
+            arguments = args[2:]
+            
+        else:
+            if self.only_with_bot_username:
+                return '', []
+            
+            command_part = first
+            
+            if not command_part.startswith(self.prefix):
+                return '', []
+            
+            command = command_part[len(self.prefix):]
+            arguments = args[1:]
+
+        return command, arguments
      
     async def __call__(self, event: UpdateUnion):
          
@@ -79,7 +121,7 @@ class Command(BaseFilter):
         if not text:
             return False
         
-        parsed_command, args = self.parse_command(text)
+        parsed_command, args = self.parse_command(text, event.bot.me.username)
         if not parsed_command:
             return False
         
@@ -102,14 +144,24 @@ class CommandStart(Command):
 
     Args:
         prefix (str, optional): Префикс команды (по умолчанию '/').
-        check_case (bool, optional): Учитывать регистр (по умолчанию False).
+        check_case (bool, optional): Учитывать регистр (по умолчанию False)
+        ignore_symbol_at_sign (bool, optional): Учитывать символ "@" при отправке команды с упоминанием бота (по умолчанию False).
+        only_with_bot_username (bool, optional): Обязательно упоминать бота при отправке команды (по умолчанию False)..
     """
     
-    def __init__(self, prefix = '/', check_case = False):
+    def __init__(
+            self, 
+            prefix = '/', 
+            check_case = False, 
+            ignore_symbol_at_sign: bool = False,
+            only_with_bot_username: bool = False):
+        
         super().__init__(
             'start', 
             prefix, 
-            check_case
+            check_case,
+            ignore_symbol_at_sign,
+            only_with_bot_username
         )
         
     async def __call__(self, event):
