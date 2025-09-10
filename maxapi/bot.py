@@ -120,6 +120,7 @@ class Bot(BaseConnection):
         self.default_connection = default_connection or DefaultConnectionProperties()
         self.after_input_media_delay = after_input_media_delay or 2.0
         self.auto_check_subscriptions = auto_check_subscriptions
+        self.commands = []
 
         self.__token = token
         self.params: Dict[str, Any] = {'access_token': self.__token}
@@ -131,6 +132,18 @@ class Bot(BaseConnection):
         self.auto_requests = auto_requests
 
         self._me: User | None = None
+        
+    @property
+    def handlers_commands(self) -> List[str]:
+
+        """
+        Возвращает список команд из зарегистрированных обработчиков текущего инстанса.
+
+        Returns:
+            List[str]: Список команд
+        """
+
+        return self.commands
 
     @property
     def me(self) -> Optional[User]:

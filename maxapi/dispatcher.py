@@ -220,6 +220,15 @@ class Dispatcher:
         
         for router in self.routers:
             router.bot = bot
+            
+            for handler in router.event_handlers:
+                for base_filter in handler.base_filters:
+                    
+                    commands = getattr(base_filter, 'commands', None)
+                    
+                    if commands:
+                        if type(commands) is list:
+                            self.bot.commands += commands
         
         handlers_count = sum(len(router.event_handlers) for router in self.routers)
 
