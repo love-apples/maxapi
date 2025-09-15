@@ -444,7 +444,7 @@ class Dispatcher:
                 logger_dp.info(f'Проигнорировано: router_id: {router_id} | {process_info}')
             
         except Exception as e:
-            logger_dp.error(f'Ошибка при обработке события: router_id: {router_id} | {process_info} | {e} ')
+            logger_dp.exception(f'Ошибка при обработке события: router_id: {router_id} | {process_info} | {e} ')
 
 
     async def start_polling(self, bot: Bot):
