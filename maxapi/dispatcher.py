@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 
 import functools
+from re import DOTALL, search
 from typing import Any, Awaitable, Callable, Dict, List, TYPE_CHECKING, Literal, Optional
 from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
 
@@ -13,6 +14,7 @@ from .exceptions.dispatcher import HandlerException, MiddlewareException
 from .filters.filter import BaseFilter
 from .filters.middleware import BaseMiddleware
 from .filters.handler import Handler
+from .filters.command import CommandsInfo
 
 from .context import MemoryContext
 from .types.updates import UpdateUnion
@@ -47,6 +49,7 @@ if TYPE_CHECKING:
 
 CONNECTION_RETRY_DELAY = 30
 GET_UPDATES_RETRY_DELAY = 5
+COMMANDS_INFO_PATTERN = r'commands_info:\s*(.*?)(?=\n|$)'
 
 
 class Dispatcher:
@@ -226,9 +229,16 @@ class Dispatcher:
                     
                     commands = getattr(base_filter, 'commands', None)
                     
-                    if commands:
-                        if type(commands) is list:
-                            self.bot.commands += commands
+                    if commands and type(commands) is list:
+                        handler_doc = handler.func_event.__doc__
+                        extracted_info = None
+                        
+                        if handler_doc:
+                            from_pattern = search(COMMANDS_INFO_PATTERN, handler_doc, DOTALL)
+                            if from_pattern:
+                                extracted_info = from_pattern.group(1).strip()
+                            
+                        self.bot.commands.append(CommandsInfo(commands, extracted_info))
         
         handlers_count = sum(len(router.event_handlers) for router in self.routers)
 

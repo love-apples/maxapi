@@ -1,8 +1,24 @@
-from typing import List, Tuple
+from dataclasses import dataclass
+from typing import List, Optional, Tuple
 
 from ..filters.filter import BaseFilter
 from ..types.updates import UpdateUnion
 from ..types.updates.message_created import MessageCreated
+
+
+@dataclass
+class CommandsInfo:
+    
+    """
+    Датакласс информации о командах
+    
+    Attributes:
+        commands (List[str]): Список команд
+        info (Optional[str]): Информация о их предназначениях
+    """
+    
+    commands: List[str]
+    info: Optional[str] = None
 
 
 class Command(BaseFilter):
