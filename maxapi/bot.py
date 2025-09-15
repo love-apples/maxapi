@@ -77,6 +77,8 @@ if TYPE_CHECKING:
     from .methods.types.sended_action import SendedAction
     from .methods.types.sended_callback import SendedCallback
     from .methods.types.sended_message import SendedMessage
+    
+    from .filters.command import CommandsInfo
 
 
 class Bot(BaseConnection):
@@ -120,7 +122,7 @@ class Bot(BaseConnection):
         self.default_connection = default_connection or DefaultConnectionProperties()
         self.after_input_media_delay = after_input_media_delay or 2.0
         self.auto_check_subscriptions = auto_check_subscriptions
-        self.commands = []
+        self.commands: List[CommandsInfo] = []
 
         self.__token = token
         self.params: Dict[str, Any] = {'access_token': self.__token}
@@ -134,13 +136,13 @@ class Bot(BaseConnection):
         self._me: User | None = None
         
     @property
-    def handlers_commands(self) -> List[str]:
+    def handlers_commands(self) -> List[CommandsInfo]:
 
         """
         Возвращает список команд из зарегистрированных обработчиков текущего инстанса.
 
         Returns:
-            List[str]: Список команд
+            List[CommandsInfo]: Список команд
         """
 
         return self.commands
