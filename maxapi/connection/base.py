@@ -52,7 +52,19 @@ class BaseConnection:
         self.bot: Optional[Bot] = None
         self.session: Optional[ClientSession] = None
         self.after_input_media_delay: float = self.AFTER_MEDIA_INPUT_DELAY
+        self.api_url = self.API_URL
+    
+    def set_api_url(self, url: str) -> None:
+        
+        """
+        Установка API URL для запросов
+        
+        Args:
+            url (str): Новый API URl
+        """
 
+        self.api_url = url
+        
     async def request(
         self,
         method: HTTPMethod,
@@ -86,8 +98,9 @@ class BaseConnection:
 
         if not self.bot.session:
             self.bot.session = ClientSession(
-                base_url=self.bot.API_URL,
+                base_url=self.bot.api_url,
                 timeout=self.bot.default_connection.timeout,
+                headers=self.bot.headers,
                 **self.bot.default_connection.kwargs
             )
 
