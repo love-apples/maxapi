@@ -439,8 +439,15 @@ class Dispatcher:
                 await global_chain(event_object, kwargs)
             except Exception as e:
                 mem_data = await memory_context.get_data()
+                
+                func_object = getattr(global_chain, 'func', None)
+                if func_object is None:
+                    middleware_title = global_chain.__class__.__name__
+                else:
+                    middleware_title = global_chain.func.__class__.__name__
+                    
                 raise MiddlewareException(
-                    middleware_title=global_chain.func.__class__.__name__, # type: ignore
+                    middleware_title=middleware_title,
                     router_id=router_id,
                     process_info=process_info,
                     memory_context={
