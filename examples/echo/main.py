@@ -1,8 +1,7 @@
 import asyncio
 import logging
 
-from maxapi import Bot, Dispatcher
-from maxapi.filters import F
+from maxapi import Bot, Dispatcher, F
 from maxapi.types import MessageCreated
 
 logging.basicConfig(level=logging.INFO)
