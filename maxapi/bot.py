@@ -125,7 +125,8 @@ class Bot(BaseConnection):
         self.commands: List[CommandsInfo] = []
 
         self.__token = token
-        self.params: Dict[str, Any] = {'access_token': self.__token}
+        self.params: Dict[str, Any] = {}
+        self.headers: Dict[str, Any] = {'Authorization': self.__token}
         self.marker_updates = None
 
         self.parse_mode = parse_mode
