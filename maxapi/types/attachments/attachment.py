@@ -66,7 +66,7 @@ class ContactAttachmentPayload(BaseModel):
         max_info (Optional[User]): Дополнительная информация о пользователе.
     """
     
-    vcf_info: Optional[str] = None
+    vcf_info: str = None # для корректного определения
     max_info: Optional[User] = None
 
 
@@ -103,8 +103,8 @@ class Attachment(BaseModel):
         AttachmentUpload,
         PhotoAttachmentPayload, 
         OtherAttachmentPayload, 
-        ContactAttachmentPayload, 
         ButtonsPayload,
+        ContactAttachmentPayload,
         StickerAttachmentPayload
     ]] = None
     bot: Optional[Any] = Field(default=None, exclude=True)
