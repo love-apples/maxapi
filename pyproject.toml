@@ -4,9 +4,7 @@ version = "0.9.6"
 description = "Библиотека для разработки чат-ботов с помощью API мессенджера MAX"
 readme = "README.md"
 requires-python = ">=3.10"
-authors = [
-    {name = "Denis", email = "bestloveapples@gmail.com"},
-]
+authors = [{ name = "Denis", email = "bestloveapples@gmail.com" }]
 keywords = ["max", "api", "bot"]
 classifiers = [
     "Programming Language :: Python :: 3.10",
@@ -17,7 +15,7 @@ dependencies = [
     "magic_filter>=1.0.0",
     "pydantic>=1.8.0",
     "aiofiles==24.1.0",
-    "puremagic==1.30"
+    "puremagic==1.30",
 ]
 
 [project.optional-dependencies]
@@ -35,3 +33,20 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["maxapi*", "wiki*", "examples*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "ruff>=0.12",
+    "black>=24.1",
+    "isort>=5.12",
+    "mypy>=1.2",
+    "pre-commit>=3.0",
+    "coverage>=6.5",
+]
+
+[tool.uv]
+# Enable uv project management and include `dev` group by default when running/syncing
+default-groups = ["dev"]
+managed = true
