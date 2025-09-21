@@ -18,9 +18,6 @@ dependencies = [
     "puremagic==1.30",
 ]
 
-[project.optional-dependencies]
-webhook = ["fastapi>=0.68.0", "uvicorn>=0.15.0"]
-
 [project.urls]
 Homepage = "https://github.com/love-apples/maxapi"
 
@@ -33,6 +30,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["maxapi*", "wiki*", "examples*"]
+
+[project.optional-dependencies]
+webhook = ["fastapi>=0.68.0", "uvicorn>=0.15.0"]
 
 [dependency-groups]
 dev = [
