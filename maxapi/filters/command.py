@@ -137,7 +137,14 @@ class Command(BaseFilter):
         if not text:
             return False
         
-        parsed_command, args = self.parse_command(text, event.bot.me.username)
+        # временно
+        bot_me = event.bot.me
+        if bot_me:
+            bot_username = bot_me.username
+        else:
+            bot_username = ''
+        
+        parsed_command, args = self.parse_command(text, bot_username)
         if not parsed_command:
             return False
         
