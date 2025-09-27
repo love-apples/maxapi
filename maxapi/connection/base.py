@@ -33,7 +33,7 @@ class BaseConnection:
     Содержит общую логику выполнения запроса (сериализация, отправка HTTP-запроса, обработка ответа).
     """
 
-    API_URL = 'https://botapi.max.ru'
+    API_URL = 'https://platform-api.max.ru'
     RETRY_DELAY = 2
     ATTEMPTS_COUNT = 5
     AFTER_MEDIA_INPUT_DELAY = 2.0
