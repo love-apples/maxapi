@@ -9,6 +9,9 @@ from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
 
 from aiohttp import ClientConnectorError
 
+from maxapi.exceptions.invalid_token import InvalidToken
+from maxapi.exceptions.max import MaxConnection
+
 from .exceptions.dispatcher import HandlerException, MiddlewareException
 
 from .filters.filter import BaseFilter
@@ -440,11 +443,10 @@ class Dispatcher:
             except Exception as e:
                 mem_data = await memory_context.get_data()
                 
-                func_object = getattr(global_chain, 'func', None)
-                if func_object is None:
-                    middleware_title = global_chain.__class__.__name__
+                if hasattr(global_chain, 'func'):
+                    middleware_title = global_chain.func.__class__.__name__  # type: ignore[attr-defined]
                 else:
-                    middleware_title = global_chain.func.__class__.__name__
+                    middleware_title = getattr(global_chain, '__name__', global_chain.__class__.__name__)
                     
                 raise MiddlewareException(
                     middleware_title=middleware_title,
@@ -485,6 +487,18 @@ class Dispatcher:
             try:
                 events: Dict = await self.bot.get_updates(marker=self.bot.marker_updates)
             except AsyncioTimeoutError:
+                continue
+            except (MaxConnection, ClientConnectorError) as e:
+                logger_dp.warning(f'Ошибка подключения при получении обновлений: {e}, жду {CONNECTION_RETRY_DELAY} секунд')
+                await asyncio.sleep(CONNECTION_RETRY_DELAY)
+                continue
+            except InvalidToken:
+                logger_dp.error('Неверный токен! Останавливаю polling')
+                self.polling = False
+                raise
+            except Exception as e:
+                logger_dp.error(f'Неожиданная ошибка при получении обновлений: {e.__class__.__name__}: {e}')
+                await asyncio.sleep(GET_UPDATES_RETRY_DELAY)
                 continue
         
             try:
