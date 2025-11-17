@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/love-apples/maxapi"><img src="https://s.iimg.su/s/29/DCvw4dx2HZgFdTcpqGAs6xdnJnvD44r9zLga2GGe.png" alt="MaxAPI"></a>
+  <a href="https://github.com/love-apples/maxapi"><img src="wiki/data/logo.png" alt="MaxAPI"></a>
 </p>
 
 
@@ -57,7 +57,10 @@ from maxapi.types import BotStarted, Command, MessageCreated
 
 logging.basicConfig(level=logging.INFO)
 
-bot = Bot('тут_ваш_токен')
+# Внесите токен бота в переменную окружения MAX_BOT_TOKEN
+# Не забудьте загрузить переменные из .env в os.environ
+# или задайте его аргументом в Bot(token='...')
+bot = Bot()
 dp = Dispatcher()
 
 # Ответ бота при нажатии на кнопку "Начать"
@@ -99,7 +102,7 @@ from maxapi.types import BotStarted, Command, MessageCreated
 
 logging.basicConfig(level=logging.INFO)
 
-bot = Bot('тут_ваш_токен')
+bot = Bot()
 dp = Dispatcher()
 
 
