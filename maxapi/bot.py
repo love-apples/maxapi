@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
+import os
 from typing import Any, Dict, List, Optional, Sequence, Union, TYPE_CHECKING
+
+from .exceptions.invalid_token import InvalidToken
 
 from .client.default import DefaultConnectionProperties
 from .types.errors import Error
@@ -92,7 +95,7 @@ class Bot(BaseConnection):
 
     def __init__(
         self, 
-        token: str,
+        token: Optional[str] = None,
         parse_mode: Optional[ParseMode] = None,
         notify: Optional[bool] = None,
         disable_link_preview: Optional[bool] = None,
@@ -106,7 +109,7 @@ class Bot(BaseConnection):
         Инициализирует экземпляр бота.
 
         Args:
-            token (str): Токен доступа к API бота.
+            token (str): Токен доступа к API бота. При None идет получение из под окружения MAX_BOT_TOKEN.
             parse_mode (Optional[ParseMode]): Форматирование по умолчанию.
             notify (Optional[bool]): Отключение уведомлений при отправке сообщений.
             disable_link_preview (Optional[bool]): Если false, сервер не будет генерировать превью для ссылок в тексте сообщений.
@@ -124,7 +127,10 @@ class Bot(BaseConnection):
         self.auto_check_subscriptions = auto_check_subscriptions
         self.commands: List[CommandsInfo] = []
 
-        self.__token = token
+        self.__token = token or os.environ.get('MAX_BOT_TOKEN')
+        if self.__token is None:
+            raise InvalidToken('Токен не может быть None. Укажите токен в Bot(token="...") или в переменную окружения MAX_BOT_TOKEN')
+        
         self.params: Dict[str, Any] = {}
         self.headers: Dict[str, Any] = {'Authorization': self.__token}
         self.marker_updates = None
@@ -369,7 +375,7 @@ class Bot(BaseConnection):
         message_ids: Optional[List[str]] = None,
         from_time: Optional[Union[datetime, int]] = None,
         to_time: Optional[Union[datetime, int]] = None,
-        count: Optional[int] = None,
+        count: int = 50,
     ) -> Messages:
 
         """
