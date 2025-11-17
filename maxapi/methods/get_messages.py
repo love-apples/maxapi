@@ -34,7 +34,7 @@ class GetMessages(BaseConnection):
             message_ids: Optional[List[str]] = None,
             from_time: Optional[Union[datetime, int]] = None,
             to_time: Optional[Union[datetime, int]] = None,
-            count: Optional[int] = None,
+            count: int = 50,
         ):
         
         if count is not None and not (1 <= count <= 100):
@@ -71,15 +71,15 @@ class GetMessages(BaseConnection):
 
         if self.from_time:
             if isinstance(self.from_time, datetime):
-                params['from_time'] = int(self.from_time.timestamp())
+                params['from'] = int(self.from_time.timestamp() * 1000)
             else:
-                params['from_time'] = self.from_time
+                params['from'] = self.from_time
 
         if self.to_time:
             if isinstance(self.to_time, datetime):
-                params['to_time'] = int(self.to_time.timestamp())
+                params['to'] = int(self.to_time.timestamp() * 1000)
             else:
-                params['to_time'] = self.to_time
+                params['to'] = self.to_time
         
         params['count'] = self.count
 
