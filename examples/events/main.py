@@ -25,7 +25,10 @@ from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
 logging.basicConfig(level=logging.INFO)
 
-bot = Bot('тут_ваш_токен')
+# Внесите токен бота в переменную окружения MAX_BOT_TOKEN
+# Не забудьте загрузить переменные из .env в os.environ
+# или задайте его аргументом в Bot(token='...')
+bot = Bot()
 dp = Dispatcher()
 
 
@@ -66,7 +69,7 @@ async def bot_added(event: BotAdded):
         return
     
     await bot.send_message(
-        chat_id=event.chat.id,
+        chat_id=event.chat_id,
         text=f'Привет чат {event.chat.title}!'
     )
     

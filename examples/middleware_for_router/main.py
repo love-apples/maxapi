@@ -9,7 +9,10 @@ from maxapi.filters.middleware import BaseMiddleware
 
 logging.basicConfig(level=logging.INFO)
 
-bot = Bot(token='тут_ваш_токен')
+# Внесите токен бота в переменную окружения MAX_BOT_TOKEN
+# Не забудьте загрузить переменные из .env в os.environ
+# или задайте его аргументом в Bot(token='...')
+bot = Bot()
 dp = Dispatcher()
 
 
