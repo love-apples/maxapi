@@ -116,13 +116,13 @@ class LinkedMessage(BaseModel):
 
     Attributes:
         type (MessageLinkType): Тип связи.
-        sender (User): Отправитель связанного сообщения.
+        sender (Optional[User]): Отправитель связанного сообщения, может быть None, если связанное сообщение отправлено каналом https://github.com/love-apples/maxapi/issues/11.
         chat_id (Optional[int]): Идентификатор чата. Может быть None.
         message (MessageBody): Тело связанного сообщения.
     """
     
     type: MessageLinkType
-    sender: User
+    sender: Optional[User] = None
     chat_id: Optional[int] = None
     message: MessageBody
 
