@@ -9,8 +9,8 @@ from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
 
 from aiohttp import ClientConnectorError
 
-from maxapi.exceptions.invalid_token import InvalidToken
-from maxapi.exceptions.max import MaxConnection
+from .exceptions.invalid_token import InvalidToken
+from .exceptions.max import MaxConnection
 
 from .exceptions.dispatcher import HandlerException, MiddlewareException
 
