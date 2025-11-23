@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
+from datetime import datetime
 import functools
 from re import DOTALL, search
 from typing import Any, Awaitable, Callable, Dict, List, TYPE_CHECKING, Literal, Optional
@@ -9,8 +10,10 @@ from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
 
 from aiohttp import ClientConnectorError
 
-from .exceptions.invalid_token import InvalidToken
-from .exceptions.max import MaxConnection
+from .types.bot_mixin import BotMixin
+
+
+from .exceptions.max import MaxApiError, MaxConnection, InvalidToken
 
 from .exceptions.dispatcher import HandlerException, MiddlewareException
 
@@ -21,7 +24,6 @@ from .filters.command import CommandsInfo
 
 from .context import MemoryContext
 from .types.updates import UpdateUnion
-from .types.errors import Error
 
 from .methods.types.getted_updates import process_update_request, process_update_webhook
 
@@ -53,9 +55,11 @@ if TYPE_CHECKING:
 CONNECTION_RETRY_DELAY = 30
 GET_UPDATES_RETRY_DELAY = 5
 COMMANDS_INFO_PATTERN = r'commands_info:\s*(.*?)(?=\n|$)'
+DEFAULT_HOST = 'localhost'
+DEFAULT_PORT = 8080
 
 
-class Dispatcher:
+class Dispatcher(BotMixin):
     
     """
     Основной класс для обработки событий бота.
@@ -71,7 +75,7 @@ class Dispatcher:
 
         Args:
             router_id (str | None): Идентификатор роутера для логов.
-            use_create_task (bool): Флаг отвечающий за параллелизацию обработок событий.
+            use_create_task (bool): Флаг, отвечающий за параллелизацию обработок событий.
         """
         
         self.router_id = router_id
@@ -130,9 +134,9 @@ class Dispatcher:
         Проверяет и логирует информацию о боте.
         """
         
-        me = await self.bot.get_me()
+        me = await self._ensure_bot().get_me()
         
-        self.bot._me = me
+        self._ensure_bot()._me = me
         
         logger_dp.info(f'Бот: @{me.username} first_name={me.first_name} id={me.user_id}')
         
@@ -228,6 +232,10 @@ class Dispatcher:
             router.bot = bot
             
             for handler in router.event_handlers:
+                
+                if handler.base_filters is None:
+                    continue
+                
                 for base_filter in handler.base_filters:
                     
                     commands = getattr(base_filter, 'commands', None)
@@ -250,14 +258,14 @@ class Dispatcher:
         if self.on_started_func:
             await self.on_started_func()
             
-    def __get_memory_context(self, chat_id: int, user_id: int):
+    def __get_memory_context(self, chat_id: Optional[int], user_id: Optional[int]):
         
         """
         Возвращает существующий или создаёт новый MemoryContext по chat_id и user_id.
 
         Args:
-            chat_id (int): Идентификатор чата.
-            user_id (int): Идентификатор пользователя.
+            chat_id (Optional[int]): Идентификатор чата.
+            user_id (Optional[int]): Идентификатор пользователя.
 
         Returns:
             MemoryContext: Контекст.
@@ -403,6 +411,8 @@ class Dispatcher:
                                 
                             elif not result_filter:
                                 continue
+                            
+                        local_middlewares = handler.middlewares
                         
                         if isinstance(router, Router):
                             local_middlewares = router.middlewares + handler.middlewares
@@ -466,26 +476,26 @@ class Dispatcher:
             logger_dp.exception(f'Ошибка при обработке события: router_id: {router_id} | {process_info} | {e} ')
 
 
-    async def start_polling(self, bot: Bot):
+    async def start_polling(self, bot: Bot, skip_updates: bool = False):
         
         """
         Запускает цикл получения обновлений (long polling).
 
         Args:
             bot (Bot): Экземпляр бота.
+            skip_updates (bool): Флаг, отвечающий за обработку старых событий. 
         """
         
         self.polling = True
         
         await self.__ready(bot)
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        current_timestamp = int(datetime.now().timestamp() * 1000)
 
         while self.polling:
                 
             try:
-                events: Dict = await self.bot.get_updates(marker=self.bot.marker_updates)
+                events: Dict = await self._ensure_bot().get_updates(marker=self._ensure_bot().marker_updates)
             except AsyncioTimeoutError:
                 continue
             except (MaxConnection, ClientConnectorError) as e:
@@ -496,28 +506,33 @@ class Dispatcher:
                 logger_dp.error('Неверный токен! Останавливаю polling')
                 self.polling = False
                 raise
+            except MaxApiError as e:
+                logger_dp.info(f'Ошибка при получении обновлений: {e}, жду {GET_UPDATES_RETRY_DELAY} секунд')
+                await asyncio.sleep(GET_UPDATES_RETRY_DELAY)
+                continue
             except Exception as e:
                 logger_dp.error(f'Неожиданная ошибка при получении обновлений: {e.__class__.__name__}: {e}')
                 await asyncio.sleep(GET_UPDATES_RETRY_DELAY)
                 continue
         
             try:
-
-                if isinstance(events, Error):
-                    logger_dp.info(f'Ошибка при получении обновлений: {events}, жду {GET_UPDATES_RETRY_DELAY} секунд')
-                    await asyncio.sleep(GET_UPDATES_RETRY_DELAY)
-                    continue
-
-                self.bot.marker_updates = events.get('marker')
+                self._ensure_bot().marker_updates = events.get('marker')
  
                 processed_events = await process_update_request(
                     events=events,
-                    bot=self.bot
+                    bot=self._ensure_bot()
                 )
                 
                 for event in processed_events:
+                    
+                    if skip_updates:
+                        if event.timestamp < current_timestamp:
+                            logger_dp.info(f'Пропуск события от {datetime.fromtimestamp(event.timestamp / 1000)}: {event.update_type}')
+                            continue
+                    
                     if self.use_create_task:
                         asyncio.create_task(self.handle(event))
+                        
                     else:
                         await self.handle(event)
                     
@@ -527,7 +542,7 @@ class Dispatcher:
             except Exception as e:
                 logger_dp.error(f'Общая ошибка при обработке событий: {e.__class__} - {e}')
 
-    async def handle_webhook(self, bot: Bot, host: str = 'localhost', port: int = 8080, **kwargs):
+    async def handle_webhook(self, bot: Bot, host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, **kwargs):
         
         """
         Запускает FastAPI-приложение для приёма обновлений через вебхук.
@@ -568,7 +583,8 @@ class Dispatcher:
                 asyncio.create_task(self.handle(event_object))
             else:
                 await self.handle(event_object)
-            return JSONResponse(content={'ok': True}, status_code=200)
+                
+            return JSONResponse(content={'ok': True}, status_code=200)  # pyright: ignore[reportPossiblyUnboundVariable]
         
         
         await self.init_serve(
@@ -578,7 +594,7 @@ class Dispatcher:
             **kwargs
         )
         
-    async def init_serve(self, bot: Bot, host: str = 'localhost', port: int = 8080, **kwargs):
+    async def init_serve(self, bot: Bot, host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, **kwargs):
     
         """
         Запускает сервер для обработки вебхуков.
@@ -601,8 +617,8 @@ class Dispatcher:
         if self.webhook_app is None:
             raise RuntimeError('webhook_app не инициализирован')
             
-        config = Config(app=self.webhook_app, host=host, port=port, **kwargs)
-        server = Server(config)
+        config = Config(app=self.webhook_app, host=host, port=port, **kwargs)  # pyright: ignore[reportPossiblyUnboundVariable]
+        server = Server(config)  # pyright: ignore[reportPossiblyUnboundVariable]
         
         await self.__ready(bot)
 
