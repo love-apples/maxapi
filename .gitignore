@@ -2,8 +2,7 @@
 mkdocs*
 docs
 scripts
-test
-test.py
+test*
 __pycache__/
 *.py[cod]
 *$py.class
