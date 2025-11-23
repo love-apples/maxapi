@@ -11,11 +11,11 @@ class MemoryContext:
     Контекст хранения данных пользователя с блокировками.
 
     Args:
-        chat_id (int): Идентификатор чата
-        user_id (int): Идентификатор пользователя
+        chat_id (Optional[int]): Идентификатор чата
+        user_id (Optional[int]): Идентификатор пользователя
     """
     
-    def __init__(self, chat_id: int, user_id: int):
+    def __init__(self, chat_id: Optional[int], user_id: Optional[int]):
         self.chat_id = chat_id
         self.user_id = user_id
         self._context: Dict[str, Any] = {}
