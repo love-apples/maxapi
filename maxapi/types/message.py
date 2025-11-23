@@ -3,6 +3,8 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 from typing import Any, Optional, List, Union, TYPE_CHECKING
 
+from ..types.bot_mixin import BotMixin
+
 from ..types.attachments import Attachments
 
 from ..enums.text_style import TextStyle
@@ -127,7 +129,7 @@ class LinkedMessage(BaseModel):
     message: MessageBody
 
 
-class Message(BaseModel):
+class Message(BaseModel, BotMixin):
     
     """
     Модель сообщения.
@@ -150,7 +152,7 @@ class Message(BaseModel):
     body: MessageBody
     stat: Optional[MessageStat] = None
     url: Optional[str] = None
-    bot: Optional[Any] = Field(default=None, exclude=True)
+    bot: Optional[Any] = Field(default=None, exclude=True) # pyright: ignore[reportRedeclaration]
     
     if TYPE_CHECKING:
         bot: Optional[Bot] # type: ignore
@@ -178,10 +180,7 @@ class Message(BaseModel):
             Any: Результат выполнения метода send_message бота.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
-        
-        return await self.bot.send_message(
+        return await self._ensure_bot().send_message(
             chat_id=self.recipient.chat_id,
             user_id=self.recipient.user_id,
             text=text,
@@ -212,10 +211,7 @@ class Message(BaseModel):
             Any: Результат выполнения метода send_message бота.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
-        
-        return await self.bot.send_message(
+        return await self._ensure_bot().send_message(
             chat_id=self.recipient.chat_id,
             user_id=self.recipient.user_id,
             text=text,
@@ -251,10 +247,7 @@ class Message(BaseModel):
             Any: Результат выполнения метода send_message бота.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
-        
-        return await self.bot.send_message(
+        return await self._ensure_bot().send_message(
             chat_id=chat_id,
             user_id=user_id,
             attachments=attachments,
@@ -269,7 +262,7 @@ class Message(BaseModel):
     async def edit(
             self,
             text: Optional[str] = None,
-            attachments: Optional[List[Attachment | InputMedia | InputMediaBuffer]] = None,
+            attachments: Optional[List[Attachment | InputMedia | InputMediaBuffer] | List[Attachments]] = None,
             link: Optional[NewMessageLink] = None,
             notify: bool = True,
             parse_mode: Optional[ParseMode] = None
@@ -289,10 +282,13 @@ class Message(BaseModel):
             Any: Результат выполнения метода edit_message бота.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
-        
-        return await self.bot.edit_message(
+        if link is None and self.link:
+            link = NewMessageLink(type=self.link.type, mid=self.link.message.mid)
+            
+        if attachments is None and self.body.attachments:
+            attachments = self.body.attachments
+            
+        return await self._ensure_bot().edit_message(
             message_id=self.body.mid,
             text=text,
             attachments=attachments,
@@ -310,7 +306,7 @@ class Message(BaseModel):
             Any: Результат выполнения метода delete_message бота.
         """
         
-        return await self.bot.delete_message(
+        return await self._ensure_bot().delete_message(
             message_id=self.body.mid,
         )
     
@@ -326,10 +322,10 @@ class Message(BaseModel):
             Any: Результат выполнения метода pin_message бота.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        if self.recipient.chat_id is None:
+            raise ValueError('chat_id не может быть None')
         
-        return await self.bot.pin_message(
+        return await self._ensure_bot().pin_message(
             chat_id=self.recipient.chat_id,
             message_id=self.body.mid,
             notify=notify
@@ -347,7 +343,7 @@ class Messages(BaseModel):
     """
     
     messages: List[Message]
-    bot: Optional[Any] = Field(default=None, exclude=True)
+    bot: Optional[Any] = Field(default=None, exclude=True)  # pyright: ignore[reportRedeclaration]
     
     if TYPE_CHECKING:
         bot: Optional[Bot] # type: ignore

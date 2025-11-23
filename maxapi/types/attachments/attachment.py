@@ -66,7 +66,7 @@ class ContactAttachmentPayload(BaseModel):
         max_info (Optional[User]): Дополнительная информация о пользователе.
     """
     
-    vcf_info: str = None # для корректного определения
+    vcf_info: str = '' # для корректного определения
     max_info: Optional[User] = None
 
 
@@ -107,7 +107,7 @@ class Attachment(BaseModel):
         ContactAttachmentPayload,
         StickerAttachmentPayload
     ]] = None
-    bot: Optional[Any] = Field(default=None, exclude=True)
+    bot: Optional[Any] = Field(default=None, exclude=True) # pyright: ignore[reportRedeclaration]
     
     if TYPE_CHECKING:
         bot: Optional[Bot] # type: ignore

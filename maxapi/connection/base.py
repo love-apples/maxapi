@@ -11,10 +11,10 @@ import puremagic
 from pydantic import BaseModel
 from aiohttp import ClientSession, ClientConnectionError, FormData
 
-from ..exceptions.invalid_token import InvalidToken
-from ..exceptions.max import MaxConnection
+from ..types.bot_mixin import BotMixin
 
-from ..types.errors import Error
+from ..exceptions.max import MaxApiError, MaxConnection, InvalidToken
+
 from ..enums.http_method import HTTPMethod
 from ..enums.api_path import ApiPath
 from ..enums.upload_type import UploadType
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from ..bot import Bot
 
 
-class BaseConnection:
+class BaseConnection(BotMixin):
     
     """
     Базовый класс для всех методов API.
@@ -72,7 +72,7 @@ class BaseConnection:
         model: BaseModel | Any = None,
         is_return_raw: bool = False,
         **kwargs: Any
-    ) -> Error | Any | BaseModel:
+    ) -> Any | BaseModel:
         
         """
         Выполняет HTTP-запрос к API.
@@ -93,19 +93,18 @@ class BaseConnection:
             InvalidToken: Ошибка авторизации (401).
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
 
-        if not self.bot.session:
-            self.bot.session = ClientSession(
-                base_url=self.bot.api_url,
-                timeout=self.bot.default_connection.timeout,
-                headers=self.bot.headers,
-                **self.bot.default_connection.kwargs
+        if not bot.session:
+            bot.session = ClientSession(
+                base_url=bot.api_url,
+                timeout=bot.default_connection.timeout,
+                headers=bot.headers,
+                **bot.default_connection.kwargs
             )
 
         try:
-            r = await self.bot.session.request(
+            r = await bot.session.request(
                 method=method.value,
                 url=path.value if isinstance(path, ApiPath) else path,
                 **kwargs
@@ -114,14 +113,12 @@ class BaseConnection:
             raise MaxConnection(f'Ошибка при отправке запроса: {e}')
 
         if r.status == 401:
-            await self.bot.session.close()
+            await bot.session.close()
             raise InvalidToken('Неверный токен!')
 
         if not r.ok:
             raw = await r.json()
-            error = Error(code=r.status, raw=raw)
-            logger_bot.error(error)
-            return error
+            raise MaxApiError(code=r.status, raw=raw)
 
         raw = await r.json()
 
@@ -133,10 +130,10 @@ class BaseConnection:
         if hasattr(model, 'message'):
             attr = getattr(model, 'message')
             if hasattr(attr, 'bot'):
-                attr.bot = self.bot
+                attr.bot = bot
 
         if hasattr(model, 'bot'):
-            model.bot = self.bot
+            model.bot = bot
 
         return model
 

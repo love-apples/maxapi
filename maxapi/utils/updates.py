@@ -65,7 +65,7 @@ async def enrich_event(event_object: Any, bot: Bot) -> Any:
             )
             
         elif event_object.chat.type == ChatType.DIALOG:
-            event_object.from_user = event_object.chat
+            event_object.from_user = event_object.chat  # pyright: ignore[reportAttributeAccessIssue]
 
     elif isinstance(event_object, UserRemoved):
         event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
@@ -83,9 +83,11 @@ async def enrich_event(event_object: Any, bot: Bot) -> Any:
         event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
         event_object.from_user = event_object.user
 
-    if hasattr(event_object, 'message'):
-        event_object.message.bot = bot
-        for att in event_object.message.body.attachments:
+    if isinstance(event_object, (MessageCreated, MessageEdited, MessageCallback)):
+        object_message = event_object.message  # pyright: ignore[reportAttributeAccessIssue]
+        
+        object_message.bot = bot
+        for att in object_message.body.attachments or []:
             if hasattr(att, 'bot'):
                 att.bot = bot
 
