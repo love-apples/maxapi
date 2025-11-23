@@ -15,6 +15,6 @@ class File(Attachment):
         size (Optional[int]): Размер файла в байтах.
     """
     
-    type: Literal[AttachmentType.FILE]
+    type: Literal[AttachmentType.FILE] # pyright: ignore[reportIncompatibleVariableOverride]
     filename: Optional[str] = None
     size: Optional[int] = None

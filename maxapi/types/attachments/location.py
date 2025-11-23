@@ -15,6 +15,6 @@ class Location(Attachment):
         longitude (Optional[float]): Долгота.
     """
     
-    type: Literal[AttachmentType.LOCATION]
+    type: Literal[AttachmentType.LOCATION] # pyright: ignore[reportIncompatibleVariableOverride]
     latitude: Optional[float] = None
     longitude: Optional[float] = None

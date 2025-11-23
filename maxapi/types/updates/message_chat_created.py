@@ -17,7 +17,7 @@ class MessageChatCreated(Update):
         start_payload (Optional[str]): Payload для старта.
     """
     
-    chat: Chat
+    chat: Chat # type: ignore[assignment]
     title: Optional[str] = None
     message_id: Optional[str] = None
     start_payload: Optional[str] = None

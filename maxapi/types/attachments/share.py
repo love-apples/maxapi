@@ -16,7 +16,7 @@ class Share(Attachment):
         image_url (Optional[str]): URL изображения для предпросмотра.
     """
     
-    type: Literal[AttachmentType.SHARE]
+    type: Literal[AttachmentType.SHARE] # pyright: ignore[reportIncompatibleVariableOverride]
     title: Optional[str] = None
     description: Optional[str] = None
     image_url: Optional[str] = None

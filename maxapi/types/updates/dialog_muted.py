@@ -27,7 +27,7 @@ class DialogMuted(Update):
     user_locale: Optional[str] = None
     
     if TYPE_CHECKING:
-        bot: Optional[Bot]
+        bot: Optional[Bot]  # pyright: ignore[reportGeneralTypeIssues]
         
     @property
     def muted_until_datetime(self):

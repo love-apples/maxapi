@@ -26,7 +26,7 @@ class BotStarted(Update):
     payload: Optional[str] = None
     
     if TYPE_CHECKING:
-        bot: Optional[Bot]
+        bot: Optional[Bot]  # pyright: ignore[reportGeneralTypeIssues]
 
     def get_ids(self):
         return (self.chat_id, self.user.user_id)

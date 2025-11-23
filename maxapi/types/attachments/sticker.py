@@ -15,6 +15,6 @@ class Sticker(Attachment):
         height (Optional[int]): Высота стикера в пикселях.
     """
     
-    type: Literal[AttachmentType.STICKER]
+    type: Literal[AttachmentType.STICKER] # pyright: ignore[reportIncompatibleVariableOverride]
     width: Optional[int] = None
     height: Optional[int] = None

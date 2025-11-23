@@ -31,4 +31,4 @@ class Image(Attachment):
         type (Literal['image']): Тип вложения, всегда 'image'.
     """
     
-    type: Literal[AttachmentType.IMAGE]
+    type: Literal[AttachmentType.IMAGE]  # pyright: ignore[reportIncompatibleVariableOverride]
