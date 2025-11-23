@@ -138,11 +138,10 @@ class Command(BaseFilter):
             return False
         
         # временно
-        bot_me = event.bot.me
+        bot_me = event._ensure_bot().me
+        bot_username = ''
         if bot_me:
-            bot_username = bot_me.username
-        else:
-            bot_username = ''
+            bot_username = bot_me.username or ''
         
         parsed_command, args = self.parse_command(text, bot_username)
         if not parsed_command:
