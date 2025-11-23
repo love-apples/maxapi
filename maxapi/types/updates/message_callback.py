@@ -86,9 +86,6 @@ class MessageCallback(Update):
             Результат вызова send_callback бота.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
-        
         message = MessageForCallback()
 
         message.text = new_text
@@ -97,7 +94,7 @@ class MessageCallback(Update):
         message.notify = notify
         message.format = format
         
-        return await self.bot.send_callback(
+        return await self._ensure_bot().send_callback(
             callback_id=self.callback.callback_id,
             message=message,
             notification=notification
