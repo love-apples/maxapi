@@ -6,9 +6,8 @@ from uuid import uuid4
 
 from ..types.input_media import InputMedia, InputMediaBuffer
 from ..enums.upload_type import UploadType
-from ..exceptions.max import MaxUploadFileFailed
+from ..exceptions.max import MaxApiError, MaxUploadFileFailed
 from ..types.attachments.upload import AttachmentPayload, AttachmentUpload
-from ..types.errors import Error
 
 if TYPE_CHECKING:
     from ..bot import Bot
@@ -34,10 +33,10 @@ async def process_input_media(
         AttachmentUpload: Загруженное вложение с токеном.
     """
     
-    upload = await bot.get_upload_url(att.type)
-    
-    if isinstance(upload, Error):
-        raise MaxUploadFileFailed(f'Ошибка при загрузке файла: code={upload.code}, raw={upload.raw}')
+    try:
+        upload = await bot.get_upload_url(att.type)
+    except MaxApiError as e:
+        raise MaxUploadFileFailed(f'Ошибка при загрузке файла: code={e.code}, raw={e.raw}')
 
     if isinstance(att, InputMedia):
         upload_file_response = await base_connection.upload_file(
@@ -52,6 +51,8 @@ async def process_input_media(
             buffer=att.buffer,
             type=att.type,
         )
+        
+    token = ''
 
     if att.type in (UploadType.VIDEO, UploadType.AUDIO):
         if upload.token is None:
