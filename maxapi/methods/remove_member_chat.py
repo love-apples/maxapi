@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from .types.removed_member_chat import RemovedMemberChat
 
@@ -48,18 +48,19 @@ class RemoveMemberChat(BaseConnection):
             RemovedMemberChat: Результат удаления участника.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        params = self.bot.params.copy()
+        params = bot.params.copy()
 
         params['chat_id'] = self.chat_id
         params['user_id'] = self.user_id
         params['block'] = str(self.block).lower()
 
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.DELETE, 
             path=ApiPath.CHATS.value + '/' + str(self.chat_id) + ApiPath.MEMBERS,
             model=RemovedMemberChat,
             params=params,
         )
+        
+        return cast(RemovedMemberChat, response)

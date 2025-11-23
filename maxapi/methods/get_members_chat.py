@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, cast
 
 from ..methods.types.getted_members_chat import GettedMembersChat
 
@@ -58,10 +58,9 @@ class GetMembersChat(BaseConnection):
             GettedMembersChat: Объект с данными по участникам чата.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        params = self.bot.params.copy()
+        params = bot.params.copy()
 
         if self.user_ids: 
             params['user_ids'] = ','.join([str(user_id) for user_id in self.user_ids])
@@ -71,9 +70,11 @@ class GetMembersChat(BaseConnection):
         if self.count: 
             params['marker'] = self.count
 
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.GET, 
             path=ApiPath.CHATS.value + '/' + str(self.chat_id) + ApiPath.MEMBERS,
             model=GettedMembersChat,
             params=params
         )
+        
+        return cast(GettedMembersChat, response)

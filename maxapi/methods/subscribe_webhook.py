@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
 from ..methods.types.subscribed import Subscribed
 
@@ -53,8 +53,7 @@ class SubscribeWebhook(BaseConnection):
             Subscribed: Объект с информацией об операции
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
         json: Dict[str, Any] = {}
         
@@ -66,10 +65,12 @@ class SubscribeWebhook(BaseConnection):
         if self.secret:
             json['secret'] = self.secret
         
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.POST, 
             path=ApiPath.SUBSCRIPTIONS,
             model=Subscribed,
-            params=self.bot.params,
+            params=bot.params,
             json=json
         )
+        
+        return cast(Subscribed, response)

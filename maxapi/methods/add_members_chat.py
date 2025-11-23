@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, cast
 
 from ..methods.types.added_members_chat import AddedMembersChat
 
@@ -47,17 +47,18 @@ class AddMembersChat(BaseConnection):
             AddedMembersChat: Результат операции с информацией об успешности добавления.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
         json: Dict[str, Any] = {}
 
         json['user_ids'] = self.user_ids
 
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.POST, 
             path=ApiPath.CHATS.value + '/' + str(self.chat_id) + ApiPath.MEMBERS,
             model=AddedMembersChat,
-            params=self.bot.params,
+            params=bot.params,
             json=json
         )
+        
+        return cast(AddedMembersChat, response)

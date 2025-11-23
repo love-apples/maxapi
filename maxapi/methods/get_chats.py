@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, cast
 
 from ..types.chats import Chats
 
@@ -48,10 +48,9 @@ class GetChats(BaseConnection):
             Chats: Объект с данными по списку чатов.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        params = self.bot.params.copy()
+        params = bot.params.copy()
 
         if self.count: 
             params['count'] = self.count
@@ -59,9 +58,11 @@ class GetChats(BaseConnection):
         if self.marker: 
             params['marker'] = self.marker
 
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.GET, 
             path=ApiPath.CHATS,
             model=Chats,
             params=params
         )
+        
+        return cast(Chats, response)

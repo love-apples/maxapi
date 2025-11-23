@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from ..methods.types.unsubscribed import Unsubscribed
 
@@ -43,16 +43,17 @@ class UnsubscribeWebhook(BaseConnection):
             Unsubscribed: Объект с информацией об операции
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        params = self.bot.params.copy()
+        params = bot.params.copy()
         
         params['url'] = self.url
         
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.DELETE, 
             path=ApiPath.SUBSCRIPTIONS,
             model=Unsubscribed,
             params=params,
         )
+        
+        return cast(Unsubscribed, response)

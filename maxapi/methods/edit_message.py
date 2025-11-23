@@ -1,8 +1,11 @@
 from __future__ import annotations
 import asyncio
 
-from ..types.errors import Error
-from typing import Any, Dict, List, TYPE_CHECKING, Optional
+from typing import Any, Dict, List, TYPE_CHECKING, Optional, cast
+
+from ..types.attachments import Attachments
+
+from ..exceptions.max import MaxApiError
 
 from ..utils.message import process_input_media
 
@@ -45,7 +48,7 @@ class EditMessage(BaseConnection):
             bot: Bot,
             message_id: str,
             text: Optional[str] = None,
-            attachments: Optional[List[Attachment | InputMedia | InputMediaBuffer]] = None,
+            attachments: Optional[List[Attachment | InputMedia | InputMediaBuffer] | List[Attachments]] = None,
             link: Optional[NewMessageLink] = None,
             notify: Optional[bool] = None,
             parse_mode: Optional[ParseMode] = None
@@ -62,7 +65,7 @@ class EditMessage(BaseConnection):
             self.notify = notify
             self.parse_mode = parse_mode
 
-    async def fetch(self) -> Optional[EditedMessage | Error]:
+    async def fetch(self) -> Optional[EditedMessage]:
         
         """
         Выполняет PUT-запрос для обновления сообщения.
@@ -73,10 +76,9 @@ class EditMessage(BaseConnection):
             EditedMessage: Обновлённое сообщение.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        params = self.bot.params.copy()
+        params = bot.params.copy()
 
         json: Dict[str, Any] = {'attachments': []}
 
@@ -92,7 +94,7 @@ class EditMessage(BaseConnection):
                 if isinstance(att, InputMedia) or isinstance(att, InputMediaBuffer):
                     input_media = await process_input_media(
                         base_connection=self,
-                        bot=self.bot,
+                        bot=bot,
                         att=att
                     )
                     json['attachments'].append(
@@ -108,23 +110,29 @@ class EditMessage(BaseConnection):
         if self.parse_mode is not None: 
             json['format'] = self.parse_mode.value
 
-        await asyncio.sleep(self.bot.after_input_media_delay)
+        await asyncio.sleep(bot.after_input_media_delay)
         
         response = None
+        
         for attempt in range(self.ATTEMPTS_COUNT):
-            response = await super().request(
-                method=HTTPMethod.PUT, 
-                path=ApiPath.MESSAGES,
-                model=EditedMessage,
-                params=params,
-                json=json
-            )
-
-            if isinstance(response, Error):
-                if response.raw.get('code') == 'attachment.not.ready':
+            
+            try:
+                response = await super().request(
+                    method=HTTPMethod.PUT, 
+                    path=ApiPath.MESSAGES,
+                    model=EditedMessage,
+                    params=params,
+                    json=json
+                )
+            except MaxApiError as e:
+                if 'attachment.not.ready' in e.raw:
                     logger_bot.info(f'Ошибка при отправке загруженного медиа, попытка {attempt+1}, жду {self.RETRY_DELAY} секунды')
                     await asyncio.sleep(self.RETRY_DELAY)
                     continue
             
-            return response
-        return response
+            break
+        
+        if response is None:
+            raise RuntimeError('Не удалось отредактировать сообщение')
+        
+        return cast(Optional[EditedMessage], response)

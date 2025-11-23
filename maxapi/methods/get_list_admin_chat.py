@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from ..methods.types.getted_list_admin_chat import GettedListAdminChat
 
@@ -41,12 +41,13 @@ class GetListAdminChat(BaseConnection):
             GettedListAdminChat: Объект с информацией о администраторах чата.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.GET, 
             path=ApiPath.CHATS.value + '/' + str(self.chat_id) + ApiPath.MEMBERS + ApiPath.ADMINS,
             model=GettedListAdminChat,
-            params=self.bot.params
+            params=bot.params
         )
+        
+        return cast(GettedListAdminChat, response)

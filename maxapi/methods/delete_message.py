@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from ..methods.types.deleted_message import DeletedMessage
 
@@ -46,16 +46,17 @@ class DeleteMessage(BaseConnection):
             DeletedMessage: Результат операции удаления сообщения.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        params = self.bot.params.copy()
+        params = bot.params.copy()
 
         params['message_id'] = self.message_id
 
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.DELETE, 
             path=ApiPath.MESSAGES,
             model=DeletedMessage,
             params=params,
         )
+        
+        return cast(DeletedMessage, response)

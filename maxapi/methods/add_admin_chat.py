@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
 from .types.added_admin_chat import AddedListAdminChat
 from ..types.users import ChatAdmin
@@ -50,18 +50,19 @@ class AddAdminChat(BaseConnection):
             AddedListAdminChat: Результат операции с информацией об успешности.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
         json: Dict[str, Any] = {}
 
         json['admins'] = [admin.model_dump() for admin in self.admins]
         json['marker'] = self.marker
 
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.POST, 
             path=ApiPath.CHATS.value + '/' + str(self.chat_id) + ApiPath.MEMBERS + ApiPath.ADMINS,
             model=AddedListAdminChat,
-            params=self.bot.params,
+            params=bot.params,
             json=json
         )
+        
+        return cast(AddedListAdminChat, response)

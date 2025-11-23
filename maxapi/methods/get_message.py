@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from ..types.message import Message
 from ..enums.http_method import HTTPMethod
@@ -39,12 +39,13 @@ class GetMessage(BaseConnection):
             Message: Объект с полученным сообщением.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.GET, 
             path=ApiPath.MESSAGES + '/' + self.message_id,
             model=Message,
-            params=self.bot.params
+            params=bot.params
         )
+        
+        return cast(Message, response)

@@ -1,7 +1,7 @@
 
 
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional, cast
 from collections import Counter
 
 from ..exceptions.max import MaxIconParamsException
@@ -70,8 +70,7 @@ class EditChat(BaseConnection):
             Chat: Обновлённый объект чата.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
         json: Dict[str, Any] = {}
 
@@ -96,10 +95,12 @@ class EditChat(BaseConnection):
         if self.notify: 
             json['notify'] = self.notify
 
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.PATCH, 
             path=ApiPath.CHATS.value + '/' + str(self.chat_id),
             model=Chat,
-            params=self.bot.params,
+            params=bot.params,
             json=json
         )
+        
+        return cast(Chat, response)

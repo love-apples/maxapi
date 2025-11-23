@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional, cast
 
 from ..methods.types.sended_callback import SendedCallback
 
@@ -11,7 +11,7 @@ from ..connection.base import BaseConnection
 
 if TYPE_CHECKING:
     from ..bot import Bot
-    from ..types.message import Message
+    from ..types.updates.message_callback import MessageForCallback
 
 
 class SendCallback(BaseConnection):
@@ -24,7 +24,7 @@ class SendCallback(BaseConnection):
     Attributes:
         bot (Bot): Экземпляр бота.
         callback_id (str): Идентификатор callback.
-        message (Optional[Message]): Сообщение для отправки.
+        message (Optional[MessageForCallback]): Сообщение для отправки.
         notification (Optional[str]): Текст уведомления.
     """
     
@@ -32,7 +32,7 @@ class SendCallback(BaseConnection):
             self,
             bot: 'Bot',
             callback_id: str,
-            message: Optional[Message] = None,
+            message: Optional[MessageForCallback] = None,
             notification: Optional[str] = None
         ):
             self.bot = bot
@@ -51,10 +51,9 @@ class SendCallback(BaseConnection):
             SendedCallback: Объект с результатом отправки callback.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        params = self.bot.params.copy()
+        params = bot.params.copy()
 
         params['callback_id'] = self.callback_id
 
@@ -65,10 +64,12 @@ class SendCallback(BaseConnection):
         if self.notification: 
             json['notification'] = self.notification
 
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.POST, 
             path=ApiPath.ANSWERS,
             model=SendedCallback,
             params=params,
             json=json
         )
+        
+        return cast(SendedCallback, response)

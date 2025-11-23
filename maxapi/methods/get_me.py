@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from ..types.users import User
 
@@ -36,12 +36,13 @@ class GetMe(BaseConnection):
             User: Объект пользователя с полной информацией.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.GET, 
             path=ApiPath.ME,
             model=User,
-            params=self.bot.params
+            params=bot.params
         )
+        
+        return cast(User, response)

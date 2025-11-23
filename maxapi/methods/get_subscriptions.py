@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from ..methods.types.getted_subscriptions import GettedSubscriptions
 
@@ -38,12 +38,13 @@ class GetSubscriptions(BaseConnection):
             GettedSubscriptions: Объект со списком подписок
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.GET, 
             path=ApiPath.SUBSCRIPTIONS,
             model=GettedSubscriptions,
-            params=self.bot.params
+            params=bot.params
         )
+        
+        return cast(GettedSubscriptions, response)

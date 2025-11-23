@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from .types.removed_admin import RemovedAdmin
 
@@ -44,13 +44,14 @@ class RemoveAdmin(BaseConnection):
             RemovedAdmin: Объект с результатом отмены прав администратора.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.DELETE, 
             path=ApiPath.CHATS + '/' + str(self.chat_id) + \
                   ApiPath.MEMBERS + ApiPath.ADMINS + '/' + str(self.user_id),
             model=RemovedAdmin,
-            params=self.bot.params,
-        ) 
+            params=bot.params,
+        )
+        
+        return cast(RemovedAdmin, response) 

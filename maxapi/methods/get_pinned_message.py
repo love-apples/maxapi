@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from .types.getted_pineed_message import GettedPin
 
@@ -40,12 +40,13 @@ class GetPinnedMessage(BaseConnection):
             GettedPin: Объект с информацией о закреплённом сообщении.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.GET, 
             path=ApiPath.CHATS + '/' + str(self.chat_id) + ApiPath.PIN,
             model=GettedPin,
-            params=self.bot.params
+            params=bot.params
         )
+        
+        return cast(GettedPin, response)

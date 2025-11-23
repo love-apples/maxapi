@@ -1,12 +1,15 @@
 
 
 import asyncio
-from typing import Any, Dict, List, TYPE_CHECKING, Optional
+from typing import Any, Dict, List, TYPE_CHECKING, Optional, cast
+
+from ..types.attachments import Attachments
+
+from ..exceptions.max import MaxApiError
 
 from ..utils.message import process_input_media
 
 from .types.sended_message import SendedMessage
-from ..types.errors import Error
 from ..types.message import NewMessageLink
 from ..types.input_media import InputMedia, InputMediaBuffer
 from ..types.attachments.attachment import Attachment
@@ -49,7 +52,7 @@ class SendMessage(BaseConnection):
             chat_id: Optional[int] = None, 
             user_id: Optional[int] = None, 
             text: Optional[str] = None,
-            attachments: Optional[List[Attachment | InputMedia | InputMediaBuffer]] = None,
+            attachments: Optional[List[Attachment | InputMedia | InputMediaBuffer] |  List[Attachments]] = None,
             link: Optional[NewMessageLink] = None,
             notify: Optional[bool] = None,
             parse_mode: Optional[ParseMode] = None,
@@ -69,7 +72,7 @@ class SendMessage(BaseConnection):
             self.parse_mode = parse_mode
             self.disable_link_preview = disable_link_preview
 
-    async def fetch(self) -> Optional[SendedMessage | Error]:
+    async def fetch(self) -> Optional[SendedMessage]:
         
         """
         Отправляет сообщение с вложениями (если есть), с обработкой задержки готовности вложений.
@@ -80,10 +83,9 @@ class SendMessage(BaseConnection):
             SendedMessage или Error
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        params = self.bot.params.copy()
+        params = bot.params.copy()
 
         json: Dict[str, Any] = {'attachments': []}
 
@@ -105,7 +107,7 @@ class SendMessage(BaseConnection):
                     
                     input_media = await process_input_media(
                         base_connection=self,
-                        bot=self.bot,
+                        bot=bot,
                         att=att
                     )
                     json['attachments'].append(
@@ -127,23 +129,28 @@ class SendMessage(BaseConnection):
             json['format'] = self.parse_mode.value
         
         if HAS_INPUT_MEDIA:
-            await asyncio.sleep(self.bot.after_input_media_delay)
+            await asyncio.sleep(bot.after_input_media_delay)
 
         response = None
         for attempt in range(self.ATTEMPTS_COUNT):
-            response = await super().request(
-                method=HTTPMethod.POST, 
-                path=ApiPath.MESSAGES,
-                model=SendedMessage,
-                params=params,
-                json=json
-            )
-
-            if isinstance(response, Error):
-                if response.raw.get('code') == 'attachment.not.ready':
+            
+            try:
+                response = await super().request(
+                    method=HTTPMethod.POST, 
+                    path=ApiPath.MESSAGES,
+                    model=SendedMessage,
+                    params=params,
+                    json=json
+                )
+            except MaxApiError as e:
+                if 'attachment.not.ready' in e.raw:
                     logger_bot.info(f'Ошибка при отправке загруженного медиа, попытка {attempt+1}, жду {self.RETRY_DELAY} секунды')
                     await asyncio.sleep(self.RETRY_DELAY)
                     continue
             
-            return response
-        return response
+            break
+        
+        if response is None:
+            raise RuntimeError('Не удалось отправить сообщение')
+        
+        return cast(Optional[SendedMessage], response)

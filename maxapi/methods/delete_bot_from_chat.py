@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from ..methods.types.deleted_bot_from_chat import DeletedBotFromChat
 
@@ -41,11 +41,13 @@ class DeleteMeFromMessage(BaseConnection):
             DeletedBotFromChat: Результат операции удаления.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
-        return await super().request(
+        bot = self._ensure_bot()
+        
+        response = await super().request(
             method=HTTPMethod.DELETE, 
             path=ApiPath.CHATS + '/' + str(self.chat_id) + ApiPath.MEMBERS + ApiPath.ME,
             model=DeletedBotFromChat,
-            params=self.bot.params,
+            params=bot.params,
         )
+        
+        return cast(DeletedBotFromChat, response)

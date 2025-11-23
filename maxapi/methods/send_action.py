@@ -1,6 +1,6 @@
 
 
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional, cast
 
 from ..methods.types.sended_action import SendedAction
 
@@ -47,17 +47,18 @@ class SendAction(BaseConnection):
             SendedAction: Результат выполнения запроса.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
         json: Dict[str, Any] = {}
 
         json['action'] = self.action.value
 
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.POST, 
             path=ApiPath.CHATS + '/' + str(self.chat_id) + ApiPath.ACTIONS,
             model=SendedAction,
-            params=self.bot.params,
+            params=bot.params,
             json=json
         )
+        
+        return cast(SendedAction, response)

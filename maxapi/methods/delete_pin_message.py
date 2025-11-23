@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from ..methods.types.deleted_pin_message import DeletedPinMessage
 
@@ -41,12 +41,13 @@ class DeletePinMessage(BaseConnection):
             DeletedPinMessage: Результат операции удаления закреплённого сообщения.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.DELETE, 
             path=ApiPath.CHATS + '/' + str(self.chat_id) + ApiPath.PIN,
             model=DeletedPinMessage,
-            params=self.bot.params,
+            params=bot.params,
         )
+        
+        return cast(DeletedPinMessage, response)

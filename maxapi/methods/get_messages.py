@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union, cast
 
 from ..types.message import Messages
 from ..enums.http_method import HTTPMethod
@@ -58,10 +58,9 @@ class GetMessages(BaseConnection):
             Messages: Объект с полученными сообщениями.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        params = self.bot.params.copy()
+        params = bot.params.copy()
 
         if self.chat_id: 
             params['chat_id'] = self.chat_id
@@ -83,9 +82,11 @@ class GetMessages(BaseConnection):
         
         params['count'] = self.count
 
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.GET, 
             path=ApiPath.MESSAGES,
             model=Messages,
             params=params
         )
+        
+        return cast(Messages, response)

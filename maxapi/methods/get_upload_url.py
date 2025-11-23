@@ -1,6 +1,6 @@
 
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from ..methods.types.getted_upload_url import GettedUploadUrl
 
@@ -46,16 +46,17 @@ class GetUploadURL(BaseConnection):
             GettedUploadUrl: Результат с URL для загрузки.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        params = self.bot.params.copy()
+        params = bot.params.copy()
 
         params['type'] = self.type.value
 
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.POST, 
             path=ApiPath.UPLOADS,
             model=GettedUploadUrl,
             params=params,
         )
+        
+        return cast(GettedUploadUrl, response)

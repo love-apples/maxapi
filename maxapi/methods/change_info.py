@@ -1,4 +1,5 @@
-from typing import Any, Dict, List, TYPE_CHECKING, Optional
+import warnings
+from typing import Any, Dict, List, TYPE_CHECKING, Optional, cast
 
 from ..types.attachments.image import PhotoAttachmentRequestPayload
 
@@ -20,6 +21,10 @@ class ChangeInfo(BaseConnection):
     """
     Класс для изменения данных текущего бота.
     
+    .. deprecated:: 0.9.8
+        Этот метод отсутствует в официальной swagger-спецификации API MAX.
+        Использование не рекомендуется.
+    
     https://dev.max.ru/docs-api/methods/PATCH/me
 
     Args:
@@ -37,12 +42,19 @@ class ChangeInfo(BaseConnection):
             self,
             bot: 'Bot',
             first_name: Optional[str] = None, 
-            last_name: Optional[str] = None, 
+            last_name: Optional[str] = None,
             description: Optional[str] = None,
             commands: Optional[List[BotCommand]] = None,
             photo: Optional[PhotoAttachmentRequestPayload] = None
         ):
         
+            warnings.warn(
+                'ChangeInfo устарел и отсутствует в официальной swagger-спецификации API MAX. '
+                'Использование не рекомендуется.',
+                DeprecationWarning,
+                stacklevel=2
+            )
+            
             if not any([first_name, last_name, description, commands, photo]):
                 raise ValueError('Нужно указать хотя бы один параметр для изменения')
 
@@ -74,8 +86,7 @@ class ChangeInfo(BaseConnection):
             User: Объект с обновленными данными бота
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
         json: Dict[str, Any] = {}
 
@@ -90,10 +101,12 @@ class ChangeInfo(BaseConnection):
         if self.photo: 
             json['photo'] = self.photo.model_dump()
 
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.PATCH, 
             path=ApiPath.ME,
             model=User,
-            params=self.bot.params,
+            params=bot.params,
             json=json
         )
+        
+        return cast(User, response)

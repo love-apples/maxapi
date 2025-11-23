@@ -1,5 +1,5 @@
 from re import findall
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from ..types.chats import Chat
 
@@ -47,12 +47,13 @@ class GetChatByLink(BaseConnection):
             Chat: Объект с информацией о чате.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.GET, 
             path=ApiPath.CHATS.value + '/' + self.link[-1],
             model=Chat,
-            params=self.bot.params
+            params=bot.params
         )
+        
+        return cast(Chat, response)

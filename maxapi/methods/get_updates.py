@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, cast
 
 from ..enums.update import UpdateType
 from ..enums.http_method import HTTPMethod
@@ -57,10 +57,9 @@ class GetUpdates(BaseConnection):
         Returns:
             Dict: Сырой JSON-ответ от API с новыми событиями.
         """
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
 
-        params = self.bot.params.copy()
+        params = bot.params.copy()
         
         if self.limit:
             params['limit'] = self.limit
@@ -79,4 +78,4 @@ class GetUpdates(BaseConnection):
             is_return_raw=True
         )
 
-        return event_json
+        return cast(Dict[str, Any], event_json)

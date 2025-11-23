@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from ..types.attachments.video import Video
 
@@ -41,12 +41,13 @@ class GetVideo(BaseConnection):
             Video: Объект с информацией о видео.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.GET, 
             path=ApiPath.VIDEOS.value + '/' + self.video_token,
             model=Video,
-            params=self.bot.params,
+            params=bot.params,
         )
+        
+        return cast(Video, response)

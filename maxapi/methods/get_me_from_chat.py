@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from ..types.chats import ChatMember
 
@@ -41,12 +41,13 @@ class GetMeFromChat(BaseConnection):
             ChatMember: Информация о боте как участнике чата.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.GET, 
             path=ApiPath.CHATS + '/' + str(self.chat_id) + ApiPath.MEMBERS + ApiPath.ME,
             model=ChatMember,
-            params=self.bot.params
+            params=bot.params
         )
+        
+        return cast(ChatMember, response)

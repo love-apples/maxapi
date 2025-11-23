@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional, cast
 
 from .types.pinned_message import PinnedMessage
 
@@ -49,18 +49,19 @@ class PinMessage(BaseConnection):
             PinnedMessage: Объект с информацией о закреплённом сообщении.
         """
         
-        if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
+        bot = self._ensure_bot()
         
         json: Dict[str, Any] = {}
 
         json['message_id'] = self.message_id
         json['notify'] = self.notify
 
-        return await super().request(
+        response = await super().request(
             method=HTTPMethod.PUT, 
             path=ApiPath.CHATS + '/' + str(self.chat_id) + ApiPath.PIN,
             model=PinnedMessage,
-            params=self.bot.params,
+            params=bot.params,
             json=json
         )
+        
+        return cast(PinnedMessage, response)
