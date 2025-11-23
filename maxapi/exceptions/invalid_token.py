@@ -1,4 +1,0 @@
-
-
-class InvalidToken(Exception):
-    ...
