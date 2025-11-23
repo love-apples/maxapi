@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from datetime import datetime
 import os
+import warnings
 from typing import Any, Dict, List, Optional, Sequence, Union, TYPE_CHECKING
 
-from .exceptions.invalid_token import InvalidToken
+from .types.attachments import Attachments
+
+from .exceptions.max import InvalidToken
 
 from .client.default import DefaultConnectionProperties
-from .types.errors import Error
 
 from .types.input_media import InputMedia, InputMediaBuffer
 
@@ -62,6 +64,7 @@ if TYPE_CHECKING:
     from .types.command import BotCommand
     from .types.message import Message, Messages, NewMessageLink
     from .types.users import ChatAdmin, User
+    from .types.updates.message_callback import MessageForCallback
 
     from .methods.types.added_admin_chat import AddedListAdminChat
     from .methods.types.added_members_chat import AddedMembersChat
@@ -225,12 +228,12 @@ class Bot(BaseConnection):
         chat_id: Optional[int] = None, 
         user_id: Optional[int] = None,
         text: Optional[str] = None,
-        attachments: Optional[List[Attachment | InputMedia | InputMediaBuffer]] = None,
+        attachments: Optional[List[Attachment | InputMedia | InputMediaBuffer] | List[Attachments]] = None,
         link: Optional[NewMessageLink] = None,
         notify: Optional[bool] = None,
         parse_mode: Optional[ParseMode] = None,
         disable_link_preview: Optional[bool] = None
-    ) -> Optional[SendedMessage | Error]:
+    ) -> Optional[SendedMessage]:
 
         """
         Отправляет сообщение в чат или пользователю.
@@ -248,7 +251,7 @@ class Bot(BaseConnection):
             disable_link_preview (Optional[bool]): Флаг генерации превью. 
 
         Returns:
-            Optional[SendedMessage | Error]: Отправленное сообщение или ошибка.
+            Optional[SendedMessage]: Отправленное сообщение или ошибка.
         """
 
         return await SendMessage(
@@ -292,11 +295,11 @@ class Bot(BaseConnection):
         self,
         message_id: str,
         text: Optional[str] = None,
-        attachments: Optional[List[Attachment | InputMedia | InputMediaBuffer]] = None,
+        attachments: Optional[List[Attachment | InputMedia | InputMediaBuffer] | List[Attachments]] = None,
         link: Optional[NewMessageLink] = None,
         notify: Optional[bool] = None,
         parse_mode: Optional[ParseMode] = None
-    ) -> Optional[EditedMessage | Error]:
+    ) -> Optional[EditedMessage]:
 
         """
         Редактирует существующее сообщение.
@@ -312,7 +315,7 @@ class Bot(BaseConnection):
             parse_mode (Optional[ParseMode]): Режим форматирования текста.
 
         Returns:
-            Optional[EditedMessage | Error]: Отредактированное сообщение или ошибка.
+            Optional[EditedMessage]: Отредактированное сообщение или ошибка.
         """
 
         return await EditMessage(
@@ -472,6 +475,10 @@ class Bot(BaseConnection):
         """
         Изменяет данные текущего бота (PATCH /me).
         
+        .. deprecated:: 0.9.8
+            Этот метод отсутствует в официальной swagger-спецификации API MAX.
+            Использование не рекомендуется.
+        
         https://dev.max.ru/docs-api/methods/PATCH/me
 
         Args:
@@ -485,6 +492,13 @@ class Bot(BaseConnection):
         Returns:
             User: Объект с обновлённой информацией о боте.
         """
+        
+        warnings.warn(
+            'bot.change_info() устарел и отсутствует в официальной swagger-спецификации API MAX. '
+            'Использование не рекомендуется.',
+            DeprecationWarning,
+            stacklevel=2
+        )
 
         return await ChangeInfo(
             bot=self, 
@@ -617,7 +631,7 @@ class Bot(BaseConnection):
     async def send_callback(
         self,
         callback_id: str,
-        message: Optional[Message] = None,
+        message: Optional[MessageForCallback] = None,
         notification: Optional[str] = None
     ) -> SendedCallback:
 
@@ -628,7 +642,7 @@ class Bot(BaseConnection):
 
         Args:
             callback_id (str): ID callback.
-            message (Optional[Message]): Сообщение для отправки.
+            message (Optional[MessageForCallback]): Сообщение для отправки.
             notification (Optional[str]): Текст уведомления.
 
         Returns:
