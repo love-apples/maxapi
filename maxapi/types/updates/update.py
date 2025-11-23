@@ -2,6 +2,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Optional
 from pydantic import BaseModel, Field
 
+from ...types.bot_mixin import BotMixin
+
 from ...enums.update import UpdateType
 
 if TYPE_CHECKING:
@@ -10,7 +12,7 @@ if TYPE_CHECKING:
     from ...types.users import User
 
 
-class Update(BaseModel):
+class Update(BaseModel, BotMixin):
     
     """
     Базовая модель обновления.
@@ -23,9 +25,9 @@ class Update(BaseModel):
     update_type: UpdateType
     timestamp: int
     
-    bot: Optional[Any] = Field(default=None, exclude=True)
-    from_user: Optional[Any] = Field(default=None, exclude=True)
-    chat: Optional[Any] = Field(default=None, exclude=True)
+    bot: Optional[Any] = Field(default=None, exclude=True)  # pyright: ignore[reportRedeclaration]
+    from_user: Optional[Any] = Field(default=None, exclude=True)  # pyright: ignore[reportRedeclaration]
+    chat: Optional[Any] = Field(default=None, exclude=True)  # pyright: ignore[reportRedeclaration]
 
     if TYPE_CHECKING:
         bot: Optional[Bot] # type: ignore
