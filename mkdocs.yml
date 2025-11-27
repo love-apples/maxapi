@@ -1,0 +1,234 @@
+site_name: Документация библиотеки maxapi
+site_description: Библиотека для разработки чат-ботов с помощью API мессенджера MAX
+site_author: Denis
+site_url: https://github.com/love-apples/maxapi
+
+repo_name: love-apples/maxapi
+repo_url: https://github.com/love-apples/maxapi
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: ru
+  palette:
+    - scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Переключить на темную тему
+    - scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Переключить на светлую тему
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.annotate
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search:
+      lang: ru
+  - autorefs:
+      # Выбирать наиболее специфичный (самый глубокий) URL как основной
+      # Это уменьшит количество предупреждений о дублирующихся URL
+      fallback_to_title: true
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            members_order: source
+            show_root_heading: true
+            merge_init_into_class: true
+            annotations_path: brief
+            show_submodules: true
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+nav:
+- Главная: index.md
+- Руководства:
+  - Установка: guides/installation.md
+  - Обработчики: guides/handlers.md
+  - Фильтры: guides/filters.md
+  - Клавиатуры: guides/keyboards.md
+  - Webhook vs Polling: guides/webhook_vs_polling.md
+  - Контекст и состояния: guides/context.md
+  - Middleware: guides/middleware.md
+  - Роутеры: guides/routers.md
+- Примеры: examples.md
+- API:
+  - Bot: bot.md
+  - Dispatcher: dispatcher.md
+  - Loggers: loggers.md
+  - Client:
+    - Default: client/default.md
+  - Connection:
+    - Base: connection/base.md
+    - Overview: connection/index.md
+  - Context:
+    - Context: context/context.md
+    - Overview: context/index.md
+    - State_machine: context/state_machine.md
+  - Enums:
+    - Api_path: enums/api_path.md
+    - Attachment: enums/attachment.md
+    - Button_type: enums/button_type.md
+    - Chat_permission: enums/chat_permission.md
+    - Chat_status: enums/chat_status.md
+    - Chat_type: enums/chat_type.md
+    - Http_method: enums/http_method.md
+    - Intent: enums/intent.md
+    - Message_link_type: enums/message_link_type.md
+    - Overview: enums/index.md
+    - Parse_mode: enums/parse_mode.md
+    - Sender_action: enums/sender_action.md
+    - Text_style: enums/text_style.md
+    - Update: enums/update.md
+    - Upload_type: enums/upload_type.md
+  - Exceptions:
+    - Dispatcher: exceptions/dispatcher.md
+    - Download_file: exceptions/download_file.md
+    - Invalid_token: exceptions/invalid_token.md
+    - Max: exceptions/max.md
+  - Filters:
+    - Callback_payload: filters/callback_payload.md
+    - Command: filters/command.md
+    - Filter: filters/filter.md
+    - Handler: filters/handler.md
+    - Middleware: filters/middleware.md
+    - Overview: filters/index.md
+  - Methods:
+    - Add_admin_chat: methods/add_admin_chat.md
+    - Add_members_chat: methods/add_members_chat.md
+    - Change_info: methods/change_info.md
+    - Delete_bot_from_chat: methods/delete_bot_from_chat.md
+    - Delete_chat: methods/delete_chat.md
+    - Delete_message: methods/delete_message.md
+    - Delete_pin_message: methods/delete_pin_message.md
+    - Edit_chat: methods/edit_chat.md
+    - Edit_message: methods/edit_message.md
+    - Get_chat_by_id: methods/get_chat_by_id.md
+    - Get_chat_by_link: methods/get_chat_by_link.md
+    - Get_chats: methods/get_chats.md
+    - Get_list_admin_chat: methods/get_list_admin_chat.md
+    - Get_me: methods/get_me.md
+    - Get_me_from_chat: methods/get_me_from_chat.md
+    - Get_members_chat: methods/get_members_chat.md
+    - Get_message: methods/get_message.md
+    - Get_messages: methods/get_messages.md
+    - Get_pinned_message: methods/get_pinned_message.md
+    - Get_subscriptions: methods/get_subscriptions.md
+    - Get_updates: methods/get_updates.md
+    - Get_upload_url: methods/get_upload_url.md
+    - Get_video: methods/get_video.md
+    - Overview: methods/index.md
+    - Pin_message: methods/pin_message.md
+    - Remove_admin: methods/remove_admin.md
+    - Remove_member_chat: methods/remove_member_chat.md
+    - Send_action: methods/send_action.md
+    - Send_callback: methods/send_callback.md
+    - Send_message: methods/send_message.md
+    - Subscribe_webhook: methods/subscribe_webhook.md
+    - Unsubscribe_webhook: methods/unsubscribe_webhook.md
+    - Types:
+      - Added_admin_chat: methods/types/added_admin_chat.md
+      - Added_members_chat: methods/types/added_members_chat.md
+      - Deleted_bot_from_chat: methods/types/deleted_bot_from_chat.md
+      - Deleted_chat: methods/types/deleted_chat.md
+      - Deleted_message: methods/types/deleted_message.md
+      - Deleted_pin_message: methods/types/deleted_pin_message.md
+      - Edited_message: methods/types/edited_message.md
+      - Getted_list_admin_chat: methods/types/getted_list_admin_chat.md
+      - Getted_members_chat: methods/types/getted_members_chat.md
+      - Getted_pineed_message: methods/types/getted_pineed_message.md
+      - Getted_subscriptions: methods/types/getted_subscriptions.md
+      - Getted_updates: methods/types/getted_updates.md
+      - Getted_upload_url: methods/types/getted_upload_url.md
+      - Overview: methods/types/index.md
+      - Pinned_message: methods/types/pinned_message.md
+      - Removed_admin: methods/types/removed_admin.md
+      - Removed_member_chat: methods/types/removed_member_chat.md
+      - Sended_action: methods/types/sended_action.md
+      - Sended_callback: methods/types/sended_callback.md
+      - Sended_message: methods/types/sended_message.md
+      - Subscribed: methods/types/subscribed.md
+      - Unsubscribed: methods/types/unsubscribed.md
+  - Types:
+    - Callback: types/callback.md
+    - Chats: types/chats.md
+    - Command: types/command.md
+    - Errors: types/errors.md
+    - Input_media: types/input_media.md
+    - Message: types/message.md
+    - Overview: types/index.md
+    - Subscription: types/subscription.md
+    - Users: types/users.md
+    - Attachments:
+      - Attachment: types/attachments/attachment.md
+      - Audio: types/attachments/audio.md
+      - Contact: types/attachments/contact.md
+      - File: types/attachments/file.md
+      - Image: types/attachments/image.md
+      - Location: types/attachments/location.md
+      - Overview: types/attachments/index.md
+      - Share: types/attachments/share.md
+      - Sticker: types/attachments/sticker.md
+      - Upload: types/attachments/upload.md
+      - Video: types/attachments/video.md
+      - Buttons:
+        - Attachment_button: types/attachments/buttons/attachment_button.md
+        - Button: types/attachments/buttons/button.md
+        - Callback_button: types/attachments/buttons/callback_button.md
+        - Chat_button: types/attachments/buttons/chat_button.md
+        - Link_button: types/attachments/buttons/link_button.md
+        - Message_button: types/attachments/buttons/message_button.md
+        - Open_app_button: types/attachments/buttons/open_app_button.md
+        - Overview: types/attachments/buttons/index.md
+        - Request_contact: types/attachments/buttons/request_contact.md
+        - Request_geo_location_button: types/attachments/buttons/request_geo_location_button.md
+    - Updates:
+      - Bot_added: types/updates/bot_added.md
+      - Bot_removed: types/updates/bot_removed.md
+      - Bot_started: types/updates/bot_started.md
+      - Bot_stopped: types/updates/bot_stopped.md
+      - Chat_title_changed: types/updates/chat_title_changed.md
+      - Dialog_cleared: types/updates/dialog_cleared.md
+      - Dialog_muted: types/updates/dialog_muted.md
+      - Dialog_removed: types/updates/dialog_removed.md
+      - Dialog_unmuted: types/updates/dialog_unmuted.md
+      - Message_callback: types/updates/message_callback.md
+      - Message_chat_created: types/updates/message_chat_created.md
+      - Message_created: types/updates/message_created.md
+      - Message_edited: types/updates/message_edited.md
+      - Message_removed: types/updates/message_removed.md
+      - Overview: types/updates/index.md
+      - Update: types/updates/update.md
+      - User_added: types/updates/user_added.md
+      - User_removed: types/updates/user_removed.md
+  - Utils:
+    - Inline_keyboard: utils/inline_keyboard.md
+    - Message: utils/message.md
+    - Overview: utils/index.md
+    - Updates: utils/updates.md

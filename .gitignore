@@ -1,6 +1,4 @@
 # Byte-compiled / optimized / DLL files
-mkdocs*
-docs
 scripts
 test*
 __pycache__/
