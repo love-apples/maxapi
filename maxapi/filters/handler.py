@@ -1,4 +1,4 @@
-from typing import Callable, List, Optional
+from typing import Any, Callable, List, Optional
 
 from magic_filter import MagicFilter
 
@@ -22,19 +22,20 @@ class Handler:
 
     def __init__(
         self,
-        *args,
+        *args: Any,
         func_event: Callable,
         update_type: UpdateType,
-        **kwargs
+        **kwargs: Any
     ):
         
         """
         Создаёт обработчик события.
 
         Args:
-            *args: Список фильтров (MagicFilter, State, Command, BaseFilter, BaseMiddleware).
+            *args (Any): Список фильтров (MagicFilter, State, Command, BaseFilter, BaseMiddleware).
             func_event (Callable): Функция-обработчик.
             update_type (UpdateType): Тип обновления.
+            **kwargs (Any): Дополнительные параметры.
         """
         
         self.func_event: Callable = func_event

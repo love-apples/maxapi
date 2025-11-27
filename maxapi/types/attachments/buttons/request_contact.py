@@ -8,8 +8,8 @@ class RequestContactButton(Button):
     """
     Кнопка с контактом
     
-    Args:
-        text: Текст кнопки
+    Attributes:
+        text (str): Текст кнопки
     """
 
     type: ButtonType = ButtonType.REQUEST_CONTACT

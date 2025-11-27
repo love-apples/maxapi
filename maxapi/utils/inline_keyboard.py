@@ -37,13 +37,13 @@ class InlineKeyboardBuilder:
         
         self.payload[-1].append(button)
 
-    def as_markup(self):
+    def as_markup(self) -> Attachment:
         
         """
         Собрать клавиатуру в объект для отправки.
         
         Returns:
-            Объект вложения с типом INLINE_KEYBOARD.
+            Attachment: Объект вложения с типом INLINE_KEYBOARD.
         """
         
         return Attachment(

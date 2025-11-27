@@ -18,7 +18,7 @@ async def process_input_media(
         base_connection: BaseConnection,
         bot: Bot,
         att: InputMedia | InputMediaBuffer
-    ):
+    ) -> AttachmentUpload:
     
     # очень нестабильный метод независящий от модуля
     # ждем обновлений MAX API
@@ -27,7 +27,9 @@ async def process_input_media(
     Загружает файл вложения и формирует объект AttachmentUpload.
 
     Args:
-        att (InputMedia): Объект вложения для загрузки.
+        base_connection (BaseConnection): Базовое соединение для загрузки файла.
+        bot (Bot): Экземпляр бота.
+        att (InputMedia | InputMediaBuffer): Объект вложения для загрузки.
 
     Returns:
         AttachmentUpload: Загруженное вложение с токеном.

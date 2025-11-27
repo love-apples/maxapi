@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -12,6 +12,9 @@ from ...enums.parse_mode import ParseMode
 from ...types.message import NewMessageLink
 from ...types.callback import Callback
 from ...types.message import Message
+
+if TYPE_CHECKING:
+    from ...methods.types.sended_callback import SendedCallback
 
 
 class MessageForCallback(BaseModel):
@@ -52,7 +55,7 @@ class MessageCallback(Update):
     user_locale: Optional[str] = None
     callback: Callback
 
-    def get_ids(self):
+    def get_ids(self) -> Tuple[Optional[int], int]:
         
         """
         Возвращает кортеж идентификаторов (chat_id, user_id).
@@ -70,7 +73,7 @@ class MessageCallback(Update):
             link: Optional[NewMessageLink] = None,
             notify: bool = True,
             format: Optional[ParseMode] = None,
-        ):
+        ) -> 'SendedCallback':
         
         """
         Отправляет ответ на callback с возможностью изменить текст, вложения и параметры уведомления.
@@ -83,7 +86,7 @@ class MessageCallback(Update):
             format (Optional[ParseMode]): Режим разбора текста.
 
         Returns:
-            Результат вызова send_callback бота.
+            SendedCallback: Результат вызова send_callback бота.
         """
         
         message = MessageForCallback()

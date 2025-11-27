@@ -33,9 +33,9 @@ class ChangeInfo(BaseConnection):
         description (str, optional): Описание бота (1–16000 символов).
         commands (list[BotCommand], optional): Список команд (до 32 элементов).
         photo (PhotoAttachmentRequestPayload, optional): Фото бота.
-
-    Returns:
-        User:  Объект с обновленными данными бота
+    
+    Note:
+        Метод :meth:`fetch` возвращает объект :class:`User` с обновленными данными бота.
     """
     
     def __init__(

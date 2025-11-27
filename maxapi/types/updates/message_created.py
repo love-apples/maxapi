@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional
+from typing import Optional, Tuple
 
 from .update import Update
 
@@ -19,7 +19,7 @@ class MessageCreated(Update):
     message: Message
     user_locale: Optional[str] = None
     
-    def get_ids(self):
+    def get_ids(self) -> Tuple[Optional[int], int]:
         
         """
         Возвращает кортеж идентификаторов (chat_id, user_id).

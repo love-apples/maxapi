@@ -20,6 +20,10 @@ from .users import User
 if TYPE_CHECKING:
     from ..bot import Bot
     from ..types.input_media import InputMedia, InputMediaBuffer
+    from ..methods.types.sended_message import SendedMessage
+    from ..methods.types.edited_message import EditedMessage
+    from ..methods.types.deleted_message import DeletedMessage
+    from ..methods.types.pinned_message import PinnedMessage
 
 
 class MarkupElement(BaseModel):
@@ -164,7 +168,7 @@ class Message(BaseModel, BotMixin):
             link: Optional[NewMessageLink] = None,
             notify: Optional[bool] = None,
             parse_mode: Optional[ParseMode] = None
-        ):
+        ) -> Optional['SendedMessage']:
         
         """
         Отправляет сообщение (автозаполнение chat_id, user_id).
@@ -177,7 +181,7 @@ class Message(BaseModel, BotMixin):
             parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
 
         Returns:
-            Any: Результат выполнения метода send_message бота.
+            Optional[SendedMessage]: Результат выполнения метода send_message бота.
         """
         
         return await self._ensure_bot().send_message(
@@ -196,7 +200,7 @@ class Message(BaseModel, BotMixin):
             attachments: Optional[List[Attachment | InputMedia | InputMediaBuffer]] = None,
             notify: Optional[bool] = None,
             parse_mode: Optional[ParseMode] = None
-        ):
+        ) -> Optional['SendedMessage']:
         
         """
         Отправляет ответное сообщение (автозаполнение chat_id, user_id, link).
@@ -208,7 +212,7 @@ class Message(BaseModel, BotMixin):
             parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
 
         Returns:
-            Any: Результат выполнения метода send_message бота.
+            Optional[SendedMessage]: Результат выполнения метода send_message бота.
         """
         
         return await self._ensure_bot().send_message(
@@ -231,7 +235,7 @@ class Message(BaseModel, BotMixin):
             attachments: Optional[List[Attachment | InputMedia | InputMediaBuffer]] = None,
             notify: Optional[bool] = None,
             parse_mode: Optional[ParseMode] = None
-        ):
+        ) -> Optional['SendedMessage']:
         
         """
         Пересылает отправленное сообщение в указанный чат (автозаполнение link).
@@ -244,7 +248,7 @@ class Message(BaseModel, BotMixin):
             parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
 
         Returns:
-            Any: Результат выполнения метода send_message бота.
+            Optional[SendedMessage]: Результат выполнения метода send_message бота.
         """
         
         return await self._ensure_bot().send_message(
@@ -266,7 +270,7 @@ class Message(BaseModel, BotMixin):
             link: Optional[NewMessageLink] = None,
             notify: bool = True,
             parse_mode: Optional[ParseMode] = None
-        ):
+        ) -> Optional['EditedMessage']:
         
         """
         Редактирует текущее сообщение.
@@ -279,7 +283,7 @@ class Message(BaseModel, BotMixin):
             parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
 
         Returns:
-            Any: Результат выполнения метода edit_message бота.
+            Optional[EditedMessage]: Результат выполнения метода edit_message бота.
         """
         
         if link is None and self.link:
@@ -297,20 +301,20 @@ class Message(BaseModel, BotMixin):
             parse_mode=parse_mode
         )
     
-    async def delete(self):
+    async def delete(self) -> 'DeletedMessage':
         
         """
         Удаляет текущее сообщение.
 
         Returns:
-            Any: Результат выполнения метода delete_message бота.
+            DeletedMessage: Результат выполнения метода delete_message бота.
         """
         
         return await self._ensure_bot().delete_message(
             message_id=self.body.mid,
         )
     
-    async def pin(self, notify: bool = True):
+    async def pin(self, notify: bool = True) -> 'PinnedMessage':
         
         """
         Закрепляет текущее сообщение в чате.
@@ -319,7 +323,7 @@ class Message(BaseModel, BotMixin):
             notify (bool): Флаг отправки уведомления. По умолчанию True.
 
         Returns:
-            Any: Результат выполнения метода pin_message бота.
+            PinnedMessage: Результат выполнения метода pin_message бота.
         """
         
         if self.recipient.chat_id is None:

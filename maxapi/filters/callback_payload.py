@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, ClassVar, List, Optional, Type, TYPE_CHECKING
+from typing import Any, ClassVar, Dict, List, Optional, Type, TYPE_CHECKING, Union
 from magic_filter import MagicFilter
 from pydantic import BaseModel
 
@@ -68,7 +68,7 @@ class CallbackPayload(BaseModel):
         return data
     
     @classmethod
-    def unpack(cls, data: str):
+    def unpack(cls, data: str) -> 'CallbackPayload':
         
         """
         Десериализует payload из строки.
@@ -146,7 +146,7 @@ class PayloadFilter(BaseFilter):
         self.model = model
         self.rule = rule
 
-    async def __call__(self, event: UpdateUnion):
+    async def __call__(self, event: UpdateUnion) -> Union[Dict[str, Any], bool]:
         
         """
         Проверяет event на MessageCallback и применяет фильтр к payload.

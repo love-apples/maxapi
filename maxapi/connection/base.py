@@ -142,7 +142,7 @@ class BaseConnection(BotMixin):
         url: str,
         path: str,
         type: UploadType
-    ):
+    ) -> str:
         
         """
         Загружает файл на сервер.
@@ -184,7 +184,7 @@ class BaseConnection(BotMixin):
         url: str,
         buffer: bytes,
         type: UploadType
-    ):
+    ) -> str:
         
         """
         Загружает файл из буфера.

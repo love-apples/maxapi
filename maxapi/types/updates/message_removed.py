@@ -1,3 +1,5 @@
+from typing import Optional, Tuple
+
 from .update import Update
 
 
@@ -16,7 +18,7 @@ class MessageRemoved(Update):
     chat_id: int
     user_id: int
 
-    def get_ids(self):
+    def get_ids(self) -> Tuple[Optional[int], Optional[int]]:
         
         """
         Возвращает кортеж идентификаторов (chat_id, user_id).

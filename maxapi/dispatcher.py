@@ -258,7 +258,7 @@ class Dispatcher(BotMixin):
         if self.on_started_func:
             await self.on_started_func()
             
-    def __get_memory_context(self, chat_id: Optional[int], user_id: Optional[int]):
+    def __get_memory_context(self, chat_id: Optional[int], user_id: Optional[int]) -> MemoryContext:
         
         """
         Возвращает существующий или создаёт новый MemoryContext по chat_id и user_id.
@@ -662,7 +662,7 @@ class Event:
         self.update_type = update_type
         self.router = router
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> Callable:
         
         """
         Регистрирует функцию как обработчик события.

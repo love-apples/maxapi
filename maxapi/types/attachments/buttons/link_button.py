@@ -10,8 +10,8 @@ class LinkButton(Button):
     """
     Кнопка с внешней ссылкой.
     
-    Args:
-        url: Ссылка для перехода (должна содержать http/https)
+    Attributes:
+        url (Optional[str]): Ссылка для перехода (должна содержать http/https)
     """
 
     type: ButtonType = ButtonType.LINK

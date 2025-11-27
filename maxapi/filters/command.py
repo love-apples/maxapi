@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from ..filters.filter import BaseFilter
 from ..types.updates import UpdateUnion
@@ -117,7 +117,7 @@ class Command(BaseFilter):
 
         return command, arguments
      
-    async def __call__(self, event: UpdateUnion):
+    async def __call__(self, event: UpdateUnion) -> Union[Dict[str, List[str]], bool]:
          
         """
         Проверяет, соответствует ли сообщение заданной(ым) команде(ам).
@@ -126,7 +126,7 @@ class Command(BaseFilter):
             event (MessageCreated): Событие сообщения.
 
         Returns:
-            bool: True, если команда совпадает, иначе False.
+            dict | bool: dict с аргументами команды при совпадении, иначе False.
         """
         
         if not isinstance(event, MessageCreated):
