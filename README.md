@@ -12,17 +12,14 @@
 
 <p align="center">
 <a href='https://pypi.org/project/maxapi/'>
-  <img src='https://img.shields.io/pypi/v/maxapi.svg' alt='PyPI version'>
-</a>
+  <img src='https://img.shields.io/pypi/v/maxapi.svg' alt='PyPI version'></a>
 <a href='https://pypi.org/project/maxapi/'>
-  <img src='https://img.shields.io/pypi/pyversions/maxapi.svg' alt='Python Version'>
-</a>
+  <img src='https://img.shields.io/pypi/pyversions/maxapi.svg' alt='Python Version'></a>
 <a href='https://love-apples/maxapi/blob/main/LICENSE'>
-  <img src='https://img.shields.io/github/license/love-apples/maxapi.svg' alt='License'>
-</a>
+  <img src='https://img.shields.io/github/license/love-apples/maxapi.svg' alt='License'></a>
 </p>
 
-## 📦 Установка из PyPi
+## ● Установка из PyPi
 
 Стабильная версия
 
@@ -30,7 +27,7 @@
 pip install maxapi
 ```
 
-## 🐱‍👤 Установка из GitHub
+## ● Установка из GitHub
 
 Свежая версия, возможны баги. Рекомендуется только для ознакомления с новыми коммитами.
 
@@ -40,13 +37,13 @@ pip install git+https://github.com/love-apples/maxapi.git
 
 
 
-## 🚀 Быстрый старт
+## ● Быстрый старт
 
 Если вы тестируете бота в чате - не забудьте дать ему права администратора!
 
-### Запуск Polling
+### ● Запуск Polling
 
-Если у бота установлены подписки на Webhook - события не будут приходить при методе `start_polling`. При таком случае удалите подписки на Webhook через [MasterBot](https://web.max.ru/masterbot) или через `await bot.delete_webhook()` перед `start_polling`.
+Если у бота установлены подписки на Webhook - события не будут приходить при методе `start_polling`. При таком случае удалите подписки на Webhook через `await bot.delete_webhook()` перед `start_polling`.
 
 ```python
 import asyncio
@@ -85,7 +82,7 @@ if __name__ == '__main__':
     asyncio.run(main())
 ```
 
-### Запуск Webhook
+### ● Запуск Webhook
 
 Перед запуском бота через Webhook, вам нужно установить дополнительные зависимости (fastapi, uvicorn). Можно это сделать через команду:
 ```bash
