@@ -4,8 +4,8 @@
 
 
 <p align="center">
-<a href='https://github.com/love-apples/maxapi/wiki'>Документация</a> •
-<a href='https://github.com/love-apples/maxapi/tree/main/examples'>Примеры</a> •
+<a href='https://love-apples.github.io/maxapi/'>Документация</a> •
+<a href='https://love-apples.github.io/maxapi/examples/'>Примеры</a> •
 <a href='https://max.ru/join/IPAok63C3vFqbWTFdutMUtjmrAkGqO56YeAN7iyDfc8'>MAX Чат</a> •
 <a href='https://t.me/maxapi_github'>TG Чат</a>
 </p>
@@ -89,7 +89,7 @@ if __name__ == '__main__':
 pip install maxapi[webhook]
 ```
 
-Указан пример простого запуска, для более низкого уровня можете рассмотреть [этот пример](https://github.com/love-apples/maxapi/blob/main/examples/webhook/low_level.py).
+Указан пример простого запуска, для более низкого уровня можете рассмотреть [этот пример](https://love-apples.github.io/maxapi/examples/#_6).
 ```python
 import asyncio
 import logging

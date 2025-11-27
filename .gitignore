@@ -1,6 +1,8 @@
-# Byte-compiled / optimized / DLL files
 scripts
+wiki
+examples/
 test*
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
