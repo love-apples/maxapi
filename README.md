@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/love-apples/maxapi"><img src="wiki/data/logo.png" alt="MaxAPI"></a>
+  <a href="https://github.com/love-apples/maxapi"><img src="logo.png" alt="MaxAPI"></a>
 </p>
 
 
