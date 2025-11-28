@@ -1,12 +1,10 @@
 from typing import Literal, Optional
 
 from ...enums.attachment import AttachmentType
-
 from .attachment import Attachment
 
 
 class Share(Attachment):
-    
     """
     Вложение с типом "share" (поделиться).
 
@@ -15,8 +13,10 @@ class Share(Attachment):
         description (Optional[str]): Описание.
         image_url (Optional[str]): URL изображения для предпросмотра.
     """
-    
-    type: Literal[AttachmentType.SHARE] # pyright: ignore[reportIncompatibleVariableOverride]
+
+    type: Literal[
+        AttachmentType.SHARE
+    ]  # pyright: ignore[reportIncompatibleVariableOverride]
     title: Optional[str] = None
     description: Optional[str] = None
     image_url: Optional[str] = None

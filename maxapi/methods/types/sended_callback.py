@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING, Any, Optional
+
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
@@ -6,7 +7,6 @@ if TYPE_CHECKING:
 
 
 class SendedCallback(BaseModel):
-    
     """
     Ответ API после выполнения callback-действия.
 
@@ -15,10 +15,12 @@ class SendedCallback(BaseModel):
         message (Optional[str]): Дополнительное сообщение или описание ошибки.
         bot (Optional[Bot]): Внутреннее поле для хранения ссылки на экземпляр бота (не сериализуется).
     """
-    
+
     success: bool
     message: Optional[str] = None
-    bot: Optional[Any] = Field(default=None, exclude=True)   # pyright: ignore[reportRedeclaration]
-    
+    bot: Optional[Any] = Field(
+        default=None, exclude=True
+    )  # pyright: ignore[reportRedeclaration]
+
     if TYPE_CHECKING:
-        bot: Optional[Bot] # type: ignore
+        bot: Optional[Bot]  # type: ignore

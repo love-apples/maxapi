@@ -1,18 +1,13 @@
-
-
+from collections import Counter
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Dict, Optional, cast
-from collections import Counter
-
-from ..exceptions.max import MaxIconParamsException
-
-from ..types.attachments.image import PhotoAttachmentRequestPayload
-from ..types.chats import Chat
-
-from ..enums.http_method import HTTPMethod
-from ..enums.api_path import ApiPath
 
 from ..connection.base import BaseConnection
+from ..enums.api_path import ApiPath
+from ..enums.http_method import HTTPMethod
+from ..exceptions.max import MaxIconParamsException
+from ..types.attachments.image import PhotoAttachmentRequestPayload
+from ..types.chats import Chat
 
 logger = getLogger(__name__)
 
@@ -22,10 +17,9 @@ if TYPE_CHECKING:
 
 
 class EditChat(BaseConnection):
-    
     """
     Класс для редактирования информации о чате через API.
-    
+
     https://dev.max.ru/docs-api/methods/PATCH/chats/-chatId-
 
     Attributes:
@@ -36,29 +30,30 @@ class EditChat(BaseConnection):
         pin (str, optional): Идентификатор закреплённого сообщения.
         notify (bool, optional): Включение или отключение уведомлений (по умолчанию True).
     """
-    
+
     def __init__(
-            self,
-            bot: 'Bot',
-            chat_id: int,
-            icon: Optional[PhotoAttachmentRequestPayload] = None,
-            title: Optional[str] = None,
-            pin: Optional[str] = None,
-            notify: Optional[bool] = None,
-        ):
-        
-            if title is not None and not (1 <= len(title) <= 200):
-                raise ValueError('title не должен быть меньше 1 или больше 200 символов')
-            
-            self.bot = bot
-            self.chat_id = chat_id
-            self.icon = icon
-            self.title = title
-            self.pin = pin
-            self.notify = notify
+        self,
+        bot: "Bot",
+        chat_id: int,
+        icon: Optional[PhotoAttachmentRequestPayload] = None,
+        title: Optional[str] = None,
+        pin: Optional[str] = None,
+        notify: Optional[bool] = None,
+    ):
+
+        if title is not None and not (1 <= len(title) <= 200):
+            raise ValueError(
+                "title не должен быть меньше 1 или больше 200 символов"
+            )
+
+        self.bot = bot
+        self.chat_id = chat_id
+        self.icon = icon
+        self.title = title
+        self.pin = pin
+        self.notify = notify
 
     async def fetch(self) -> Chat:
-        
         """
         Выполняет PATCH-запрос для обновления параметров чата.
 
@@ -69,38 +64,37 @@ class EditChat(BaseConnection):
         Returns:
             Chat: Обновлённый объект чата.
         """
-        
+
         bot = self._ensure_bot()
-        
+
         json: Dict[str, Any] = {}
 
         if self.icon:
             dump = self.icon.model_dump()
             counter = Counter(dump.values())
 
-            if None not in counter or \
-                not counter[None] == 2:
-                    
-                raise MaxIconParamsException(
-                    'Все атрибуты модели Icon являются взаимоисключающими | '
-                    'https://dev.max.ru/docs-api/methods/PATCH/chats/-chatId-'
-                )
-            
-            json['icon'] = dump
+            if None not in counter or not counter[None] == 2:
 
-        if self.title: 
-            json['title'] = self.title
-        if self.pin: 
-            json['pin'] = self.pin
-        if self.notify: 
-            json['notify'] = self.notify
+                raise MaxIconParamsException(
+                    "Все атрибуты модели Icon являются взаимоисключающими | "
+                    "https://dev.max.ru/docs-api/methods/PATCH/chats/-chatId-"
+                )
+
+            json["icon"] = dump
+
+        if self.title:
+            json["title"] = self.title
+        if self.pin:
+            json["pin"] = self.pin
+        if self.notify:
+            json["notify"] = self.notify
 
         response = await super().request(
-            method=HTTPMethod.PATCH, 
-            path=ApiPath.CHATS.value + '/' + str(self.chat_id),
+            method=HTTPMethod.PATCH,
+            path=ApiPath.CHATS.value + "/" + str(self.chat_id),
             model=Chat,
             params=bot.params,
-            json=json
+            json=json,
         )
-        
+
         return cast(Chat, response)

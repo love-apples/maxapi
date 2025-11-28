@@ -2,23 +2,17 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
-from ...types.attachments import Attachments
-
-
-from .update import Update
-
 from ...enums.parse_mode import ParseMode
-
-from ...types.message import NewMessageLink
+from ...types.attachments import Attachments
 from ...types.callback import Callback
-from ...types.message import Message
+from ...types.message import Message, NewMessageLink
+from .update import Update
 
 if TYPE_CHECKING:
     from ...methods.types.sended_callback import SendedCallback
 
 
 class MessageForCallback(BaseModel):
-    
     """
     Модель сообщения для ответа на callback-запрос.
 
@@ -30,18 +24,17 @@ class MessageForCallback(BaseModel):
         notify (Optional[bool]): Отправлять ли уведомление.
         format (Optional[ParseMode]): Режим разбора текста.
     """
-    
+
     text: Optional[str] = None
-    attachments: Optional[
-        List[Attachments]
-    ] = Field(default_factory=list) # type: ignore
+    attachments: Optional[List[Attachments]] = Field(
+        default_factory=list
+    )  # type: ignore
     link: Optional[NewMessageLink] = None
     notify: Optional[bool] = True
     format: Optional[ParseMode] = None
 
 
 class MessageCallback(Update):
-    
     """
     Обновление с callback-событием сообщения.
 
@@ -50,31 +43,29 @@ class MessageCallback(Update):
         user_locale (Optional[str]): Локаль пользователя.
         callback (Callback): Объект callback.
     """
-    
+
     message: Message
     user_locale: Optional[str] = None
     callback: Callback
 
     def get_ids(self) -> Tuple[Optional[int], int]:
-        
         """
         Возвращает кортеж идентификаторов (chat_id, user_id).
 
         Returns:
             tuple[Optional[int], int]: Идентификаторы чата и пользователя.
         """
-        
+
         return (self.message.recipient.chat_id, self.callback.user.user_id)
-    
+
     async def answer(
-            self,
-            notification: Optional[str] = None,
-            new_text: Optional[str] = None,
-            link: Optional[NewMessageLink] = None,
-            notify: bool = True,
-            format: Optional[ParseMode] = None,
-        ) -> 'SendedCallback':
-        
+        self,
+        notification: Optional[str] = None,
+        new_text: Optional[str] = None,
+        link: Optional[NewMessageLink] = None,
+        notify: bool = True,
+        format: Optional[ParseMode] = None,
+    ) -> "SendedCallback":
         """
         Отправляет ответ на callback с возможностью изменить текст, вложения и параметры уведомления.
 
@@ -88,7 +79,7 @@ class MessageCallback(Update):
         Returns:
             SendedCallback: Результат вызова send_callback бота.
         """
-        
+
         message = MessageForCallback()
 
         message.text = new_text
@@ -96,9 +87,9 @@ class MessageCallback(Update):
         message.link = link
         message.notify = notify
         message.format = format
-        
+
         return await self._ensure_bot().send_callback(
             callback_id=self.callback.callback_id,
             message=message,
-            notification=notification
+            notification=notification,
         )

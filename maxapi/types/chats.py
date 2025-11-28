@@ -1,29 +1,27 @@
-from pydantic import BaseModel, Field, field_validator
-from typing import Dict, List, Optional
 from datetime import datetime
+from typing import Dict, List, Optional
 
+from pydantic import BaseModel, Field, field_validator
+
+from ..enums.chat_permission import ChatPermission
 from ..enums.chat_status import ChatStatus
 from ..enums.chat_type import ChatType
-from ..enums.chat_permission import ChatPermission
-
-from ..types.users import User
 from ..types.message import Message
+from ..types.users import User
 
 
 class Icon(BaseModel):
-    
     """
     Модель иконки чата.
 
     Attributes:
         url (str): URL-адрес иконки.
     """
-    
+
     url: str
 
 
 class Chat(BaseModel):
-    
     """
     Модель чата.
 
@@ -45,7 +43,7 @@ class Chat(BaseModel):
         chat_message_id (Optional[str]): Идентификатор сообщения чата. Может быть None.
         pinned_message (Optional[Message]): Закрепленное сообщение. Может быть None.
     """
-    
+
     chat_id: int
     type: ChatType
     status: ChatStatus
@@ -63,10 +61,9 @@ class Chat(BaseModel):
     chat_message_id: Optional[str] = None
     pinned_message: Optional[Message] = None
 
-    @field_validator('participants', mode='before')
+    @field_validator("participants", mode="before")
     @classmethod
     def convert_timestamps(cls, value: Dict[str, int]) -> Dict[str, datetime]:
-        
         """
         Преобразует временные метки участников из миллисекунд в объекты datetime.
 
@@ -76,18 +73,16 @@ class Chat(BaseModel):
         Returns:
             Dict[str, datetime]: Словарь с временными метками в формате datetime.
         """
-        
+
         return {
-            key: datetime.fromtimestamp(ts / 1000)
-            for key, ts in value.items()
+            key: datetime.fromtimestamp(ts / 1000) for key, ts in value.items()
         }
 
     class Config:
-        arbitrary_types_allowed=True
+        arbitrary_types_allowed = True
 
 
 class Chats(BaseModel):
-    
     """
     Модель списка чатов.
 
@@ -95,13 +90,12 @@ class Chats(BaseModel):
         chats (List[Chat]): Список чатов. По умолчанию пустой.
         marker (Optional[int]): Маркер для пагинации. Может быть None.
     """
-    
+
     chats: List[Chat] = Field(default_factory=list)
     marker: Optional[int] = None
 
 
 class ChatMember(User):
-    
     """
     Модель участника чата.
 
@@ -112,7 +106,7 @@ class ChatMember(User):
         join_time (Optional[int]): Время присоединения к чату. Может быть None.
         permissions (Optional[List[ChatPermission]]): Список разрешений участника. Может быть None.
     """
-    
+
     last_access_time: Optional[int] = None
     is_owner: Optional[bool] = None
     is_admin: Optional[bool] = None

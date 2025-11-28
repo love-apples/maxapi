@@ -1,10 +1,8 @@
 from ....enums.button_type import ButtonType
-
 from .button import Button
 
 
 class MessageButton(Button):
-    
     """
     Кнопка для отправки текста
 

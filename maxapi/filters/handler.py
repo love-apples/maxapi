@@ -2,18 +2,14 @@ from typing import Any, Callable, List, Optional
 
 from magic_filter import MagicFilter
 
+from ..context.state_machine import State
+from ..enums.update import UpdateType
 from ..filters.filter import BaseFilter
 from ..filters.middleware import BaseMiddleware
-
-from ..context.state_machine import State
-
-from ..enums.update import UpdateType
-
 from ..loggers import logger_dp
 
 
 class Handler:
-    
     """
     Обработчик события.
 
@@ -25,9 +21,8 @@ class Handler:
         *args: Any,
         func_event: Callable,
         update_type: UpdateType,
-        **kwargs: Any
+        **kwargs: Any,
     ):
-        
         """
         Создаёт обработчик события.
 
@@ -37,7 +32,7 @@ class Handler:
             update_type (UpdateType): Тип обновления.
             **kwargs (Any): Дополнительные параметры.
         """
-        
+
         self.func_event: Callable = func_event
         self.update_type: UpdateType = update_type
         self.filters: Optional[List[MagicFilter]] = []
@@ -56,5 +51,5 @@ class Handler:
                 self.base_filters.append(arg)
             else:
                 logger_dp.info(
-                    f'Неизвестный фильтр `{arg}` при регистрации `{func_event.__name__}`'
+                    f"Неизвестный фильтр `{arg}` при регистрации `{func_event.__name__}`"
                 )

@@ -4,7 +4,6 @@ from ....enums.button_type import ButtonType
 
 
 class Button(BaseModel):
-    
     """
     Базовая модель кнопки для сообщений.
 

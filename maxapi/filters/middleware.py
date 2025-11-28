@@ -1,7 +1,7 @@
-from typing import Any, Callable, Awaitable
+from typing import Any, Awaitable, Callable
+
 
 class BaseMiddleware:
-    
     """
     Базовый класс для мидлварей.
 
@@ -12,9 +12,8 @@ class BaseMiddleware:
         self,
         handler: Callable[[Any, dict[str, Any]], Awaitable[Any]],
         event_object: Any,
-        data: dict[str, Any]
+        data: dict[str, Any],
     ) -> Any:
-        
         """
         Вызывает хендлер с переданным событием и данными.
 
@@ -26,5 +25,5 @@ class BaseMiddleware:
         Returns:
             Any: Результат работы хендлера.
         """
-        
+
         return await handler(event_object, data)

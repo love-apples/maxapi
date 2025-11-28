@@ -1,4 +1,5 @@
 from typing import Union
+
 from ...types.updates.bot_added import BotAdded
 from ...types.updates.bot_removed import BotRemoved
 from ...types.updates.bot_started import BotStarted
@@ -11,7 +12,6 @@ from ...types.updates.message_removed import MessageRemoved
 from ...types.updates.user_added import UserAdded
 from ...types.updates.user_removed import UserRemoved
 
-
 UpdateUnion = Union[
     BotAdded,
     BotRemoved,
@@ -23,5 +23,5 @@ UpdateUnion = Union[
     MessageEdited,
     MessageRemoved,
     UserAdded,
-    UserRemoved
+    UserRemoved,
 ]

@@ -6,7 +6,6 @@ from ..enums.upload_type import UploadType
 
 
 class InputMedia:
-    
     """
     Класс для представления медиафайла.
 
@@ -16,19 +15,17 @@ class InputMedia:
     """
 
     def __init__(self, path: str):
-        
         """
         Инициализирует объект медиафайла.
 
         Args:
             path (str): Путь к файлу.
         """
-        
+
         self.path = path
         self.type = self.__detect_file_type(path)
 
     def __detect_file_type(self, path: str) -> UploadType:
-        
         """
         Определяет тип файла на основе его содержимого (MIME-типа).
 
@@ -38,8 +35,8 @@ class InputMedia:
         Returns:
             UploadType: Тип файла (VIDEO, IMAGE, AUDIO или FILE).
         """
-        
-        with open(path, 'rb') as f:
+
+        with open(path, "rb") as f:
             sample = f.read(4096)
 
         try:
@@ -54,18 +51,17 @@ class InputMedia:
         if mime_type is None:
             return UploadType.FILE
 
-        if mime_type.startswith('video/'):
+        if mime_type.startswith("video/"):
             return UploadType.VIDEO
-        elif mime_type.startswith('image/'):
+        elif mime_type.startswith("image/"):
             return UploadType.IMAGE
-        elif mime_type.startswith('audio/'):
+        elif mime_type.startswith("audio/"):
             return UploadType.AUDIO
         else:
             return UploadType.FILE
 
-        
+
 class InputMediaBuffer:
-    
     """
     Класс для представления медиафайла из буфера.
 
@@ -75,7 +71,6 @@ class InputMediaBuffer:
     """
 
     def __init__(self, buffer: bytes, filename: str | None = None):
-        
         """
         Инициализирует объект медиафайла из буфера.
 
@@ -83,7 +78,7 @@ class InputMediaBuffer:
             buffer (IO): Буфер с содержимым файла.
             filename (str): Название файла (по умолчанию присваивается uuid4).
         """
-        
+
         self.filename = filename
         self.buffer = buffer
         self.type = self.__detect_file_type(buffer)
@@ -100,11 +95,11 @@ class InputMediaBuffer:
 
         if mime_type is None:
             return UploadType.FILE
-        if mime_type.startswith('video/'):
+        if mime_type.startswith("video/"):
             return UploadType.VIDEO
-        elif mime_type.startswith('image/'):
+        elif mime_type.startswith("image/"):
             return UploadType.IMAGE
-        elif mime_type.startswith('audio/'):
+        elif mime_type.startswith("audio/"):
             return UploadType.AUDIO
         else:
             return UploadType.FILE

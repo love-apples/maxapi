@@ -1,15 +1,13 @@
 from typing import TYPE_CHECKING, Optional
 
-from .update import Update
-
 from ...types.users import User
+from .update import Update
 
 if TYPE_CHECKING:
     from ...bot import Bot
-    
+
 
 class ChatTitleChanged(Update):
-    
     """
     Обновление, сигнализирующее об изменении названия чата.
 
@@ -18,11 +16,11 @@ class ChatTitleChanged(Update):
         user (User): Пользователь, совершивший изменение.
         title (str): Новое название чата.
     """
-    
+
     chat_id: int
     user: User
     title: str
-    
+
     if TYPE_CHECKING:
         bot: Optional[Bot]  # pyright: ignore[reportGeneralTypeIssues]
 

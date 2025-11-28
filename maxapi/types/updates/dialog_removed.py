@@ -1,15 +1,13 @@
 from typing import TYPE_CHECKING, Optional
 
-from .update import Update
-
 from ...types.users import User
+from .update import Update
 
 if TYPE_CHECKING:
     from ...bot import Bot
 
 
 class DialogRemoved(Update):
-    
     """
     Обновление, сигнализирующее об удалении диалога с ботом.
 
@@ -18,13 +16,13 @@ class DialogRemoved(Update):
         user (User): Пользователь (бот).
         user_locale (Optional[str]): Локаль пользователя.
     """
-    
+
     chat_id: int
     user: User
     user_locale: Optional[str] = None
-    
+
     if TYPE_CHECKING:
         bot: Optional[Bot]  # pyright: ignore[reportGeneralTypeIssues]
-        
+
     def get_ids(self):
         return (self.chat_id, self.user.user_id)

@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING, Any, Literal, Optional
+
 from pydantic import BaseModel, Field
 
 from ...enums.attachment import AttachmentType
-
 from .attachment import Attachment
 
 if TYPE_CHECKING:
@@ -10,7 +10,6 @@ if TYPE_CHECKING:
 
 
 class VideoUrl(BaseModel):
-    
     """
     URLs различных разрешений видео.
 
@@ -23,7 +22,7 @@ class VideoUrl(BaseModel):
         mp4_144 (Optional[str]): URL видео в 144p.
         hls (Optional[str]): URL HLS потока.
     """
-    
+
     mp4_1080: Optional[str] = None
     mp4_720: Optional[str] = None
     mp4_480: Optional[str] = None
@@ -34,19 +33,17 @@ class VideoUrl(BaseModel):
 
 
 class VideoThumbnail(BaseModel):
-    
     """
     Миниатюра видео.
 
     Attributes:
         url (str): URL миниатюры.
     """
-    
+
     url: str
 
 
 class Video(Attachment):
-    
     """
     Вложение с типом видео.
 
@@ -59,15 +56,19 @@ class Video(Attachment):
         duration (Optional[int]): Продолжительность видео в секундах.
         bot (Optional[Any]): Ссылка на экземпляр бота, не сериализуется.
     """
-    
-    type: Literal[AttachmentType.VIDEO] # pyright: ignore[reportIncompatibleVariableOverride]
+
+    type: Literal[
+        AttachmentType.VIDEO
+    ]  # pyright: ignore[reportIncompatibleVariableOverride]
     token: Optional[str] = None
     urls: Optional[VideoUrl] = None
     thumbnail: VideoThumbnail
     width: Optional[int] = None
     height: Optional[int] = None
     duration: Optional[int] = None
-    bot: Optional[Any] = Field(default=None, exclude=True)  # pyright: ignore[reportRedeclaration]
-    
+    bot: Optional[Any] = Field(
+        default=None, exclude=True
+    )  # pyright: ignore[reportRedeclaration]
+
     if TYPE_CHECKING:
-        bot: Optional['Bot'] # type: ignore
+        bot: Optional["Bot"]  # type: ignore

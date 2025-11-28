@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -6,11 +7,10 @@ if TYPE_CHECKING:
 
 
 class BaseFilter:
-    
     """
     Базовый класс для фильтров.
 
-    Определяет интерфейс фильтрации событий. 
+    Определяет интерфейс фильтрации событий.
     Потомки должны переопределять метод __call__.
 
     Methods:

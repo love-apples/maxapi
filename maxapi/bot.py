@@ -1,26 +1,18 @@
 from __future__ import annotations
 
-from datetime import datetime
 import os
 import warnings
-from typing import Any, Dict, List, Optional, Sequence, Union, TYPE_CHECKING
-
-from .types.attachments import Attachments
-
-from .exceptions.max import InvalidToken
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Union
 
 from .client.default import DefaultConnectionProperties
-
-from .types.input_media import InputMedia, InputMediaBuffer
-
 from .connection.base import BaseConnection
-from .loggers import logger_bot
-
 from .enums.parse_mode import ParseMode
 from .enums.sender_action import SenderAction
-from .enums.upload_type import UploadType
 from .enums.update import UpdateType
-
+from .enums.upload_type import UploadType
+from .exceptions.max import InvalidToken
+from .loggers import logger_bot
 from .methods.add_admin_chat import AddAdminChat
 from .methods.add_members_chat import AddMembersChat
 from .methods.change_info import ChangeInfo
@@ -37,8 +29,10 @@ from .methods.get_list_admin_chat import GetListAdminChat
 from .methods.get_me import GetMe
 from .methods.get_me_from_chat import GetMeFromChat
 from .methods.get_members_chat import GetMembersChat
+from .methods.get_message import GetMessage
 from .methods.get_messages import GetMessages
 from .methods.get_pinned_message import GetPinnedMessage
+from .methods.get_subscriptions import GetSubscriptions
 from .methods.get_updates import GetUpdates
 from .methods.get_upload_url import GetUploadURL
 from .methods.get_video import GetVideo
@@ -48,24 +42,16 @@ from .methods.remove_member_chat import RemoveMemberChat
 from .methods.send_action import SendAction
 from .methods.send_callback import SendCallback
 from .methods.send_message import SendMessage
-from .methods.get_subscriptions import GetSubscriptions
-from .methods.types.getted_subscriptions import GettedSubscriptions
 from .methods.subscribe_webhook import SubscribeWebhook
+from .methods.types.getted_subscriptions import GettedSubscriptions
 from .methods.types.subscribed import Subscribed
 from .methods.types.unsubscribed import Unsubscribed
 from .methods.unsubscribe_webhook import UnsubscribeWebhook
-from .methods.get_message import GetMessage
+from .types.attachments import Attachments
+from .types.input_media import InputMedia, InputMediaBuffer
 
 if TYPE_CHECKING:
-    from .types.attachments.attachment import Attachment
-    from .types.attachments.image import PhotoAttachmentRequestPayload
-    from .types.attachments.video import Video
-    from .types.chats import Chat, ChatMember, Chats
-    from .types.command import BotCommand
-    from .types.message import Message, Messages, NewMessageLink
-    from .types.users import ChatAdmin, User
-    from .types.updates.message_callback import MessageForCallback
-
+    from .filters.command import CommandsInfo
     from .methods.types.added_admin_chat import AddedListAdminChat
     from .methods.types.added_members_chat import AddedMembersChat
     from .methods.types.deleted_bot_from_chat import DeletedBotFromChat
@@ -83,12 +69,17 @@ if TYPE_CHECKING:
     from .methods.types.sended_action import SendedAction
     from .methods.types.sended_callback import SendedCallback
     from .methods.types.sended_message import SendedMessage
-    
-    from .filters.command import CommandsInfo
+    from .types.attachments.attachment import Attachment
+    from .types.attachments.image import PhotoAttachmentRequestPayload
+    from .types.attachments.video import Video
+    from .types.chats import Chat, ChatMember, Chats
+    from .types.command import BotCommand
+    from .types.message import Message, Messages, NewMessageLink
+    from .types.updates.message_callback import MessageForCallback
+    from .types.users import ChatAdmin, User
 
 
 class Bot(BaseConnection):
-
     """
     Основной класс для работы с API бота.
 
@@ -97,7 +88,7 @@ class Bot(BaseConnection):
     """
 
     def __init__(
-        self, 
+        self,
         token: Optional[str] = None,
         parse_mode: Optional[ParseMode] = None,
         notify: Optional[bool] = None,
@@ -105,9 +96,8 @@ class Bot(BaseConnection):
         auto_requests: bool = True,
         default_connection: Optional[DefaultConnectionProperties] = None,
         after_input_media_delay: Optional[float] = None,
-        auto_check_subscriptions: bool = True
+        auto_check_subscriptions: bool = True,
     ):
-
         """
         Инициализирует экземпляр бота.
 
@@ -125,17 +115,21 @@ class Bot(BaseConnection):
 
         super().__init__()
         self.bot = self
-        self.default_connection = default_connection or DefaultConnectionProperties()
+        self.default_connection = (
+            default_connection or DefaultConnectionProperties()
+        )
         self.after_input_media_delay = after_input_media_delay or 2.0
         self.auto_check_subscriptions = auto_check_subscriptions
         self.commands: List[CommandsInfo] = []
 
-        self.__token = token or os.environ.get('MAX_BOT_TOKEN')
+        self.__token = token or os.environ.get("MAX_BOT_TOKEN")
         if self.__token is None:
-            raise InvalidToken('Токен не может быть None. Укажите токен в Bot(token="...") или в переменную окружения MAX_BOT_TOKEN')
-        
+            raise InvalidToken(
+                'Токен не может быть None. Укажите токен в Bot(token="...") или в переменную окружения MAX_BOT_TOKEN'
+            )
+
         self.params: Dict[str, Any] = {}
-        self.headers: Dict[str, Any] = {'Authorization': self.__token}
+        self.headers: Dict[str, Any] = {"Authorization": self.__token}
         self.marker_updates = None
 
         self.parse_mode = parse_mode
@@ -144,10 +138,9 @@ class Bot(BaseConnection):
         self.auto_requests = auto_requests
 
         self._me: User | None = None
-        
+
     @property
     def handlers_commands(self) -> List[CommandsInfo]:
-
         """
         Возвращает список команд из зарегистрированных обработчиков текущего инстанса.
 
@@ -159,7 +152,6 @@ class Bot(BaseConnection):
 
     @property
     def me(self) -> Optional[User]:
-
         """
         Возвращает объект пользователя (бота).
 
@@ -168,9 +160,10 @@ class Bot(BaseConnection):
         """
 
         return self._me
-    
-    def _resolve_disable_link_preview(self, disable_link_preview: Optional[bool]) -> Optional[bool]:
 
+    def _resolve_disable_link_preview(
+        self, disable_link_preview: Optional[bool]
+    ) -> Optional[bool]:
         """
         Определяет флаг превью.
 
@@ -181,10 +174,13 @@ class Bot(BaseConnection):
             Optional[bool]: Итоговый флаг.
         """
 
-        return disable_link_preview if disable_link_preview is not None else self.disable_link_preview
+        return (
+            disable_link_preview
+            if disable_link_preview is not None
+            else self.disable_link_preview
+        )
 
     def _resolve_notify(self, notify: Optional[bool]) -> Optional[bool]:
-
         """
         Определяет флаг уведомления.
 
@@ -197,8 +193,9 @@ class Bot(BaseConnection):
 
         return notify if notify is not None else self.notify
 
-    def _resolve_parse_mode(self, mode: Optional[ParseMode]) -> Optional[ParseMode]:
-
+    def _resolve_parse_mode(
+        self, mode: Optional[ParseMode]
+    ) -> Optional[ParseMode]:
         """
         Определяет режим форматирования.
 
@@ -212,7 +209,6 @@ class Bot(BaseConnection):
         return mode if mode is not None else self.parse_mode
 
     async def close_session(self) -> None:
-
         """
         Закрывает текущую сессию aiohttp.
 
@@ -225,19 +221,21 @@ class Bot(BaseConnection):
 
     async def send_message(
         self,
-        chat_id: Optional[int] = None, 
+        chat_id: Optional[int] = None,
         user_id: Optional[int] = None,
         text: Optional[str] = None,
-        attachments: Optional[List[Attachment | InputMedia | InputMediaBuffer] | List[Attachments]] = None,
+        attachments: Optional[
+            List[Attachment | InputMedia | InputMediaBuffer]
+            | List[Attachments]
+        ] = None,
         link: Optional[NewMessageLink] = None,
         notify: Optional[bool] = None,
         parse_mode: Optional[ParseMode] = None,
-        disable_link_preview: Optional[bool] = None
+        disable_link_preview: Optional[bool] = None,
     ) -> Optional[SendedMessage]:
-
         """
         Отправляет сообщение в чат или пользователю.
-        
+
         https://dev.max.ru/docs-api/methods/POST/messages
 
         Args:
@@ -248,7 +246,7 @@ class Bot(BaseConnection):
             link (Optional[NewMessageLink]): Данные ссылки сообщения.
             notify (Optional[bool]): Флаг уведомления.
             parse_mode (Optional[ParseMode]): Режим форматирования текста.
-            disable_link_preview (Optional[bool]): Флаг генерации превью. 
+            disable_link_preview (Optional[bool]): Флаг генерации превью.
 
         Returns:
             Optional[SendedMessage]: Отправленное сообщение или ошибка.
@@ -263,18 +261,19 @@ class Bot(BaseConnection):
             link=link,
             notify=self._resolve_notify(notify),
             parse_mode=self._resolve_parse_mode(parse_mode),
-            disable_link_preview=self._resolve_disable_link_preview(disable_link_preview)
+            disable_link_preview=self._resolve_disable_link_preview(
+                disable_link_preview
+            ),
         ).fetch()
 
     async def send_action(
         self,
         chat_id: Optional[int] = None,
-        action: SenderAction = SenderAction.TYPING_ON
+        action: SenderAction = SenderAction.TYPING_ON,
     ) -> SendedAction:
-
         """
         Отправляет действие в чат (например, "печатает").
-        
+
         https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/actions
 
         Args:
@@ -286,24 +285,24 @@ class Bot(BaseConnection):
         """
 
         return await SendAction(
-            bot=self,
-            chat_id=chat_id,
-            action=action
+            bot=self, chat_id=chat_id, action=action
         ).fetch()
 
     async def edit_message(
         self,
         message_id: str,
         text: Optional[str] = None,
-        attachments: Optional[List[Attachment | InputMedia | InputMediaBuffer] | List[Attachments]] = None,
+        attachments: Optional[
+            List[Attachment | InputMedia | InputMediaBuffer]
+            | List[Attachments]
+        ] = None,
         link: Optional[NewMessageLink] = None,
         notify: Optional[bool] = None,
-        parse_mode: Optional[ParseMode] = None
+        parse_mode: Optional[ParseMode] = None,
     ) -> Optional[EditedMessage]:
-
         """
         Редактирует существующее сообщение.
-        
+
         https://dev.max.ru/docs-api/methods/PUT/messages
 
         Args:
@@ -325,17 +324,13 @@ class Bot(BaseConnection):
             attachments=attachments,
             link=link,
             notify=self._resolve_notify(notify),
-            parse_mode=self._resolve_parse_mode(parse_mode)
+            parse_mode=self._resolve_parse_mode(parse_mode),
         ).fetch()
 
-    async def delete_message(
-        self,
-        message_id: str
-    ) -> DeletedMessage:
-
+    async def delete_message(self, message_id: str) -> DeletedMessage:
         """
         Удаляет сообщение.
-        
+
         https://dev.max.ru/docs-api/methods/DELETE/messages
 
         Args:
@@ -350,14 +345,10 @@ class Bot(BaseConnection):
             message_id=message_id,
         ).fetch()
 
-    async def delete_chat(
-        self,
-        chat_id: int
-    ) -> DeletedChat:
-
+    async def delete_chat(self, chat_id: int) -> DeletedChat:
         """
         Удаляет чат.
-        
+
         https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-
 
         Args:
@@ -373,17 +364,16 @@ class Bot(BaseConnection):
         ).fetch()
 
     async def get_messages(
-        self, 
+        self,
         chat_id: Optional[int] = None,
         message_ids: Optional[List[str]] = None,
         from_time: Optional[Union[datetime, int]] = None,
         to_time: Optional[Union[datetime, int]] = None,
         count: int = 50,
     ) -> Messages:
-
         """
         Получает сообщения из чата.
-        
+
         https://dev.max.ru/docs-api/methods/GET/messages
 
         Args:
@@ -398,22 +388,18 @@ class Bot(BaseConnection):
         """
 
         return await GetMessages(
-            bot=self, 
+            bot=self,
             chat_id=chat_id,
             message_ids=message_ids,
             from_time=from_time,
             to_time=to_time,
-            count=count
+            count=count,
         ).fetch()
 
-    async def get_message(
-        self, 
-        message_id: str
-    ) -> Message:
-
+    async def get_message(self, message_id: str) -> Message:
         """
         Получает одно сообщение по ID.
-        
+
         https://dev.max.ru/docs-api/methods/GET/messages/-messageId-
 
         Args:
@@ -423,16 +409,12 @@ class Bot(BaseConnection):
             Message: Объект сообщения.
         """
 
-        return await GetMessage(
-            bot=self,
-            message_id=message_id
-        ).fetch()
+        return await GetMessage(bot=self, message_id=message_id).fetch()
 
     async def get_me(self) -> User:
-
         """
         Получает информацию о текущем боте.
-        
+
         https://dev.max.ru/docs-api/methods/GET/me
 
         Returns:
@@ -441,14 +423,10 @@ class Bot(BaseConnection):
 
         return await GetMe(self).fetch()
 
-    async def get_pin_message(
-        self, 
-        chat_id: int
-    ) -> GettedPin:
-
+    async def get_pin_message(self, chat_id: int) -> GettedPin:
         """
         Получает закрепленное сообщение в чате.
-        
+
         https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/pin
 
         Args:
@@ -458,66 +436,59 @@ class Bot(BaseConnection):
             GettedPin: Закрепленное сообщение.
         """
 
-        return await GetPinnedMessage(
-            bot=self, 
-            chat_id=chat_id
-        ).fetch()
+        return await GetPinnedMessage(bot=self, chat_id=chat_id).fetch()
 
     async def change_info(
-        self, 
+        self,
         first_name: Optional[str] = None,
         last_name: Optional[str] = None,
         description: Optional[str] = None,
         commands: Optional[List[BotCommand]] = None,
-        photo: Optional[PhotoAttachmentRequestPayload] = None
+        photo: Optional[PhotoAttachmentRequestPayload] = None,
     ) -> User:
-
         """
         Изменяет данные текущего бота (PATCH /me).
-        
+
         .. deprecated:: 0.9.8
             Этот метод отсутствует в официальной swagger-спецификации API MAX.
             Использование не рекомендуется.
-        
+
         https://dev.max.ru/docs-api/methods/PATCH/me
 
         Args:
             first_name (Optional[str]): Новое имя бота (1–64 символа).
             last_name (str, optional): Второе имя бота (1–64 символа).
             description (Optional[str]): Новое описание бота (1–16000 символов).
-            commands (Optional[List[BotCommand]]): Список команд бота (до 32 элементов). 
+            commands (Optional[List[BotCommand]]): Список команд бота (до 32 элементов).
                 Передайте пустой список, чтобы удалить все команды.
             photo (Optional[PhotoAttachmentRequestPayload]): Новое фото бота.
 
         Returns:
             User: Объект с обновлённой информацией о боте.
         """
-        
+
         warnings.warn(
-            'bot.change_info() устарел и отсутствует в официальной swagger-спецификации API MAX. '
-            'Использование не рекомендуется.',
+            "bot.change_info() устарел и отсутствует в официальной swagger-спецификации API MAX. "
+            "Использование не рекомендуется.",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
 
         return await ChangeInfo(
-            bot=self, 
+            bot=self,
             first_name=first_name,
             last_name=last_name,
-            description=description, 
-            commands=commands, 
-            photo=photo
+            description=description,
+            commands=commands,
+            photo=photo,
         ).fetch()
 
     async def get_chats(
-        self,
-        count: Optional[int] = None,
-        marker: Optional[int] = None
+        self, count: Optional[int] = None, marker: Optional[int] = None
     ) -> Chats:
-
         """
         Получает список чатов бота.
-        
+
         https://dev.max.ru/docs-api/methods/GET/chats
 
         Args:
@@ -528,20 +499,12 @@ class Bot(BaseConnection):
             Chats: Список чатов.
         """
 
-        return await GetChats(
-            bot=self,
-            count=count,
-            marker=marker
-        ).fetch()
+        return await GetChats(bot=self, count=count, marker=marker).fetch()
 
-    async def get_chat_by_link(
-        self, 
-        link: str
-    ) -> Chat:
-
+    async def get_chat_by_link(self, link: str) -> Chat:
         """
         Получает чат по ссылке.
-        
+
         https://dev.max.ru/docs-api/methods/GET/chats/-chatLink-
 
         Args:
@@ -553,14 +516,10 @@ class Bot(BaseConnection):
 
         return await GetChatByLink(bot=self, link=link).fetch()
 
-    async def get_chat_by_id(
-        self, 
-        id: int
-    ) -> Chat:
-
+    async def get_chat_by_id(self, id: int) -> Chat:
         """
         Получает чат по ID.
-        
+
         https://dev.max.ru/docs-api/methods/GET/chats/-chatId-
 
         Args:
@@ -580,10 +539,9 @@ class Bot(BaseConnection):
         pin: Optional[str] = None,
         notify: Optional[bool] = None,
     ) -> Chat:
-
         """
         Редактирует информацию о чате.
-        
+
         https://dev.max.ru/docs-api/methods/PATCH/chats/-chatId-
 
         Args:
@@ -606,14 +564,10 @@ class Bot(BaseConnection):
             notify=self._resolve_notify(notify),
         ).fetch()
 
-    async def get_video(
-        self, 
-        video_token: str
-    ) -> Video:
-
+    async def get_video(self, video_token: str) -> Video:
         """
         Получает видео по токену.
-        
+
         https://dev.max.ru/docs-api/methods/GET/videos/-videoToken-
 
         Args:
@@ -623,21 +577,17 @@ class Bot(BaseConnection):
             Video: Объект видео.
         """
 
-        return await GetVideo(
-            bot=self, 
-            video_token=video_token
-        ).fetch()
+        return await GetVideo(bot=self, video_token=video_token).fetch()
 
     async def send_callback(
         self,
         callback_id: str,
         message: Optional[MessageForCallback] = None,
-        notification: Optional[str] = None
+        notification: Optional[str] = None,
     ) -> SendedCallback:
-
         """
         Отправляет callback ответ.
-        
+
         https://dev.max.ru/docs-api/methods/POST/answers
 
         Args:
@@ -653,19 +603,15 @@ class Bot(BaseConnection):
             bot=self,
             callback_id=callback_id,
             message=message,
-            notification=notification
+            notification=notification,
         ).fetch()
 
     async def pin_message(
-        self,
-        chat_id: int,
-        message_id: str,
-        notify: Optional[bool] = None
+        self, chat_id: int, message_id: str, notify: Optional[bool] = None
     ) -> PinnedMessage:
-
         """
         Закрепляет сообщение в чате.
-        
+
         https://dev.max.ru/docs-api/methods/PUT/chats/-chatId-/pin
 
         Args:
@@ -688,10 +634,9 @@ class Bot(BaseConnection):
         self,
         chat_id: int,
     ) -> DeletedPinMessage:
-
         """
         Удаляет закрепленное сообщение в чате.
-        
+
         https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-/pin
 
         Args:
@@ -710,10 +655,9 @@ class Bot(BaseConnection):
         self,
         chat_id: int,
     ) -> ChatMember:
-
         """
         Получает информацию о боте в чате.
-        
+
         https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members/me
 
         Args:
@@ -732,10 +676,9 @@ class Bot(BaseConnection):
         self,
         chat_id: int,
     ) -> DeletedBotFromChat:
-
         """
         Удаляет бота из чата.
-        
+
         https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-/members/me
 
         Args:
@@ -754,10 +697,9 @@ class Bot(BaseConnection):
         self,
         chat_id: int,
     ) -> GettedListAdminChat:
-
         """
         Получает список администраторов чата.
-        
+
         https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members/admins
 
         Args:
@@ -776,12 +718,11 @@ class Bot(BaseConnection):
         self,
         chat_id: int,
         admins: List[ChatAdmin],
-        marker: Optional[int] = None
+        marker: Optional[int] = None,
     ) -> AddedListAdminChat:
-
         """
         Добавляет администраторов в чат.
-        
+
         https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members/admins
 
         Args:
@@ -800,15 +741,10 @@ class Bot(BaseConnection):
             marker=marker,
         ).fetch()
 
-    async def remove_admin(
-        self,
-        chat_id: int,
-        user_id: int
-    ) -> RemovedAdmin:
-
+    async def remove_admin(self, chat_id: int, user_id: int) -> RemovedAdmin:
         """
         Удаляет администратора из чата.
-        
+
         https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-/members/admins/-userId-
 
         Args:
@@ -832,10 +768,9 @@ class Bot(BaseConnection):
         marker: Optional[int] = None,
         count: Optional[int] = None,
     ) -> GettedMembersChat:
-
         """
         Получает участников чата.
-        
+
         https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members
 
         Args:
@@ -861,10 +796,9 @@ class Bot(BaseConnection):
         chat_id: int,
         user_id: int,
     ) -> Optional[ChatMember]:
-
         """
         Получает участника чата.
-        
+
         https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members
 
         Args:
@@ -876,8 +810,7 @@ class Bot(BaseConnection):
         """
 
         members = await self.get_chat_members(
-            chat_id=chat_id,
-            user_ids=[user_id]
+            chat_id=chat_id, user_ids=[user_id]
         )
 
         if members.members:
@@ -890,10 +823,9 @@ class Bot(BaseConnection):
         chat_id: int,
         user_ids: List[int],
     ) -> AddedMembersChat:
-
         """
         Добавляет участников в чат.
-        
+
         https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members
 
         Args:
@@ -916,10 +848,9 @@ class Bot(BaseConnection):
         user_id: int,
         block: bool = False,
     ) -> RemovedMemberChat:
-
         """
         Исключает участника из чата.
-        
+
         https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-/members
 
         Args:
@@ -943,13 +874,11 @@ class Bot(BaseConnection):
         limit: Optional[int] = None,
         timeout: Optional[int] = None,
         marker: Optional[int] = None,
-        types: Optional[Sequence[UpdateType]] = None
-        
+        types: Optional[Sequence[UpdateType]] = None,
     ) -> Dict:
-
         """
         Получает обновления для бота.
-        
+
         https://dev.max.ru/docs-api/methods/GET/updates
 
         Returns:
@@ -957,21 +886,13 @@ class Bot(BaseConnection):
         """
 
         return await GetUpdates(
-            bot=self,
-            limit=limit,
-            marker=marker,
-            types=types,
-            timeout=timeout
+            bot=self, limit=limit, marker=marker, types=types, timeout=timeout
         ).fetch()
 
-    async def get_upload_url(
-        self,
-        type: UploadType
-    ) -> GettedUploadUrl:
-
+    async def get_upload_url(self, type: UploadType) -> GettedUploadUrl:
         """
         Получает URL для загрузки файлов.
-        
+
         https://dev.max.ru/docs-api/methods/POST/uploads
 
         Args:
@@ -981,16 +902,9 @@ class Bot(BaseConnection):
             GettedUploadUrl: URL для загрузки.
         """
 
-        return await GetUploadURL(
-            bot=self,
-            type=type
-        ).fetch()
+        return await GetUploadURL(bot=self, type=type).fetch()
 
-    async def set_my_commands(
-        self,
-        *commands: BotCommand
-    ) -> User:
-
+    async def set_my_commands(self, *commands: BotCommand) -> User:
         """
         Устанавливает список команд бота.
 
@@ -1001,16 +915,12 @@ class Bot(BaseConnection):
             User: Обновленная информация о боте.
         """
 
-        return await ChangeInfo(
-            bot=self,
-            commands=list(commands)
-        ).fetch()
+        return await ChangeInfo(bot=self, commands=list(commands)).fetch()
 
     async def get_subscriptions(self) -> GettedSubscriptions:
-
         """
         Получает список всех подписок.
-        
+
         https://dev.max.ru/docs-api/methods/GET/subscriptions
 
         Returns:
@@ -1023,12 +933,11 @@ class Bot(BaseConnection):
         self,
         url: str,
         update_types: Optional[List[UpdateType]] = None,
-        secret: Optional[str] = None
+        secret: Optional[str] = None,
     ) -> Subscribed:
-
         """
         Подписывает бота на получение обновлений через WebHook.
-        
+
         https://dev.max.ru/docs-api/methods/POST/subscriptions
 
         Args:
@@ -1041,20 +950,16 @@ class Bot(BaseConnection):
         """
 
         return await SubscribeWebhook(
-            bot=self,
-            url=url,
-            update_types=update_types,
-            secret=secret
+            bot=self, url=url, update_types=update_types, secret=secret
         ).fetch()
 
     async def unsubscribe_webhook(
         self,
         url: str,
     ) -> Unsubscribed:
-
         """
         Отписывает бота от получения обновлений через WebHook.
-        
+
         https://dev.max.ru/docs-api/methods/DELETE/subscriptions
 
         Args:
@@ -1070,10 +975,9 @@ class Bot(BaseConnection):
         ).fetch()
 
     async def delete_webhook(self) -> None:
-
         """
         Удаляет все подписки на Webhook.
-        
+
         https://dev.max.ru/docs-api/methods/DELETE/subscriptions
 
         Returns:
@@ -1082,8 +986,8 @@ class Bot(BaseConnection):
 
         subs = await self.get_subscriptions()
         if subs.subscriptions:
-            
+
             for sub in subs.subscriptions:
-                
+
                 await self.unsubscribe_webhook(sub.url)
-                logger_bot.info('Удалена подписка на Webhook: %s', sub.url)
+                logger_bot.info("Удалена подписка на Webhook: %s", sub.url)

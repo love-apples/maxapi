@@ -6,22 +6,21 @@ if TYPE_CHECKING:
 
 class BotMixin:
     """Миксин для проверки инициализации bot."""
-    
+
     bot: Any
-    
-    def _ensure_bot(self) -> 'Bot':
-        
+
+    def _ensure_bot(self) -> "Bot":
         """
         Проверяет, что bot инициализирован, и возвращает его.
-        
+
         Returns:
             Bot: Объект бота.
-            
+
         Raises:
             RuntimeError: Если bot не инициализирован.
         """
-        
+
         if self.bot is None:
-            raise RuntimeError('Bot не инициализирован')
-        
+            raise RuntimeError("Bot не инициализирован")
+
         return self.bot  # type: ignore

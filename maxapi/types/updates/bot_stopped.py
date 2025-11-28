@@ -1,15 +1,13 @@
 from typing import TYPE_CHECKING, Optional
 
-from .update import Update
-
 from ...types.users import User
+from .update import Update
 
 if TYPE_CHECKING:
     from ...bot import Bot
 
 
 class BotStopped(Update):
-    
     """
     Обновление, сигнализирующее об остановке бота.
 
@@ -19,12 +17,12 @@ class BotStopped(Update):
         user_locale (Optional[str]): Локаль пользователя.
         payload (Optional[str]): Дополнительные данные.
     """
-    
+
     chat_id: int
     user: User
     user_locale: Optional[str] = None
     payload: Optional[str] = None
-    
+
     if TYPE_CHECKING:
         bot: Optional[Bot]  # pyright: ignore[reportGeneralTypeIssues]
 

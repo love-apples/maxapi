@@ -1,16 +1,14 @@
-from typing import TYPE_CHECKING, Optional
 from datetime import datetime
-
-from .update import Update
+from typing import TYPE_CHECKING, Optional
 
 from ...types.users import User
+from .update import Update
 
 if TYPE_CHECKING:
     from ...bot import Bot
 
 
 class DialogMuted(Update):
-    
     """
     Обновление, сигнализирующее об отключении оповещений от бота.
 
@@ -20,15 +18,15 @@ class DialogMuted(Update):
         user (User): Пользователь (бот).
         user_locale (Optional[str]): Локаль пользователя.
     """
-    
+
     chat_id: int
     muted_until: int
     user: User
     user_locale: Optional[str] = None
-    
+
     if TYPE_CHECKING:
         bot: Optional[Bot]  # pyright: ignore[reportGeneralTypeIssues]
-        
+
     @property
     def muted_until_datetime(self):
         try:
