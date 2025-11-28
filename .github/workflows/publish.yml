@@ -1,0 +1,94 @@
+name: Publish to PyPI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pyproject.toml'
+  workflow_dispatch:
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      changed: ${{ steps.changed.outputs.changed }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Нужна полная история для сравнения
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Get current version
+        id: version
+        run: |
+          python -c "import tomllib; f = open('pyproject.toml', 'rb'); data = tomllib.load(f); print(data['project']['version'])" > /tmp/current_version.txt
+          VERSION=$(cat /tmp/current_version.txt)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Check if version changed
+        id: changed
+        run: |
+          CURRENT_VERSION=$(cat /tmp/current_version.txt)
+          
+          # Получаем версию из предыдущего коммита
+          PREVIOUS_VERSION=$(git show HEAD~1:pyproject.toml 2>/dev/null | python -c "import sys, tomllib; data = tomllib.load(sys.stdin.buffer); print(data['project']['version'])" 2>/dev/null || echo "")
+          
+          if [ -z "$PREVIOUS_VERSION" ]; then
+            # Если нет предыдущей версии, проверяем изменения в файле
+            if git diff --quiet HEAD~1 HEAD -- pyproject.toml 2>/dev/null; then
+              echo "changed=false" >> $GITHUB_OUTPUT
+              echo "No changes in pyproject.toml"
+            else
+              echo "changed=true" >> $GITHUB_OUTPUT
+              echo "pyproject.toml changed (first publish or version file modified)"
+            fi
+          elif [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Version changed from $PREVIOUS_VERSION to $CURRENT_VERSION"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "Version not changed: $CURRENT_VERSION"
+          fi
+
+  publish:
+    needs: check-version
+    if: needs.check-version.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # Для Trusted Publishing на PyPI
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build dependencies
+        run: |
+          uv sync --all-groups
+
+      - name: Build package
+        run: |
+          uv build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          print-hash: true
