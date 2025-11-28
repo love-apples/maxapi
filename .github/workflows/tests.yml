@@ -49,6 +49,7 @@ jobs:
       - name: Run integration tests
         env:
           MAX_BOT_TOKEN: ${{ secrets.MAX_BOT_TOKEN }}
+          TEST_CHAT_ID: ${{ secrets.TEST_CHAT_ID }}
         run: |
           if [ -n "$MAX_BOT_TOKEN" ]; then
             uv run pytest tests/ -v -m integration
