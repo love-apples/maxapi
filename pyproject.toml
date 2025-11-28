@@ -38,6 +38,7 @@ webhook = ["fastapi>=0.68.0", "uvicorn>=0.15.0"]
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
+    "pytest-cov>=4.1",
     "ruff>=0.12",
     "black>=24.1",
     "isort>=5.12",
@@ -48,6 +49,7 @@ dev = [
     "mkdocs-material>=9.5.0",
     "mkdocstrings[python]>=0.24.0",
     "pymdown-extensions>=10.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [tool.uv]
@@ -69,6 +71,8 @@ from_first = false
 order_by_type = true
 no_sections = false
 import_heading_firstparty = "Core Stuff"
+skip = ["test*.py", "test_all_features.py", "examples"]
+skip_glob = ["test*.py", "examples/*"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -78,9 +82,27 @@ exclude = ["core/yandex/cloud", "core/google"]
 check_untyped_defs = true
 
 [tool.pytest.ini_options]
-testpaths = "tests"
+# Путь к тестам
+testpaths = ["tests"]
+
+# Автоматический режим для asyncio
 asyncio_mode = "auto"
-addopts = "-ra"
+
+# Параметры запуска
+addopts = "-ra --strict-markers -v -W ignore::pytest.PytestUnraisableExceptionWarning"
+
+# Маркеры
+markers = [
+    "integration: интеграционные тесты, требующие реальный токен бота",
+    "slow: медленные тесты",
+]
+
+# Фильтры предупреждений
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::pytest.PytestUnraisableExceptionWarning",
+]
 
 
 [tool.ruff]
