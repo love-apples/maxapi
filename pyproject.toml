@@ -1,6 +1,6 @@
 [project]
 name = "maxapi"
-version = "0.9.8"
+version = "0.9.9"
 description = "Библиотека для разработки чат-ботов с помощью API мессенджера MAX"
 readme = "README.md"
 requires-python = ">=3.10"
