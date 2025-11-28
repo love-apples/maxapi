@@ -1,8 +1,5 @@
 """Тесты для типов и моделей."""
 
-import pytest
-from unittest.mock import Mock
-
 from maxapi.types import (
     CallbackButton,
     LinkButton,
@@ -14,7 +11,7 @@ from maxapi.types import (
 from maxapi.enums.attachment import AttachmentType
 from maxapi.enums.message_link_type import MessageLinkType
 from maxapi.types.message import NewMessageLink
-from maxapi.types.input_media import InputMedia, InputMediaBuffer
+from maxapi.types.input_media import InputMediaBuffer
 from maxapi.enums.upload_type import UploadType
 
 

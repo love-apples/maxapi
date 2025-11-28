@@ -1,7 +1,6 @@
 """Тесты для Context и State Machine."""
 
 import pytest
-from unittest.mock import Mock
 
 from maxapi.context import MemoryContext
 from maxapi.context.state_machine import State, StatesGroup
