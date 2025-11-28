@@ -71,8 +71,8 @@ from_first = false
 order_by_type = true
 no_sections = false
 import_heading_firstparty = "Core Stuff"
-skip = ["test*.py", "test_all_features.py", "examples"]
-skip_glob = ["test*.py", "examples/*"]
+skip = ["test*.py", "test_all_features.py", "examples", ".venv", "venv", "env"]
+skip_glob = ["test*.py", "examples/*", ".venv/**", "venv/**", "env/**", "**/.venv/**", "**/venv/**", "**/env/**"]
 
 [tool.mypy]
 python_version = "3.12"
