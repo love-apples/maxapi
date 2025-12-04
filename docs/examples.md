@@ -964,3 +964,73 @@ if __name__ == '__main__':
     asyncio.run(main())
 ```
 
+## Настройка прокси
+
+### Подключение через прокси
+
+Для использования прокси-сервера передайте параметр `proxy` в `DefaultConnectionProperties`:
+
+```python
+import asyncio
+from maxapi import Bot, Dispatcher
+from maxapi.client import DefaultConnectionProperties
+from maxapi.types import MessageCreated, Command
+
+# URL прокси в формате: http://login:password@ip:port
+proxy_url = "http://login:password@ip:port"
+
+# Создание настроек соединения с прокси
+connection_props = DefaultConnectionProperties(proxy=proxy_url)
+
+# Инициализация бота с настройками соединения
+bot = Bot(default_connection=connection_props)
+dp = Dispatcher()
+
+@dp.message_created(Command('start'))
+async def start_handler(event: MessageCreated):
+    await event.message.answer("Привет!")
+
+async def main():
+    await dp.start_polling(bot)
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+
+### Использование прокси из переменных окружения
+
+Для использования прокси из переменных окружения используйте параметр `trust_env=True`:
+
+```python
+import asyncio
+from maxapi import Bot, Dispatcher
+from maxapi.client import DefaultConnectionProperties
+from maxapi.types import MessageCreated, Command
+
+bot = Bot(
+    "YOUR-TOKEN",
+    default_connection=DefaultConnectionProperties(trust_env=True),
+)
+dp = Dispatcher()
+
+@dp.message_created(Command('start'))
+async def start_handler(event: MessageCreated):
+    await event.message.answer("Привет!")
+
+async def main():
+    await dp.start_polling(bot)
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+
+#### Что такое `trust_env`?
+
+Параметр `trust_env=True` в aiohttp позволяет автоматически читать настройки прокси из переменных окружения системы. Когда этот параметр включен, aiohttp будет искать следующие переменные окружения:
+
+- **`HTTP_PROXY`** — прокси для HTTP-запросов (например, `http://proxy.example.com:8080`)
+- **`HTTPS_PROXY`** — прокси для HTTPS-запросов (например, `https://proxy.example.com:8080`)
+- **`NO_PROXY`** — список доменов, для которых прокси не используется (например, `localhost,127.0.0.1,*.local`)
+
+**Важно**: Если переменные окружения не установлены, `trust_env=True` не вызовет ошибку — просто прокси использоваться не будет.
+
