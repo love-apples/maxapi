@@ -18,3 +18,4 @@ class ChatPermission(str, Enum):
     EDIT_LINK = "edit_link"
     EDIT = "edit"
     DELETE = "delete"
+    VIEW_STATS = "view_stats"
