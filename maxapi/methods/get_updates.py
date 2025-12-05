@@ -36,7 +36,6 @@ class GetUpdates(BaseConnection):
         marker: Optional[int] = None,
         types: Optional[Sequence[UpdateType]] = None,
     ):
-
         if limit is not None and not (1 <= limit <= 1000):
             raise ValueError("limit не должен быть меньше 1 и больше 1000")
 

@@ -31,7 +31,6 @@ class SubscribeWebhook(BaseConnection):
         update_types: Optional[List[UpdateType]] = None,
         secret: Optional[str] = None,
     ):
-
         if secret is not None and not (5 <= len(secret) <= 256):
             raise ValueError(
                 "secret не должен быть меньше 5 или больше 256 символов"

@@ -265,12 +265,10 @@ class Dispatcher(BotMixin):
             router.bot = bot
 
             for handler in router.event_handlers:
-
                 if handler.base_filters is None:
                     continue
 
                 for base_filter in handler.base_filters:
-
                     commands = getattr(base_filter, "commands", None)
 
                     if commands and type(commands) is list:
@@ -480,10 +478,8 @@ class Dispatcher(BotMixin):
             HandlerException: При ошибке выполнения обработчика.
         """
         func_args = handler.func_event.__annotations__.keys()
-        kwargs_filtered = {
-            k: v for k, v in data.items() if k in func_args
-        }
-        
+        kwargs_filtered = {k: v for k, v in data.items() if k in func_args}
+
         if "context" not in kwargs_filtered and "context" in data:
             kwargs_filtered["context"] = data["context"]
 
@@ -531,13 +527,11 @@ class Dispatcher(BotMixin):
             async def _process_event(
                 _: UpdateUnion, data: Dict[str, Any]
             ) -> None:
-
                 nonlocal router_id, is_handled, memory_context, current_state
-                
+
                 data["context"] = memory_context
 
                 for index, router in enumerate(self.routers):
-
                     if is_handled:
                         break
 
@@ -560,13 +554,13 @@ class Dispatcher(BotMixin):
                     async def _process_handlers(
                         event: UpdateUnion, handler_data: Dict[str, Any]
                     ) -> None:
-                        
                         nonlocal is_handled
 
                         for handler in matching_handlers:
-
-                            handler_match_result = await self._check_handler_match(
-                                handler, event, current_state
+                            handler_match_result = (
+                                await self._check_handler_match(
+                                    handler, event, current_state
+                                )
                             )
 
                             if handler_match_result is False:
@@ -656,7 +650,6 @@ class Dispatcher(BotMixin):
         current_timestamp = int(datetime.now().timestamp() * 1000)
 
         while self.polling:
-
             try:
                 events: Dict = await self._ensure_bot().get_updates(
                     marker=self._ensure_bot().marker_updates
@@ -694,7 +687,6 @@ class Dispatcher(BotMixin):
                 )
 
                 for event in processed_events:
-
                     if skip_updates:
                         if event.timestamp < current_timestamp:
                             logger_dp.info(
@@ -854,7 +846,6 @@ class Event:
         """
 
         def decorator(func_event: Callable):
-
             if self.update_type == UpdateType.ON_STARTED:
                 self.router.on_started_func = func_event
 

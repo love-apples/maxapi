@@ -25,7 +25,6 @@ class DeleteMessage(BaseConnection):
         bot: "Bot",
         message_id: str,
     ):
-
         if len(message_id) < 1:
             raise ValueError("message_id не должен быть меньше 1 символа")
 

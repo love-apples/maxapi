@@ -34,7 +34,6 @@ class GetMessages(BaseConnection):
         to_time: Optional[Union[datetime, int]] = None,
         count: int = 50,
     ):
-
         if count is not None and not (1 <= count <= 100):
             raise ValueError("count не должен быть меньше 1 или больше 100")
 

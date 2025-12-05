@@ -50,7 +50,6 @@ class EditMessage(BaseConnection):
         notify: Optional[bool] = None,
         parse_mode: Optional[ParseMode] = None,
     ):
-
         if text is not None and not (len(text) < 4000):
             raise ValueError("text должен быть меньше 4000 символов")
 
@@ -84,9 +83,7 @@ class EditMessage(BaseConnection):
             json["text"] = self.text
 
         if self.attachments:
-
             for att in self.attachments:
-
                 if isinstance(att, InputMedia) or isinstance(
                     att, InputMediaBuffer
                 ):
@@ -109,7 +106,6 @@ class EditMessage(BaseConnection):
         response = None
 
         for attempt in range(self.ATTEMPTS_COUNT):
-
             try:
                 response = await super().request(
                     method=HTTPMethod.PUT,

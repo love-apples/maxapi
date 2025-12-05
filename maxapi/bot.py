@@ -986,8 +986,6 @@ class Bot(BaseConnection):
 
         subs = await self.get_subscriptions()
         if subs.subscriptions:
-
             for sub in subs.subscriptions:
-
                 await self.unsubscribe_webhook(sub.url)
                 logger_bot.info("Удалена подписка на Webhook: %s", sub.url)

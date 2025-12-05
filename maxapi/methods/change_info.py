@@ -42,7 +42,6 @@ class ChangeInfo(BaseConnection):
         commands: Optional[List[BotCommand]] = None,
         photo: Optional[PhotoAttachmentRequestPayload] = None,
     ):
-
         warnings.warn(
             "ChangeInfo устарел и отсутствует в официальной swagger-спецификации API MAX. "
             "Использование не рекомендуется.",

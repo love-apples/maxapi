@@ -19,7 +19,6 @@ async def process_input_media(
     bot: Bot,
     att: InputMedia | InputMediaBuffer,
 ) -> AttachmentUpload:
-
     # очень нестабильный метод независящий от модуля
     # ждем обновлений MAX API
 
@@ -60,7 +59,6 @@ async def process_input_media(
 
     if att.type in (UploadType.VIDEO, UploadType.AUDIO):
         if upload.token is None:
-
             if bot.session is not None:
                 await bot.session.close()
 

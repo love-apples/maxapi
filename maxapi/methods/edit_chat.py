@@ -40,7 +40,6 @@ class EditChat(BaseConnection):
         pin: Optional[str] = None,
         notify: Optional[bool] = None,
     ):
-
         if title is not None and not (1 <= len(title) <= 200):
             raise ValueError(
                 "title не должен быть меньше 1 или больше 200 символов"
@@ -74,7 +73,6 @@ class EditChat(BaseConnection):
             counter = Counter(dump.values())
 
             if None not in counter or not counter[None] == 2:
-
                 raise MaxIconParamsException(
                     "Все атрибуты модели Icon являются взаимоисключающими | "
                     "https://dev.max.ru/docs-api/methods/PATCH/chats/-chatId-"

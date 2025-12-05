@@ -52,7 +52,6 @@ class SendMessage(BaseConnection):
         parse_mode: Optional[ParseMode] = None,
         disable_link_preview: Optional[bool] = None,
     ):
-
         if text is not None and not (len(text) < 4000):
             raise ValueError("text должен быть меньше 4000 символов")
 
@@ -92,9 +91,7 @@ class SendMessage(BaseConnection):
         HAS_INPUT_MEDIA = False
 
         if self.attachments:
-
             for att in self.attachments:
-
                 if isinstance(att, (InputMedia, InputMediaBuffer)):
                     HAS_INPUT_MEDIA = True
 
@@ -122,7 +119,6 @@ class SendMessage(BaseConnection):
 
         response = None
         for attempt in range(self.ATTEMPTS_COUNT):
-
             try:
                 response = await super().request(
                     method=HTTPMethod.POST,

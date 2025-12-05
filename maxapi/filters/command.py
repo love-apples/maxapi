@@ -178,7 +178,6 @@ class CommandStart(Command):
         ignore_symbol_at_sign: bool = False,
         only_with_bot_username: bool = False,
     ):
-
         super().__init__(
             "start",
             prefix,
