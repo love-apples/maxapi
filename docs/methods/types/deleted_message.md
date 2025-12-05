@@ -1,4 +1,4 @@
-# Deleted_message Module
+# DeletedMessage
 
 ::: maxapi.methods.types.deleted_message
     options:

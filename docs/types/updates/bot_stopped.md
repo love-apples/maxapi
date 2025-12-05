@@ -1,4 +1,4 @@
-# Bot_stopped Module
+# BotStopped
 
 ::: maxapi.types.updates.bot_stopped
     options:

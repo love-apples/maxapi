@@ -1,4 +1,4 @@
-# Chat_type Module
+# ChatType
 
 ::: maxapi.enums.chat_type
     options:

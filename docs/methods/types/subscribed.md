@@ -1,4 +1,4 @@
-# Subscribed Module
+# Subscribed
 
 ::: maxapi.methods.types.subscribed
     options:

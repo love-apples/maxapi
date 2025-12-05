@@ -1,4 +1,4 @@
-# Text_style Module
+# TextStyle
 
 ::: maxapi.enums.text_style
     options:

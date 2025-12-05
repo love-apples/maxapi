@@ -1,4 +1,4 @@
-# Open_app_button Module
+# OpenAppButton
 
 ::: maxapi.types.attachments.buttons.open_app_button
     options:

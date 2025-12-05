@@ -1,4 +1,4 @@
-# Get_subscriptions Module
+# GetSubscriptions
 
 ::: maxapi.methods.get_subscriptions
     options:

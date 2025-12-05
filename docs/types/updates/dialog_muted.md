@@ -1,4 +1,4 @@
-# Dialog_muted Module
+# DialogMuted
 
 ::: maxapi.types.updates.dialog_muted
     options:

@@ -1,4 +1,4 @@
-# Delete_bot_from_chat Module
+# DeleteBotFromChat
 
 ::: maxapi.methods.delete_bot_from_chat
     options:

@@ -1,4 +1,4 @@
-# Get_messages Module
+# GetMessages
 
 ::: maxapi.methods.get_messages
     options:

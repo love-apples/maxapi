@@ -1,4 +1,4 @@
-# Get_video Module
+# GetVideo
 
 ::: maxapi.methods.get_video
     options:

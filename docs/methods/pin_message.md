@@ -1,6 +1,4 @@
-# Pin_message Module
-
-::: maxapi.methods.pin_message
+::: maxapi.methods.pin_message.PinMessage
     options:
-      show_root_heading: false
+      show_root_heading: true
       members_order: source

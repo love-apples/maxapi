@@ -1,4 +1,4 @@
-# Deleted_chat Module
+# DeletedChat
 
 ::: maxapi.methods.types.deleted_chat
     options:

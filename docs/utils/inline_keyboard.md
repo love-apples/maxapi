@@ -1,4 +1,4 @@
-# Inline_keyboard Module
+# InlineKeyboard
 
 ::: maxapi.utils.inline_keyboard
     options:

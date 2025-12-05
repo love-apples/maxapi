@@ -1,4 +1,4 @@
-# Message_button Module
+# MessageButton
 
 ::: maxapi.types.attachments.buttons.message_button
     options:

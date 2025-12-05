@@ -1,4 +1,4 @@
-# Get_chat_by_link Module
+# GetChatByLink
 
 ::: maxapi.methods.get_chat_by_link
     options:

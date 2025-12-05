@@ -1,4 +1,4 @@
-# Request_contact Module
+# RequestContact
 
 ::: maxapi.types.attachments.buttons.request_contact
     options:

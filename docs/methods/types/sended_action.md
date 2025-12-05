@@ -1,4 +1,4 @@
-# Sended_action Module
+# SendedAction
 
 ::: maxapi.methods.types.sended_action
     options:

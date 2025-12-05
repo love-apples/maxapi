@@ -1,4 +1,4 @@
-# Added_admin_chat Module
+# AddedAdminChat
 
 ::: maxapi.methods.types.added_admin_chat
     options:

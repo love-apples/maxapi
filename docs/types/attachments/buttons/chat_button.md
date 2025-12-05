@@ -1,4 +1,4 @@
-# Chat_button Module
+# ChatButton
 
 ::: maxapi.types.attachments.buttons.chat_button
     options:

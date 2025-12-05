@@ -1,4 +1,4 @@
-# Edit_chat Module
+# EditChat
 
 ::: maxapi.methods.edit_chat
     options:

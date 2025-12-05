@@ -1,4 +1,4 @@
-# Change_info Module
+# ChangeInfo
 
 ::: maxapi.methods.change_info
     options:

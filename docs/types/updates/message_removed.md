@@ -1,4 +1,4 @@
-# Message_removed Module
+# MessageRemoved
 
 ::: maxapi.types.updates.message_removed
     options:

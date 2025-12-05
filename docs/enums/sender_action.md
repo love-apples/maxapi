@@ -1,4 +1,4 @@
-# Sender_action Module
+# SenderAction
 
 ::: maxapi.enums.sender_action
     options:

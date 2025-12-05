@@ -1,4 +1,4 @@
-# Dialog_cleared Module
+# DialogCleared
 
 ::: maxapi.types.updates.dialog_cleared
     options:

@@ -1,4 +1,4 @@
-# Delete_chat Module
+# DeleteChat
 
 ::: maxapi.methods.delete_chat
     options:

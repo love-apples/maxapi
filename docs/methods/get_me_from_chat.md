@@ -1,4 +1,4 @@
-# Get_me_from_chat Module
+# GetMeFromChat
 
 ::: maxapi.methods.get_me_from_chat
     options:

@@ -1,6 +1,4 @@
-# Add_admin_chat Module
-
-::: maxapi.methods.add_admin_chat
+::: maxapi.methods.add_admin_chat.AddAdminChat
     options:
-      show_root_heading: false
+      show_root_heading: true
       members_order: source

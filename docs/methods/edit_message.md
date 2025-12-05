@@ -1,4 +1,4 @@
-# Edit_message Module
+# EditMessage
 
 ::: maxapi.methods.edit_message
     options:

@@ -1,4 +1,4 @@
-# Upload_type Module
+# UploadType
 
 ::: maxapi.enums.upload_type
     options:

@@ -1,4 +1,4 @@
-# Message_callback Module
+# MessageCallback
 
 ::: maxapi.types.updates.message_callback
     options:

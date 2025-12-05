@@ -1,4 +1,4 @@
-# Link_button Module
+# LinkButton
 
 ::: maxapi.types.attachments.buttons.link_button
     options:

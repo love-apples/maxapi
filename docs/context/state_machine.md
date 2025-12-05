@@ -1,4 +1,4 @@
-# State_machine Module
+# StateMachine
 
 ::: maxapi.context.state_machine
     options:

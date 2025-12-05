@@ -1,4 +1,4 @@
-# Message_created Module
+# MessageCreated
 
 ::: maxapi.types.updates.message_created
     options:

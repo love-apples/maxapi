@@ -1,4 +1,4 @@
-# Delete_message Module
+# DeleteMessage
 
 ::: maxapi.methods.delete_message
     options:

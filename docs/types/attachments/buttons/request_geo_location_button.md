@@ -1,4 +1,4 @@
-# Request_geo_location_button Module
+# RequestGeoLocationButton
 
 ::: maxapi.types.attachments.buttons.request_geo_location_button
     options:

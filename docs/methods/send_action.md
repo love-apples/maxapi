@@ -1,4 +1,4 @@
-# Send_action Module
+# SendAction
 
 ::: maxapi.methods.send_action
     options:

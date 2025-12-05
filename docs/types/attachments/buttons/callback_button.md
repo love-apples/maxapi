@@ -1,4 +1,4 @@
-# Callback_button Module
+# CallbackButton
 
 ::: maxapi.types.attachments.buttons.callback_button
     options:

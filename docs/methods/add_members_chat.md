@@ -1,4 +1,4 @@
-# Add_members_chat Module
+# AddMembersChat
 
 ::: maxapi.methods.add_members_chat
     options:

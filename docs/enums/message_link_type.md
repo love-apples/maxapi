@@ -1,4 +1,4 @@
-# Message_link_type Module
+# MessageLinkType
 
 ::: maxapi.enums.message_link_type
     options:

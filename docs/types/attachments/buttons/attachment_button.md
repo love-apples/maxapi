@@ -1,4 +1,4 @@
-# Attachment_button Module
+# AttachmentButton
 
 ::: maxapi.types.attachments.buttons.attachment_button
     options:

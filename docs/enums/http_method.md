@@ -1,4 +1,4 @@
-# Http_method Module
+# HTTPMethod
 
 ::: maxapi.enums.http_method
     options:

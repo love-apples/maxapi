@@ -1,4 +1,4 @@
-# Removed_admin Module
+# RemovedAdmin
 
 ::: maxapi.methods.types.removed_admin
     options:

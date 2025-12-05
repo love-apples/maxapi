@@ -1,4 +1,4 @@
-# Unsubscribed Module
+# Unsubscribed
 
 ::: maxapi.methods.types.unsubscribed
     options:

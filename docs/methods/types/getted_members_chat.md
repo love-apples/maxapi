@@ -1,4 +1,4 @@
-# Getted_members_chat Module
+# GettedMembersChat
 
 ::: maxapi.methods.types.getted_members_chat
     options:

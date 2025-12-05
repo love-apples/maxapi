@@ -1,4 +1,4 @@
-# Getted_subscriptions Module
+# GettedSubscriptions
 
 ::: maxapi.methods.types.getted_subscriptions
     options:

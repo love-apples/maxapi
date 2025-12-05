@@ -1,4 +1,4 @@
-# Deleted_pin_message Module
+# DeletedPinMessage
 
 ::: maxapi.methods.types.deleted_pin_message
     options:

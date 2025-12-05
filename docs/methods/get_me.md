@@ -1,4 +1,4 @@
-# Get_me Module
+# GetMe
 
 ::: maxapi.methods.get_me
     options:

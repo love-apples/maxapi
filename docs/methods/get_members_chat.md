@@ -1,4 +1,4 @@
-# Get_members_chat Module
+# GetMembersChat
 
 ::: maxapi.methods.get_members_chat
     options:

@@ -1,4 +1,4 @@
-# Sended_message Module
+# SendedMessage
 
 ::: maxapi.methods.types.sended_message
     options:

@@ -1,4 +1,4 @@
-# Getted_upload_url Module
+# GettedUploadURL
 
 ::: maxapi.methods.types.getted_upload_url
     options:

@@ -1,4 +1,4 @@
-# Chat_status Module
+# ChatStatus
 
 ::: maxapi.enums.chat_status
     options:

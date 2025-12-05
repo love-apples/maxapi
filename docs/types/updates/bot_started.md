@@ -1,4 +1,4 @@
-# Bot_started Module
+# BotStarted
 
 ::: maxapi.types.updates.bot_started
     options:

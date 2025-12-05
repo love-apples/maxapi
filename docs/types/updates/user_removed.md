@@ -1,4 +1,4 @@
-# User_removed Module
+# UserRemoved
 
 ::: maxapi.types.updates.user_removed
     options:

@@ -1,4 +1,4 @@
-# Input_media Module
+# InputMedia
 
 ::: maxapi.types.input_media
     options:

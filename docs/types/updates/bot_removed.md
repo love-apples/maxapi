@@ -1,4 +1,4 @@
-# Bot_removed Module
+# BotRemoved
 
 ::: maxapi.types.updates.bot_removed
     options:

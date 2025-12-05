@@ -1,4 +1,4 @@
-# Pinned_message Module
+# PinnedMessage
 
 ::: maxapi.methods.types.pinned_message
     options:

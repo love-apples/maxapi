@@ -1,4 +1,4 @@
-# Getted_pineed_message Module
+# GettedPinnedMessage
 
 ::: maxapi.methods.types.getted_pineed_message
     options:

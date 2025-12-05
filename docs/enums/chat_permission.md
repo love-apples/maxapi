@@ -1,4 +1,4 @@
-# Chat_permission Module
+# ChatPermission
 
 ::: maxapi.enums.chat_permission
     options:

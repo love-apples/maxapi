@@ -1,4 +1,4 @@
-# Send_callback Module
+# SendCallback
 
 ::: maxapi.methods.send_callback
     options:

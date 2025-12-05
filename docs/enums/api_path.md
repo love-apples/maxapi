@@ -1,4 +1,4 @@
-# Api_path Module
+# ApiPath
 
 ::: maxapi.enums.api_path
     options:

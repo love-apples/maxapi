@@ -1,4 +1,4 @@
-# Removed_member_chat Module
+# RemovedMemberChat
 
 ::: maxapi.methods.types.removed_member_chat
     options:

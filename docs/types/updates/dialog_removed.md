@@ -1,4 +1,4 @@
-# Dialog_removed Module
+# DialogRemoved
 
 ::: maxapi.types.updates.dialog_removed
     options:

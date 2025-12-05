@@ -1,4 +1,4 @@
-# Get_pinned_message Module
+# GetPinnedMessage
 
 ::: maxapi.methods.get_pinned_message
     options:

@@ -1,4 +1,4 @@
-# Button_type Module
+# ButtonType
 
 ::: maxapi.enums.button_type
     options:

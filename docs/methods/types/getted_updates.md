@@ -1,4 +1,4 @@
-# Getted_updates Module
+# GettedUpdates
 
 ::: maxapi.methods.types.getted_updates
     options:

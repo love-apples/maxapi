@@ -1,4 +1,4 @@
-# Callback_payload Module
+# CallbackPayload
 
 ::: maxapi.filters.callback_payload
     options:

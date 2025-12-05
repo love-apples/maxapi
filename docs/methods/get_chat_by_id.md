@@ -1,6 +1,4 @@
-# Get_chat_by_id Module
-
-::: maxapi.methods.get_chat_by_id
+::: maxapi.methods.get_chat_by_id.GetChatById
     options:
-      show_root_heading: false
+      show_root_heading: true
       members_order: source

@@ -1,4 +1,4 @@
-# Chat_title_changed Module
+# ChatTitleChanged
 
 ::: maxapi.types.updates.chat_title_changed
     options:

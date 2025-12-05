@@ -1,4 +1,4 @@
-# Parse_mode Module
+# ParseMode
 
 ::: maxapi.enums.parse_mode
     options:

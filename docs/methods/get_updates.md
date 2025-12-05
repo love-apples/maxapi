@@ -1,4 +1,4 @@
-# Get_updates Module
+# GetUpdates
 
 ::: maxapi.methods.get_updates
     options:

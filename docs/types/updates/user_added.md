@@ -1,4 +1,4 @@
-# User_added Module
+# UserAdded
 
 ::: maxapi.types.updates.user_added
     options:

@@ -1,4 +1,4 @@
-# Bot_added Module
+# BotAdded
 
 ::: maxapi.types.updates.bot_added
     options:

@@ -1,4 +1,4 @@
-# Dialog_unmuted Module
+# DialogUnmuted
 
 ::: maxapi.types.updates.dialog_unmuted
     options:

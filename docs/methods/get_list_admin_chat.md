@@ -1,4 +1,4 @@
-# Get_list_admin_chat Module
+# GetListAdminChat
 
 ::: maxapi.methods.get_list_admin_chat
     options:

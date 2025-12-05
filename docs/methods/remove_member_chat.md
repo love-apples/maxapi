@@ -1,4 +1,4 @@
-# Remove_member_chat Module
+сдел# RemoveMemberChat
 
 ::: maxapi.methods.remove_member_chat
     options:

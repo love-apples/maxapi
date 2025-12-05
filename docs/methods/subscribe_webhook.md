@@ -1,4 +1,4 @@
-# Subscribe_webhook Module
+# SubscribeWebhook
 
 ::: maxapi.methods.subscribe_webhook
     options:

@@ -1,4 +1,4 @@
-# Get_chats Module
+# GetChats
 
 ::: maxapi.methods.get_chats
     options:

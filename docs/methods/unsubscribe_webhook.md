@@ -1,4 +1,4 @@
-# Unsubscribe_webhook Module
+# UnsubscribeWebhook
 
 ::: maxapi.methods.unsubscribe_webhook
     options:

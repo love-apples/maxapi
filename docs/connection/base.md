@@ -1,4 +1,4 @@
-# Base Module
+# BaseConnection
 
 ::: maxapi.connection.base
     options:
