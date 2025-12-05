@@ -105,6 +105,7 @@ class ChatMember(User):
         is_admin (Optional[bool]): Флаг администратора чата. Может быть None.
         join_time (Optional[int]): Время присоединения к чату. Может быть None.
         permissions (Optional[List[ChatPermission]]): Список разрешений участника. Может быть None.
+        alias (Optional[str]): Заголовок, который будет показан на клиент. Может быть None.
     """
 
     last_access_time: Optional[int] = None
@@ -112,3 +113,4 @@ class ChatMember(User):
     is_admin: Optional[bool] = None
     join_time: Optional[int] = None
     permissions: Optional[List[ChatPermission]] = None
+    alias: Optional[str] = None
