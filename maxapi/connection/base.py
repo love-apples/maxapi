@@ -154,10 +154,16 @@ class BaseConnection(BotMixin):
             content_type=f"{type.value}/{ext.lstrip('.')}",
         )
 
-        async with ClientSession() as session:
-            response = await session.post(url=url, data=form)
+        bot = self._ensure_bot()
 
+        session = bot.session
+        if session is not None and not session.closed:
+            response = await session.post(url=url, data=form)
             return await response.text()
+        else:
+            async with ClientSession() as temp_session:
+                response = await temp_session.post(url=url, data=form)
+                return await response.text()
 
     async def upload_file_buffer(
         self, filename: str, url: str, buffer: bytes, type: UploadType
@@ -197,6 +203,13 @@ class BaseConnection(BotMixin):
             content_type=mime_type,
         )
 
-        async with ClientSession() as session:
+        bot = self._ensure_bot()
+
+        session = bot.session
+        if session is not None and not session.closed:
             response = await session.post(url=url, data=form)
             return await response.text()
+        else:
+            async with ClientSession() as temp_session:
+                response = await temp_session.post(url=url, data=form)
+                return await response.text()
