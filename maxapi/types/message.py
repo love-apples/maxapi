@@ -124,7 +124,7 @@ class Message(BaseModel, BotMixin):
     Модель сообщения.
 
     Attributes:
-        sender (User): Отправитель сообщения.
+        sender (Optional[User]): Отправитель сообщения, может быть None, если сообщение отправлено каналом https://github.com/love-apples/maxapi/discussions/14.
         recipient (Recipient): Получатель сообщения.
         timestamp (int): Временная метка сообщения.
         link (Optional[LinkedMessage]): Связанное сообщение. Может быть None.
@@ -134,7 +134,7 @@ class Message(BaseModel, BotMixin):
         bot (Optional[Bot]): Объект бота, исключается из сериализации.
     """
 
-    sender: User
+    sender: Optional[User] = None
     recipient: Recipient
     timestamp: int
     link: Optional[LinkedMessage] = None
