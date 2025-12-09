@@ -146,7 +146,7 @@ class BaseConnection(BotMixin):
         basename = os.path.basename(path)
         _, ext = os.path.splitext(basename)
 
-        form = FormData()
+        form = FormData(quote_fields=False)
         form.add_field(
             name="data",
             value=file_data,
@@ -195,7 +195,7 @@ class BaseConnection(BotMixin):
 
         basename = f"{filename}{ext}"
 
-        form = FormData()
+        form = FormData(quote_fields=False)
         form.add_field(
             name="data",
             value=buffer,
