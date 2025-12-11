@@ -914,7 +914,7 @@ class Bot(BaseConnection):
         Returns:
             User: Обновленная информация о боте.
         """
-        
+
         warnings.warn(
             "bot.change_info() устарел и отсутствует в официальной swagger-спецификации API MAX. "
             "Использование не рекомендуется.",
