@@ -710,6 +710,17 @@ class Dispatcher(BotMixin):
                     f"Общая ошибка при обработке событий: {e.__class__} - {e}"
                 )
 
+    async def stop_polling(self):
+        """
+        Останавливает цикл получения обновлений (long polling).
+
+        Этот метод устанавливает флаг polling в False, что приводит к
+        завершению цикла в методе start_polling.
+        """
+        if self.polling:
+            self.polling = False
+            logger_dp.info("Polling остановлен")
+
     async def handle_webhook(
         self,
         bot: Bot,
