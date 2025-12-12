@@ -139,18 +139,17 @@ class Bot(BaseConnection):
         self.auto_requests = auto_requests
 
         self._me: User | None = None
-        
-        
+
     def set_marker_updates(self, marker_updates: int) -> None:
         """
         Устанавливает маркер для получения обновлений.
-        
+
         Args:
             marker_updates (int): Маркер для получения обновлений.
         """
-        
+
         self.marker_updates = marker_updates
-        
+
     @property
     def handlers_commands(self) -> List[CommandsInfo]:
         """
