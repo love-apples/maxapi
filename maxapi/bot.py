@@ -97,6 +97,7 @@ class Bot(BaseConnection):
         default_connection: Optional[DefaultConnectionProperties] = None,
         after_input_media_delay: Optional[float] = None,
         auto_check_subscriptions: bool = True,
+        marker_updates: Optional[int] = None,
     ):
         """
         Инициализирует экземпляр бота.
@@ -110,7 +111,7 @@ class Bot(BaseConnection):
             default_connection (Optional[DefaultConnectionProperties]): Настройки соединения.
             after_input_media_delay (Optional[float]): Задержка после загрузки файла.
             auto_check_subscriptions (bool): Проверка подписок для метода start_polling.
-
+            marker_updates (Optional[int]): Маркер для получения обновлений.
         """
 
         super().__init__()
@@ -130,7 +131,7 @@ class Bot(BaseConnection):
 
         self.params: Dict[str, Any] = {}
         self.headers: Dict[str, Any] = {"Authorization": self.__token}
-        self.marker_updates = None
+        self.marker_updates = marker_updates
 
         self.parse_mode = parse_mode
         self.notify = notify
@@ -138,7 +139,18 @@ class Bot(BaseConnection):
         self.auto_requests = auto_requests
 
         self._me: User | None = None
-
+        
+        
+    def set_marker_updates(self, marker_updates: int) -> None:
+        """
+        Устанавливает маркер для получения обновлений.
+        
+        Args:
+            marker_updates (int): Маркер для получения обновлений.
+        """
+        
+        self.marker_updates = marker_updates
+        
     @property
     def handlers_commands(self) -> List[CommandsInfo]:
         """
