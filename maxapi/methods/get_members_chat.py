@@ -63,7 +63,7 @@ class GetMembersChat(BaseConnection):
         if self.marker:
             params["marker"] = self.marker
         if self.count:
-            params["marker"] = self.count
+            params["count"] = self.count
 
         response = await super().request(
             method=HTTPMethod.GET,
