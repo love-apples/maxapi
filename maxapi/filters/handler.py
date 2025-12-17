@@ -1,3 +1,4 @@
+import inspect
 from typing import Any, Callable, List, Optional
 
 from magic_filter import MagicFilter
@@ -34,6 +35,7 @@ class Handler:
         """
 
         self.func_event: Callable = func_event
+        self.signature = inspect.signature(func_event)
         self.update_type: UpdateType = update_type
         self.filters: Optional[List[MagicFilter]] = []
         self.base_filters: Optional[List[BaseFilter]] = []
@@ -55,3 +57,9 @@ class Handler:
                     arg,
                     func_event.__name__
                 )
+
+    async def __call__(self, event_object, data):
+        kwargs = {
+            k: v for k, v in data.items() if k in self.signature.parameters
+        }
+        return await self.func_event(event_object, **kwargs)
