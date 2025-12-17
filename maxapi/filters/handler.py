@@ -18,6 +18,16 @@ class Handler:
     Связывает функцию-обработчик с типом события, состояниями и фильтрами.
     """
 
+    __slots__ = (
+        "func_event",
+        "signature",
+        "update_type",
+        "filters",
+        "base_filters",
+        "states",
+        "middlewares",
+    )
+
     def __init__(
         self,
         *args: Any,
