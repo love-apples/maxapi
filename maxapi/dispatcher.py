@@ -317,29 +317,6 @@ class Dispatcher(BotMixin):
         self.contexts.append(new_ctx)
         return new_ctx
 
-    async def call_handler(
-        self, handler: Handler, event_object: UpdateType, data: Dict[str, Any]
-    ) -> None:
-        """
-        Вызывает хендлер с нужными аргументами.
-
-        Args:
-            handler: Handler.
-            event_object: Объект события.
-            data: Данные для хендлера.
-
-        Returns:
-            None
-        """
-
-        func_args = handler.func_event.__annotations__.keys()
-        kwargs_filtered = {k: v for k, v in data.items() if k in func_args}
-
-        if kwargs_filtered:
-            await handler.func_event(event_object, **kwargs_filtered)
-        else:
-            await handler.func_event(event_object)
-
     async def process_base_filters(
         self, event: UpdateUnion, filters: List[BaseFilter]
     ) -> Optional[Dict[str, Any]] | Literal[False]:
@@ -477,19 +454,13 @@ class Dispatcher(BotMixin):
         Raises:
             HandlerException: При ошибке выполнения обработчика.
         """
-        func_args = handler.func_event.__annotations__.keys()
-        kwargs_filtered = {k: v for k, v in data.items() if k in func_args}
-
-        if "context" not in kwargs_filtered and "context" in data:
-            kwargs_filtered["context"] = data["context"]
 
         handler_chain = self.build_middleware_chain(
-            handler_middlewares,
-            functools.partial(self.call_handler, handler),
+            handler_middlewares, handler
         )
 
         try:
-            await handler_chain(event, kwargs_filtered)
+            await handler_chain(event, data)
         except Exception as e:
             mem_data = await memory_context.get_data()
             raise HandlerException(
