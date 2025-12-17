@@ -51,5 +51,7 @@ class Handler:
                 self.base_filters.append(arg)
             else:
                 logger_dp.info(
-                    f"Неизвестный фильтр `{arg}` при регистрации `{func_event.__name__}`"
+                    "Неизвестный фильтр `%s` при регистрации `%s`",
+                    arg,
+                    func_event.__name__
                 )
