@@ -1,5 +1,5 @@
-import inspect
-from typing import Any, Callable, List, Optional
+from inspect import Signature, signature
+from typing import Any, Callable
 
 from magic_filter import MagicFilter
 
@@ -8,6 +8,7 @@ from ..enums.update import UpdateType
 from ..filters.filter import BaseFilter
 from ..filters.middleware import BaseMiddleware
 from ..loggers import logger_dp
+from ..types.updates import UpdateUnion
 
 
 class Handler:
@@ -36,12 +37,13 @@ class Handler:
         """
 
         self.func_event: Callable = func_event
-        self.signature = inspect.signature(func_event)
+        self.signature: Signature = signature(func_event)
         self.update_type: UpdateType = update_type
-        self.filters: Optional[List[MagicFilter]] = []
-        self.base_filters: Optional[List[BaseFilter]] = []
-        self.states: Optional[List[State]] = []
-        self.middlewares: List[BaseMiddleware] = []
+
+        self.filters: list[MagicFilter] = []
+        self.base_filters: list[BaseFilter] = []
+        self.states: list[State] = []
+        self.middlewares: list[BaseMiddleware] = []
 
         for arg in args:
             if isinstance(arg, MagicFilter):
@@ -59,7 +61,11 @@ class Handler:
                     func_event.__name__
                 )
 
-    async def __call__(self, event_object, data):
+    async def __call__(
+        self,
+        event_object: UpdateUnion,
+        data: dict[str, Any],
+    ) -> Any:
         kwargs = {
             k: v for k, v in data.items() if k in self.signature.parameters
         }
