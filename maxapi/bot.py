@@ -243,6 +243,7 @@ class Bot(BaseConnection):
         notify: Optional[bool] = None,
         parse_mode: Optional[ParseMode] = None,
         disable_link_preview: Optional[bool] = None,
+        sleep_after_input_media: Optional[bool] = True,
     ) -> Optional[SendedMessage]:
         """
         Отправляет сообщение в чат или пользователю.
@@ -275,6 +276,7 @@ class Bot(BaseConnection):
             disable_link_preview=self._resolve_disable_link_preview(
                 disable_link_preview
             ),
+            sleep_after_input_media=sleep_after_input_media,
         ).fetch()
 
     async def send_action(
@@ -310,6 +312,7 @@ class Bot(BaseConnection):
         link: Optional[NewMessageLink] = None,
         notify: Optional[bool] = None,
         parse_mode: Optional[ParseMode] = None,
+        sleep_after_input_media: Optional[bool] = True,
     ) -> Optional[EditedMessage]:
         """
         Редактирует существующее сообщение.
@@ -336,6 +339,7 @@ class Bot(BaseConnection):
             link=link,
             notify=self._resolve_notify(notify),
             parse_mode=self._resolve_parse_mode(parse_mode),
+            sleep_after_input_media=sleep_after_input_media,
         ).fetch()
 
     async def delete_message(self, message_id: str) -> DeletedMessage:

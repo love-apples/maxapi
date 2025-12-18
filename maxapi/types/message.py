@@ -157,6 +157,7 @@ class Message(BaseModel, BotMixin):
         link: Optional[NewMessageLink] = None,
         notify: Optional[bool] = None,
         parse_mode: Optional[ParseMode] = None,
+        sleep_after_input_media: Optional[bool] = True,
     ) -> Optional["SendedMessage"]:
         """
         Отправляет сообщение (автозаполнение chat_id, user_id).
@@ -180,6 +181,7 @@ class Message(BaseModel, BotMixin):
             link=link,
             notify=notify,
             parse_mode=parse_mode,
+            sleep_after_input_media=sleep_after_input_media,
         )
 
     async def reply(
@@ -190,6 +192,7 @@ class Message(BaseModel, BotMixin):
         ] = None,
         notify: Optional[bool] = None,
         parse_mode: Optional[ParseMode] = None,
+        sleep_after_input_media: Optional[bool] = True,
     ) -> Optional["SendedMessage"]:
         """
         Отправляет ответное сообщение (автозаполнение chat_id, user_id, link).
@@ -199,6 +202,7 @@ class Message(BaseModel, BotMixin):
             attachments (List[Attachment | InputMedia | InputMediaBuffer], optional): Список вложений. Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
             parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
+            sleep_after_input_media: Optional[bool] = True,
 
         Returns:
             Optional[SendedMessage]: Результат выполнения метода send_message бота.
@@ -212,6 +216,7 @@ class Message(BaseModel, BotMixin):
             link=NewMessageLink(type=MessageLinkType.REPLY, mid=self.body.mid),
             notify=notify,
             parse_mode=parse_mode,
+            sleep_after_input_media=sleep_after_input_media,
         )
 
     async def forward(
@@ -223,6 +228,7 @@ class Message(BaseModel, BotMixin):
         ] = None,
         notify: Optional[bool] = None,
         parse_mode: Optional[ParseMode] = None,
+        sleep_after_input_media: Optional[bool] = True,
     ) -> Optional["SendedMessage"]:
         """
         Пересылает отправленное сообщение в указанный чат (автозаполнение link).
@@ -233,6 +239,7 @@ class Message(BaseModel, BotMixin):
             attachments (List[Attachment | InputMedia | InputMediaBuffer], optional): Список вложений. Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
             parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
+            sleep_after_input_media: Optional[bool] = True,
 
         Returns:
             Optional[SendedMessage]: Результат выполнения метода send_message бота.
@@ -247,6 +254,7 @@ class Message(BaseModel, BotMixin):
             ),
             notify=notify,
             parse_mode=parse_mode,
+            sleep_after_input_media=sleep_after_input_media,
         )
 
     async def edit(
@@ -259,6 +267,7 @@ class Message(BaseModel, BotMixin):
         link: Optional[NewMessageLink] = None,
         notify: bool = True,
         parse_mode: Optional[ParseMode] = None,
+        sleep_after_input_media: Optional[bool] = True,
     ) -> Optional["EditedMessage"]:
         """
         Редактирует текущее сообщение.
@@ -289,6 +298,7 @@ class Message(BaseModel, BotMixin):
             link=link,
             notify=notify,
             parse_mode=parse_mode,
+            sleep_after_input_media=sleep_after_input_media,
         )
 
     async def delete(self) -> "DeletedMessage":
