@@ -51,6 +51,7 @@ class SendMessage(BaseConnection):
         notify: Optional[bool] = None,
         parse_mode: Optional[ParseMode] = None,
         disable_link_preview: Optional[bool] = None,
+        sleep_after_input_media: Optional[bool] = True,
     ):
         if text is not None and not (len(text) < 4000):
             raise ValueError("text должен быть меньше 4000 символов")
@@ -64,7 +65,8 @@ class SendMessage(BaseConnection):
         self.notify = notify
         self.parse_mode = parse_mode
         self.disable_link_preview = disable_link_preview
-
+        self.sleep_after_input_media = sleep_after_input_media
+        
     async def fetch(self) -> Optional[SendedMessage]:
         """
         Отправляет сообщение с вложениями (если есть), с обработкой задержки готовности вложений.
@@ -114,7 +116,7 @@ class SendMessage(BaseConnection):
         if self.parse_mode is not None:
             json["format"] = self.parse_mode.value
 
-        if HAS_INPUT_MEDIA:
+        if HAS_INPUT_MEDIA and self.sleep_after_input_media:
             await asyncio.sleep(bot.after_input_media_delay)
 
         response = None

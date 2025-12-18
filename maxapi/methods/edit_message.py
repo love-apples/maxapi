@@ -49,6 +49,7 @@ class EditMessage(BaseConnection):
         link: Optional[NewMessageLink] = None,
         notify: Optional[bool] = None,
         parse_mode: Optional[ParseMode] = None,
+        sleep_after_input_media: Optional[bool] = True,
     ):
         if text is not None and not (len(text) < 4000):
             raise ValueError("text должен быть меньше 4000 символов")
@@ -60,7 +61,8 @@ class EditMessage(BaseConnection):
         self.link = link
         self.notify = notify
         self.parse_mode = parse_mode
-
+        self.sleep_after_input_media = sleep_after_input_media
+        
     async def fetch(self) -> Optional[EditedMessage]:
         """
         Выполняет PUT-запрос для обновления сообщения.
@@ -105,7 +107,7 @@ class EditMessage(BaseConnection):
         if self.parse_mode is not None:
             json["format"] = self.parse_mode.value
 
-        if HAS_INPUT_MEDIA:
+        if HAS_INPUT_MEDIA and self.sleep_after_input_media:
             await asyncio.sleep(bot.after_input_media_delay)
 
         response = None
