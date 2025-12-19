@@ -5,7 +5,6 @@ from unittest.mock import Mock
 
 from maxapi.filters.filter import BaseFilter
 from maxapi.filters.command import Command, CommandStart
-from maxapi.filters.callback_payload import CallbackPayload
 from maxapi.types.updates.message_created import MessageCreated
 
 
@@ -107,73 +106,5 @@ class TestCommandFilter:
         event._ensure_bot = Mock(return_value=mock_bot)
 
         result = f(event)
-
-class TestCallbackPayloadFilter:
-    """Тесты фильтра CallbackPayload."""
-
-    def test_callback_payload_init(self):
-        """Тест инициализации PayloadFilter."""
-        from maxapi.filters.callback_payload import PayloadFilter
-
-        # CallbackPayload - это BaseModel, используется через PayloadFilter
-        # Создаем простой класс payload для теста
-        class TestPayload(CallbackPayload):
-            value: str
-
-        payload_filter = PayloadFilter(model=TestPayload, rule=None)
-        assert payload_filter.model == TestPayload
-        assert payload_filter.rule is None
-
-    @pytest.mark.asyncio
-    async def test_callback_payload_match(self):
-        """Тест PayloadFilter при совпадении."""
-        from maxapi.types.updates.message_callback import MessageCallback
-        from maxapi.types.callback import Callback
-        from maxapi.filters.callback_payload import PayloadFilter
-
-        # Создаем простой класс payload для теста
-        class TestPayload(CallbackPayload):
-            value: str
-
-        payload_filter = PayloadFilter(model=TestPayload, rule=None)
-
-        # Создаем payload строку (prefix|value)
-        payload_str = "TestPayload|test_value"
-
-        callback = Mock(spec=Callback)
-        callback.payload = payload_str
-
-        event = Mock(spec=MessageCallback)
-        event.callback = callback
-
-        result = await payload_filter(event)
-
-        assert result is not False
-        assert isinstance(result, dict)
-        assert "payload" in result
-        assert isinstance(result["payload"], TestPayload)
-        assert result["payload"].value == "test_value"
-
-    @pytest.mark.asyncio
-    async def test_callback_payload_no_match(self):
-        """Тест PayloadFilter при несовпадении."""
-        from maxapi.types.updates.message_callback import MessageCallback
-        from maxapi.types.callback import Callback
-        from maxapi.filters.callback_payload import PayloadFilter
-
-        # Создаем простой класс payload для теста
-        class TestPayload(CallbackPayload):
-            value: str
-
-        payload_filter = PayloadFilter(model=TestPayload, rule=None)
-
-        # Неправильный payload (неправильный prefix)
-        callback = Mock(spec=Callback)
-        callback.payload = "WrongPrefix|test_value"
-
-        event = Mock(spec=MessageCallback)
-        event.callback = callback
-
-        result = await payload_filter(event)
 
         assert result is False

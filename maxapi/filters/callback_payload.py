@@ -3,20 +3,14 @@ from __future__ import annotations
 from typing import (
     TYPE_CHECKING,
     Any,
+    Awaitable,
+    Callable,
     ClassVar,
-    Dict,
-    List,
-    Optional,
-    Type,
-    Union,
 )
 
-from magic_filter import MagicFilter
 from pydantic import BaseModel
 
-from ..types.updates import UpdateUnion
-from ..types.updates.message_callback import MessageCallback
-from .filter import BaseFilter
+from ..filters.middleware import BaseMiddleware
 
 PAYLOAD_MAX = 1024
 
@@ -26,8 +20,9 @@ class CallbackPayload(BaseModel):
     Базовый класс для сериализации/десериализации callback payload.
 
     Атрибуты:
-        prefix (str): Префикс для payload (используется при pack/unpack) (по умолчанию название класса).
-        separator (str): Разделитель между значениями (по умолчанию '|').
+        prefix: Префикс для payload (используется при pack/unpack) (по
+            умолчанию название класса).
+        separator: Разделитель между значениями (по умолчанию '|').
     """
 
     if TYPE_CHECKING:
@@ -47,7 +42,8 @@ class CallbackPayload(BaseModel):
         Собирает данные payload в строку для передачи в callback payload.
 
         Raises:
-            ValueError: Если в значении встречается разделитель или payload слишком длинный.
+            ValueError: Если в значении встречается разделитель или payload
+                слишком длинный.
 
         Returns:
             str: Сериализованный payload.
@@ -60,7 +56,8 @@ class CallbackPayload(BaseModel):
             str_value = "" if value is None else str(value)
             if self.separator in str_value:
                 raise ValueError(
-                    f'Символ разделителя "{self.separator}" не должен встречаться в значении поля {name}'
+                    f"Символ разделителя '{self.separator}' не должен "
+                    f"встречаться в значении поля {name}"
                 )
 
             values.append(str_value)
@@ -80,7 +77,7 @@ class CallbackPayload(BaseModel):
         Десериализует payload из строки.
 
         Args:
-            data (str): Строка payload (из callback payload).
+            data: Строка payload (из callback payload).
 
         Raises:
             ValueError: Некорректный prefix или количество аргументов.
@@ -98,19 +95,20 @@ class CallbackPayload(BaseModel):
 
         if not len(parts) - 1 == len(field_names):
             raise ValueError(
-                f"Ожидалось {len(field_names)} аргументов, получено {len(parts) - 1}"
+                f"Ожидалось {len(field_names)} аргументов, получено "
+                f"{len(parts) - 1}"
             )
 
         kwargs = dict(zip(field_names, parts[1:]))
         return cls(**kwargs)
 
     @classmethod
-    def attrs(cls) -> List[str]:
+    def attrs(cls) -> list[str]:
         """
-        Возвращает список полей для сериализации/десериализации (исключая prefix и separator).
+        Вернуть список полей для (де)сериализации (без prefix и separator).
 
         Returns:
-            List[str]: Имена полей модели.
+            Имена полей модели.
         """
 
         return [
@@ -120,62 +118,27 @@ class CallbackPayload(BaseModel):
         ]
 
     @classmethod
-    def filter(cls, rule: Optional[MagicFilter] = None) -> PayloadFilter:
+    def provide(cls) -> ProvidePayload:
         """
-        Создаёт PayloadFilter для фильтрации callback-ивентов по payload.
-
-        Args:
-            rule (Optional[MagicFilter]): Фильтр на payload.
+        Создаёт ProvidePayload для предоставления параметра payload хэндлеру.
 
         Returns:
-            PayloadFilter: Экземпляр фильтра для хэндлера.
+            Экземпляр мидлвар для хэндлера.
         """
 
-        return PayloadFilter(model=cls, rule=rule)
+        return ProvidePayload(model=cls)
 
+class ProvidePayload(BaseMiddleware):
+    __slots__ = ("model",)
 
-class PayloadFilter(BaseFilter):
-    """
-    Фильтр для MessageCallback по payload.
-    """
-
-    def __init__(
-        self, model: Type[CallbackPayload], rule: Optional[MagicFilter]
-    ):
-        """
-        Args:
-            model (Type[CallbackPayload]): Класс payload для распаковки.
-            rule (Optional[MagicFilter]): Фильтр (условие) для payload.
-        """
-
+    def __init__(self, model: type[CallbackPayload]):
         self.model = model
-        self.rule = rule
 
     async def __call__(
-        self, event: UpdateUnion
-    ) -> Union[Dict[str, Any], bool]:
-        """
-        Проверяет event на MessageCallback и применяет фильтр к payload.
-
-        Args:
-            event (UpdateUnion): Обновление/событие.
-
-        Returns:
-            dict | bool: dict с payload при совпадении, иначе False.
-        """
-
-        if not isinstance(event, MessageCallback):
-            return False
-
-        if not event.callback.payload:
-            return False
-
-        try:
-            payload = self.model.unpack(event.callback.payload)
-        except Exception:
-            return False
-
-        if not self.rule or self.rule.resolve(payload):
-            return {"payload": payload}
-
-        return False
+        self,
+        handler: Callable[[Any, dict[str, Any]], Awaitable[Any]],
+        event_object: Any,
+        data: dict[str, Any],
+    ) -> Any:
+        data["payload"] = self.model.unpack(event_object.callback.payload)
+        return await handler(event_object, data)
