@@ -27,11 +27,11 @@ class Handler:
         "middlewares",
     )
 
-    _TYPE_RULES = (
-        (lambda x: isinstance(x, State), "states"),
-        (lambda x: isinstance(x, BaseMiddleware), "middlewares"),
-        (callable, "filters"),
-    )
+    _TYPE_RULES: dict[str, Callable[[Any], bool]] = {
+        "states": lambda x: isinstance(x, State),
+        "middlewares": lambda x: isinstance(x, BaseMiddleware),
+        "filters": callable,
+    }
 
     def __init__(
         self,
@@ -60,6 +60,7 @@ class Handler:
         self.middlewares: list[BaseMiddleware] = []
 
         self._sort_args(args)
+        self._sort_kwargs(kwargs)
 
     def _sort_args(self, args: tuple[Any]):
         for arg in args:
@@ -70,16 +71,41 @@ class Handler:
                 self._handle_arg(arg)
 
     def _handle_arg(self, arg: Any):
-        for predicate, target in type(self)._TYPE_RULES:
+        for target, predicate in type(self)._TYPE_RULES.items():
             if predicate(arg):
                 getattr(self, target).append(arg)
                 break
         else:
             logger_dp.info(
-                "Неизвестный фильтр `%s` при регистрации `%s`",
+                "Неизвестный фильтр '%s' при регистрации '%s'",
                 arg,
                 self.func_event.__name__,
             )
+
+    def _sort_kwargs(self, kwargs: dict["str", Any]):
+        type_rules = type(self)._TYPE_RULES
+        for k, v in kwargs.items():
+            try:
+                predicate = type_rules[k]
+            except KeyError:
+                logger_dp.info(
+                    "Неизвестный параметр '%s' при регистрации '%s'. Возможные"
+                    "значения: %s",
+                    k,
+                    self.func_event.__name__,
+                    ", ".join(type_rules.keys())
+                )
+                continue
+
+            if predicate(v):
+                getattr(self, k).append(v)
+            else:
+                logger_dp.info(
+                    "Неизвестный фильтр '%s' при регистрации '%s'",
+                    v,
+                    self.func_event.__name__,
+                )
+
 
     def matches_event(
         self, event: UpdateUnion, current_state: str | State | None
