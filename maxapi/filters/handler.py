@@ -28,6 +28,13 @@ class Handler:
         "middlewares",
     )
 
+    _TYPE_MAP = (
+        (State, "states"),
+        (MagicFilter, "filters"),
+        (BaseFilter, "base_filters"),
+        (BaseMiddleware, "middlewares"),
+    )
+
     def __init__(
         self,
         *args: Any,
@@ -55,21 +62,24 @@ class Handler:
         self.states: list[State] = []
         self.middlewares: list[BaseMiddleware] = []
 
+        for arg in self._sort_args(args):
+            logger_dp.info(
+                "Неизвестный фильтр `%s` при регистрации `%s`",
+                arg,
+                func_event.__name__,
+            )
+
+    def _sort_args(self, args: tuple[Any]) -> list[Any]:
+        unknown: list[Any] = []
         for arg in args:
-            if isinstance(arg, MagicFilter):
-                self.filters.append(arg)
-            elif isinstance(arg, State):
-                self.states.append(arg)
-            elif isinstance(arg, BaseMiddleware):
-                self.middlewares.append(arg)
-            elif isinstance(arg, BaseFilter):
-                self.base_filters.append(arg)
+
+            for cls, target in type(self)._TYPE_MAP:
+                if isinstance(arg, cls):
+                    getattr(self, target).append(arg)
+                    break
             else:
-                logger_dp.info(
-                    "Неизвестный фильтр `%s` при регистрации `%s`",
-                    arg,
-                    func_event.__name__
-                )
+                unknown.append(arg)
+        return unknown
 
     async def __call__(
         self,
