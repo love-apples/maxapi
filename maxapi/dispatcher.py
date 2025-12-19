@@ -16,6 +16,7 @@ from typing import (
 )
 
 from aiohttp import ClientConnectorError
+from magic_filter import MagicFilter
 
 from .bot import Bot
 from .context import MemoryContext
@@ -23,7 +24,6 @@ from .enums.update import UpdateType
 from .exceptions.dispatcher import HandlerException, MiddlewareException
 from .exceptions.max import InvalidToken, MaxApiError, MaxConnection
 from .filters.command import CommandsInfo
-from .filters.filter import BaseFilter
 from .filters.handler import Handler
 from .filters.middleware import BaseMiddleware
 from .loggers import logger_dp
@@ -85,8 +85,7 @@ class Dispatcher(BotMixin):
         self.event_handlers: List[Handler] = []
         self.contexts: List[MemoryContext] = []
         self.routers: List[Router | Dispatcher] = []
-        self.filters: List[MagicFilter] = []
-        self.base_filters: List[BaseFilter] = []
+        self.filters: List[Callable] = []
         self.middlewares: List[BaseMiddleware] = []
 
         self.bot: Optional[Bot] = None
@@ -223,15 +222,15 @@ class Dispatcher(BotMixin):
 
         self.middlewares.append(middleware)
 
-    def filter(self, base_filter: BaseFilter) -> None:
+    def filter(self, filter: Callable) -> None:
         """
         Добавляет фильтр в список.
 
         Args:
-            base_filter (BaseFilter): Фильтр.
+            filter: Фильтр.
         """
 
-        self.base_filters.append(base_filter)
+        self.filters.append(filter)
 
     async def __ready(self, bot: Bot):
         """
@@ -263,11 +262,11 @@ class Dispatcher(BotMixin):
             router.bot = bot
 
             for handler in router.event_handlers:
-                if handler.base_filters is None:
+                if not handler.filters:
                     continue
 
-                for base_filter in handler.base_filters:
-                    commands = getattr(base_filter, "commands", None)
+                for f in handler.filters:
+                    commands = getattr(f, "commands", None)
 
                     if commands and type(commands) is list:
                         handler_doc = handler.func_event.__doc__
@@ -322,11 +321,14 @@ class Dispatcher(BotMixin):
         Args:
             event (UpdateUnion): Событие.
         """
-        if not all(f.resolve(event) for f in self.filters):
-            return False
+        for f in self.filters:
+            if isinstance(f, MagicFilter):
+                r = f.resolve(event)
+            else:
+                r = f(event)
 
-        if not all (f(event) for f in self.base_filters):
-            return False
+            if not r:
+                return False
 
         return True
 

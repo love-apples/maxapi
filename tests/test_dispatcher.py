@@ -1,14 +1,15 @@
 """Тесты для Dispatcher и Router."""
 
-import pytest
 from unittest.mock import Mock, AsyncMock, patch
 
+import pytest
+
 from maxapi import Dispatcher, F
+from maxapi.context import MemoryContext
 from maxapi.dispatcher import Router, Event
 from maxapi.types.updates.message_created import MessageCreated
 from maxapi.types.updates.bot_started import BotStarted
 from maxapi.enums.update import UpdateType
-from maxapi.context import MemoryContext
 
 
 class TestDispatcherInitialization:
@@ -174,19 +175,18 @@ class TestDispatcherMiddleware:
 class TestDispatcherFilters:
     """Тесты фильтров."""
 
-    def test_add_base_filter(self, dispatcher):
-        """Тест добавления базового фильтра."""
+    def test_add_filter(self, dispatcher):
+        """Тест добавления фильтра."""
         from maxapi.filters.filter import BaseFilter
 
         class TestFilter(BaseFilter):
             def __call__(self, event):
                 return True
 
-        filter_obj = TestFilter()
-        dispatcher.filter(filter_obj)
+        dispatcher.filter(TestFilter())
 
-        assert len(dispatcher.base_filters) == 1
-        assert dispatcher.base_filters[0] == filter_obj
+        assert len(dispatcher.filters) == 1
+        assert callable(dispatcher.filters[0])
 
 
 class TestDispatcherContext:
@@ -284,7 +284,7 @@ class TestDispatcherAsync:
             def __call__(self, event):
                 return True
 
-        dispatcher.base_filters.append(TestFilter())
+        dispatcher.filters.append(TestFilter())
 
         assert await dispatcher._matches_event(
             sample_message_created_event
@@ -300,7 +300,7 @@ class TestDispatcherAsync:
             def __call__(self, event):
                 return False
 
-        dispatcher.base_filters.append(TestFilter())
+        dispatcher.filters.append(TestFilter())
 
         assert await dispatcher._matches_event(
             sample_message_created_event
