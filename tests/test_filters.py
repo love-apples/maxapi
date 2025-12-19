@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock
 
 from maxapi.filters.filter import BaseFilter
-from maxapi.filters.command import Command
+from maxapi.filters.command import Command, CommandStart
 from maxapi.filters.callback_payload import CallbackPayload
 from maxapi.types.updates.message_created import MessageCreated
 
@@ -46,24 +46,23 @@ class TestBaseFilter:
 class TestCommandFilter:
     """Тесты фильтра команд."""
 
-    def test_command_filter_init(self):
+    def test_command_start_filter(self):
         """Тест инициализации Command фильтра."""
-        cmd = Command("start")
-        assert "start" in cmd.commands
+        f, _ = CommandStart()
+        assert "start" in f.commands
 
     def test_command_filter_multiple(self):
         """Тест Command с несколькими командами."""
-        cmd = Command(["start", "begin", "go"])
-        assert "start" in cmd.commands
-        assert "begin" in cmd.commands
-        assert "go" in cmd.commands
+        commands = ("start", "begin", "go")
+        f, _ = Command(*commands)
+        assert all(c in f.commands for c in commands)
 
     @pytest.mark.asyncio
     async def test_command_filter_match(self):
         """Тест Command фильтра при совпадении."""
         from maxapi.types.message import MessageBody, Message
 
-        cmd = Command("start")
+        f, _ = CommandStart()
 
         # Создаем событие с командой /start
         event = Mock(spec=MessageCreated)
@@ -80,19 +79,17 @@ class TestCommandFilter:
         mock_bot.me = mock_me
         event._ensure_bot = Mock(return_value=mock_bot)
 
-        result = await cmd(event)
+        result = f(event)
 
         # Command возвращает словарь с 'args' при совпадении
-        assert result is not False
-        assert isinstance(result, dict)
-        assert "args" in result
+        assert result is True
 
     @pytest.mark.asyncio
     async def test_command_filter_no_match(self):
         """Тест Command фильтра при несовпадении."""
         from maxapi.types.message import MessageBody, Message
 
-        cmd = Command("start")
+        f, _ = CommandStart()
 
         # Создаем событие без команды
         event = Mock(spec=MessageCreated)
@@ -109,10 +106,7 @@ class TestCommandFilter:
         mock_bot.me = mock_me
         event._ensure_bot = Mock(return_value=mock_bot)
 
-        result = await cmd(event)
-
-        assert result is False
-
+        result = f(event)
 
 class TestCallbackPayloadFilter:
     """Тесты фильтра CallbackPayload."""

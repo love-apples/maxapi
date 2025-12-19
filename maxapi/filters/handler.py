@@ -72,6 +72,9 @@ class Handler:
     def _sort_args(self, args: tuple[Any]) -> list[Any]:
         unknown: list[Any] = []
         for arg in args:
+            if isinstance(arg, tuple):
+                self._sort_args(arg)
+                continue
 
             for cls, target in type(self)._TYPE_MAP:
                 if isinstance(arg, cls):
