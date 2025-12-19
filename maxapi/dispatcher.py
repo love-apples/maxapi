@@ -12,7 +12,6 @@ from typing import (
     Callable,
     Dict,
     List,
-    Literal,
     Optional,
 )
 
@@ -23,7 +22,6 @@ from .context import MemoryContext
 from .enums.update import UpdateType
 from .exceptions.dispatcher import HandlerException, MiddlewareException
 from .exceptions.max import InvalidToken, MaxApiError, MaxConnection
-from .filters import filter_attrs
 from .filters.command import CommandsInfo
 from .filters.filter import BaseFilter
 from .filters.handler import Handler
@@ -317,115 +315,20 @@ class Dispatcher(BotMixin):
         self.contexts.append(new_ctx)
         return new_ctx
 
-    async def process_base_filters(
-        self, event: UpdateUnion, filters: List[BaseFilter]
-    ) -> Optional[Dict[str, Any]] | Literal[False]:
-        """
-        Асинхронно применяет фильтры к событию.
-
-        Args:
-            event (UpdateUnion): Событие.
-            filters (List[BaseFilter]): Список фильтров.
-
-        Returns:
-            Optional[Dict[str, Any]] | Literal[False]: Словарь с результатом или False.
-        """
-
-        data = {}
-
-        for _filter in filters:
-            result = await _filter(event)
-
-            if isinstance(result, dict):
-                data.update(result)
-
-            elif not result:
-                return result
-
-        return data
-
-    async def _check_router_filters(
-        self, event: UpdateUnion, router: "Router | Dispatcher"
-    ) -> Optional[Dict[str, Any]] | Literal[False]:
+    async def _matches_event(self, event: UpdateUnion) -> bool:
         """
         Проверяет фильтры роутера для события.
 
         Args:
             event (UpdateUnion): Событие.
-            router (Router | Dispatcher): Роутер для проверки.
-
-        Returns:
-            Optional[Dict[str, Any]] | Literal[False]: Словарь с данными или False, если фильтры не прошли.
         """
-        if router.filters:
-            if not filter_attrs(event, *router.filters):
-                return False
+        if not all(f.resolve(event) for f in self.filters):
+            return False
 
-        if router.base_filters:
-            result = await self.process_base_filters(
-                event=event, filters=router.base_filters
-            )
-            if isinstance(result, dict):
-                return result
-            if not result:
-                return False
+        if not all (f(event) for f in self.base_filters):
+            return False
 
-        return {}
-
-    def _find_matching_handlers(
-        self, router: "Router | Dispatcher", event_type: UpdateType
-    ) -> List[Handler]:
-        """
-        Находит обработчики, соответствующие типу события в роутере.
-
-        Args:
-            router (Router | Dispatcher): Роутер для поиска.
-            event_type (UpdateType): Тип события.
-
-        Returns:
-            List[Handler]: Список подходящих обработчиков.
-        """
-        matching_handlers = []
-        for handler in router.event_handlers:
-            if handler.update_type == event_type:
-                matching_handlers.append(handler)
-        return matching_handlers
-
-    async def _check_handler_match(
-        self,
-        handler: Handler,
-        event: UpdateUnion,
-        current_state: Optional[Any],
-    ) -> Optional[Dict[str, Any]] | Literal[False]:
-        """
-        Проверяет, подходит ли обработчик для события (фильтры, состояние).
-
-        Args:
-            handler (Handler): Обработчик для проверки.
-            event (UpdateUnion): Событие.
-            current_state (Optional[Any]): Текущее состояние.
-
-        Returns:
-            Optional[Dict[str, Any]] | Literal[False]: Словарь с данными или False, если не подходит.
-        """
-        if handler.filters:
-            if not filter_attrs(event, *handler.filters):
-                return False
-
-        if handler.states:
-            if current_state not in handler.states:
-                return False
-
-        if handler.base_filters:
-            result = await self.process_base_filters(
-                event=event, filters=handler.base_filters
-            )
-            if isinstance(result, dict):
-                return result
-            if not result:
-                return False
-
-        return {}
+        return True
 
     async def _execute_handler(
         self,
@@ -508,19 +411,13 @@ class Dispatcher(BotMixin):
 
                     router_id = router.router_id or index
 
-                    router_filter_result = await self._check_router_filters(
-                        event_object, router
-                    )
-
-                    if router_filter_result is False:
+                    if not await self._matches_event(event_object):
                         continue
 
-                    if isinstance(router_filter_result, dict):
-                        data.update(router_filter_result)
-
-                    matching_handlers = self._find_matching_handlers(
-                        router, event_object.update_type
-                    )
+                    matching_handlers = [
+                        h for h in router.event_handlers
+                        if h.update_type == event_object.update_type
+                    ]
 
                     async def _process_handlers(
                         event: UpdateUnion, handler_data: Dict[str, Any]
@@ -528,17 +425,8 @@ class Dispatcher(BotMixin):
                         nonlocal is_handled
 
                         for handler in matching_handlers:
-                            handler_match_result = (
-                                await self._check_handler_match(
-                                    handler, event, current_state
-                                )
-                            )
-
-                            if handler_match_result is False:
+                            if not handler.matches_event(event, current_state):
                                 continue
-
-                            if isinstance(handler_match_result, dict):
-                                handler_data.update(handler_match_result)
 
                             await self._execute_handler(
                                 handler=handler,

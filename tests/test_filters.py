@@ -26,12 +26,10 @@ class TestBaseFilter:
         """Тест кастомного фильтра, возвращающего True."""
 
         class TestFilter(BaseFilter):
-            async def __call__(self, event):
+            def __call__(self, event):
                 return True
 
-        filter_obj = TestFilter()
-        result = await filter_obj(sample_message_created_event)
-        assert result is True
+        assert TestFilter()(sample_message_created_event) is True
 
     @pytest.mark.asyncio
     async def test_custom_filter_return_false(
@@ -40,28 +38,10 @@ class TestBaseFilter:
         """Тест кастомного фильтра, возвращающего False."""
 
         class TestFilter(BaseFilter):
-            async def __call__(self, event):
+            def __call__(self, event):
                 return False
 
-        filter_obj = TestFilter()
-        result = await filter_obj(sample_message_created_event)
-        assert result is False
-
-    @pytest.mark.asyncio
-    async def test_custom_filter_return_dict(
-        self, sample_message_created_event
-    ):
-        """Тест кастомного фильтра, возвращающего словарь."""
-
-        class TestFilter(BaseFilter):
-            async def __call__(self, event):
-                return {"test_key": "test_value"}
-
-        filter_obj = TestFilter()
-        result = await filter_obj(sample_message_created_event)
-        assert isinstance(result, dict)
-        assert result["test_key"] == "test_value"
-
+        assert TestFilter()(sample_message_created_event) is False
 
 class TestCommandFilter:
     """Тесты фильтра команд."""

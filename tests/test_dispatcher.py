@@ -179,7 +179,7 @@ class TestDispatcherFilters:
         from maxapi.filters.filter import BaseFilter
 
         class TestFilter(BaseFilter):
-            async def __call__(self, event):
+            def __call__(self, event):
                 return True
 
         filter_obj = TestFilter()
@@ -274,41 +274,34 @@ class TestDispatcherAsync:
             assert bot._me == mock_me
             mock_get_me.assert_called_once()
 
-    async def test_process_base_filters(
+    async def test_matches_event(
         self, dispatcher, sample_message_created_event
     ):
-        """Тест process_base_filters."""
+        """Тест `_matches_event`."""
         from maxapi.filters.filter import BaseFilter
 
         class TestFilter(BaseFilter):
-            async def __call__(self, event):
-                return {"test_key": "test_value"}
+            def __call__(self, event):
+                return True
 
-        filter_obj = TestFilter()
-        dispatcher.base_filters.append(filter_obj)
+        dispatcher.base_filters.append(TestFilter())
 
-        result = await dispatcher.process_base_filters(
-            sample_message_created_event, dispatcher.base_filters
-        )
+        assert await dispatcher._matches_event(
+            sample_message_created_event
+        ) is True
 
-        assert isinstance(result, dict)
-        assert result["test_key"] == "test_value"
-
-    async def test_process_base_filters_false(
+    async def test_matches_event_false(
         self, dispatcher, sample_message_created_event
     ):
-        """Тест process_base_filters с возвратом False."""
+        """Тест `_matches_event` с возвратом False."""
         from maxapi.filters.filter import BaseFilter
 
         class TestFilter(BaseFilter):
-            async def __call__(self, event):
+            def __call__(self, event):
                 return False
 
-        filter_obj = TestFilter()
-        dispatcher.base_filters.append(filter_obj)
+        dispatcher.base_filters.append(TestFilter())
 
-        result = await dispatcher.process_base_filters(
-            sample_message_created_event, dispatcher.base_filters
-        )
-
-        assert result is False
+        assert await dispatcher._matches_event(
+            sample_message_created_event
+        ) is False

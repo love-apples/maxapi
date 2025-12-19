@@ -17,5 +17,5 @@ class BaseFilter(ABC):
         __call__(event): Асинхронная проверка события на соответствие фильтру.
     """
     @abstractmethod
-    async def __call__(self, event: UpdateUnion) -> bool | dict:
+    def __call__(self, event: UpdateUnion) -> bool:
         """Должен быть переопределен в дочернем классе."""

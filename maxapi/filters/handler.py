@@ -81,6 +81,27 @@ class Handler:
                 unknown.append(arg)
         return unknown
 
+    def matches_event(
+        self, event: UpdateUnion, current_state: str | State | None
+    ) -> bool:
+        """
+        Проверяет, подходит ли обработчик для события (фильтры, состояние).
+
+        Args:
+            event: Событие.
+            current_state : Текущее состояние.
+        """
+        if self.states and current_state not in self.states:
+            return False
+
+        if not all(f.resolve(event) for f in self.filters):
+            return False
+
+        if not all (f(event) for f in self.base_filters):
+            return False
+
+        return True
+
     async def __call__(
         self,
         event_object: UpdateUnion,
