@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from inspect import Signature, signature
+from inspect import Parameter, Signature, signature
 from typing import Any
 
 from magic_filter import MagicFilter
@@ -21,6 +21,7 @@ class Handler:
     __slots__ = (
         "func_event",
         "signature",
+        "demands_kwargs",
         "update_type",
         "filters",
         "states",
@@ -53,6 +54,10 @@ class Handler:
 
         self.func_event: Callable = func_event
         self.signature: Signature = signature(func_event)
+        self.demands_kwargs: bool = any(
+            p.kind is Parameter.VAR_KEYWORD
+            for p in self.signature.parameters.values()
+        )
         self.update_type: UpdateType = update_type
 
         self.filters: list[Callable] = []
@@ -136,7 +141,10 @@ class Handler:
         event_object: UpdateUnion,
         data: dict[str, Any],
     ) -> Any:
+        if self.demands_kwargs:
+            return await self.func_event(event_object, **data)
         kwargs = {
-            k: v for k, v in data.items() if k in self.signature.parameters
+            k: v for k, v in data.items()
+            if k in self.signature.parameters
         }
         return await self.func_event(event_object, **kwargs)

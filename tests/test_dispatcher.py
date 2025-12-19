@@ -66,15 +66,26 @@ class TestRouterInitialization:
 class TestDispatcherHandlers:
     """Тесты регистрации обработчиков."""
 
-    def test_register_message_created_handler(self, dispatcher):
+    async def test_register_message_created_handler(self, dispatcher):
         """Тест регистрации обработчика message_created."""
 
         @dispatcher.message_created()
-        async def _(event: MessageCreated):
-            pass
+        async def _(_): ...
 
         assert len(dispatcher.event_handlers) == 1
         handler = dispatcher.event_handlers[0]
+        await handler(None, {})
+        assert handler.update_type == UpdateType.MESSAGE_CREATED
+
+    async def test_register_handler_with_kwargs(self, dispatcher):
+        """Тест регистрации обработчика message_created."""
+
+        @dispatcher.message_created()
+        async def _(_, **kwargs): ...
+
+        assert len(dispatcher.event_handlers) == 1
+        handler = dispatcher.event_handlers[0]
+        await handler(None, {"kwarg": None})
         assert handler.update_type == UpdateType.MESSAGE_CREATED
 
     def test_register_multiple_handlers(self, dispatcher):
