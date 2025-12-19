@@ -62,27 +62,27 @@ class Handler:
         self.states: list[State] = []
         self.middlewares: list[BaseMiddleware] = []
 
-        for arg in self._sort_args(args):
+        self._sort_args(args)
+
+    def _sort_args(self, args: tuple[Any]):
+        for arg in args:
+            if isinstance(arg, tuple):
+                for item in arg:
+                    self._handle_arg(item)
+            else:
+                self._handle_arg(arg)
+
+    def _handle_arg(self, arg: Any):
+        for cls, target in type(self)._TYPE_MAP:
+            if isinstance(arg, cls):
+                getattr(self, target).append(arg)
+                break
+        else:
             logger_dp.info(
                 "Неизвестный фильтр `%s` при регистрации `%s`",
                 arg,
-                func_event.__name__,
+                self.func_event.__name__,
             )
-
-    def _sort_args(self, args: tuple[Any]) -> list[Any]:
-        unknown: list[Any] = []
-        for arg in args:
-            if isinstance(arg, tuple):
-                self._sort_args(arg)
-                continue
-
-            for cls, target in type(self)._TYPE_MAP:
-                if isinstance(arg, cls):
-                    getattr(self, target).append(arg)
-                    break
-            else:
-                unknown.append(arg)
-        return unknown
 
     def matches_event(
         self, event: UpdateUnion, current_state: str | State | None
