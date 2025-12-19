@@ -286,7 +286,7 @@ class TestDispatcherAsync:
 
         dispatcher.filters.append(TestFilter())
 
-        assert await dispatcher._matches_event(
+        assert dispatcher._matches_event(
             sample_message_created_event
         ) is True
 
@@ -302,6 +302,6 @@ class TestDispatcherAsync:
 
         dispatcher.filters.append(TestFilter())
 
-        assert await dispatcher._matches_event(
+        assert dispatcher._matches_event(
             sample_message_created_event
         ) is False

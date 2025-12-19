@@ -314,7 +314,7 @@ class Dispatcher(BotMixin):
         self.contexts.append(new_ctx)
         return new_ctx
 
-    async def _matches_event(self, event: UpdateUnion) -> bool:
+    def _matches_event(self, event: UpdateUnion) -> bool:
         """
         Проверяет фильтры роутера для события.
 
@@ -413,7 +413,7 @@ class Dispatcher(BotMixin):
 
                     router_id = router.router_id or index
 
-                    if not await self._matches_event(event_object):
+                    if not self._matches_event(event_object):
                         continue
 
                     matching_handlers = [
