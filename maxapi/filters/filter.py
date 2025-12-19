@@ -1,21 +1,21 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..types.updates import UpdateUnion
 
 
-class BaseFilter:
+class BaseFilter(ABC):
     """
     Базовый класс для фильтров.
 
     Определяет интерфейс фильтрации событий.
-    Потомки должны переопределять метод __call__.
 
     Methods:
         __call__(event): Асинхронная проверка события на соответствие фильтру.
     """
-
+    @abstractmethod
     async def __call__(self, event: UpdateUnion) -> bool | dict:
-        return True
+        """Должен быть переопределен в дочернем классе."""

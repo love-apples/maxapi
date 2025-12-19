@@ -13,11 +13,11 @@ class TestBaseFilter:
     """Тесты BaseFilter."""
 
     @pytest.mark.asyncio
-    async def test_base_filter_default(self, sample_message_created_event):
+    async def test_base_filter_default(self):
         """Тест базового фильтра по умолчанию."""
-        filter_obj = BaseFilter()
-        result = await filter_obj(sample_message_created_event)
-        assert result is True
+        class TestFilter(BaseFilter): ...
+        with pytest.raises(TypeError):
+            TestFilter()
 
     @pytest.mark.asyncio
     async def test_custom_filter_return_true(
