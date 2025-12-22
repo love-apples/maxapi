@@ -33,4 +33,3 @@ jobs:
         run: |
           uv run mypy maxapi
         continue-on-error: true
-

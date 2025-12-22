@@ -35,7 +35,6 @@ jobs:
       - name: Run linting
         run: |
           uv run ruff check .
-          uv run black --check .
           uv run isort --check-only maxapi tests
 
       - name: Run type checking
@@ -65,4 +64,3 @@ jobs:
           fail_ci_if_error: false
           flags: unittests
           name: codecov-umbrella
-

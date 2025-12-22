@@ -32,4 +32,3 @@ jobs:
       - name: Run ruff check
         run: |
           uv run ruff check .
-
