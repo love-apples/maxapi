@@ -23,6 +23,7 @@ try:
 except ImportError:
     sys.exit(1)
 
+# Core Stuff
 from maxapi import Bot
 
 

@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
+# Core Stuff
 from maxapi import Dispatcher, F
 from maxapi.context import MemoryContext
 from maxapi.dispatcher import Event, Router
@@ -142,6 +143,7 @@ class TestDispatcherMiddleware:
 
     def test_add_middleware(self, dispatcher):
         """Тест добавления middleware."""
+        # Core Stuff
         from maxapi.filters.middleware import BaseMiddleware
 
         class TestMiddleware(BaseMiddleware):
@@ -156,6 +158,7 @@ class TestDispatcherMiddleware:
 
     def test_add_outer_middleware(self, dispatcher):
         """Тест добавления outer middleware."""
+        # Core Stuff
         from maxapi.filters.middleware import BaseMiddleware
 
         class TestMiddleware(BaseMiddleware):
@@ -177,6 +180,7 @@ class TestDispatcherFilters:
 
     def test_add_base_filter(self, dispatcher):
         """Тест добавления базового фильтра."""
+        # Core Stuff
         from maxapi.filters.filter import BaseFilter
 
         class TestFilter(BaseFilter):
@@ -224,6 +228,7 @@ class TestDispatcherMiddlewareChain:
 
     def test_build_middleware_chain(self, dispatcher):
         """Тест построения цепочки middleware."""
+        # Core Stuff
         from maxapi.filters.middleware import BaseMiddleware
 
         call_order = []
@@ -279,6 +284,7 @@ class TestDispatcherAsync:
         self, dispatcher, sample_message_created_event
     ):
         """Тест process_base_filters."""
+        # Core Stuff
         from maxapi.filters.filter import BaseFilter
 
         class TestFilter(BaseFilter):
@@ -299,6 +305,7 @@ class TestDispatcherAsync:
         self, dispatcher, sample_message_created_event
     ):
         """Тест process_base_filters с возвратом False."""
+        # Core Stuff
         from maxapi.filters.filter import BaseFilter
 
         class TestFilter(BaseFilter):

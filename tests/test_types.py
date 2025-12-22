@@ -1,5 +1,6 @@
 """Тесты для типов и моделей."""
 
+# Core Stuff
 from maxapi.enums.attachment import AttachmentType
 from maxapi.enums.message_link_type import MessageLinkType
 from maxapi.enums.upload_type import UploadType

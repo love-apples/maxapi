@@ -7,6 +7,7 @@
 
 import pytest
 
+# Core Stuff
 from maxapi import Dispatcher
 
 # Маркер для интеграционных тестов
@@ -91,6 +92,7 @@ class TestBotIntegration:
     @pytest.mark.asyncio
     async def test_get_upload_url(self, integration_bot):
         """Тест получения URL для загрузки."""
+        # Core Stuff
         from maxapi.enums.upload_type import UploadType
 
         upload_info = await integration_bot.get_upload_url(UploadType.IMAGE)
@@ -124,6 +126,7 @@ class TestMessageIntegration:
         if not test_chat_id:
             pytest.skip("Не удалось получить test_chat_id")
 
+        # Core Stuff
         from maxapi.enums.parse_mode import ParseMode
 
         message = await integration_bot.send_message(
@@ -139,6 +142,7 @@ class TestMessageIntegration:
         if not test_chat_id:
             pytest.skip("Не удалось получить test_chat_id")
 
+        # Core Stuff
         from maxapi.enums.sender_action import SenderAction
 
         result = await integration_bot.send_action(

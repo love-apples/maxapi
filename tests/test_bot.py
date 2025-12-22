@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
+# Core Stuff
 from maxapi import Bot
 from maxapi.client.default import DefaultConnectionProperties
 from maxapi.enums.parse_mode import ParseMode
@@ -133,6 +134,7 @@ class TestBotMethods:
     @pytest.mark.asyncio
     async def test_send_message_call(self, bot):
         """Тест вызова send_message (без реального запроса)."""
+        # Core Stuff
         from maxapi.methods.send_message import SendMessage
 
         with patch.object(
@@ -149,6 +151,7 @@ class TestBotMethods:
     @pytest.mark.asyncio
     async def test_send_action_call(self, bot):
         """Тест вызова send_action (без реального запроса)."""
+        # Core Stuff
         from maxapi.methods.send_action import SendAction
 
         with patch.object(
@@ -163,6 +166,7 @@ class TestBotMethods:
     @pytest.mark.asyncio
     async def test_get_me_structure(self, bot):
         """Тест структуры вызова get_me."""
+        # Core Stuff
         from maxapi.methods.get_me import GetMe
 
         with patch.object(

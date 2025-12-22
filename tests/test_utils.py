@@ -1,5 +1,6 @@
 """Тесты для утилит."""
 
+# Core Stuff
 from maxapi.enums.attachment import AttachmentType
 from maxapi.types import (
     CallbackButton,

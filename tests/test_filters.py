@@ -4,6 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
+# Core Stuff
 from maxapi.filters.callback_payload import CallbackPayload
 from maxapi.filters.command import Command
 from maxapi.filters.filter import BaseFilter
@@ -82,6 +83,7 @@ class TestCommandFilter:
     @pytest.mark.asyncio
     async def test_command_filter_match(self):
         """Тест Command фильтра при совпадении."""
+        # Core Stuff
         from maxapi.types.message import Message, MessageBody
 
         cmd = Command("start")
@@ -111,6 +113,7 @@ class TestCommandFilter:
     @pytest.mark.asyncio
     async def test_command_filter_no_match(self):
         """Тест Command фильтра при несовпадении."""
+        # Core Stuff
         from maxapi.types.message import Message, MessageBody
 
         cmd = Command("start")
@@ -140,6 +143,7 @@ class TestCallbackPayloadFilter:
 
     def test_callback_payload_init(self):
         """Тест инициализации PayloadFilter."""
+        # Core Stuff
         from maxapi.filters.callback_payload import PayloadFilter
 
         # CallbackPayload - это BaseModel, используется через PayloadFilter
@@ -154,6 +158,7 @@ class TestCallbackPayloadFilter:
     @pytest.mark.asyncio
     async def test_callback_payload_match(self):
         """Тест PayloadFilter при совпадении."""
+        # Core Stuff
         from maxapi.filters.callback_payload import PayloadFilter
         from maxapi.types.callback import Callback
         from maxapi.types.updates.message_callback import MessageCallback
@@ -184,6 +189,7 @@ class TestCallbackPayloadFilter:
     @pytest.mark.asyncio
     async def test_callback_payload_no_match(self):
         """Тест PayloadFilter при несовпадении."""
+        # Core Stuff
         from maxapi.filters.callback_payload import PayloadFilter
         from maxapi.types.callback import Callback
         from maxapi.types.updates.message_callback import MessageCallback

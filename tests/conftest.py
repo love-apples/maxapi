@@ -28,6 +28,7 @@ except ImportError:
     # python-dotenv не установлен, пропускаем загрузку
     pass
 
+# Core Stuff
 from maxapi import Bot, Dispatcher
 from maxapi.client.default import DefaultConnectionProperties
 
@@ -92,6 +93,7 @@ def dispatcher():
 @pytest.fixture
 def router():
     """Фикстура для создания Router."""
+    # Core Stuff
     from maxapi.dispatcher import Router
 
     return Router(router_id="test_router")
@@ -106,6 +108,7 @@ def default_connection():
 @pytest.fixture
 def sample_message_created_event():
     """Фикстура с примером события MessageCreated."""
+    # Core Stuff
     from maxapi.enums.update import UpdateType
     from maxapi.types.message import Message, MessageBody
     from maxapi.types.updates.message_created import MessageCreated
@@ -137,6 +140,7 @@ def sample_message_created_event():
 @pytest.fixture
 def sample_context():
     """Фикстура для создания MemoryContext."""
+    # Core Stuff
     from maxapi.context import MemoryContext
 
     return MemoryContext(chat_id=12345, user_id=67890)
