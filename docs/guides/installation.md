@@ -22,4 +22,3 @@ pip install git+https://github.com/love-apples/maxapi.git
 
 - Python 3.10+
 - Токен бота MAX
-

@@ -5,8 +5,8 @@
     python tests/get_chat_id.py
 """
 
-import os
 import asyncio
+import os
 import sys
 from pathlib import Path
 

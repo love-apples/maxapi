@@ -52,4 +52,3 @@ async def main():
 !!! warning "Важно"
     Если у бота есть подписки на Webhook, `start_polling` предупредит об этом в логах. 
     Удалите подписки через `await bot.delete_webhook()`.
-

@@ -26,4 +26,4 @@ class MessageCreated(Update):
             tuple[Optional[int], int]: Идентификатор чата и пользователя.
         """
 
-        return (self.message.recipient.chat_id, self.message.sender.user_id)
+        return (self.message.recipient.chat_id, self.message.sender.user_id) # type: ignore

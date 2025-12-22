@@ -47,4 +47,3 @@ class RouterMiddleware(BaseMiddleware):
 
 router.middleware(RouterMiddleware())
 ```
-

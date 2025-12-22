@@ -57,18 +57,14 @@ class Video(Attachment):
         bot (Optional[Any]): Ссылка на экземпляр бота, не сериализуется.
     """
 
-    type: Literal[
-        AttachmentType.VIDEO
-    ]  # pyright: ignore[reportIncompatibleVariableOverride]
+    type: Literal[AttachmentType.VIDEO]  # pyright: ignore[reportIncompatibleVariableOverride]
     token: Optional[str] = None
     urls: Optional[VideoUrl] = None
     thumbnail: VideoThumbnail
     width: Optional[int] = None
     height: Optional[int] = None
     duration: Optional[int] = None
-    bot: Optional[Any] = Field(
-        default=None, exclude=True
-    )  # pyright: ignore[reportRedeclaration]
+    bot: Optional[Any] = Field(default=None, exclude=True)  # pyright: ignore[reportRedeclaration]
 
     if TYPE_CHECKING:
         bot: Optional["Bot"]  # type: ignore

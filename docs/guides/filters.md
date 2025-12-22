@@ -99,4 +99,3 @@ class MyFilter(BaseFilter):
         # Возвращает True/False или dict с данными
         return True
 ```
-

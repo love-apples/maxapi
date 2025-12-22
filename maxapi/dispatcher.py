@@ -767,10 +767,8 @@ class Dispatcher(BotMixin):
             else:
                 await self.handle(event_object)
 
-            return (
-                JSONResponse(  # pyright: ignore[reportPossiblyUnboundVariable]
-                    content={"ok": True}, status_code=200
-                )
+            return JSONResponse(  # pyright: ignore[reportPossiblyUnboundVariable]
+                content={"ok": True}, status_code=200
             )
 
         await self.init_serve(bot=bot, host=host, port=port, **kwargs)

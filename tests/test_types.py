@@ -1,18 +1,18 @@
 """Тесты для типов и моделей."""
 
-from maxapi.types import (
-    CallbackButton,
-    LinkButton,
-    ChatButton,
-    RequestContactButton,
-    RequestGeoLocationButton,
-    BotCommand,
-)
 from maxapi.enums.attachment import AttachmentType
 from maxapi.enums.message_link_type import MessageLinkType
-from maxapi.types.message import NewMessageLink
-from maxapi.types.input_media import InputMediaBuffer
 from maxapi.enums.upload_type import UploadType
+from maxapi.types import (
+    BotCommand,
+    CallbackButton,
+    ChatButton,
+    LinkButton,
+    RequestContactButton,
+    RequestGeoLocationButton,
+)
+from maxapi.types.input_media import InputMediaBuffer
+from maxapi.types.message import NewMessageLink
 
 
 class TestButtons:

@@ -1,11 +1,12 @@
 """Тесты для фильтров и команд."""
 
-import pytest
 from unittest.mock import Mock
 
-from maxapi.filters.filter import BaseFilter
-from maxapi.filters.command import Command
+import pytest
+
 from maxapi.filters.callback_payload import CallbackPayload
+from maxapi.filters.command import Command
+from maxapi.filters.filter import BaseFilter
 from maxapi.types.updates.message_created import MessageCreated
 
 
@@ -81,7 +82,7 @@ class TestCommandFilter:
     @pytest.mark.asyncio
     async def test_command_filter_match(self):
         """Тест Command фильтра при совпадении."""
-        from maxapi.types.message import MessageBody, Message
+        from maxapi.types.message import Message, MessageBody
 
         cmd = Command("start")
 
@@ -110,7 +111,7 @@ class TestCommandFilter:
     @pytest.mark.asyncio
     async def test_command_filter_no_match(self):
         """Тест Command фильтра при несовпадении."""
-        from maxapi.types.message import MessageBody, Message
+        from maxapi.types.message import Message, MessageBody
 
         cmd = Command("start")
 
@@ -153,9 +154,9 @@ class TestCallbackPayloadFilter:
     @pytest.mark.asyncio
     async def test_callback_payload_match(self):
         """Тест PayloadFilter при совпадении."""
-        from maxapi.types.updates.message_callback import MessageCallback
-        from maxapi.types.callback import Callback
         from maxapi.filters.callback_payload import PayloadFilter
+        from maxapi.types.callback import Callback
+        from maxapi.types.updates.message_callback import MessageCallback
 
         # Создаем простой класс payload для теста
         class TestPayload(CallbackPayload):
@@ -183,9 +184,9 @@ class TestCallbackPayloadFilter:
     @pytest.mark.asyncio
     async def test_callback_payload_no_match(self):
         """Тест PayloadFilter при несовпадении."""
-        from maxapi.types.updates.message_callback import MessageCallback
-        from maxapi.types.callback import Callback
         from maxapi.filters.callback_payload import PayloadFilter
+        from maxapi.types.callback import Callback
+        from maxapi.types.updates.message_callback import MessageCallback
 
         # Создаем простой класс payload для теста
         class TestPayload(CallbackPayload):

@@ -76,9 +76,7 @@ class ButtonsPayload(BaseModel):
     buttons: List[List[InlineButtonUnion]]
 
     def pack(self):
-        return Attachment(
-            type=AttachmentType.INLINE_KEYBOARD, payload=self
-        )  # type: ignore
+        return Attachment(type=AttachmentType.INLINE_KEYBOARD, payload=self)  # type: ignore
 
 
 class Attachment(BaseModel):

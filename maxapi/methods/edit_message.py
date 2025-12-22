@@ -62,7 +62,7 @@ class EditMessage(BaseConnection):
         self.notify = notify
         self.parse_mode = parse_mode
         self.sleep_after_input_media = sleep_after_input_media
-        
+
     async def fetch(self) -> Optional[EditedMessage]:
         """
         Выполняет PUT-запрос для обновления сообщения.
@@ -124,7 +124,7 @@ class EditMessage(BaseConnection):
             except MaxApiError as e:
                 if "attachment.not.ready" in e.raw:
                     logger_bot.info(
-                        f"Ошибка при отправке загруженного медиа, попытка {attempt+1}, жду {self.RETRY_DELAY} секунды"
+                        f"Ошибка при отправке загруженного медиа, попытка {attempt + 1}, жду {self.RETRY_DELAY} секунды"
                     )
                     await asyncio.sleep(self.RETRY_DELAY)
                     continue

@@ -26,9 +26,7 @@ class MessageForCallback(BaseModel):
     """
 
     text: Optional[str] = None
-    attachments: Optional[List[Attachments]] = Field(
-        default_factory=list
-    )  # type: ignore
+    attachments: Optional[List[Attachments]] = Field(default_factory=list)  # type: ignore
     link: Optional[NewMessageLink] = None
     notify: Optional[bool] = True
     format: Optional[ParseMode] = None

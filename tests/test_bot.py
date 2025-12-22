@@ -1,14 +1,15 @@
 """Тесты для класса Bot."""
 
-import pytest
-from unittest.mock import Mock, AsyncMock, patch
 import os
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 from maxapi import Bot
-from maxapi.exceptions.max import InvalidToken
+from maxapi.client.default import DefaultConnectionProperties
 from maxapi.enums.parse_mode import ParseMode
 from maxapi.enums.sender_action import SenderAction
-from maxapi.client.default import DefaultConnectionProperties
+from maxapi.exceptions.max import InvalidToken
 
 
 class TestBotInitialization:

@@ -9,7 +9,6 @@ import pytest
 
 from maxapi import Dispatcher
 
-
 # Маркер для интеграционных тестов
 pytestmark = pytest.mark.integration
 

@@ -1,14 +1,14 @@
 """Тесты для утилит."""
 
-from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
+from maxapi.enums.attachment import AttachmentType
 from maxapi.types import (
     CallbackButton,
-    LinkButton,
     ChatButton,
+    LinkButton,
     RequestContactButton,
     RequestGeoLocationButton,
 )
-from maxapi.enums.attachment import AttachmentType
+from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
 
 class TestInlineKeyboardBuilder:

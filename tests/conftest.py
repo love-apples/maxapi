@@ -2,10 +2,10 @@
 
 import os
 from pathlib import Path
-import pytest
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import aiohttp
+import pytest
 
 # Загружаем переменные окружения из .env файла
 try:
@@ -106,9 +106,9 @@ def default_connection():
 @pytest.fixture
 def sample_message_created_event():
     """Фикстура с примером события MessageCreated."""
-    from maxapi.types.updates.message_created import MessageCreated
-    from maxapi.types.message import MessageBody, Message
     from maxapi.enums.update import UpdateType
+    from maxapi.types.message import Message, MessageBody
+    from maxapi.types.updates.message_created import MessageCreated
 
     # Создаем минимальную структуру события
     event = Mock(spec=MessageCreated)

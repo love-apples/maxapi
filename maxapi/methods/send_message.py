@@ -66,7 +66,7 @@ class SendMessage(BaseConnection):
         self.parse_mode = parse_mode
         self.disable_link_preview = disable_link_preview
         self.sleep_after_input_media = sleep_after_input_media
-        
+
     async def fetch(self) -> Optional[SendedMessage]:
         """
         Отправляет сообщение с вложениями (если есть), с обработкой задержки готовности вложений.
@@ -132,7 +132,7 @@ class SendMessage(BaseConnection):
             except MaxApiError as e:
                 if "attachment.not.ready" in e.raw:
                     logger_bot.info(
-                        f"Ошибка при отправке загруженного медиа, попытка {attempt+1}, жду {self.RETRY_DELAY} секунды"
+                        f"Ошибка при отправке загруженного медиа, попытка {attempt + 1}, жду {self.RETRY_DELAY} секунды"
                     )
                     await asyncio.sleep(self.RETRY_DELAY)
                     continue

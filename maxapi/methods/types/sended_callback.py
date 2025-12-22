@@ -18,9 +18,7 @@ class SendedCallback(BaseModel):
 
     success: bool
     message: Optional[str] = None
-    bot: Optional[Any] = Field(
-        default=None, exclude=True
-    )  # pyright: ignore[reportRedeclaration]
+    bot: Optional[Any] = Field(default=None, exclude=True)  # pyright: ignore[reportRedeclaration]
 
     if TYPE_CHECKING:
         bot: Optional[Bot]  # type: ignore

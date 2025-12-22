@@ -12,7 +12,5 @@ class Audio(Attachment):
         transcription (Optional[str]): Транскрипция аудио (если есть).
     """
 
-    type: Literal[
-        AttachmentType.AUDIO
-    ]  # pyright: ignore[reportIncompatibleVariableOverride]
+    type: Literal[AttachmentType.AUDIO]  # pyright: ignore[reportIncompatibleVariableOverride]
     transcription: Optional[str] = None

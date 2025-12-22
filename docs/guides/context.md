@@ -51,4 +51,3 @@ class Form(StatesGroup):
     name = State()  # Автоматически получит имя 'Form:name'
     age = State()   # Автоматически получит имя 'Form:age'
 ```
-

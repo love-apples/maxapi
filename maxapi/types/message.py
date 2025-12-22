@@ -82,9 +82,7 @@ class MessageBody(BaseModel):
     mid: str
     seq: int
     text: Optional[str] = None
-    attachments: Optional[List[Attachments]] = Field(
-        default_factory=list
-    )  # type: ignore
+    attachments: Optional[List[Attachments]] = Field(default_factory=list)  # type: ignore
 
     markup: Optional[List[Union[MarkupLink, MarkupElement]]] = Field(
         default_factory=list

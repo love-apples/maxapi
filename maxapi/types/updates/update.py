@@ -25,15 +25,9 @@ class Update(BaseModel, BotMixin):
     update_type: UpdateType
     timestamp: int
 
-    bot: Optional[Any] = Field(
-        default=None, exclude=True
-    )  # pyright: ignore[reportRedeclaration]
-    from_user: Optional[Any] = Field(
-        default=None, exclude=True
-    )  # pyright: ignore[reportRedeclaration]
-    chat: Optional[Any] = Field(
-        default=None, exclude=True
-    )  # pyright: ignore[reportRedeclaration]
+    bot: Optional[Any] = Field(default=None, exclude=True)  # pyright: ignore[reportRedeclaration]
+    from_user: Optional[Any] = Field(default=None, exclude=True)  # pyright: ignore[reportRedeclaration]
+    chat: Optional[Any] = Field(default=None, exclude=True)  # pyright: ignore[reportRedeclaration]
 
     if TYPE_CHECKING:
         bot: Optional[Bot]  # type: ignore

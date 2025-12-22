@@ -99,4 +99,3 @@ async def data_handler(event: MessageCreated, context: MemoryContext):
 - `on_started` — событие при старте диспетчера (после инициализации)
 
 Подробнее о типах событий см. [Updates](../types/updates/index.md)
-

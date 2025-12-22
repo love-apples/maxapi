@@ -1,14 +1,15 @@
 """Тесты для Dispatcher и Router."""
 
+from unittest.mock import AsyncMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
 
 from maxapi import Dispatcher, F
-from maxapi.dispatcher import Router, Event
-from maxapi.types.updates.message_created import MessageCreated
-from maxapi.types.updates.bot_started import BotStarted
-from maxapi.enums.update import UpdateType
 from maxapi.context import MemoryContext
+from maxapi.dispatcher import Event, Router
+from maxapi.enums.update import UpdateType
+from maxapi.types.updates.bot_started import BotStarted
+from maxapi.types.updates.message_created import MessageCreated
 
 
 class TestDispatcherInitialization:

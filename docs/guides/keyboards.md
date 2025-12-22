@@ -51,4 +51,3 @@ await event.message.answer(
 - `OpenAppButton` — открытие приложения
 - `RequestContact` — запрос контакта
 - `RequestGeoLocationButton` — запрос геолокации
-

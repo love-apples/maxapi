@@ -55,4 +55,3 @@ async def handler(event: MessageCreated, custom_data: str):
 - Обработка ошибок
 - Измерение времени выполнения
 - Модификация данных
-
