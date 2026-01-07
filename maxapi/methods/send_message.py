@@ -136,6 +136,8 @@ class SendMessage(BaseConnection):
                     )
                     await asyncio.sleep(self.RETRY_DELAY)
                     continue
+                else:
+                    raise e
 
             break
 
