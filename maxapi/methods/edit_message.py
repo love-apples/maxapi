@@ -11,6 +11,7 @@ from ..exceptions.max import MaxApiError
 from ..loggers import logger_bot
 from ..types.attachments import Attachments
 from ..types.attachments.attachment import Attachment
+from ..types.attachments.upload import AttachmentUpload
 from ..types.input_media import InputMedia, InputMediaBuffer
 from ..types.message import NewMessageLink
 from ..utils.message import process_input_media
@@ -97,6 +98,10 @@ class EditMessage(BaseConnection):
                         base_connection=self, bot=bot, att=att
                     )
                     json["attachments"].append(input_media.model_dump())
+                elif isinstance(att, Attachment) and isinstance(
+                    att.payload, AttachmentUpload
+                ):
+                    json["attachments"].append(att.payload.model_dump())
                 else:
                     json["attachments"].append(att.model_dump())
 
