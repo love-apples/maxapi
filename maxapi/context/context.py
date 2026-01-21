@@ -1,24 +1,22 @@
-import asyncio
-from typing import Any, Dict, Optional, Union
+from typing import Any
+
 
 from ..context.state_machine import State
+from ..storage import BaseStorage, StorageKey
 
 
 class Context:
     """
-    Контекст хранения данных пользователя с блокировками.
+    Контекст хранения данных пользователя
 
     Args:
-        chat_id (Optional[int]): Идентификатор чата
-        user_id (Optional[int]): Идентификатор пользователя
+        storage (BaseStorage): хранилище
+        key (StorageKey): ключ в хранище
     """
 
-    def __init__(self, chat_id: Optional[int], user_id: Optional[int]):
-        self.chat_id = chat_id
-        self.user_id = user_id
-        self._context: Dict[str, Any] = {}
-        self._state: State | str | None = None
-        self._lock = asyncio.Lock()
+    def __init__(self, storage: BaseStorage, key: StorageKey):
+        self.storage = storage
+        self.key = key
 
     async def get_data(self) -> dict[str, Any]:
         """
@@ -28,10 +26,9 @@ class Context:
             Словарь с данными контекста
         """
 
-        async with self._lock:
-            return self._context
+        return await self.storage.get_data(key=self.key)
 
-    async def set_data(self, data: dict[str, Any]):
+    async def set_data(self, data: dict[str, Any]) -> None:
         """
         Полностью заменяет контекст данных.
 
@@ -39,8 +36,7 @@ class Context:
             data: Новый словарь контекста
         """
 
-        async with self._lock:
-            self._context = data
+        await self.storage.set_data(key=self.key, data=data)
 
     async def update_data(self, **kwargs: Any) -> None:
         """
@@ -50,10 +46,9 @@ class Context:
             **kwargs: Пары ключ-значение для обновления
         """
 
-        async with self._lock:
-            self._context.update(kwargs)
+        await self.storage.update_data(key=self.key, **kwargs)
 
-    async def set_state(self, state: Optional[Union[State, str]] = None):
+    async def set_state(self, state: State | str | None = None) -> None:
         """
         Устанавливает новое состояние.
 
@@ -61,10 +56,9 @@ class Context:
             state: Новое состояние или None для сброса
         """
 
-        async with self._lock:
-            self._state = state
+        await self.storage.set_state(key=self.key, state=state)
 
-    async def get_state(self) -> Optional[State | str]:
+    async def get_state(self) -> State | str | None:
         """
         Возвращает текущее состояние.
 
@@ -72,14 +66,11 @@ class Context:
             Текущее состояние или None
         """
 
-        async with self._lock:
-            return self._state
+        return await self.storage.get_state(key=self.key)
 
-    async def clear(self):
+    async def clear(self) -> None:
         """
         Очищает контекст и сбрасывает состояние.
         """
 
-        async with self._lock:
-            self._state = None
-            self._context = {}
+        await self.storage.clear(key=self.key)

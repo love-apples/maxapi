@@ -19,7 +19,8 @@ from typing import (
 from aiohttp import ClientConnectorError
 
 from .bot import Bot
-from .context import MemoryContext
+from .context import Context, MemoryContext
+from .storage import BaseStorage, StorageKey, MemoryStorage
 from .enums.update import UpdateType
 from .exceptions.dispatcher import HandlerException, MiddlewareException
 from .exceptions.max import InvalidToken, MaxApiError, MaxConnection
@@ -72,7 +73,10 @@ class Dispatcher(BotMixin):
     """
 
     def __init__(
-        self, router_id: str | None = None, use_create_task: bool = False
+        self,
+        router_id: str | None = None,
+        use_create_task: bool = False,
+        storage: BaseStorage | None = None,
     ) -> None:
         """
         Инициализация диспетчера.
@@ -80,12 +84,13 @@ class Dispatcher(BotMixin):
         Args:
             router_id (str | None): Идентификатор роутера для логов.
             use_create_task (bool): Флаг, отвечающий за параллелизацию обработок событий.
+            storage (BaseStorage | None): хранилище контекста
         """
 
         self.router_id = router_id
 
         self.event_handlers: List[Handler] = []
-        self.contexts: List[MemoryContext] = []
+        self.storage: BaseStorage = storage or MemoryStorage()
         self.routers: List[Router | Dispatcher] = []
         self.filters: List[MagicFilter] = []
         self.base_filters: List[BaseFilter] = []
@@ -297,7 +302,7 @@ class Dispatcher(BotMixin):
 
     def __get_memory_context(
         self, chat_id: Optional[int], user_id: Optional[int]
-    ) -> MemoryContext:
+    ) -> Context:
         """
         Возвращает существующий или создаёт новый MemoryContext по chat_id и user_id.
 
@@ -309,13 +314,8 @@ class Dispatcher(BotMixin):
             MemoryContext: Контекст.
         """
 
-        for ctx in self.contexts:
-            if ctx.chat_id == chat_id and ctx.user_id == user_id:
-                return ctx
-
-        new_ctx = MemoryContext(chat_id, user_id)
-        self.contexts.append(new_ctx)
-        return new_ctx
+        storage_key = StorageKey(chat_id=chat_id, user_id=user_id)
+        return Context(storage=self.storage, key=storage_key)
 
     async def call_handler(
         self, handler: Handler, event_object: UpdateType, data: Dict[str, Any]
