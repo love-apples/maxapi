@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional, Union
 from ..context.state_machine import State
 
 
-class MemoryContext:
+class Context:
     """
     Контекст хранения данных пользователя с блокировками.
 
