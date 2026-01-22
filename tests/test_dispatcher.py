@@ -9,6 +9,7 @@ from maxapi import Dispatcher, F
 from maxapi.context import MemoryContext
 from maxapi.dispatcher import Event, Router
 from maxapi.enums.update import UpdateType
+from maxapi.storage.base import BaseStorage, StorageKey
 from maxapi.types.updates.bot_started import BotStarted
 from maxapi.types.updates.message_created import MessageCreated
 
@@ -23,7 +24,7 @@ class TestDispatcherInitialization:
         assert dp.use_create_task is False
         assert isinstance(dp.event_handlers, list)
         assert len(dp.event_handlers) == 0
-        assert isinstance(dp.contexts, list)
+        assert isinstance(dp.storage, BaseStorage)
         assert isinstance(dp.routers, list)
         assert isinstance(dp.middlewares, list)
         assert dp.bot is None
@@ -199,28 +200,34 @@ class TestDispatcherContext:
 
     def test_get_memory_context_new(self, dispatcher):
         """Тест получения нового контекста."""
-        context = dispatcher._Dispatcher__get_memory_context(12345, 67890)
+
+        chat_id = 12345
+        user_id = 67890
+
+        context = dispatcher._Dispatcher__get_memory_context(chat_id, user_id)
 
         assert isinstance(context, MemoryContext)
-        assert context.chat_id == 12345
-        assert context.user_id == 67890
-        assert len(dispatcher.contexts) == 1
+        assert context.key == StorageKey(chat_id, user_id)
+        assert context.storage is context.storage
 
     def test_get_memory_context_existing(self, dispatcher):
         """Тест получения существующего контекста."""
-        context1 = dispatcher._Dispatcher__get_memory_context(12345, 67890)
-        context2 = dispatcher._Dispatcher__get_memory_context(12345, 67890)
 
-        assert context1 is context2
-        assert len(dispatcher.contexts) == 1
+        chat_id = 12345
+        user_id = 67890
+        context1 = dispatcher._Dispatcher__get_memory_context(chat_id, user_id)
+        context2 = dispatcher._Dispatcher__get_memory_context(chat_id, user_id)
+
+        assert context1.storage is context2.storage
+        assert context1.key == context2.key
 
     def test_get_memory_context_different_ids(self, dispatcher):
         """Тест получения контекстов для разных ID."""
         context1 = dispatcher._Dispatcher__get_memory_context(12345, 67890)
         context2 = dispatcher._Dispatcher__get_memory_context(54321, 98765)
 
-        assert context1 is not context2
-        assert len(dispatcher.contexts) == 2
+        assert context1.key != context2.key
+        assert context1.storage is context2.storage
 
 
 class TestDispatcherMiddlewareChain:
