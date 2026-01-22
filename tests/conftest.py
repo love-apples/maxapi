@@ -138,12 +138,39 @@ def sample_message_created_event():
 
 
 @pytest.fixture
-def sample_context():
+def sample_storage():
+    """Фикстура для создания MemoryStorage."""
+
+    from maxapi.storage import MemoryStorage
+
+    return MemoryStorage()
+
+
+@pytest.fixture
+def sample_storage_key():
+    """Фикстура для создания StorageKey."""
+
+    from maxapi.storage import StorageKey
+
+    return StorageKey(chat_id=12345, user_id=67890)
+
+
+@pytest.fixture
+def sample_none_storage_key():
+    """Фикстура для создания пустого StorageKey."""
+
+    from maxapi.storage import StorageKey
+
+    return StorageKey(chat_id=None, user_id=None)
+
+
+@pytest.fixture
+def sample_context(sample_storage, sample_storage_key):
     """Фикстура для создания MemoryContext."""
     # Core Stuff
     from maxapi.context import MemoryContext
 
-    return MemoryContext(chat_id=12345, user_id=67890)
+    return MemoryContext(storage=sample_storage, key=sample_storage_key)
 
 
 @pytest.fixture

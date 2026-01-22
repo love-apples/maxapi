@@ -9,17 +9,22 @@ from maxapi.context.state_machine import State, StatesGroup
 class TestMemoryContext:
     """Тесты MemoryContext."""
 
-    def test_context_init(self):
+    def test_context_init(self, sample_storage, sample_storage_key):
         """Тест инициализации контекста."""
-        context = MemoryContext(chat_id=12345, user_id=67890)
-        assert context.chat_id == 12345
-        assert context.user_id == 67890
 
-    def test_context_init_none_ids(self):
+        context = MemoryContext(storage=sample_storage, key=sample_storage_key)
+        assert context.key == sample_storage_key
+        assert context.storage is sample_storage
+
+    def test_context_init_none_ids(
+        self, sample_storage, sample_none_storage_key
+    ):
         """Тест инициализации контекста с None."""
-        context = MemoryContext(chat_id=None, user_id=None)
-        assert context.chat_id is None
-        assert context.user_id is None
+        context = MemoryContext(
+            storage=sample_storage, key=sample_none_storage_key
+        )
+        assert context.key == sample_none_storage_key
+        assert context.storage is sample_storage
 
     @pytest.mark.asyncio
     async def test_get_data_empty(self, sample_context):
