@@ -111,10 +111,11 @@ class RedisStorage(BaseStorage):
         key: StorageKey,
         data: dict[str, Any],
     ) -> None:
-        redis_key = self.key_builder(key, "data")
         if not data:
-            await self.redis.delete(redis_key)
+            await self.clear(key)
             return
+
+        redis_key = self.key_builder(key, "data")
         await self.redis.set(
             redis_key,
             self.json_dumps(data),
@@ -132,3 +133,23 @@ class RedisStorage(BaseStorage):
         if isinstance(value, bytes):
             value = value.decode("utf-8")
         return cast(dict[str, Any], self.json_loads(value))
+
+    async def update_data(self, key: StorageKey, **kwargs: Any) -> None:
+        redis_key = self.key_builder(key, "data")
+        value = await self.redis.get(redis_key)
+        if value is None:
+            value = {}
+        else:
+            value = value.decode("utf-8")
+            value = cast(dict[str, Any], self.json_loads(value))
+
+        value.update(kwargs)
+        await self.redis.set(
+            redis_key,
+            self.json_dumps(value),
+            ex=self.data_ttl,
+        )
+
+    async def clear(self, key: StorageKey) -> None:
+        redis_key = self.key_builder(key, "data")
+        await self.redis.delete(redis_key)
