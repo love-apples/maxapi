@@ -17,6 +17,15 @@ class State:
     def __str__(self):
         return self.name
 
+    def __eq__(self, value: object, /) -> bool:
+        if isinstance(value, State):
+            return self.name == value.name
+        if isinstance(value, str):
+            return self.name == value
+        raise NotImplementedError(
+            f"Сравнение `State` с типом {type(value)} невозможно"
+        )
+
 
 class StatesGroup:
     """
