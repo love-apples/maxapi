@@ -138,15 +138,6 @@ def sample_message_created_event():
 
 
 @pytest.fixture
-def sample_storage():
-    """Фикстура для создания MemoryStorage."""
-
-    from maxapi.storage import MemoryStorage
-
-    return MemoryStorage()
-
-
-@pytest.fixture
 def memory_storage():
     """Фикстура для создания MemoryStorage."""
 
@@ -192,7 +183,7 @@ async def redis_storage(redis_url: str):
         await storage.close()
 
 
-@pytest.fixture()
+@pytest.fixture
 def storage(request):
     return request.getfixturevalue(request.param)
 
@@ -207,7 +198,7 @@ def storage_key():
 
 
 @pytest.fixture
-def sample_none_storage_key():
+def none_storage_key():
     """Фикстура для создания пустого StorageKey."""
 
     from maxapi.storage import StorageKey
@@ -216,12 +207,12 @@ def sample_none_storage_key():
 
 
 @pytest.fixture
-def sample_context(sample_storage, sample_storage_key):
-    """Фикстура для создания MemoryContext."""
+def context(memory_storage, storage_key):
+    """Фикстура для создания Context."""
     # Core Stuff
-    from maxapi.context import MemoryContext
+    from maxapi.context import Context
 
-    return MemoryContext(storage=sample_storage, key=sample_storage_key)
+    return Context(storage=memory_storage, key=storage_key)
 
 
 @pytest.fixture
