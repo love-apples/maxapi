@@ -32,7 +32,7 @@ def default_key_builder(
 
 class RedisStorage(BaseStorage):
     """
-    Требуется установка Redis :code:`redis` package installed (:code:`pip install redis`)
+    Требуется установка пакета :code:`redis` (:code:`pip install redis`)
     """
 
     def __init__(
@@ -45,10 +45,11 @@ class RedisStorage(BaseStorage):
         json_dumps: _JsonDumps = json.dumps,
     ) -> None:
         """
-        :param redis: экземпляр соединения Redis
-        :param key_builder: функция преобразования StorageKey в строку
-        :param state_ttl: время жизни для состояния
-        :param data_ttl: время жизни для данных
+        Args:
+            redis (Redis): Экземпляр соединения :code:`Redis`
+            key_builder (_KeyBuilder): Функция преобразования :code:`StorageKey` в строку
+            state_ttl (ExpiryT): Время жизни для состояния
+            data_ttl (ExpiryT): Время жизни для данных
         """
         self.redis = redis
         self.state_ttl = state_ttl
@@ -67,10 +68,13 @@ class RedisStorage(BaseStorage):
         """
         Создайте экземпляр :class:`RedisStorage` с указанием строки подключения
 
-        :param url: например :code:`redis://user:password@host:port/db`
-        :param connection_kwargs: смотрите документацию :code:`redis`
-        :param kwargs: аргументы передаваемые в :class:`RedisStorage`
-        :return: экземпляр :class:`RedisStorage`
+        Args:
+            url (str): Например :code:`redis://user:password@host:port/db`
+            connection_kwargs (dict[str, Any]): Смотрите документацию :code:`redis`
+            **kwargs (Any): Аргументы передаваемые в :class:`RedisStorage`
+
+        Returns:
+            RedisStorage: Экземпляр :class:`RedisStorage`
         """
         if connection_kwargs is None:
             connection_kwargs = {}
