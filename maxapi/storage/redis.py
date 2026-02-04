@@ -160,5 +160,6 @@ class RedisStorage(BaseStorage):
         )
 
     async def clear(self, key: StorageKey) -> None:
-        redis_key = self.key_builder(key, "data")
-        await self.redis.delete(redis_key)
+        for part in ("data", "state"):
+            redis_key = self.key_builder(key, part)
+            await self.redis.delete(redis_key)
