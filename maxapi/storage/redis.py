@@ -1,3 +1,8 @@
+"""
+Код файла основан на коде из проекта aiogram (лицензия MIT).
+Оригинальный источник: https://github.com/aiogram/aiogram/blob/dev-3.x/aiogram/fsm/storage/redis.py
+"""
+
 import json
 from collections.abc import Callable
 from typing import Any, Literal, cast
