@@ -22,6 +22,8 @@ class State:
             return self.name == value.name
         if isinstance(value, str):
             return self.name == value
+        if value is None:
+            return False
         raise NotImplementedError(
             f"Сравнение `State` с типом {type(value)} невозможно"
         )
