@@ -2,93 +2,97 @@
 
 import pytest
 
-from maxapi.context import MemoryContext
+from maxapi.context import Context
 from maxapi.context.state_machine import State, StatesGroup
+from maxapi.storage import MemoryStorage
 
 
-class TestMemoryContext:
-    """Тесты MemoryContext."""
+class TestContext:
+    """Тесты Context."""
 
-    def test_context_init(self):
+    def test_context_init(self, memory_storage: MemoryStorage, storage_key):
         """Тест инициализации контекста."""
-        context = MemoryContext(chat_id=12345, user_id=67890)
-        assert context.chat_id == 12345
-        assert context.user_id == 67890
 
-    def test_context_init_none_ids(self):
+        context = Context(storage=memory_storage, key=storage_key)
+        assert context.key == storage_key
+        assert context.storage is memory_storage
+
+    def test_context_init_none_ids(
+        self, memory_storage: MemoryStorage, none_storage_key
+    ):
         """Тест инициализации контекста с None."""
-        context = MemoryContext(chat_id=None, user_id=None)
-        assert context.chat_id is None
-        assert context.user_id is None
+        context = Context(storage=memory_storage, key=none_storage_key)
+        assert context.key == none_storage_key
+        assert context.storage is memory_storage
 
     @pytest.mark.asyncio
-    async def test_get_data_empty(self, sample_context):
+    async def test_get_data_empty(self, context):
         """Тест получения пустых данных."""
-        data = await sample_context.get_data()
+        data = await context.get_data()
         assert data == {}
 
     @pytest.mark.asyncio
-    async def test_set_data(self, sample_context):
+    async def test_set_data(self, context):
         """Тест установки данных."""
         test_data = {"key1": "value1", "key2": 42}
-        await sample_context.set_data(test_data)
+        await context.set_data(test_data)
 
-        data = await sample_context.get_data()
+        data = await context.get_data()
         assert data == test_data
 
     @pytest.mark.asyncio
-    async def test_update_data(self, sample_context):
+    async def test_update_data(self, context):
         """Тест обновления данных."""
-        await sample_context.set_data({"key1": "value1"})
-        await sample_context.update_data(key2="value2", key3=123)
+        await context.set_data({"key1": "value1"})
+        await context.update_data(key2="value2", key3=123)
 
-        data = await sample_context.get_data()
+        data = await context.get_data()
         assert data["key1"] == "value1"
         assert data["key2"] == "value2"
         assert data["key3"] == 123
 
     @pytest.mark.asyncio
-    async def test_get_state_none(self, sample_context):
+    async def test_get_state_none(self, context):
         """Тест получения состояния (изначально None)."""
-        state = await sample_context.get_state()
+        state = await context.get_state()
         assert state is None
 
     @pytest.mark.asyncio
-    async def test_set_state_string(self, sample_context):
+    async def test_set_state_string(self, context):
         """Тест установки строкового состояния."""
-        await sample_context.set_state("test_state")
-        state = await sample_context.get_state()
+        await context.set_state("test_state")
+        state = await context.get_state()
         assert state == "test_state"
 
     @pytest.mark.asyncio
-    async def test_set_state_none(self, sample_context):
+    async def test_set_state_none(self, context):
         """Тест сброса состояния."""
-        await sample_context.set_state("test_state")
-        await sample_context.set_state(None)
-        state = await sample_context.get_state()
+        await context.set_state("test_state")
+        await context.set_state(None)
+        state = await context.get_state()
         assert state is None
 
     @pytest.mark.asyncio
-    async def test_clear(self, sample_context):
+    async def test_clear(self, context):
         """Тест очистки контекста."""
-        await sample_context.set_data({"key": "value"})
-        await sample_context.set_state("test_state")
+        await context.set_data({"key": "value"})
+        await context.set_state("test_state")
 
-        await sample_context.clear()
+        await context.clear()
 
-        data = await sample_context.get_data()
-        state = await sample_context.get_state()
+        data = await context.get_data()
+        state = await context.get_state()
 
         assert data == {}
         assert state is None
 
     @pytest.mark.asyncio
-    async def test_concurrent_access(self, sample_context):
+    async def test_concurrent_access(self, context):
         """Тест параллельного доступа к контексту."""
         import asyncio
 
         async def update_data(key, value):
-            await sample_context.update_data(**{key: value})
+            await context.update_data(**{key: value})
 
         # Параллельные обновления
         await asyncio.gather(
@@ -97,7 +101,7 @@ class TestMemoryContext:
             update_data("key3", "value3"),
         )
 
-        data = await sample_context.get_data()
+        data = await context.get_data()
         assert "key1" in data
         assert "key2" in data
         assert "key3" in data
@@ -146,7 +150,7 @@ class TestStateMachine:
         assert states == []
 
     @pytest.mark.asyncio
-    async def test_state_in_context(self, sample_context):
+    async def test_state_in_context(self, context):
         """Тест использования State в контексте."""
 
         class TestStates(StatesGroup):
@@ -154,12 +158,12 @@ class TestStateMachine:
             processing = State()
             completed = State()
 
-        await sample_context.set_state(TestStates.waiting)
-        state = await sample_context.get_state()
+        await context.set_state(TestStates.waiting)
+        state = await context.get_state()
 
         assert state is TestStates.waiting
         assert str(state) == "TestStates:waiting"
 
-        await sample_context.set_state(TestStates.processing)
-        state = await sample_context.get_state()
+        await context.set_state(TestStates.processing)
+        state = await context.get_state()
         assert state is TestStates.processing

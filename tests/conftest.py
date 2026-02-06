@@ -138,12 +138,81 @@ def sample_message_created_event():
 
 
 @pytest.fixture
-def sample_context():
-    """Фикстура для создания MemoryContext."""
-    # Core Stuff
-    from maxapi.context import MemoryContext
+def memory_storage():
+    """Фикстура для создания MemoryStorage."""
 
-    return MemoryContext(chat_id=12345, user_id=67890)
+    from maxapi.storage import MemoryStorage
+
+    return MemoryStorage()
+
+
+@pytest.fixture
+def redis_url():
+    url = os.environ.get("redis_url")
+    if url:
+        return url
+    pytest.skip(
+        "Не указана переменная окружения `redis_url` для подключения к Redis "
+    )
+
+
+@pytest.fixture
+async def redis_storage(redis_url: str):
+    from redis.asyncio.connection import parse_url as parse_redis_url
+    from _pytest.config import UsageError
+
+    from maxapi.storage.redis import RedisStorage
+
+    try:
+        parse_redis_url(redis_url)
+    except ValueError as e:
+        raise UsageError(
+            f"Неверная ссылка подключения к Redis URL {redis_url!r}: {e}"
+        )
+    storage = RedisStorage.from_url(redis_url)
+    try:
+        await storage.redis.info()
+    except ConnectionError as e:
+        pytest.fail(str(e))
+
+    try:
+        yield storage
+    finally:
+        conn = await storage.redis
+        await conn.flushdb()
+        await storage.close()
+
+
+@pytest.fixture
+def storage(request):
+    return request.getfixturevalue(request.param)
+
+
+@pytest.fixture
+def storage_key():
+    """Фикстура для создания StorageKey."""
+
+    from maxapi.storage import StorageKey
+
+    return StorageKey(chat_id=12345, user_id=67890)
+
+
+@pytest.fixture
+def none_storage_key():
+    """Фикстура для создания пустого StorageKey."""
+
+    from maxapi.storage import StorageKey
+
+    return StorageKey(chat_id=None, user_id=None)
+
+
+@pytest.fixture
+def context(memory_storage, storage_key):
+    """Фикстура для создания Context."""
+    # Core Stuff
+    from maxapi.context import Context
+
+    return Context(storage=memory_storage, key=storage_key)
 
 
 @pytest.fixture

@@ -1,4 +1,6 @@
 from ..context.state_machine import State, StatesGroup
-from .context import MemoryContext
+from .context import Context
 
-__all__ = ["State", "StatesGroup", "MemoryContext"]
+MemoryContext = Context
+
+__all__ = ["State", "StatesGroup", "Context", "MemoryContext"]
