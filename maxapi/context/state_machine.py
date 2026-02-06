@@ -18,6 +18,8 @@ class State:
         return self.name
 
     def __eq__(self, value: object, /) -> bool:
+        if value is None:
+            return False
         if isinstance(value, State):
             return self.name == value.name
         if isinstance(value, str):
