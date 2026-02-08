@@ -122,6 +122,9 @@ class Dispatcher(BotMixin):
         self.dialog_removed = Event(
             update_type=UpdateType.DIALOG_REMOVED, router=self
         )
+        self.raw_api_response = Event(
+            update_type=UpdateType.RAW_API_RESPONSE, router=self
+        )
         self.chat_title_changed = Event(
             update_type=UpdateType.CHAT_TITLE_CHANGED, router=self
         )
@@ -246,6 +249,7 @@ class Dispatcher(BotMixin):
         """
 
         self.bot = bot
+        self.bot.dispatcher = self
 
         if self.polling and self.bot.auto_check_subscriptions:
             response = await self.bot.get_subscriptions()
@@ -320,7 +324,10 @@ class Dispatcher(BotMixin):
         return new_ctx
 
     async def call_handler(
-        self, handler: Handler, event_object: UpdateType, data: Dict[str, Any]
+        self,
+        handler: Handler,
+        event_object: UpdateType | Dict[str, Any],
+        data: Dict[str, Any],
     ) -> None:
         """
         Вызывает хендлер с нужными аргументами.
@@ -504,6 +511,18 @@ class Dispatcher(BotMixin):
                 },
                 cause=e,
             ) from e
+
+    async def handle_raw_response(self, event_type: UpdateType, raw_data: Dict[str, Any]):
+        """
+        Специальный метод для обработки сырых ответов API.
+        """
+        for index, router in enumerate(self.routers):
+            matching_handlers = self._find_matching_handlers(router, event_type)
+            for handler in matching_handlers:
+                try:
+                    await self.call_handler(handler, raw_data, {})
+                except Exception as e:
+                    logger_dp.exception(f"Ошибка в обработчике RAW_API_RESPONSE: {e}")
 
     async def handle(self, event_object: UpdateUnion):
         """

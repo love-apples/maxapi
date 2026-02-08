@@ -51,6 +51,7 @@ from .types.attachments import Attachments
 from .types.input_media import InputMedia, InputMediaBuffer
 
 if TYPE_CHECKING:
+    from .dispatcher import Dispatcher
     from .filters.command import CommandsInfo
     from .methods.types.added_admin_chat import AddedListAdminChat
     from .methods.types.added_members_chat import AddedMembersChat
@@ -139,6 +140,7 @@ class Bot(BaseConnection):
         self.disable_link_preview = disable_link_preview
         self.auto_requests = auto_requests
 
+        self.dispatcher: Optional[Dispatcher] = None
         self._me: User | None = None
 
     def set_marker_updates(self, marker_updates: int) -> None:

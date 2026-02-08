@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import mimetypes
 import os
 from typing import TYPE_CHECKING, Any, Optional
@@ -108,9 +109,26 @@ class BaseConnection(BotMixin):
 
         if not r.ok:
             raw = await r.json()
+            if bot.dispatcher:
+                from ..enums.update import UpdateType
+
+                asyncio.create_task(
+                    bot.dispatcher.handle_raw_response(
+                        UpdateType.RAW_API_RESPONSE, raw
+                    )
+                )
             raise MaxApiError(code=r.status, raw=raw)
 
         raw = await r.json()
+
+        if bot.dispatcher:
+            from ..enums.update import UpdateType
+
+            asyncio.create_task(
+                bot.dispatcher.handle_raw_response(
+                    UpdateType.RAW_API_RESPONSE, raw
+                )
+            )
 
         if is_return_raw:
             return raw

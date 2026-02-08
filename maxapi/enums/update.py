@@ -24,6 +24,7 @@ class UpdateType(str, Enum):
     DIALOG_MUTED = "dialog_muted"
     DIALOG_UNMUTED = "dialog_unmuted"
     DIALOG_REMOVED = "dialog_removed"
+    RAW_API_RESPONSE = "raw_api_response"
 
     # Для начинки диспатчера
     ON_STARTED = "on_started"
