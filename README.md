@@ -4,8 +4,6 @@
 
 
 <p align="center">
-<a href='https://love-apples.github.io/maxapi/'>Документация</a> •
-<a href='https://love-apples.github.io/maxapi/examples/'>Примеры</a> •
 <a href='https://max.ru/join/IPAok63C3vFqbWTFdutMUtjmrAkGqO56YeAN7iyDfc8'>MAX Чат</a> •
 <a href='https://t.me/maxapi_github'>TG Чат</a>
 </p>
@@ -18,6 +16,11 @@
 <a href='https://love-apples/maxapi/blob/main/LICENSE'>
   <img src='https://img.shields.io/github/license/love-apples/maxapi.svg' alt='License'></a>
 </p>
+
+
+## ● Документация и примеры использования
+
+Можно посмотреть здесь: https://love-apples.github.io/maxapi/
 
 ## ● Установка из PyPi
 
