@@ -846,27 +846,42 @@ class Event:
         self.update_type = update_type
         self.router = router
 
-    def __call__(self, *args: Any, **kwargs: Any) -> Callable:
+    def register(self, func_event: Callable, *args: Any, **kwargs: Any) -> Callable:
         """
         Регистрирует функцию как обработчик события.
+
+        Args:
+            func_event (Callable): Функция-обработчик
+            *args: Фильтры
+            **kwargs: Дополнительные параметры (например, states)
 
         Returns:
             Callable: Исходная функция.
         """
 
-        def decorator(func_event: Callable):
-            if self.update_type == UpdateType.ON_STARTED:
-                self.router.on_started_func = func_event
+        if self.update_type == UpdateType.ON_STARTED:
+            self.router.on_started_func = func_event
 
-            else:
-                self.router.event_handlers.append(
-                    Handler(
-                        func_event=func_event,
-                        update_type=self.update_type,
-                        *args,
-                        **kwargs,
-                    )
+        else:
+            self.router.event_handlers.append(
+                Handler(
+                    func_event=func_event,
+                    update_type=self.update_type,
+                    *args,
+                    **kwargs,
                 )
-            return func_event
+            )
+        return func_event
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Callable:
+        """
+        Регистрирует функцию как обработчик события через декоратор.
+
+        Returns:
+            Callable: Декоратор.
+        """
+
+        def decorator(func_event: Callable):
+            return self.register(func_event, *args, **kwargs)
 
         return decorator
