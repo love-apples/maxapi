@@ -129,7 +129,9 @@ class Dispatcher(BotMixin):
             update_type=UpdateType.MESSAGE_CALLBACK, router=self
         )
         self.message_chat_created = Event(
-            update_type=UpdateType.MESSAGE_CHAT_CREATED, router=self
+            update_type=UpdateType.MESSAGE_CHAT_CREATED,
+            router=self,
+            deprecated=True,
         )
         self.message_edited = Event(
             update_type=UpdateType.MESSAGE_EDITED, router=self
@@ -834,19 +836,28 @@ class Event:
     Декоратор для регистрации обработчиков событий.
     """
 
-    def __init__(self, update_type: UpdateType, router: Dispatcher | Router):
+    def __init__(
+        self,
+        update_type: UpdateType,
+        router: Dispatcher | Router,
+        deprecated: bool = False,
+    ):
         """
         Инициализирует событие-декоратор.
 
         Args:
             update_type (UpdateType): Тип события.
             router (Dispatcher | Router): Экземпляр роутера или диспетчера.
+            deprecated (bool): Флаг, указывающий на то, что событие устарело.
         """
 
         self.update_type = update_type
         self.router = router
+        self.deprecated = deprecated
 
-    def register(self, func_event: Callable, *args: Any, **kwargs: Any) -> Callable:
+    def register(
+        self, func_event: Callable, *args: Any, **kwargs: Any
+    ) -> Callable:
         """
         Регистрирует функцию как обработчик события.
 
@@ -858,6 +869,15 @@ class Event:
         Returns:
             Callable: Исходная функция.
         """
+
+        if self.deprecated:
+            import warnings
+
+            warnings.warn(
+                f"Событие {self.update_type} устарело и будет удалено в будущих версиях.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
 
         if self.update_type == UpdateType.ON_STARTED:
             self.router.on_started_func = func_event

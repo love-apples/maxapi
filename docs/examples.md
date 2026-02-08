@@ -57,8 +57,8 @@ from maxapi.types import (
     DialogCleared,
     DialogMuted,
     DialogUnmuted,
-    ChatButton,
-    MessageChatCreated
+    ChatButton,  # deprecated: 0.9.14
+    MessageChatCreated  # deprecated: 0.9.14
 )
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
@@ -83,7 +83,7 @@ async def hello(event: MessageCreated):
         )
     )
     builder.add(
-        ChatButton(
+        ChatButton(  # deprecated: 0.9.14
             text='Создать чат',
             chat_title='Тест чат'
         )
@@ -248,7 +248,7 @@ import logging
 
 from maxapi import Bot, Dispatcher
 from maxapi.types import (
-    ChatButton, 
+    ChatButton,  # deprecated: 0.9.14
     LinkButton, 
     CallbackButton, 
     RequestGeoLocationButton, 
@@ -258,7 +258,7 @@ from maxapi.types import (
     OpenAppButton,
     MessageCreated, 
     MessageCallback, 
-    MessageChatCreated,
+    MessageChatCreated, # deprecated: 0.9.14
     CommandStart, 
     Command
 )
@@ -287,7 +287,7 @@ async def builder(event: MessageCreated):
     builder = InlineKeyboardBuilder()
     
     builder.row(
-        ChatButton(
+        ChatButton(  # deprecated: 0.9.14
             text="Создать чат", 
             chat_title='Test', 
             chat_description='Test desc'
@@ -330,7 +330,7 @@ async def builder(event: MessageCreated):
 async def payload(event: MessageCreated):
     buttons = [
         [
-            ChatButton(
+            ChatButton(  # deprecated: 0.9.14
                 text="Создать чат", 
                 chat_title='Test', 
                 chat_description='Test desc'
@@ -369,7 +369,7 @@ async def payload(event: MessageCreated):
         ])
     
     
-@dp.message_chat_created()
+@dp.message_chat_created()  # deprecated: 0.9.14
 async def message_chat_created(obj: MessageChatCreated):
     await obj.bot.send_message(
         chat_id=obj.chat.chat_id,

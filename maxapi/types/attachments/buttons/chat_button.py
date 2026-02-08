@@ -1,3 +1,4 @@
+import warnings
 from typing import Optional
 
 from ....enums.button_type import ButtonType
@@ -6,6 +7,9 @@ from .button import Button
 
 class ChatButton(Button):
     """
+    .. deprecated:: 0.9.14
+        Используйте другие типы кнопок.
+
     Attributes:
         text: Текст кнопки (наследуется от Button)
         chat_title: Название чата (до 128 символов)
@@ -19,3 +23,12 @@ class ChatButton(Button):
     chat_description: Optional[str] = None
     start_payload: Optional[str] = None
     uuid: Optional[int] = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        warnings.warn(
+            "ChatButton устарел и будет удален в будущих версиях. "
+            "Используйте другие типы кнопок.",
+            DeprecationWarning,
+            stacklevel=2,
+        )

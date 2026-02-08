@@ -45,7 +45,7 @@ await event.message.answer(
 
 - `CallbackButton` — кнопка с payload
 - `LinkButton` — ссылка
-- `ChatButton` — переход в чат
+- `ChatButton` — переход в чат (устарело)
 - `MessageButton` — отправка сообщения
 - `AttachmentButton` — вложение
 - `OpenAppButton` — открытие приложения

@@ -114,7 +114,7 @@ async def send_photo_by_token(event: MessageCreated):
 - `message_edited` — редактирование сообщения
 - `message_removed` — удаление сообщения
 - `message_callback` — нажатие на callback-кнопку
-- `message_chat_created` — создание чата через сообщение
+- `message_chat_created` — создание чата через сообщение (устарело)
 
 ### События бота
 

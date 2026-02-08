@@ -14,7 +14,7 @@ class UpdateType(str, Enum):
     BOT_STARTED = "bot_started"
     CHAT_TITLE_CHANGED = "chat_title_changed"
     MESSAGE_CALLBACK = "message_callback"
-    MESSAGE_CHAT_CREATED = "message_chat_created"
+    MESSAGE_CHAT_CREATED = "message_chat_created"  # deprecated: 0.9.14
     MESSAGE_EDITED = "message_edited"
     MESSAGE_REMOVED = "message_removed"
     USER_ADDED = "user_added"
