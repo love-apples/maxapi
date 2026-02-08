@@ -37,13 +37,13 @@ class Handler:
         self.update_type: UpdateType = update_type
         self.filters: Optional[List[MagicFilter]] = []
         self.base_filters: Optional[List[BaseFilter]] = []
-        self.states: Optional[List[State]] = []
+        self.states: Optional[List[State | None]] = []
         self.middlewares: List[BaseMiddleware] = []
 
         for arg in args:
             if isinstance(arg, MagicFilter):
                 self.filters.append(arg)
-            elif isinstance(arg, State):
+            elif isinstance(arg, State) or arg is None:
                 self.states.append(arg)
             elif isinstance(arg, BaseMiddleware):
                 self.middlewares.append(arg)
