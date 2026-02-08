@@ -15,7 +15,7 @@ class State:
         self.name = f"{owner.__name__}:{attr_name}"
 
     def __str__(self):
-        return self.name
+        return self.name or ""
 
     def __eq__(self, value: object, /) -> bool:
         if isinstance(value, State):
