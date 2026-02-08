@@ -45,7 +45,7 @@ class SendMessage(BaseConnection):
         user_id: Optional[int] = None,
         text: Optional[str] = None,
         attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer]
+            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
             | List[Attachments]
         ] = None,
         link: Optional[NewMessageLink] = None,

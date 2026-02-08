@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from ..methods.types.edited_message import EditedMessage
     from ..methods.types.pinned_message import PinnedMessage
     from ..methods.types.sended_message import SendedMessage
+    from ..types.attachments.upload import AttachmentUpload
     from ..types.input_media import InputMedia, InputMediaBuffer
 
 
@@ -150,7 +151,7 @@ class Message(BaseModel, BotMixin):
         self,
         text: Optional[str] = None,
         attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer]
+            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
         ] = None,
         link: Optional[NewMessageLink] = None,
         notify: Optional[bool] = None,
@@ -162,7 +163,7 @@ class Message(BaseModel, BotMixin):
 
         Args:
             text (str, optional): Текст ответа. Может быть None.
-            attachments (List[Attachment | InputMedia | InputMediaBuffer], optional): Список вложений. Может быть None.
+            attachments (List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload], optional): Список вложений. Может быть None.
             link (NewMessageLink, optional): Связь с другим сообщением. Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
             parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
@@ -186,7 +187,7 @@ class Message(BaseModel, BotMixin):
         self,
         text: Optional[str] = None,
         attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer]
+            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
         ] = None,
         notify: Optional[bool] = None,
         parse_mode: Optional[ParseMode] = None,
@@ -197,7 +198,7 @@ class Message(BaseModel, BotMixin):
 
         Args:
             text (str, optional): Текст ответа. Может быть None.
-            attachments (List[Attachment | InputMedia | InputMediaBuffer], optional): Список вложений. Может быть None.
+            attachments (List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload], optional): Список вложений. Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
             parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
             sleep_after_input_media: Optional[bool] = True,
@@ -222,7 +223,7 @@ class Message(BaseModel, BotMixin):
         chat_id,
         user_id: Optional[int] = None,
         attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer]
+            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
         ] = None,
         notify: Optional[bool] = None,
         parse_mode: Optional[ParseMode] = None,
@@ -234,7 +235,7 @@ class Message(BaseModel, BotMixin):
         Args:
             chat_id (int): ID чата для отправки (обязателен, если не указан user_id)
             user_id (int): ID пользователя для отправки (обязателен, если не указан chat_id). По умолчанию None
-            attachments (List[Attachment | InputMedia | InputMediaBuffer], optional): Список вложений. Может быть None.
+            attachments (List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload], optional): Список вложений. Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
             parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
             sleep_after_input_media: Optional[bool] = True,
@@ -259,7 +260,7 @@ class Message(BaseModel, BotMixin):
         self,
         text: Optional[str] = None,
         attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer]
+            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
             | List[Attachments]
         ] = None,
         link: Optional[NewMessageLink] = None,
@@ -272,7 +273,7 @@ class Message(BaseModel, BotMixin):
 
         Args:
             text (str, optional): Новый текст сообщения. Может быть None.
-            attachments (List[Attachment | InputMedia | InputMediaBuffer], optional): Новые вложения. Может быть None.
+            attachments (List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload], optional): Новые вложения. Может быть None.
             link (NewMessageLink, optional): Новая связь с сообщением. Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
             parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.

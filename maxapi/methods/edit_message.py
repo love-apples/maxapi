@@ -44,7 +44,7 @@ class EditMessage(BaseConnection):
         message_id: str,
         text: Optional[str] = None,
         attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer]
+            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
             | List[Attachments]
         ] = None,
         link: Optional[NewMessageLink] = None,

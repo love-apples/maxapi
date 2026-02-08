@@ -71,6 +71,7 @@ if TYPE_CHECKING:
     from .methods.types.sended_message import SendedMessage
     from .types.attachments.attachment import Attachment
     from .types.attachments.image import PhotoAttachmentRequestPayload
+    from .types.attachments.upload import AttachmentUpload
     from .types.attachments.video import Video
     from .types.chats import Chat, ChatMember, Chats
     from .types.command import BotCommand
@@ -236,7 +237,9 @@ class Bot(BaseConnection):
         user_id: Optional[int] = None,
         text: Optional[str] = None,
         attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer]
+            List[
+                Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
+            ]
             | List[Attachments]
         ] = None,
         link: Optional[NewMessageLink] = None,
@@ -306,7 +309,9 @@ class Bot(BaseConnection):
         message_id: str,
         text: Optional[str] = None,
         attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer]
+            List[
+                Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
+            ]
             | List[Attachments]
         ] = None,
         link: Optional[NewMessageLink] = None,

@@ -51,3 +51,24 @@ class Form(StatesGroup):
     name = State()  # Автоматически получит имя 'Form:name'
     age = State()   # Автоматически получит имя 'Form:age'
 ```
+
+## Фильтрация по состояниям
+
+Вы можете ограничивать выполнение хендлеров определенными состояниями:
+
+```python
+# Только в состоянии Form.name
+@dp.message_created(Form.name)
+async def name_handler(event: MessageCreated, context: MemoryContext):
+    ...
+
+# Только когда НЕТ активного состояния
+@dp.message_created(None)
+async def no_state_handler(event: MessageCreated):
+    ...
+
+# В любом из перечисленных состояний
+@dp.message_created(Form.name, Form.age)
+async def multi_state_handler(event: MessageCreated):
+    ...
+```
