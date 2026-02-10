@@ -147,9 +147,7 @@ class Command(BaseFilter):
             return False
 
         if not self.check_case:
-            if parsed_command.lower() in [
-                commands.lower() for commands in self.commands
-            ]:
+            if parsed_command.lower() in self.commands:
                 return {"args": args}
             else:
                 return False

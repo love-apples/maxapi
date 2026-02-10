@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional
+from abc import abstractmethod
+from typing import TYPE_CHECKING, Any, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -14,12 +15,11 @@ if TYPE_CHECKING:
 
 
 class Update(BaseModel, BotMixin):
-    """
-    Базовая модель обновления.
+    """Базовая модель обновления.
 
     Attributes:
-        update_type (UpdateType): Тип обновления.
-        timestamp (int): Временная метка обновления.
+        update_type: Тип обновления.
+        timestamp: Временная метка обновления.
     """
 
     update_type: UpdateType
@@ -36,3 +36,12 @@ class Update(BaseModel, BotMixin):
 
     class Config:
         arbitrary_types_allowed = True
+
+    @abstractmethod
+    def get_ids(self) -> Tuple[Optional[int], Optional[int]]:
+        """Возвращает кортеж идентификаторов (chat_id, user_id).
+
+        Returns:
+            Tuple[Optional[int], Optional[int]]: Идентификаторы чата и пользователя.
+        """
+        ...

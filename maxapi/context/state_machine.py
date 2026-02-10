@@ -5,17 +5,21 @@ class State:
     """
     Представляет отдельное состояние в FSM-группе.
 
-    При использовании внутри StatesGroup, автоматически присваивает уникальное имя в формате 'ИмяКласса:имя_поля'.
+    При использовании внутри StatesGroup, автоматически присваивает
+    уникальное имя в формате 'ИмяКласса:имя_поля'.
     """
 
-    def __init__(self):
-        self.name = None
+    def __init__(self) -> None:
+        self.name: str | None = None
 
-    def __set_name__(self, owner: type, attr_name: str):
+    def __set_name__(self, owner: type, attr_name: str) -> None:
         self.name = f"{owner.__name__}:{attr_name}"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name or ""
+
+    def __repr__(self) -> str:
+        return f"State(name={self.name!r})"
 
     def __eq__(self, value: object, /) -> bool:
         if value is None:
@@ -27,6 +31,9 @@ class State:
         raise NotImplementedError(
             f"Сравнение `State` с типом {type(value)} невозможно"
         )
+
+    def __hash__(self) -> int:
+        return hash(self.name)
 
 
 class StatesGroup:

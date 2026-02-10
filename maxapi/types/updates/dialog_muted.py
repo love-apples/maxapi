@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from ...types.users import User
 from .update import Update
@@ -34,5 +34,5 @@ class DialogMuted(Update):
         except (OverflowError, OSError):
             return datetime.max
 
-    def get_ids(self):
+    def get_ids(self) -> Tuple[Optional[int], Optional[int]]:
         return (self.chat_id, self.user.user_id)

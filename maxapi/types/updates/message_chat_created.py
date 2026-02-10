@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional
+from typing import Optional, Tuple
 
 from ...types.chats import Chat
 from .update import Update
@@ -32,5 +32,5 @@ class MessageChatCreated(Update):
             stacklevel=2,
         )
 
-    def get_ids(self):
+    def get_ids(self) -> Tuple[Optional[int], Optional[int]]:
         return (self.chat.chat_id, self.chat.owner_id)

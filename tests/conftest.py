@@ -182,6 +182,4 @@ def preserve_env_vars():
     if original_token:
         os.environ["MAX_BOT_TOKEN"] = original_token
     elif "MAX_BOT_TOKEN" in os.environ:
-        # Если токен был установлен в тесте, но не был до этого - удаляем
-        # Но только если он не был загружен из .env изначально
-        pass
+        del os.environ["MAX_BOT_TOKEN"]

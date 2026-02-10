@@ -23,7 +23,7 @@ class TestDispatcherInitialization:
         assert dp.use_create_task is False
         assert isinstance(dp.event_handlers, list)
         assert len(dp.event_handlers) == 0
-        assert isinstance(dp.contexts, list)
+        assert isinstance(dp.contexts, dict)
         assert isinstance(dp.routers, list)
         assert isinstance(dp.middlewares, list)
         assert dp.bot is None

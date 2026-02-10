@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from ...types.users import User
 from .update import Update
@@ -26,5 +26,5 @@ class BotStopped(Update):
     if TYPE_CHECKING:
         bot: Optional[Bot]  # pyright: ignore[reportGeneralTypeIssues]
 
-    def get_ids(self):
+    def get_ids(self) -> Tuple[Optional[int], Optional[int]]:
         return (self.chat_id, self.user.user_id)

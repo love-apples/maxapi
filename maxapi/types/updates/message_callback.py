@@ -46,7 +46,7 @@ class MessageCallback(Update):
     user_locale: Optional[str] = None
     callback: Callback
 
-    def get_ids(self) -> Tuple[Optional[int], int]:
+    def get_ids(self) -> Tuple[Optional[int], Optional[int]]:
         """
         Возвращает кортеж идентификаторов (chat_id, user_id).
 

@@ -538,20 +538,20 @@ class Bot(BaseConnection):
 
         return await GetChatByLink(bot=self, link=link).fetch()
 
-    async def get_chat_by_id(self, id: int) -> Chat:
+    async def get_chat_by_id(self, chat_id: int) -> Chat:
         """
         Получает чат по ID.
 
         https://dev.max.ru/docs-api/methods/GET/chats/-chatId-
 
         Args:
-            id (int): ID чата.
+            chat_id (int): ID чата.
 
         Returns:
             Chat: Объект чата.
         """
 
-        return await GetChatById(bot=self, id=id).fetch()
+        return await GetChatById(bot=self, id=chat_id).fetch()
 
     async def edit_chat(
         self,

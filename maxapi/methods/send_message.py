@@ -91,12 +91,12 @@ class SendMessage(BaseConnection):
 
         json["text"] = self.text
 
-        HAS_INPUT_MEDIA = False
+        has_input_media = False
 
         if self.attachments:
             for att in self.attachments:
                 if isinstance(att, (InputMedia, InputMediaBuffer)):
-                    HAS_INPUT_MEDIA = True
+                    has_input_media = True
 
                     input_media = await process_input_media(
                         base_connection=self, bot=bot, att=att
@@ -112,16 +112,16 @@ class SendMessage(BaseConnection):
         if self.link is not None:
             json["link"] = self.link.model_dump()
 
-        if self.notify:
+        if self.notify is not None:
             json["notify"] = self.notify
 
-        if self.disable_link_preview:
+        if self.disable_link_preview is not None:
             json["disable_link_preview"] = self.disable_link_preview
 
         if self.parse_mode is not None:
             json["format"] = self.parse_mode.value
 
-        if HAS_INPUT_MEDIA and self.sleep_after_input_media:
+        if has_input_media and self.sleep_after_input_media:
             await asyncio.sleep(bot.after_input_media_delay)
 
         response = None
@@ -137,7 +137,10 @@ class SendMessage(BaseConnection):
             except MaxApiError as e:
                 if "attachment.not.ready" in e.raw:
                     logger_bot.info(
-                        f"Ошибка при отправке загруженного медиа, попытка {attempt + 1}, жду {self.RETRY_DELAY} секунды"
+                        "Ошибка при отправке загруженного медиа, "
+                        "попытка %d, жду %d секунды",
+                        attempt + 1,
+                        self.RETRY_DELAY,
                     )
                     await asyncio.sleep(self.RETRY_DELAY)
                     continue

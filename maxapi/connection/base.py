@@ -14,6 +14,7 @@ from ..enums.api_path import ApiPath
 from ..enums.http_method import HTTPMethod
 from ..enums.upload_type import UploadType
 from ..exceptions.max import InvalidToken, MaxApiError, MaxConnection
+from ..loggers import logger_connection
 from ..types.bot_mixin import BotMixin
 
 if TYPE_CHECKING:
@@ -21,10 +22,10 @@ if TYPE_CHECKING:
 
 
 class BaseConnection(BotMixin):
-    """
-    Базовый класс для всех методов API.
+    """Базовый класс для всех методов API.
 
-    Содержит общую логику выполнения запроса (сериализация, отправка HTTP-запроса, обработка ответа).
+    Содержит общую логику выполнения запроса
+    (сериализация, отправка HTTP-запроса, обработка ответа).
     """
 
     API_URL = "https://platform-api.max.ru"
@@ -33,8 +34,7 @@ class BaseConnection(BotMixin):
     AFTER_MEDIA_INPUT_DELAY = 2.0
 
     def __init__(self) -> None:
-        """
-        Инициализация BaseConnection.
+        """Инициализация BaseConnection.
 
         Атрибуты:
             bot (Optional[Bot]): Экземпляр бота.
@@ -48,14 +48,53 @@ class BaseConnection(BotMixin):
         self.api_url = self.API_URL
 
     def set_api_url(self, url: str) -> None:
-        """
-        Установка API URL для запросов
+        """Установка API URL для запросов.
 
         Args:
-            url (str): Новый API URl
+            url: Новый API URL.
         """
 
         self.api_url = url
+
+    def _fire_raw_response(
+        self, bot: "Bot", raw: Any
+    ) -> None:
+        """Запускает обработку сырого ответа API в фоне.
+
+        Args:
+            bot: Экземпляр бота.
+            raw: Сырой JSON-ответ.
+        """
+
+        if not bot.dispatcher:
+            return
+
+        from ..enums.update import UpdateType
+
+        task = asyncio.create_task(
+            bot.dispatcher.handle_raw_response(
+                UpdateType.RAW_API_RESPONSE, raw
+            )
+        )
+        task.add_done_callback(self._handle_bg_task_result)
+
+    @staticmethod
+    def _handle_bg_task_result(task: asyncio.Task[Any]) -> None:
+        """Callback для фоновых задач — логирует исключения.
+
+        Args:
+            task: Завершённая asyncio-задача.
+        """
+
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc is not None:
+            logger_connection.error(
+                "Ошибка в фоновой задаче RAW_API_RESPONSE: %s: %s",
+                exc.__class__.__name__,
+                exc,
+            )
 
     async def request(
         self,
@@ -65,18 +104,19 @@ class BaseConnection(BotMixin):
         is_return_raw: bool = False,
         **kwargs: Any,
     ) -> Any | BaseModel:
-        """
-        Выполняет HTTP-запрос к API.
+        """Выполняет HTTP-запрос к API.
 
         Args:
-            method (HTTPMethod): HTTP-метод (GET, POST и т.д.).
-            path (ApiPath | str): Путь до конечной точки.
-            model (BaseModel | Any, optional): Pydantic-модель для десериализации ответа, если is_return_raw=False.
-            is_return_raw (bool, optional): Если True — вернуть сырой ответ, иначе — результат десериализации.
+            method: HTTP-метод (GET, POST и т.д.).
+            path: Путь до конечной точки.
+            model: Pydantic-модель для десериализации ответа,
+                если is_return_raw=False.
+            is_return_raw: Если True — вернуть сырой ответ,
+                иначе — результат десериализации.
             **kwargs: Дополнительные параметры (query, headers, json).
 
         Returns:
-            model | dict | Error: Объект модели, dict или ошибка.
+            Объект модели, dict или ошибка.
 
         Raises:
             RuntimeError: Если бот не инициализирован.
@@ -109,26 +149,12 @@ class BaseConnection(BotMixin):
 
         if not r.ok:
             raw = await r.json()
-            if bot.dispatcher:
-                from ..enums.update import UpdateType
-
-                asyncio.create_task(
-                    bot.dispatcher.handle_raw_response(
-                        UpdateType.RAW_API_RESPONSE, raw
-                    )
-                )
+            self._fire_raw_response(bot, raw)
             raise MaxApiError(code=r.status, raw=raw)
 
         raw = await r.json()
 
-        if bot.dispatcher:
-            from ..enums.update import UpdateType
-
-            asyncio.create_task(
-                bot.dispatcher.handle_raw_response(
-                    UpdateType.RAW_API_RESPONSE, raw
-                )
-            )
+        self._fire_raw_response(bot, raw)
 
         if is_return_raw:
             return raw
@@ -145,17 +171,42 @@ class BaseConnection(BotMixin):
 
         return model
 
-    async def upload_file(self, url: str, path: str, type: UploadType) -> str:
-        """
-        Загружает файл на сервер.
+    async def _post_form(
+        self, url: str, form: FormData
+    ) -> str:
+        """Отправляет FormData POST-запрос через существующую или временную сессию.
 
         Args:
-            url (str): URL загрузки.
-            path (str): Путь к файлу.
-            type (UploadType): Тип файла.
+            url: URL для загрузки.
+            form: Подготовленные данные формы.
 
         Returns:
-            str: Сырой .text() ответ от сервера.
+            Сырой текстовый ответ от сервера.
+        """
+
+        bot = self._ensure_bot()
+        session = bot.session
+
+        if session is not None and not session.closed:
+            response = await session.post(url=url, data=form)
+            return await response.text()
+
+        async with ClientSession() as temp_session:
+            response = await temp_session.post(url=url, data=form)
+            return await response.text()
+
+    async def upload_file(
+        self, url: str, path: str, type: UploadType
+    ) -> str:
+        """Загружает файл на сервер.
+
+        Args:
+            url: URL загрузки.
+            path: Путь к файлу.
+            type: Тип файла.
+
+        Returns:
+            Сырой .text() ответ от сервера.
         """
 
         async with aiofiles.open(path, "rb") as f:
@@ -172,31 +223,25 @@ class BaseConnection(BotMixin):
             content_type=f"{type.value}/{ext.lstrip('.')}",
         )
 
-        bot = self._ensure_bot()
-
-        session = bot.session
-        if session is not None and not session.closed:
-            response = await session.post(url=url, data=form)
-            return await response.text()
-        else:
-            async with ClientSession() as temp_session:
-                response = await temp_session.post(url=url, data=form)
-                return await response.text()
+        return await self._post_form(url, form)
 
     async def upload_file_buffer(
-        self, filename: str, url: str, buffer: bytes, type: UploadType
+        self,
+        filename: str,
+        url: str,
+        buffer: bytes,
+        type: UploadType,
     ) -> str:
-        """
-        Загружает файл из буфера.
+        """Загружает файл из буфера.
 
         Args:
-            filename (str): Имя файла.
-            url (str): URL загрузки.
-            buffer (bytes): Буфер данных.
-            type (UploadType): Тип файла.
+            filename: Имя файла.
+            url: URL загрузки.
+            buffer: Буфер данных.
+            type: Тип файла.
 
         Returns:
-            str: Сырой .text() ответ от сервера.
+            Сырой .text() ответ от сервера.
         """
 
         try:
@@ -208,6 +253,11 @@ class BaseConnection(BotMixin):
                 mime_type = f"{type.value}/*"
                 ext = ""
         except Exception:
+            logger_connection.debug(
+                "Не удалось определить MIME-тип буфера, "
+                "используется %s/*",
+                type.value,
+            )
             mime_type = f"{type.value}/*"
             ext = ""
 
@@ -221,13 +271,4 @@ class BaseConnection(BotMixin):
             content_type=mime_type,
         )
 
-        bot = self._ensure_bot()
-
-        session = bot.session
-        if session is not None and not session.closed:
-            response = await session.post(url=url, data=form)
-            return await response.text()
-        else:
-            async with ClientSession() as temp_session:
-                response = await temp_session.post(url=url, data=form)
-                return await response.text()
+        return await self._post_form(url, form)

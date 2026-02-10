@@ -85,7 +85,7 @@ class Dispatcher(BotMixin):
         self.router_id = router_id
 
         self.event_handlers: List[Handler] = []
-        self.contexts: List[MemoryContext] = []
+        self.contexts: Dict[tuple[Optional[int], Optional[int]], MemoryContext] = {}
         self.routers: List[Router | Dispatcher] = []
         self.filters: List[MagicFilter] = []
         self.base_filters: List[BaseFilter] = []
@@ -176,7 +176,10 @@ class Dispatcher(BotMixin):
         self._ensure_bot()._me = me
 
         logger_dp.info(
-            f"Бот: @{me.username} first_name={me.first_name} id={me.user_id}"
+            "Бот: @%s first_name=%s id=%s",
+            me.username,
+            me.first_name,
+            me.user_id,
         )
 
     def build_middleware_chain(
@@ -208,7 +211,7 @@ class Dispatcher(BotMixin):
             *routers (Router): Роутеры для добавления.
         """
 
-        self.routers += [r for r in routers]
+        self.routers.extend(routers)
 
     def outer_middleware(self, middleware: BaseMiddleware) -> None:
         """
@@ -296,7 +299,7 @@ class Dispatcher(BotMixin):
             len(router.event_handlers) for router in self.routers
         )
 
-        logger_dp.info(f"{handlers_count} событий на обработку")
+        logger_dp.info("%d событий на обработку", handlers_count)
 
         if self.on_started_func:
             await self.on_started_func()
@@ -315,12 +318,13 @@ class Dispatcher(BotMixin):
             MemoryContext: Контекст.
         """
 
-        for ctx in self.contexts:
-            if ctx.chat_id == chat_id and ctx.user_id == user_id:
-                return ctx
+        key = (chat_id, user_id)
+        ctx = self.contexts.get(key)
+        if ctx is not None:
+            return ctx
 
         new_ctx = MemoryContext(chat_id, user_id)
-        self.contexts.append(new_ctx)
+        self.contexts[key] = new_ctx
         return new_ctx
 
     async def call_handler(
@@ -521,8 +525,10 @@ class Dispatcher(BotMixin):
             for handler in matching_handlers:
                 try:
                     await self.call_handler(handler, raw_data, {})
-                except Exception as e:
-                    logger_dp.exception(f"Ошибка в обработчике RAW_API_RESPONSE: {e}")
+                except Exception:
+                    logger_dp.exception(
+                        "Ошибка в обработчике RAW_API_RESPONSE"
+                    )
 
     async def handle(self, event_object: UpdateUnion):
         """
@@ -602,7 +608,9 @@ class Dispatcher(BotMixin):
                             )
 
                             logger_dp.info(
-                                f"Обработано: router_id: {router_id} | {process_info}"
+                                "Обработано: router_id: %s | %s",
+                                router_id,
+                                process_info,
                             )
 
                             is_handled = True
@@ -647,12 +655,16 @@ class Dispatcher(BotMixin):
 
             if not is_handled:
                 logger_dp.info(
-                    f"Проигнорировано: router_id: {router_id} | {process_info}"
+                    "Проигнорировано: router_id: %s | %s",
+                    router_id,
+                    process_info,
                 )
 
-        except Exception as e:
+        except Exception:
             logger_dp.exception(
-                f"Ошибка при обработке события: router_id: {router_id} | {process_info} | {e} "
+                "Ошибка при обработке события: router_id: %s | %s",
+                router_id,
+                process_info,
             )
 
     async def start_polling(self, bot: Bot, skip_updates: bool = False):
@@ -679,7 +691,9 @@ class Dispatcher(BotMixin):
                 continue
             except (MaxConnection, ClientConnectorError) as e:
                 logger_dp.warning(
-                    f"Ошибка подключения при получении обновлений: {e}, жду {CONNECTION_RETRY_DELAY} секунд"
+                    "Ошибка подключения при получении обновлений: %s, жду %d секунд",
+                    e,
+                    CONNECTION_RETRY_DELAY,
                 )
                 await asyncio.sleep(CONNECTION_RETRY_DELAY)
                 continue
@@ -689,13 +703,17 @@ class Dispatcher(BotMixin):
                 raise
             except MaxApiError as e:
                 logger_dp.info(
-                    f"Ошибка при получении обновлений: {e}, жду {GET_UPDATES_RETRY_DELAY} секунд"
+                    "Ошибка при получении обновлений: %s, жду %d секунд",
+                    e,
+                    GET_UPDATES_RETRY_DELAY,
                 )
                 await asyncio.sleep(GET_UPDATES_RETRY_DELAY)
                 continue
             except Exception as e:
                 logger_dp.error(
-                    f"Неожиданная ошибка при получении обновлений: {e.__class__.__name__}: {e}"
+                    "Неожиданная ошибка при получении обновлений: %s: %s",
+                    e.__class__.__name__,
+                    e,
                 )
                 await asyncio.sleep(GET_UPDATES_RETRY_DELAY)
                 continue
@@ -711,7 +729,11 @@ class Dispatcher(BotMixin):
                     if skip_updates:
                         if event.timestamp < current_timestamp:
                             logger_dp.info(
-                                f"Пропуск события от {datetime.fromtimestamp(event.timestamp / 1000)}: {event.update_type}"
+                                "Пропуск события от %s: %s",
+                                datetime.fromtimestamp(
+                                    event.timestamp / 1000
+                                ),
+                                event.update_type,
                             )
                             continue
 
@@ -723,12 +745,15 @@ class Dispatcher(BotMixin):
 
             except ClientConnectorError:
                 logger_dp.error(
-                    f"Ошибка подключения, жду {CONNECTION_RETRY_DELAY} секунд"
+                    "Ошибка подключения, жду %d секунд",
+                    CONNECTION_RETRY_DELAY,
                 )
                 await asyncio.sleep(CONNECTION_RETRY_DELAY)
             except Exception as e:
                 logger_dp.error(
-                    f"Общая ошибка при обработке событий: {e.__class__} - {e}"
+                    "Общая ошибка при обработке событий: %s - %s",
+                    e.__class__.__name__,
+                    e,
                 )
 
     async def stop_polling(self):

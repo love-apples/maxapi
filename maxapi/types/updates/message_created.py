@@ -18,12 +18,13 @@ class MessageCreated(Update):
     message: Message
     user_locale: Optional[str] = None
 
-    def get_ids(self) -> Tuple[Optional[int], int]:
+    def get_ids(self) -> Tuple[Optional[int], Optional[int]]:
         """
         Возвращает кортеж идентификаторов (chat_id, user_id).
 
         Returns:
-            tuple[Optional[int], int]: Идентификатор чата и пользователя.
+            Tuple[Optional[int], Optional[int]]: Идентификатор чата и пользователя.
         """
 
-        return (self.message.recipient.chat_id, self.message.sender.user_id) # type: ignore
+        user_id = self.message.sender.user_id if self.message.sender else None
+        return (self.message.recipient.chat_id, user_id)
