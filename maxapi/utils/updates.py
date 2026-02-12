@@ -99,11 +99,12 @@ async def enrich_event(event_object: Any, bot: Bot) -> Any:
     ):
         object_message = event_object.message  # pyright: ignore[reportAttributeAccessIssue]
 
-        if object_message is not None and object_message.body is not None:
+        if object_message is not None:
             object_message.bot = bot
-            for att in object_message.body.attachments or []:
-                if hasattr(att, "bot"):
-                    att.bot = bot
+            if object_message.body is not None:
+                for att in object_message.body.attachments or []:
+                    if hasattr(att, "bot"):
+                        att.bot = bot
 
     if hasattr(event_object, "bot"):
         event_object.bot = bot
