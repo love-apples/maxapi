@@ -131,8 +131,12 @@ class Command(BaseFilter):
         if not isinstance(event, MessageCreated):
             return False
 
-        text = event.message.body.text
+        # body может быть None — защитимся от обращения
+        body = event.message.body
+        if body is None:
+            return False
 
+        text = body.text
         if not text:
             return False
 

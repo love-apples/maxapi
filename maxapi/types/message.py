@@ -127,7 +127,9 @@ class Message(BaseModel, BotMixin):
         recipient (Recipient): Получатель сообщения.
         timestamp (int): Временная метка сообщения.
         link (Optional[LinkedMessage]): Связанное сообщение. Может быть None.
-        body (Optional[MessageBody]): Тело сообщения. Может быть None.
+        body (Optional[MessageBody]): Содержимое сообщения.
+            Текст + вложения. Может быть null, если сообщение содержит
+            только пересланное сообщение
         stat (Optional[MessageStat]): Статистика сообщения. Может быть None.
         url (Optional[str]): URL сообщения. Может быть None.
         bot (Optional[Bot]): Объект бота, исключается из сериализации.
@@ -137,7 +139,7 @@ class Message(BaseModel, BotMixin):
     recipient: Recipient
     timestamp: int
     link: Optional[LinkedMessage] = None
-    body: MessageBody
+    body: Optional[MessageBody] = None
     stat: Optional[MessageStat] = None
     url: Optional[str] = None
     bot: Optional[Any] = Field(  # pyright: ignore[reportRedeclaration]
@@ -207,6 +209,10 @@ class Message(BaseModel, BotMixin):
             Optional[SendedMessage]: Результат выполнения метода send_message бота.
         """
 
+        if self.body is None:
+            msg = "Невозможно ответить: поле body отсутствует у сообщения"
+            raise ValueError(msg)
+
         return await self._ensure_bot().send_message(
             chat_id=self.recipient.chat_id,
             user_id=self.recipient.user_id,
@@ -243,6 +249,10 @@ class Message(BaseModel, BotMixin):
         Returns:
             Optional[SendedMessage]: Результат выполнения метода send_message бота.
         """
+
+        if self.body is None:
+            msg = "Невозможно переслать: поле body отсутствует у сообщения"
+            raise ValueError(msg)
 
         return await self._ensure_bot().send_message(
             chat_id=chat_id,
@@ -287,8 +297,13 @@ class Message(BaseModel, BotMixin):
                 type=self.link.type, mid=self.link.message.mid
             )
 
-        if attachments is None and self.body.attachments:
-            attachments = self.body.attachments
+        if attachments is None:
+            if self.body is not None and self.body.attachments:
+                attachments = self.body.attachments
+
+        if self.body is None:
+            msg = "Невозможно редактировать: поле body отсутствует у сообщения"
+            raise ValueError(msg)
 
         return await self._ensure_bot().edit_message(
             message_id=self.body.mid,
@@ -308,6 +323,10 @@ class Message(BaseModel, BotMixin):
             DeletedMessage: Результат выполнения метода delete_message бота.
         """
 
+        if self.body is None:
+            msg = "Невозможно удалить: поле body отсутствует у сообщения"
+            raise ValueError(msg)
+
         return await self._ensure_bot().delete_message(
             message_id=self.body.mid,
         )
@@ -325,6 +344,10 @@ class Message(BaseModel, BotMixin):
 
         if self.recipient.chat_id is None:
             raise ValueError("chat_id не может быть None")
+
+        if self.body is None:
+            msg = "Невозможно закрепить: поле body отсутствует у сообщения"
+            raise ValueError(msg)
 
         return await self._ensure_bot().pin_message(
             chat_id=self.recipient.chat_id,
