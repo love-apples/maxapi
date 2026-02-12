@@ -37,7 +37,7 @@ class MessageCallback(Update):
     Обновление с callback-событием сообщения.
 
     Attributes:
-        message (Message): Изначальное сообщение, содержащее встроенную
+        message (Optional[Message]): Изначальное сообщение, содержащее встроенную
             клавиатуру. Может быть null, если оно было удалено к моменту,
             когда бот получил это обновление.
         user_locale (Optional[str]): Локаль пользователя.
