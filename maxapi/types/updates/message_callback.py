@@ -37,12 +37,14 @@ class MessageCallback(Update):
     Обновление с callback-событием сообщения.
 
     Attributes:
-        message (Message): Сообщение, на которое пришёл callback.
+        message (Optional[Message]): Изначальное сообщение, содержащее встроенную
+            клавиатуру. Может быть null, если оно было удалено к моменту,
+            когда бот получил это обновление.
         user_locale (Optional[str]): Локаль пользователя.
         callback (Callback): Объект callback.
     """
 
-    message: Message
+    message: Optional[Message] = None
     user_locale: Optional[str] = None
     callback: Callback
 
@@ -54,7 +56,11 @@ class MessageCallback(Update):
             tuple[Optional[int], int]: Идентификаторы чата и пользователя.
         """
 
-        return (self.message.recipient.chat_id, self.callback.user.user_id)
+        chat_id: Optional[int] = None
+        if self.message is not None:
+            chat_id = self.message.recipient.chat_id
+
+        return chat_id, self.callback.user.user_id
 
     async def answer(
         self,
@@ -78,16 +84,20 @@ class MessageCallback(Update):
             SendedCallback: Результат вызова send_callback бота.
         """
 
-        message = MessageForCallback()
+        message_for_callback = MessageForCallback()
+        message_for_callback.text = new_text
 
-        message.text = new_text
-        message.attachments = self.message.body.attachments
-        message.link = link
-        message.notify = notify
-        message.format = format
+        attachments: List[Attachments] = []
+        if self.message is not None and self.message.body is not None:
+            attachments = self.message.body.attachments or []
+
+        message_for_callback.attachments = attachments
+        message_for_callback.link = link
+        message_for_callback.notify = notify
+        message_for_callback.format = format
 
         return await self._ensure_bot().send_callback(
             callback_id=self.callback.callback_id,
-            message=message,
+            message=message_for_callback,
             notification=notification,
         )
