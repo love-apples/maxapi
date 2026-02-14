@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List
 
 from ..enums.attachment import AttachmentType
@@ -16,7 +18,7 @@ class InlineKeyboardBuilder:
     def __init__(self):
         self.payload: List[List[InlineButtonUnion]] = [[]]
 
-    def row(self, *buttons: InlineButtonUnion):
+    def row(self, *buttons: InlineButtonUnion) -> InlineKeyboardBuilder:
         """
         Добавить новый ряд кнопок в клавиатуру.
 
@@ -24,17 +26,61 @@ class InlineKeyboardBuilder:
             *buttons: Произвольное количество кнопок для добавления в ряд.
         """
 
-        self.payload.append([*buttons])
+        if not self.payload[-1]:
+            self.payload[-1].extend(buttons)
+        else:
+            self.payload.append([*buttons])
+        return self
 
-    def add(self, button: InlineButtonUnion):
+    def add(self, *buttons: InlineButtonUnion) -> InlineKeyboardBuilder:
         """
-        Добавить кнопку в последний ряд клавиатуры.
+        Добавить кнопки в последний ряд клавиатуры.
 
         Args:
-            button: Кнопка для добавления.
+            *buttons: Кнопки для добавления.
         """
 
-        self.payload[-1].append(button)
+        for button in buttons:
+            self.payload[-1].append(button)
+        return self
+
+    def adjust(self, *sizes: int) -> InlineKeyboardBuilder:
+        """
+        Перераспределить кнопки по рядам в соответствии с указанными размерами.
+
+        Args:
+            *sizes: Количество кнопок в каждом ряду.
+                   Если кнопок больше, чем сумма размеров, размеры повторяются циклично.
+
+        Returns:
+            InlineKeyboardBuilder: Текущий объект для цепочки вызовов.
+        """
+        if not sizes:
+            sizes = (1,)
+
+        flat_buttons = []
+        for row in self.payload:
+            for button in row:
+                flat_buttons.append(button)
+
+        if not flat_buttons:
+            return self
+
+        new_payload: List[List[InlineButtonUnion]] = []
+        button_index = 0
+        size_index = 0
+
+        while button_index < len(flat_buttons):
+            size = sizes[size_index % len(sizes)]
+            if size <= 0:
+                size = 1
+            row_buttons = flat_buttons[button_index : button_index + size]
+            new_payload.append(row_buttons)
+            button_index += size
+            size_index += 1
+
+        self.payload = new_payload
+        return self
 
     def as_markup(self) -> Attachment:
         """
