@@ -49,10 +49,10 @@ async def enrich_event(event_object: Any, bot: Bot) -> Any:
         event_object.from_user = getattr(event_object.message, "sender", None)
 
     elif isinstance(event_object, MessageCallback):
-        if event_object.message.recipient.chat_id is not None:
-            event_object.chat = await bot.get_chat_by_id(
-                event_object.message.recipient.chat_id
-            )
+        message = event_object.message
+        if message is not None and message.recipient.chat_id is not None:
+            chat_id = message.recipient.chat_id
+            event_object.chat = await bot.get_chat_by_id(chat_id)
 
         event_object.from_user = getattr(event_object.callback, "user", None)
 
@@ -99,10 +99,12 @@ async def enrich_event(event_object: Any, bot: Bot) -> Any:
     ):
         object_message = event_object.message  # pyright: ignore[reportAttributeAccessIssue]
 
-        object_message.bot = bot
-        for att in object_message.body.attachments or []:
-            if hasattr(att, "bot"):
-                att.bot = bot
+        if object_message is not None:
+            object_message.bot = bot
+            if object_message.body is not None:
+                for att in object_message.body.attachments or []:
+                    if hasattr(att, "bot"):
+                        att.bot = bot
 
     if hasattr(event_object, "bot"):
         event_object.bot = bot

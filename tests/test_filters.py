@@ -137,6 +137,27 @@ class TestCommandFilter:
 
         assert result is False
 
+    async def test_command_filter_body_none(self):
+        """Если у сообщения body == None — фильтр должен вернуть False."""
+        from maxapi.types.message import Message
+
+        cmd = Command("start")
+
+        event = Mock(spec=MessageCreated)
+        message = Mock(spec=Message)
+        message.body = None
+        event.message = message
+
+        mock_bot = Mock()
+        mock_me = Mock()
+        mock_me.username = None
+        mock_bot.me = mock_me
+        event._ensure_bot = Mock(return_value=mock_bot)
+
+        result = await cmd(event)
+
+        assert result is False
+
 
 class TestCallbackPayloadFilter:
     """Тесты фильтра CallbackPayload."""
