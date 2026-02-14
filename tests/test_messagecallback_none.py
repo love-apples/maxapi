@@ -13,8 +13,12 @@ class DummyBot:
     def _ensure_bot(self):
         return self
 
-    async def send_callback(self, callback_id: str, message: MessageForCallback,
-                            notification=None):
+    async def send_callback(
+            self,
+            callback_id: str,
+            message: MessageForCallback,
+            notification=None,
+    ):
         self.last = {
             "callback_id": callback_id,
             "message": message,
@@ -42,7 +46,7 @@ def test_get_ids_with_no_message(cb_obj):
     assert ids[1] == 42
 
 
-async def test_answer_with_no_message(cb_obj):
+async def test_answer_with_no_message_raises_on_change(cb_obj):
     mc = MessageCallback(
         message=None,
         user_locale=None,
@@ -53,8 +57,17 @@ async def test_answer_with_no_message(cb_obj):
     bot = DummyBot()
     mc.bot = bot
 
-    res = await mc.answer(notification="n", new_text="text")
+    with pytest.raises(ValueError):
+        await mc.answer(notification="n", new_text="text")
+
+
+async def test_answer_with_no_message_notification_only(cb_obj):
+    mc = MessageCallback(message=None, user_locale=None, callback=cb_obj, update_type=UpdateType.MESSAGE_CALLBACK, timestamp=1)
+    bot = DummyBot()
+    mc.bot = bot
+
+    res = await mc.answer(notification="n")
     assert res == {"ok": True}
     assert bot.last["callback_id"] == "cb1"
-    assert bot.last["message"].text == "text"
+    assert bot.last["message"] is None
     assert bot.last["notification"] == "n"
