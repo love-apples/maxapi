@@ -148,8 +148,8 @@ class Dispatcher(BotMixin):
         )
         self.on_started = Event(update_type=UpdateType.ON_STARTED, router=self)
 
-    def webhook_post(self, path: str):
-        def decorator(func):
+    def webhook_post(self, path: str) -> Callable[[Callable[..., Any]], Any]:
+        def decorator(func: Callable[..., Any]) -> Any:
             if self.webhook_app is None:
                 try:
                     from fastapi import FastAPI  # type: ignore
@@ -166,7 +166,7 @@ class Dispatcher(BotMixin):
 
         return decorator
 
-    async def check_me(self):
+    async def check_me(self) -> None:
         """
         Проверяет и логирует информацию о боте.
         """
@@ -200,7 +200,7 @@ class Dispatcher(BotMixin):
 
         return handler
 
-    def include_routers(self, *routers: "Router"):
+    def include_routers(self, *routers: "Router") -> None:
         """
         Добавляет указанные роутеры в диспетчер.
 
@@ -240,7 +240,7 @@ class Dispatcher(BotMixin):
 
         self.base_filters.append(base_filter)
 
-    async def __ready(self, bot: Bot):
+    async def __ready(self, bot: Bot) -> None:
         """
         Подготавливает диспетчер: сохраняет бота, регистрирует обработчики, вызывает on_started.
 
@@ -512,7 +512,7 @@ class Dispatcher(BotMixin):
                 cause=e,
             ) from e
 
-    async def handle_raw_response(self, event_type: UpdateType, raw_data: Dict[str, Any]):
+    async def handle_raw_response(self, event_type: UpdateType, raw_data: Dict[str, Any]) -> None:
         """
         Специальный метод для обработки сырых ответов API.
         """
@@ -524,7 +524,7 @@ class Dispatcher(BotMixin):
                 except Exception as e:
                     logger_dp.exception(f"Ошибка в обработчике RAW_API_RESPONSE: {e}")
 
-    async def handle(self, event_object: UpdateUnion):
+    async def handle(self, event_object: UpdateUnion) -> None:
         """
         Основной обработчик события. Применяет фильтры, middleware и вызывает нужный handler.
 
@@ -655,7 +655,7 @@ class Dispatcher(BotMixin):
                 f"Ошибка при обработке события: router_id: {router_id} | {process_info} | {e} "
             )
 
-    async def start_polling(self, bot: Bot, skip_updates: bool = False):
+    async def start_polling(self, bot: Bot, skip_updates: bool = False) -> None:
         """
         Запускает цикл получения обновлений (long polling).
 
@@ -731,7 +731,7 @@ class Dispatcher(BotMixin):
                     f"Общая ошибка при обработке событий: {e.__class__} - {e}"
                 )
 
-    async def stop_polling(self):
+    async def stop_polling(self) -> None:
         """
         Останавливает цикл получения обновлений (long polling).
 
@@ -747,8 +747,8 @@ class Dispatcher(BotMixin):
         bot: Bot,
         host: str = DEFAULT_HOST,
         port: int = DEFAULT_PORT,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Запускает FastAPI-приложение для приёма обновлений через вебхук.
 
@@ -777,7 +777,7 @@ class Dispatcher(BotMixin):
             )
 
         @self.webhook_post("/")
-        async def _(request: Request):
+        async def _(request: Request) -> JSONResponse:
             event_json = await request.json()
             event_object = await process_update_webhook(
                 event_json=event_json, bot=bot
@@ -799,8 +799,8 @@ class Dispatcher(BotMixin):
         bot: Bot,
         host: str = DEFAULT_HOST,
         port: int = DEFAULT_PORT,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Запускает сервер для обработки вебхуков.
 
@@ -920,7 +920,7 @@ class Event:
             Callable: Декоратор.
         """
 
-        def decorator(func_event: Callable):
+        def decorator(func_event: Callable) -> Callable:
             return self.register(func_event, *args, **kwargs)
 
         return decorator

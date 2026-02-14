@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 
 class State:
@@ -8,13 +8,13 @@ class State:
     При использовании внутри StatesGroup, автоматически присваивает уникальное имя в формате 'ИмяКласса:имя_поля'.
     """
 
-    def __init__(self):
-        self.name = None
+    def __init__(self) -> None:
+        self.name: Optional[str] = None
 
-    def __set_name__(self, owner: type, attr_name: str):
+    def __set_name__(self, owner: type, attr_name: str) -> None:
         self.name = f"{owner.__name__}:{attr_name}"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name or ""
 
     def __eq__(self, value: object, /) -> bool:

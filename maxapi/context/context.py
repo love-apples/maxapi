@@ -13,14 +13,14 @@ class MemoryContext:
         user_id (Optional[int]): Идентификатор пользователя
     """
 
-    def __init__(self, chat_id: Optional[int], user_id: Optional[int]):
+    def __init__(self, chat_id: Optional[int], user_id: Optional[int]) -> None:
         self.chat_id = chat_id
         self.user_id = user_id
         self._context: Dict[str, Any] = {}
         self._state: State | str | None = None
         self._lock = asyncio.Lock()
 
-    async def get_data(self) -> dict[str, Any]:
+    async def get_data(self) -> Dict[str, Any]:
         """
         Возвращает текущий контекст данных.
 
@@ -31,7 +31,7 @@ class MemoryContext:
         async with self._lock:
             return self._context
 
-    async def set_data(self, data: dict[str, Any]):
+    async def set_data(self, data: Dict[str, Any]) -> None:
         """
         Полностью заменяет контекст данных.
 
@@ -53,7 +53,7 @@ class MemoryContext:
         async with self._lock:
             self._context.update(kwargs)
 
-    async def set_state(self, state: Optional[Union[State, str]] = None):
+    async def set_state(self, state: Optional[Union[State, str]] = None) -> None:
         """
         Устанавливает новое состояние.
 
@@ -64,7 +64,7 @@ class MemoryContext:
         async with self._lock:
             self._state = state
 
-    async def get_state(self) -> Optional[State | str]:
+    async def get_state(self) -> Optional[Union[State, str]]:
         """
         Возвращает текущее состояние.
 
@@ -75,7 +75,7 @@ class MemoryContext:
         async with self._lock:
             return self._state
 
-    async def clear(self):
+    async def clear(self) -> None:
         """
         Очищает контекст и сбрасывает состояние.
         """

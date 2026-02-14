@@ -213,6 +213,10 @@ class Message(BaseModel, BotMixin):
             msg = "Невозможно ответить: поле body отсутствует у сообщения"
             raise ValueError(msg)
 
+        if self.recipient.chat_id is None:
+            msg = "Невозможно ответить: chat_id отсутствует"
+            raise ValueError(msg)
+
         return await self._ensure_bot().send_message(
             chat_id=self.recipient.chat_id,
             user_id=self.recipient.user_id,
@@ -226,10 +230,10 @@ class Message(BaseModel, BotMixin):
 
     async def forward(
         self,
-        chat_id,
+        chat_id: Optional[int],
         user_id: Optional[int] = None,
         attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
+            List[Union[Attachment, InputMedia, InputMediaBuffer, AttachmentUpload]]
         ] = None,
         notify: Optional[bool] = None,
         parse_mode: Optional[ParseMode] = None,
@@ -342,12 +346,12 @@ class Message(BaseModel, BotMixin):
             PinnedMessage: Результат выполнения метода pin_message бота.
         """
 
-        if self.recipient.chat_id is None:
-            raise ValueError("chat_id не может быть None")
-
         if self.body is None:
             msg = "Невозможно закрепить: поле body отсутствует у сообщения"
             raise ValueError(msg)
+
+        if self.recipient.chat_id is None:
+            raise ValueError("chat_id не может быть None")
 
         return await self._ensure_bot().pin_message(
             chat_id=self.recipient.chat_id,

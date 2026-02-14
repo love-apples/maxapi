@@ -177,11 +177,11 @@ class CommandStart(Command):
 
     def __init__(
         self,
-        prefix="/",
-        check_case=False,
+        prefix: str = "/",
+        check_case: bool = False,
         ignore_symbol_at_sign: bool = False,
         only_with_bot_username: bool = False,
-    ):
+    ) -> None:
         super().__init__(
             "start",
             prefix,
@@ -190,5 +190,7 @@ class CommandStart(Command):
             only_with_bot_username,
         )
 
-    async def __call__(self, event):
+    async def __call__(
+        self, event: UpdateUnion
+    ) -> Union[Dict[str, List[str]], bool]:
         return await super().__call__(event)
