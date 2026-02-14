@@ -185,3 +185,14 @@ def preserve_env_vars():
         # Если токен был установлен в тесте, но не был до этого - удаляем
         # Но только если он не был загружен из .env изначально
         pass
+
+
+def pytest_collection_modifyitems(config, items):
+    """Автоматически пропускает тесты с маркером integration, если не задан токен."""
+    if not os.environ.get("MAX_BOT_TOKEN"):
+        skip_integration = pytest.mark.skip(
+            reason="Интеграционные тесты пропущены: MAX_BOT_TOKEN не установлен"
+        )
+        for item in items:
+            if "integration" in item.keywords:
+                item.add_marker(skip_integration)
