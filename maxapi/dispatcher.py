@@ -85,7 +85,7 @@ class Dispatcher(BotMixin):
         self.router_id = router_id
 
         self.event_handlers: List[Handler] = []
-        self.contexts: List[MemoryContext] = []
+        self.contexts: Dict[tuple[int | None, int | None], MemoryContext] = {}
         self.routers: List[Router | Dispatcher] = []
         self.filters: List[MagicFilter] = []
         self.base_filters: List[BaseFilter] = []
@@ -315,12 +315,12 @@ class Dispatcher(BotMixin):
             MemoryContext: Контекст.
         """
 
-        for ctx in self.contexts:
-            if ctx.chat_id == chat_id and ctx.user_id == user_id:
-                return ctx
+        key = (chat_id, user_id)
+        if key in self.contexts:
+            return self.contexts[key]
 
         new_ctx = MemoryContext(chat_id, user_id)
-        self.contexts.append(new_ctx)
+        self.contexts[key] = new_ctx
         return new_ctx
 
     async def call_handler(
