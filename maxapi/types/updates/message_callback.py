@@ -99,9 +99,8 @@ class MessageCallback(Update):
 
         if original_body is None:
             # если пытаются изменить контент/вложение/связь
-            if (
-                raise_if_not_exists
-                and (new_text is not None or link is not None or format is not None)
+            if raise_if_not_exists and (
+                new_text is not None or link is not None or format is not None
             ):
                 raise ValueError(
                     "Невозможно изменить сообщение: исходное сообщение отсутствует"

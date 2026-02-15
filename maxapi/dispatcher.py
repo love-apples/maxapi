@@ -19,7 +19,7 @@ from typing import (
 from aiohttp import ClientConnectorError
 
 from .bot import Bot
-from .context import MemoryContext
+from .context import BaseContext, MemoryContext
 from .enums.update import UpdateType
 from .exceptions.dispatcher import HandlerException, MiddlewareException
 from .exceptions.max import InvalidToken, MaxApiError, MaxConnection
@@ -72,7 +72,11 @@ class Dispatcher(BotMixin):
     """
 
     def __init__(
-        self, router_id: str | None = None, use_create_task: bool = False
+        self,
+        router_id: str | None = None,
+        use_create_task: bool = False,
+        storage: Any = MemoryContext,
+        **storage_kwargs: Any,
     ) -> None:
         """
         Инициализация диспетчера.
@@ -80,12 +84,16 @@ class Dispatcher(BotMixin):
         Args:
             router_id (str | None): Идентификатор роутера для логов.
             use_create_task (bool): Флаг, отвечающий за параллелизацию обработок событий.
+            storage (type[BaseContext]): Класс контекста для хранения данных (MemoryContext, RedisContext и т.д.).
+            **storage_kwargs (Any): Дополнительные аргументы для инициализации хранилища.
         """
 
         self.router_id = router_id
+        self.storage = storage
+        self.storage_kwargs = storage_kwargs
 
         self.event_handlers: List[Handler] = []
-        self.contexts: Dict[tuple[int | None, int | None], MemoryContext] = {}
+        self.contexts: Dict[tuple[int | None, int | None], BaseContext] = {}
         self.routers: List[Router | Dispatcher] = []
         self.filters: List[MagicFilter] = []
         self.base_filters: List[BaseFilter] = []
@@ -301,25 +309,25 @@ class Dispatcher(BotMixin):
         if self.on_started_func:
             await self.on_started_func()
 
-    def __get_memory_context(
+    def __get_context(
         self, chat_id: Optional[int], user_id: Optional[int]
-    ) -> MemoryContext:
+    ) -> BaseContext:
         """
-        Возвращает существующий или создаёт новый MemoryContext по chat_id и user_id.
+        Возвращает существующий или создаёт новый контекст по chat_id и user_id.
 
         Args:
             chat_id (Optional[int]): Идентификатор чата.
             user_id (Optional[int]): Идентификатор пользователя.
 
         Returns:
-            MemoryContext: Контекст.
+            BaseContext: Контекст.
         """
 
         key = (chat_id, user_id)
         if key in self.contexts:
             return self.contexts[key]
 
-        new_ctx = MemoryContext(chat_id, user_id)
+        new_ctx = self.storage(chat_id, user_id, **self.storage_kwargs)
         self.contexts[key] = new_ctx
         return new_ctx
 
@@ -465,7 +473,7 @@ class Dispatcher(BotMixin):
         event: UpdateUnion,
         data: Dict[str, Any],
         handler_middlewares: List[BaseMiddleware],
-        memory_context: MemoryContext,
+        memory_context: BaseContext,
         current_state: Optional[Any],
         router_id: Any,
         process_info: str,
@@ -478,7 +486,7 @@ class Dispatcher(BotMixin):
             event (UpdateUnion): Событие.
             data (Dict[str, Any]): Данные для обработчика.
             handler_middlewares (List[BaseMiddleware]): Middleware для обработчика.
-            memory_context (MemoryContext): Контекст памяти.
+            memory_context (BaseContext): Контекст памяти.
             current_state (Optional[Any]): Текущее состояние.
             router_id (Any): Идентификатор роутера для логов.
             process_info (str): Информация о процессе для логов.
@@ -512,17 +520,23 @@ class Dispatcher(BotMixin):
                 cause=e,
             ) from e
 
-    async def handle_raw_response(self, event_type: UpdateType, raw_data: Dict[str, Any]) -> None:
+    async def handle_raw_response(
+        self, event_type: UpdateType, raw_data: Dict[str, Any]
+    ) -> None:
         """
         Специальный метод для обработки сырых ответов API.
         """
         for index, router in enumerate(self.routers):
-            matching_handlers = self._find_matching_handlers(router, event_type)
+            matching_handlers = self._find_matching_handlers(
+                router, event_type
+            )
             for handler in matching_handlers:
                 try:
                     await self.call_handler(handler, raw_data, {})
                 except Exception as e:
-                    logger_dp.exception(f"Ошибка в обработчике RAW_API_RESPONSE: {e}")
+                    logger_dp.exception(
+                        f"Ошибка в обработчике RAW_API_RESPONSE: {e}"
+                    )
 
     async def handle(self, event_object: UpdateUnion) -> None:
         """
@@ -537,7 +551,7 @@ class Dispatcher(BotMixin):
 
         try:
             ids = event_object.get_ids()
-            memory_context = self.__get_memory_context(*ids)
+            memory_context = self.__get_context(*ids)
             current_state = await memory_context.get_state()
             kwargs = {"context": memory_context}
 
@@ -655,7 +669,9 @@ class Dispatcher(BotMixin):
                 f"Ошибка при обработке события: router_id: {router_id} | {process_info} | {e} "
             )
 
-    async def start_polling(self, bot: Bot, skip_updates: bool = False) -> None:
+    async def start_polling(
+        self, bot: Bot, skip_updates: bool = False
+    ) -> None:
         """
         Запускает цикл получения обновлений (long polling).
 

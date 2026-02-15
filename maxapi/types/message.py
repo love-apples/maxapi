@@ -233,7 +233,11 @@ class Message(BaseModel, BotMixin):
         chat_id: Optional[int],
         user_id: Optional[int] = None,
         attachments: Optional[
-            List[Union[Attachment, InputMedia, InputMediaBuffer, AttachmentUpload]]
+            List[
+                Union[
+                    Attachment, InputMedia, InputMediaBuffer, AttachmentUpload
+                ]
+            ]
         ] = None,
         notify: Optional[bool] = None,
         parse_mode: Optional[ParseMode] = None,

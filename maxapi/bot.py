@@ -239,9 +239,7 @@ class Bot(BaseConnection):
         user_id: Optional[int] = None,
         text: Optional[str] = None,
         attachments: Optional[
-            List[
-                Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
-            ]
+            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
             | List[Attachments]
         ] = None,
         link: Optional[NewMessageLink] = None,
@@ -311,9 +309,7 @@ class Bot(BaseConnection):
         message_id: str,
         text: Optional[str] = None,
         attachments: Optional[
-            List[
-                Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
-            ]
+            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
             | List[Attachments]
         ] = None,
         link: Optional[NewMessageLink] = None,

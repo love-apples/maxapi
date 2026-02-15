@@ -38,13 +38,21 @@ async def enrich_event(event_object: Any, bot: Bot) -> Any:
         return event_object
 
     if hasattr(event_object, "chat_id"):
-        event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
+        # Если это удаление бота из канала, мы не сможем получить инфо о чате
+        is_bot_removed_from_channel = isinstance(
+            event_object, BotRemoved
+        ) and getattr(event_object, "is_channel", False)
+        if not is_bot_removed_from_channel:
+            event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
+        else:
+            event_object.chat = None
 
     if isinstance(event_object, (MessageCreated, MessageEdited)):
         if event_object.message.recipient.chat_id is not None:
-            event_object.chat = await bot.get_chat_by_id(
-                event_object.message.recipient.chat_id
-            )
+            if not hasattr(event_object, "chat"):
+                event_object.chat = await bot.get_chat_by_id(
+                    event_object.message.recipient.chat_id
+                )
 
         event_object.from_user = getattr(event_object.message, "sender", None)
 
@@ -52,30 +60,34 @@ async def enrich_event(event_object: Any, bot: Bot) -> Any:
         message = event_object.message
         if message is not None and message.recipient.chat_id is not None:
             chat_id = message.recipient.chat_id
-            event_object.chat = await bot.get_chat_by_id(chat_id)
+            if not hasattr(event_object, "chat"):
+                event_object.chat = await bot.get_chat_by_id(chat_id)
 
         event_object.from_user = getattr(event_object.callback, "user", None)
 
     elif isinstance(event_object, MessageRemoved):
-        event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
+        if not hasattr(event_object, "chat"):
+            event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
 
-        if event_object.chat.type == ChatType.CHAT:
+        if event_object.chat and event_object.chat.type == ChatType.CHAT:
             event_object.from_user = await bot.get_chat_member(
                 chat_id=event_object.chat_id, user_id=event_object.user_id
             )
 
-        elif event_object.chat.type == ChatType.DIALOG:
+        elif event_object.chat and event_object.chat.type == ChatType.DIALOG:
             event_object.from_user = event_object.chat  # pyright: ignore[reportAttributeAccessIssue]
 
     elif isinstance(event_object, UserRemoved):
-        event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
+        if not hasattr(event_object, "chat"):
+            event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
         if event_object.admin_id:
             event_object.from_user = await bot.get_chat_member(
                 chat_id=event_object.chat_id, user_id=event_object.admin_id
             )
 
     elif isinstance(event_object, UserAdded):
-        event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
+        if not hasattr(event_object, "chat"):
+            event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
         event_object.from_user = event_object.user
 
     elif isinstance(
@@ -91,7 +103,8 @@ async def enrich_event(event_object: Any, bot: Bot) -> Any:
             DialogUnmuted,
         ),
     ):
-        event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
+        if not hasattr(event_object, "chat"):
+            event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
         event_object.from_user = event_object.user
 
     if isinstance(

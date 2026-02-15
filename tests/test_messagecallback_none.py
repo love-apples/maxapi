@@ -1,6 +1,9 @@
 import pytest
 
-from maxapi.types.updates.message_callback import MessageCallback, MessageForCallback
+from maxapi.types.updates.message_callback import (
+    MessageCallback,
+    MessageForCallback,
+)
 from maxapi.types.callback import Callback
 from maxapi.types.users import User
 from maxapi.enums.update import UpdateType
@@ -14,10 +17,10 @@ class DummyBot:
         return self
 
     async def send_callback(
-            self,
-            callback_id: str,
-            message: MessageForCallback,
-            notification=None,
+        self,
+        callback_id: str,
+        message: MessageForCallback,
+        notification=None,
     ):
         self.last = {
             "callback_id": callback_id,
@@ -29,7 +32,9 @@ class DummyBot:
 
 @pytest.fixture
 def cb_obj():
-    user = User(user_id=42, first_name="Test", is_bot=False, last_activity_time=1)
+    user = User(
+        user_id=42, first_name="Test", is_bot=False, last_activity_time=1
+    )
     return Callback(timestamp=1, callback_id="cb1", payload=None, user=user)
 
 
@@ -62,7 +67,13 @@ async def test_answer_with_no_message_raises_on_change(cb_obj):
 
 
 async def test_answer_with_no_message_notification_only(cb_obj):
-    mc = MessageCallback(message=None, user_locale=None, callback=cb_obj, update_type=UpdateType.MESSAGE_CALLBACK, timestamp=1)
+    mc = MessageCallback(
+        message=None,
+        user_locale=None,
+        callback=cb_obj,
+        update_type=UpdateType.MESSAGE_CALLBACK,
+        timestamp=1,
+    )
     bot = DummyBot()
     mc.bot = bot
 

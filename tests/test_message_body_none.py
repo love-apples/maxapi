@@ -11,7 +11,9 @@ def recipient():
 
 
 def make_message_with_no_body(recipient):
-    user = User(user_id=10, first_name="Test", is_bot=False, last_activity_time=1)
+    user = User(
+        user_id=10, first_name="Test", is_bot=False, last_activity_time=1
+    )
     return Message(sender=user, recipient=recipient, timestamp=1, body=None)
 
 
