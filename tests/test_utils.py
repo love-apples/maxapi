@@ -48,10 +48,11 @@ class TestInlineKeyboardBuilder:
     def test_row_empty(self):
         """Тест создания нового ряда."""
         builder = InlineKeyboardBuilder()
+        builder.add(CallbackButton(text="B1", payload="p1"))
         builder.row()
 
         assert len(builder.payload) == 2
-        assert builder.payload[0] == []
+        assert len(builder.payload[0]) == 1
         assert builder.payload[1] == []
 
     def test_row_with_buttons(self):
@@ -62,11 +63,10 @@ class TestInlineKeyboardBuilder:
 
         builder.row(button1, button2)
 
-        assert len(builder.payload) == 2
-        assert len(builder.payload[0]) == 0  # Первый ряд пустой
-        assert len(builder.payload[1]) == 2  # Второй ряд содержит кнопки
-        assert builder.payload[1][0] == button1
-        assert builder.payload[1][1] == button2
+        assert len(builder.payload) == 1
+        assert len(builder.payload[0]) == 2
+        assert builder.payload[0][0] == button1
+        assert builder.payload[0][1] == button2
 
     def test_multiple_rows(self):
         """Тест создания нескольких рядов."""

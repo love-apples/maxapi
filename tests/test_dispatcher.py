@@ -23,7 +23,7 @@ class TestDispatcherInitialization:
         assert dp.use_create_task is False
         assert isinstance(dp.event_handlers, list)
         assert len(dp.event_handlers) == 0
-        assert isinstance(dp.contexts, list)
+        assert isinstance(dp.contexts, dict)
         assert isinstance(dp.routers, list)
         assert isinstance(dp.middlewares, list)
         assert dp.bot is None
@@ -199,7 +199,7 @@ class TestDispatcherContext:
 
     def test_get_memory_context_new(self, dispatcher):
         """Тест получения нового контекста."""
-        context = dispatcher._Dispatcher__get_memory_context(12345, 67890)
+        context = dispatcher._Dispatcher__get_context(12345, 67890)
 
         assert isinstance(context, MemoryContext)
         assert context.chat_id == 12345
@@ -208,16 +208,16 @@ class TestDispatcherContext:
 
     def test_get_memory_context_existing(self, dispatcher):
         """Тест получения существующего контекста."""
-        context1 = dispatcher._Dispatcher__get_memory_context(12345, 67890)
-        context2 = dispatcher._Dispatcher__get_memory_context(12345, 67890)
+        context1 = dispatcher._Dispatcher__get_context(12345, 67890)
+        context2 = dispatcher._Dispatcher__get_context(12345, 67890)
 
         assert context1 is context2
         assert len(dispatcher.contexts) == 1
 
     def test_get_memory_context_different_ids(self, dispatcher):
         """Тест получения контекстов для разных ID."""
-        context1 = dispatcher._Dispatcher__get_memory_context(12345, 67890)
-        context2 = dispatcher._Dispatcher__get_memory_context(54321, 98765)
+        context1 = dispatcher._Dispatcher__get_context(12345, 67890)
+        context2 = dispatcher._Dispatcher__get_context(54321, 98765)
 
         assert context1 is not context2
         assert len(dispatcher.contexts) == 2
