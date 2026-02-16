@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from ....enums.button_type import ButtonType
 
@@ -15,5 +15,6 @@ class Button(BaseModel):
     type: ButtonType
     text: str
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(
+        use_enum_values=True,
+    )

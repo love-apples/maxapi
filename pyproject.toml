@@ -14,11 +14,11 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-    "aiohttp>=3.12.14",
-    "magic_filter>=1.0.0",
-    "pydantic>=1.8.0",
-    "aiofiles==24.1.0",
-    "puremagic==1.30",
+    "aiohttp>=3.10,<4",
+    "magic_filter>=1.0.0,<2",
+    "pydantic>=2,<3",
+    "aiofiles>=24.1,<26",
+    "puremagic>=1.30,<2",
 ]
 
 [project.urls]
@@ -28,30 +28,36 @@ Homepage = "https://github.com/love-apples/maxapi"
 license-files = []
 
 [build-system]
-requires = ["setuptools>=68.0.0", "wheel"]
+requires = [
+    "setuptools>=82.0.0",
+    "wheel>=0.46.3",
+]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["maxapi*", "wiki*", "examples*"]
 
 [project.optional-dependencies]
-webhook = ["fastapi>=0.68.0", "uvicorn>=0.15.0"]
+webhook = [
+    "fastapi>=0.68.0,<1",
+    "uvicorn>=0.15.0,<1",
+]
 
 [dependency-groups]
 dev = [
-    "pytest>=7.0",
-    "pytest-asyncio>=0.21",
-    "pytest-cov>=4.1",
-    "ruff>=0.12",
-    "mypy>=1.2",
-    "types-aiofiles>=25.0.0",
-    "pre-commit>=3.0",
-    "coverage>=6.5",
-    "mkdocs>=1.5.0",
-    "mkdocs-material>=9.5.0",
-    "mkdocstrings[python]>=0.24.0",
-    "pymdown-extensions>=10.0",
-    "python-dotenv>=1.0.0",
+    "pytest>=9.0",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.15",
+    "mypy>=1.19.1",
+    "types-aiofiles>=25.1.0",
+    "pre-commit>=4.0",
+    "coverage>=7.13",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.1",
+    "mkdocstrings[python]>=1.0.3",
+    "pymdown-extensions>=10.21",
+    "python-dotenv>=1.2.1",
 ]
 
 [tool.uv]

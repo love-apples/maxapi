@@ -35,6 +35,7 @@ from .methods.types.getted_updates import (
 )
 from .types.bot_mixin import BotMixin
 from .types.updates import UpdateUnion
+from .utils.time import to_ms, from_ms
 
 try:
     from fastapi import FastAPI, Request  # type: ignore
@@ -684,7 +685,7 @@ class Dispatcher(BotMixin):
 
         await self.__ready(bot)
 
-        current_timestamp = int(datetime.now().timestamp() * 1000)
+        current_timestamp = to_ms(datetime.now())
 
         while self.polling:
             try:
@@ -727,7 +728,8 @@ class Dispatcher(BotMixin):
                     if skip_updates:
                         if event.timestamp < current_timestamp:
                             logger_dp.info(
-                                f"Пропуск события от {datetime.fromtimestamp(event.timestamp / 1000)}: {event.update_type}"
+                                f"Пропуск события от {from_ms(event.timestamp)}: "
+                                f"{event.update_type}"
                             )
                             continue
 

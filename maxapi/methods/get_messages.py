@@ -5,6 +5,7 @@ from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
 from ..enums.http_method import HTTPMethod
 from ..types.message import Messages
+from ..utils.time import to_ms
 
 if TYPE_CHECKING:
     from ..bot import Bot
@@ -66,13 +67,13 @@ class GetMessages(BaseConnection):
 
         if self.from_time:
             if isinstance(self.from_time, datetime):
-                params["from"] = int(self.from_time.timestamp() * 1000)
+                params["from"] = to_ms(self.from_time)
             else:
                 params["from"] = self.from_time
 
         if self.to_time:
             if isinstance(self.to_time, datetime):
-                params["to"] = int(self.to_time.timestamp() * 1000)
+                params["to"] = to_ms(self.to_time)
             else:
                 params["to"] = self.to_time
 
