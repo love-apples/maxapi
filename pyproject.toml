@@ -97,3 +97,11 @@ exclude = ["core/yandex/cloud", "core/google"]
 line-length = 79
 indent-width = 4
 target-version = "py310"
+
+[tool.ruff.format]
+# Настройки форматтера Ruff для единообразного стиля кода
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+skip-magic-trailing-comma = false
+docstring-code-format = true
