@@ -14,3 +14,9 @@ run-test:
 		wait $$p || status=1; \
 	done; \
 	exit $$status
+
+
+.PHONY: format
+format:
+	@echo "Running ruff formatter..."
+	uv run ruff format .
