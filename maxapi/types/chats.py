@@ -72,17 +72,23 @@ class Chat(BaseModel):
     @classmethod
     def convert_timestamps(
         cls,
-        value: Dict[str, int],
-    ) -> Dict[str, Optional[datetime]]:
+        value: Optional[Dict[str, int]],
+    ) -> Optional[Dict[str, Optional[datetime]]]:
         """
-        Преобразует временные метки участников из миллисекунд в объекты datetime.
+        Преобразовать временные метки участников из миллисекунд
+        в объекты datetime.
 
         Args:
-            value (Dict[str, int]): Словарь с временными метками в миллисекундах.
+            value (Optional[Dict[str, int]]): Словарь с временными
+                метками в миллисекундах. Может быть None, если участников нет.
 
         Returns:
-            Dict[str, Optional[datetime]]: Словарь с временными метками в формате datetime.
+            Optional[Dict[str, Optional[datetime]]]: Словарь с
+                временными метками в формате datetime. Может быть None,
+                если входное значение было None.
         """
+        if value is None:
+            return None
 
         return {key: from_ms(ts) for key, ts in value.items()}
 
