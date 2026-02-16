@@ -43,13 +43,17 @@ def make_simple_message(fake_user, faker) -> Message:
 def test_message_serialize_deserialize_roundtrip(fake_user, faker):
     msg = make_simple_message(fake_user, faker)
 
-    d = msg.model_dump()  # pydantic v2
+    # сериализуем модель в словарь (Pydantic v2)
+    d = msg.model_dump()
 
+    # убедиться, что поле bot исключено из дампа
     assert "bot" not in d
 
+    # сериализация в JSON и обратная десериализация
     j = json.dumps(d)
     parsed = json.loads(j)
 
+    # восстановление модели из десериализованных данных
     msg2 = Message.model_validate(parsed)
 
     assert msg2.sender.user_id == msg.sender.user_id
@@ -78,6 +82,7 @@ def test_attachment_serialize_deserialize(faker):
 def test_markup_element_alias_and_serialization(faker):
     mk = MarkupElement(type=TextStyle.STRONG, from_=0, length=4)
     d = mk.model_dump(by_alias=True)
+    # в дампе должно присутствовать поле 'from' (алиас для from_)
     assert "from" in d
     assert d["from"] == 0
 
