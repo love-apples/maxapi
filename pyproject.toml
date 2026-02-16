@@ -58,6 +58,7 @@ dev = [
     "mkdocstrings[python]>=1.0.3",
     "pymdown-extensions>=10.21",
     "python-dotenv>=1.2.1",
+    "Faker>=40.4.0",
 ]
 
 [tool.uv]

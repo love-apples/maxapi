@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, Mock
 
 import aiohttp
 import pytest
+from faker import Faker
 
 # Загружаем переменные окружения из .env файла
 try:
@@ -144,6 +145,30 @@ def sample_context():
     from maxapi.context import MemoryContext
 
     return MemoryContext(chat_id=12345, user_id=67890)
+
+
+@pytest.fixture
+def faker():
+    """Возвращает экземпляр Faker для генерации тестовых данных."""
+    return Faker()
+
+
+@pytest.fixture
+def fake_user(faker):
+    """Фикстура, возвращающая фабрику/данные для создания тестового User."""
+
+    def _factory(**overrides):
+        data = {
+            "user_id": faker.random_int(min=1, max=10_000),
+            "first_name": faker.first_name(),
+            "last_name": faker.last_name(),
+            "is_bot": False,
+            "last_activity_time": int(faker.date_time().timestamp()),
+        }
+        data.update(overrides)
+        return data
+
+    return _factory
 
 
 @pytest.fixture
