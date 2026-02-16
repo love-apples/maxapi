@@ -35,7 +35,7 @@ from .methods.types.getted_updates import (
 )
 from .types.bot_mixin import BotMixin
 from .types.updates import UpdateUnion
-from .utils.time import to_ms, from_ms
+from .utils.time import from_ms, to_ms
 
 try:
     from fastapi import FastAPI, Request  # type: ignore

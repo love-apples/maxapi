@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from maxapi.utils.time import to_ms, from_ms
+from maxapi.utils.time import from_ms, to_ms
 
 
 def test_to_ms_with_datetime_aware():

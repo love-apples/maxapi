@@ -2,8 +2,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 from ...types.users import User
-from .update import Update
 from ...utils.time import from_ms
+from .update import Update
 
 if TYPE_CHECKING:
     from ...bot import Bot

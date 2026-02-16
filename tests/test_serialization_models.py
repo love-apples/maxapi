@@ -8,11 +8,11 @@ from maxapi.types.attachments.attachment import (
     PhotoAttachmentPayload,
 )
 from maxapi.types.message import (
+    MarkupElement,
     Message,
     MessageBody,
-    Recipient,
-    MarkupElement,
     Messages,
+    Recipient,
 )
 from maxapi.types.users import User
 

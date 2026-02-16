@@ -1,9 +1,9 @@
 from datetime import datetime
-import pytest
 
-from maxapi.types.chats import Chat
-from maxapi.enums.chat_type import ChatType
+import pytest
 from maxapi.enums.chat_status import ChatStatus
+from maxapi.enums.chat_type import ChatType
+from maxapi.types.chats import Chat
 
 
 def test_convert_timestamps_none():

@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Any, List, Optional, Union
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from ...enums.attachment import AttachmentType
 from ...types.attachments.buttons import InlineButtonUnion
