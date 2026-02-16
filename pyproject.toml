@@ -39,7 +39,7 @@ include = ["maxapi*", "wiki*", "examples*"]
 
 [project.optional-dependencies]
 webhook = [
-    "fastapi>=0.68.0,<1",
+    "fastapi>=0.103.0,<1",
     "uvicorn>=0.15.0,<1",
 ]
 
