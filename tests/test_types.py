@@ -91,7 +91,6 @@ class TestInputMedia:
         """Тест инициализации InputMedia."""
         # InputMedia требует путь к файлу, поэтому используем мок
         # В реальности нужно будет создать временный файл для теста
-        pass
 
     def test_input_media_buffer_init(self):
         """Тест инициализации InputMediaBuffer."""
