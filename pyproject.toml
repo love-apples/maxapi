@@ -124,6 +124,7 @@ extend-select = [
     "LOG",
     "PYI",
     "PIE",
+    "PT",
     "S",
     "T",
     "T20",

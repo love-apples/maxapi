@@ -61,7 +61,7 @@ async def test_answer_with_no_message_raises_on_change(cb_obj):
     bot = DummyBot()
     mc.bot = bot
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="исходное сообщение отсутствует"):
         await mc.answer(notification="n", new_text="text")
 
 
