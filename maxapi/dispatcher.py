@@ -159,14 +159,14 @@ class Dispatcher(BotMixin):
             if self.webhook_app is None:
                 try:
                     from fastapi import FastAPI  # type: ignore
-                except ImportError:
+                except ImportError as exc:
                     raise ImportError(
                         "\n\t Не установлен fastapi!"
                         "\n\t Выполните команду для установки fastapi: "
-                        "\n\t pip install fastapi>=0.68.0"
+                        "\n\t pip install fastapi"
                         "\n\t Или сразу все зависимости для работы вебхука:"
                         "\n\t pip install maxapi[webhook]"
-                    )
+                    ) from exc
                 self.webhook_app = FastAPI()
             return self.webhook_app.post(path)(func)
 
@@ -524,7 +524,7 @@ class Dispatcher(BotMixin):
         """
         Специальный метод для обработки сырых ответов API.
         """
-        for index, router in enumerate(self.routers):
+        for router in self.routers:
             matching_handlers = self._find_matching_handlers(
                 router, event_type
             )
@@ -920,9 +920,9 @@ class Event:
         else:
             self.router.event_handlers.append(
                 Handler(
+                    *args,
                     func_event=func_event,
                     update_type=self.update_type,
-                    *args,
                     **kwargs,
                 )
             )

@@ -109,6 +109,7 @@ target-version = "py310"
 # TODO: добавить BLE
 extend-select = [
     "ASYNC",
+    "B",
     "FAST",
     "FBT",
     "I",
@@ -117,9 +118,13 @@ extend-select = [
     "YTT",
 ]
 
+
 [tool.ruff.lint.per-file-ignores]
 "tests/**.py" = [
     "S"
+]
+"dispatcher.py" = [
+    "B023", # TODO: требует рефакторинга dispatcher
 ]
 
 [tool.ruff.format]

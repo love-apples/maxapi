@@ -39,7 +39,7 @@ async def process_input_media(
     except MaxApiError as e:
         raise MaxUploadFileFailed(
             f"Ошибка при загрузке файла: code={e.code}, raw={e.raw}"
-        )
+        ) from e
 
     if isinstance(att, InputMedia):
         upload_file_response = await base_connection.upload_file(

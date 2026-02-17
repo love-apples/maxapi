@@ -96,7 +96,7 @@ class CallbackPayload(BaseModel):
                 f"Ожидалось {len(field_names)} аргументов, получено {len(parts) - 1}"
             )
 
-        kwargs = dict(zip(field_names, parts[1:]))
+        kwargs = dict(zip(field_names, parts[1:], strict=True))
         return cls(**kwargs)
 
     @classmethod

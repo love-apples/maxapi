@@ -50,7 +50,7 @@ def test_convert_timestamps_with_none_values_raises_validation_error():
     # Если некоторые метки времени равны None, валидация должна упасть,
     # поскольку значения participants типизированы как datetime (а не Optional[datetime]).
     data = {"u1": None, "u2": 1609459200000}
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         Chat(
             chat_id=3,
             type=ChatType.CHAT,

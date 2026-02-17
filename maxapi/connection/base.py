@@ -102,7 +102,7 @@ class BaseConnection(BotMixin):
                 **kwargs,
             )
         except ClientConnectionError as e:
-            raise MaxConnection(f"Ошибка при отправке запроса: {e}")
+            raise MaxConnection(f"Ошибка при отправке запроса: {e}") from e
 
         if r.status == 401:
             await bot.session.close()
@@ -137,7 +137,7 @@ class BaseConnection(BotMixin):
         model = model(**raw)  # type: ignore
 
         if hasattr(model, "message"):
-            attr = getattr(model, "message")
+            attr = model.message
             if hasattr(attr, "bot"):
                 attr.bot = bot
 
