@@ -87,14 +87,12 @@ class EditMessage(BaseConnection):
         if self.text is not None:
             json["text"] = self.text
 
-        HAS_INPUT_MEDIA = False
+        has_input_media = False
 
         if self.attachments:
             for att in self.attachments:
-                if isinstance(att, InputMedia) or isinstance(
-                    att, InputMediaBuffer
-                ):
-                    HAS_INPUT_MEDIA = True
+                if isinstance(att, (InputMedia, InputMediaBuffer)):
+                    has_input_media = True
 
                     input_media = await process_input_media(
                         base_connection=self, bot=bot, att=att
@@ -114,7 +112,7 @@ class EditMessage(BaseConnection):
         if self.parse_mode is not None:
             json["format"] = self.parse_mode.value
 
-        if HAS_INPUT_MEDIA and self.sleep_after_input_media:
+        if has_input_media and self.sleep_after_input_media:
             await asyncio.sleep(bot.after_input_media_delay)
 
         response = None

@@ -395,9 +395,8 @@ class Dispatcher(BotMixin):
         Returns:
             Optional[Dict[str, Any]] | Literal[False]: Словарь с данными или False, если фильтры не прошли.
         """
-        if router.filters:
-            if not filter_attrs(event, *router.filters):
-                return False
+        if router.filters and not filter_attrs(event, *router.filters):
+            return False
 
         if router.base_filters:
             result = await self.process_base_filters(
@@ -444,15 +443,14 @@ class Dispatcher(BotMixin):
             current_state (Optional[Any]): Текущее состояние.
 
         Returns:
-            Optional[Dict[str, Any]] | Literal[False]: Словарь с данными или False, если не подходит.
+            Optional[Dict[str, Any]] | Literal[False]: Словарь с данными
+                или False, если не подходит.
         """
-        if handler.filters:
-            if not filter_attrs(event, *handler.filters):
-                return False
+        if handler.filters and not filter_attrs(event, *handler.filters):
+            return False
 
-        if handler.states:
-            if current_state not in handler.states:
-                return False
+        if handler.states and current_state not in handler.states:
+            return False
 
         if handler.base_filters:
             result = await self.process_base_filters(
@@ -722,13 +720,12 @@ class Dispatcher(BotMixin):
                 )
 
                 for event in processed_events:
-                    if skip_updates:
-                        if event.timestamp < current_timestamp:
-                            logger_dp.info(
-                                f"Пропуск события от {from_ms(event.timestamp)}: "
-                                f"{event.update_type}"
-                            )
-                            continue
+                    if skip_updates and event.timestamp < current_timestamp:
+                        logger_dp.info(
+                            f"Пропуск события от {from_ms(event.timestamp)}: "
+                            f"{event.update_type}"
+                        )
+                        continue
 
                     if self.use_create_task:
                         asyncio.create_task(self.handle(event))

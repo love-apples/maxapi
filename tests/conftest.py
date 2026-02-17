@@ -1,6 +1,7 @@
 """Конфигурация и фикстуры для pytest."""
 
 import os
+from contextlib import suppress
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
@@ -192,11 +193,9 @@ async def integration_bot(bot_token_from_env):
     finally:
         # Закрываем сессию после теста для предотвращения "Event loop is closed"
         if bot.session and not bot.session.closed:
-            try:
+            # Игнорируем ошибки при закрытии, если event loop уже закрыт
+            with suppress(Exception):
                 await bot.close_session()
-            except Exception:
-                # Игнорируем ошибки при закрытии, если event loop уже закрыт
-                pass
 
 
 @pytest.fixture(autouse=True)

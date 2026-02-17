@@ -311,9 +311,12 @@ class Message(BaseModel, BotMixin):
                 type=self.link.type, mid=self.link.message.mid
             )
 
-        if attachments is None:
-            if self.body is not None and self.body.attachments:
-                attachments = self.body.attachments
+        if (
+            attachments is None
+            and self.body is not None
+            and self.body.attachments
+        ):
+            attachments = self.body.attachments
 
         if self.body is None:
             msg = "Невозможно редактировать: поле body отсутствует у сообщения"

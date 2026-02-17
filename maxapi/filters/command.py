@@ -82,15 +82,14 @@ class Command(BaseFilter):
 
         first = args[0]
 
-        if self.ignore_symbol_at_sign:
-            if first == bot_username:
-                first = "@" + first
+        if self.ignore_symbol_at_sign and first == bot_username:
+            first = "@" + first
 
         if first.startswith("@"):
             if len(args) < 2:
                 return "", []
 
-            if not first[1:] == bot_username:
+            if first[1:] != bot_username:
                 return "", []
 
             command_part = args[1]
