@@ -24,7 +24,8 @@ class CallbackPayload(BaseModel):
     Базовый класс для сериализации/десериализации callback payload.
 
     Атрибуты:
-        prefix (str): Префикс для payload (используется при pack/unpack) (по умолчанию название класса).
+        prefix (str): Префикс для payload (используется при pack/unpack)
+            (по умолчанию название класса).
         separator (str): Разделитель между значениями (по умолчанию '|').
     """
 
@@ -42,10 +43,12 @@ class CallbackPayload(BaseModel):
 
     def pack(self) -> str:
         """
-        Собирает данные payload в строку для передачи в callback payload.
+        Собирает данные payload в строку для передачи в callback
+        payload.
 
         Raises:
-            ValueError: Если в значении встречается разделитель или payload слишком длинный.
+            ValueError: Если в значении встречается разделитель или
+                payload слишком длинный.
 
         Returns:
             str: Сериализованный payload.
@@ -58,7 +61,8 @@ class CallbackPayload(BaseModel):
             str_value = "" if value is None else str(value)
             if self.separator in str_value:
                 raise ValueError(
-                    f'Символ разделителя "{self.separator}" не должен встречаться в значении поля {name}'
+                    f'Символ разделителя "{self.separator}" '
+                    f"не должен встречаться в значении поля {name}"
                 )
 
             values.append(str_value)
@@ -89,14 +93,15 @@ class CallbackPayload(BaseModel):
 
         parts = data.split(cls.separator)
 
-        if not parts[0] == cls.prefix:
+        if parts[0] != cls.prefix:
             raise ValueError("Некорректный prefix")
 
         field_names = cls.attrs()
 
-        if not len(parts) - 1 == len(field_names):
+        if len(parts) - 1 != len(field_names):
             raise ValueError(
-                f"Ожидалось {len(field_names)} аргументов, получено {len(parts) - 1}"
+                f"Ожидалось {len(field_names)} аргументов, "
+                f"получено {len(parts) - 1}"
             )
 
         kwargs = dict(zip(field_names, parts[1:], strict=True))
@@ -105,7 +110,8 @@ class CallbackPayload(BaseModel):
     @classmethod
     def attrs(cls) -> list[str]:
         """
-        Возвращает список полей для сериализации/десериализации (исключая prefix и separator).
+        Возвращает список полей для сериализации/десериализации
+        (исключая prefix и separator).
 
         Returns:
             List[str]: Имена полей модели.

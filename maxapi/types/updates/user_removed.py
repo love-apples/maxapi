@@ -7,10 +7,13 @@ class UserRemoved(Update):
     Класс для обработки события выходе/удаления пользователя из чата.
 
     Attributes:
-        admin_id (Optional[int]): Идентификатор администратора, удалившего пользователя. None при выходе из чата самим пользователем.
+        admin_id (Optional[int]): Идентификатор администратора,
+            удалившего пользователя. None при выходе из чата самим
+            пользователем.
         chat_id (int): Идентификатор чата. Может быть None.
         user (User): Объект пользователя, удаленного из чата.
-        is_channel (bool): Указывает, был ли пользователь удален из канала или нет
+        is_channel (bool): Указывает, был ли пользователь удален
+            из канала или нет
     """
 
     admin_id: int | None = None
@@ -23,7 +26,8 @@ class UserRemoved(Update):
         Возвращает кортеж идентификаторов (chat_id, user_id).
 
         Returns:
-            Tuple[Optional[int], Optional[int]]: Идентификаторы чата и пользователя.
+            Tuple[Optional[int], Optional[int]]: Идентификаторы чата и
+                пользователя.
         """
 
         return (self.chat_id, self.admin_id)

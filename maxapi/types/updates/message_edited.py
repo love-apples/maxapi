@@ -17,7 +17,8 @@ class MessageEdited(Update):
         Возвращает кортеж идентификаторов (chat_id, user_id).
 
         Returns:
-            Tuple[Optional[int], Optional[int]]: Идентификаторы чата и пользователя.
+            Tuple[Optional[int], Optional[int]]: Идентификаторы чата и
+                пользователя.
         """
 
         return (self.message.recipient.chat_id, self.message.recipient.user_id)

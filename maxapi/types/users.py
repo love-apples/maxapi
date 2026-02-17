@@ -17,8 +17,10 @@ class User(BaseModel):
         last_activity_time (int): Временная метка последней активности.
         description (Optional[str]): Описание пользователя. Может быть None.
         avatar_url (Optional[str]): URL аватара пользователя. Может быть None.
-        full_avatar_url (Optional[str]): URL полного аватара пользователя. Может быть None.
-        commands (Optional[List[BotCommand]]): Список команд бота. Может быть None.
+        full_avatar_url (Optional[str]): URL полного аватара пользователя.
+            Может быть None.
+        commands (Optional[List[BotCommand]]): Список команд бота.
+            Может быть None.
     """
 
     user_id: int

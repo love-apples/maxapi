@@ -21,20 +21,26 @@ if TYPE_CHECKING:
 
 class SendMessage(BaseConnection):
     """
-    Класс для отправки сообщения в чат или пользователю с поддержкой вложений и форматирования.
+    Класс для отправки сообщения в чат или пользователю с поддержкой
+    вложений и форматирования.
 
     https://dev.max.ru/docs-api/methods/POST/messages
 
     Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
-        chat_id (Optional[int]): Идентификатор чата, куда отправлять сообщение.
-        user_id (Optional[int]): Идентификатор пользователя, если нужно отправить личное сообщение.
+        chat_id (Optional[int]): Идентификатор чата, куда отправлять
+            сообщение.
+        user_id (Optional[int]): Идентификатор пользователя, если нужно
+            отправить личное сообщение.
         text (Optional[str]): Текст сообщения.
-        attachments (Optional[List[Attachment | InputMedia | InputMediaBuffer]]):
-            Список вложений к сообщению.
-        link (Optional[NewMessageLink]): Связь с другим сообщением (например, ответ или пересылка).
-        notify (Optional[bool]): Отправлять ли уведомление о сообщении. По умолчанию True.
-        parse_mode (Optional[ParseMode]): Режим разбора текста (например, Markdown, HTML).
+        attachments (Optional[List[Attachment | InputMedia |
+            InputMediaBuffer]]): Список вложений к сообщению.
+        link (Optional[NewMessageLink]): Связь с другим сообщением
+            (например, ответ или пересылка).
+        notify (Optional[bool]): Отправлять ли уведомление о сообщении.
+            По умолчанию True.
+        parse_mode (Optional[ParseMode]): Режим разбора текста
+            (например, Markdown, HTML).
         disable_link_preview (Optional[bool]): Флаг генерации превью.
     """
 
@@ -72,7 +78,8 @@ class SendMessage(BaseConnection):
 
     async def fetch(self) -> SendedMessage | None:
         """
-        Отправляет сообщение с вложениями (если есть), с обработкой задержки готовности вложений.
+        Отправляет сообщение с вложениями (если есть),
+        с обработкой задержки готовности вложений.
 
         Возвращает результат отправки или ошибку.
 
@@ -142,7 +149,8 @@ class SendMessage(BaseConnection):
                     and e.raw.get("code") == "attachment.not.ready"
                 ):
                     logger_bot.info(
-                        f"Ошибка при отправке загруженного медиа, попытка {attempt + 1}, жду {self.RETRY_DELAY} секунды"
+                        f"Ошибка при отправке загруженного медиа, попытка "
+                        f"{attempt + 1}, жду {self.RETRY_DELAY} секунды"
                     )
                     await asyncio.sleep(self.RETRY_DELAY)
                     continue

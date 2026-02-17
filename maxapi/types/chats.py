@@ -37,17 +37,23 @@ class Chat(BaseModel):
         status (ChatStatus): Статус чата.
         title (Optional[str]): Название чата.
         icon (Optional[Icon]): Иконка чата. Может быть None.
-        last_event_time (int): Временная метка последнего события в чате.
+        last_event_time (int): Временная метка последнего события
+            в чате.
         participants_count (int): Количество участников чата.
         owner_id (Optional[int]): Идентификатор владельца чата.
-        participants (Optional[Dict[str, datetime]]): Словарь участников с временными метками. Может быть None.
+        participants (Optional[Dict[str, datetime]]): Словарь участников
+            с временными метками. Может быть None.
         is_public (bool): Флаг публичности чата.
         link (Optional[str]): Ссылка на чат. Может быть None.
         description (Optional[str]): Описание чата. Может быть None.
-        dialog_with_user (Optional[User]): Пользователь, с которым ведется диалог. Может быть None.
-        messages_count (Optional[int]): Количество сообщений в чате. Может быть None.
-        chat_message_id (Optional[str]): Идентификатор сообщения чата. Может быть None.
-        pinned_message (Optional[Message]): Закрепленное сообщение. Может быть None.
+        dialog_with_user (Optional[User]): Пользователь, с которым
+            ведется диалог. Может быть None.
+        messages_count (Optional[int]): Количество сообщений в чате.
+            Может быть None.
+        chat_message_id (Optional[str]): Идентификатор сообщения чата.
+            Может быть None.
+        pinned_message (Optional[Message]): Закрепленное сообщение.
+            Может быть None.
     """
 
     chat_id: int
@@ -121,12 +127,17 @@ class ChatMember(User):
     Модель участника чата.
 
     Attributes:
-        last_access_time (Optional[int]): Время последнего доступа. Может быть None.
+        last_access_time (Optional[int]): Время последнего доступа.
+            Может быть None.
         is_owner (Optional[bool]): Флаг владельца чата. Может быть None.
-        is_admin (Optional[bool]): Флаг администратора чата. Может быть None.
-        join_time (Optional[int]): Время присоединения к чату. Может быть None.
-        permissions (Optional[List[ChatPermission]]): Список разрешений участника. Может быть None.
-        alias (Optional[str]): Заголовок, который будет показан на клиент. Может быть None.
+        is_admin (Optional[bool]): Флаг администратора чата.
+        Может быть None.
+        join_time (Optional[int]): Время присоединения к чату.
+            Может быть None.
+        permissions (Optional[List[ChatPermission]]): Список разрешений
+            участника. Может быть None.
+        alias (Optional[str]): Заголовок, который будет показан
+            на клиент. Может быть None.
     """
 
     last_access_time: int | None = None

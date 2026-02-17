@@ -14,7 +14,8 @@ if TYPE_CHECKING:
 
 class SendCallback(BaseConnection):
     """
-    Класс для отправки callback-ответа с опциональным сообщением и уведомлением.
+    Класс для отправки callback-ответа с опциональным сообщением
+    и уведомлением.
 
     https://dev.max.ru/docs-api/methods/POST/answers
 

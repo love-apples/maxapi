@@ -25,7 +25,8 @@ class BaseConnection(BotMixin):
     """
     Базовый класс для всех методов API.
 
-    Содержит общую логику выполнения запроса (сериализация, отправка HTTP-запроса, обработка ответа).
+    Содержит общую логику выполнения запроса (сериализация, отправка
+    HTTP-запроса, обработка ответа).
     """
 
     API_URL = "https://platform-api.max.ru"
@@ -73,8 +74,10 @@ class BaseConnection(BotMixin):
         Args:
             method (HTTPMethod): HTTP-метод (GET, POST и т.д.).
             path (ApiPath | str): Путь до конечной точки.
-            model (BaseModel | Any, optional): Pydantic-модель для десериализации ответа, если is_return_raw=False.
-            is_return_raw (bool, optional): Если True — вернуть сырой ответ, иначе — результат десериализации.
+            model (BaseModel | Any, optional): Pydantic-модель для
+                десериализации ответа, если is_return_raw=False.
+            is_return_raw (bool, optional): Если True — вернуть сырой
+                ответ, иначе — результат десериализации.
             **kwargs: Дополнительные параметры (query, headers, json).
 
         Returns:

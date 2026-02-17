@@ -18,7 +18,8 @@ class MessageForCallback(BaseModel):
 
     Attributes:
         text (Optional[str]): Текст сообщения.
-        attachments (Optional[List[Union[AttachmentButton, Audio, Video, File, Image, Sticker, Share]]]):
+        attachments (Optional[List[Union[AttachmentButton, Audio, Video,
+            File, Image, Sticker, Share]]]):
             Список вложений.
         link (Optional[NewMessageLink]): Связь с другим сообщением.
         notify (Optional[bool]): Отправлять ли уведомление.
@@ -37,9 +38,9 @@ class MessageCallback(Update):
     Обновление с callback-событием сообщения.
 
     Attributes:
-        message (Optional[Message]): Изначальное сообщение, содержащее встроенную
-            клавиатуру. Может быть null, если оно было удалено к моменту,
-            когда бот получил это обновление.
+        message (Optional[Message]): Изначальное сообщение, содержащее
+            встроенную клавиатуру. Может быть null, если оно было
+            удалено к моменту, когда бот получил это обновление.
         user_locale (Optional[str]): Локаль пользователя.
         callback (Callback): Объект callback.
     """
@@ -73,7 +74,8 @@ class MessageCallback(Update):
         raise_if_not_exists: bool = True,
     ) -> "SendedCallback":
         """
-        Отправляет ответ на callback с возможностью изменить текст, вложения и параметры уведомления.
+        Отправляет ответ на callback с возможностью изменить текст,
+        вложения и параметры уведомления.
 
         Args:
             notification (str): Текст уведомления.
@@ -88,12 +90,13 @@ class MessageCallback(Update):
             SendedCallback: Результат вызова send_callback бота.
         """
 
-        # Если исходного сообщения нет (например, оно удалено), не стоит синтезировать
-        # пустой payload message. Два варианта поведения:
+        # Если исходного сообщения нет (например, оно удалено),
+        # не стоит синтезировать пустой payload message.
+        # Два варианта поведения:
         #  - если вызывающий просит изменить сообщение (new_text/link/format)
         #    => выбросить исключение
-        #  - иначе отправить только notification с message=None, чтобы API не получил
-        #    пустой объект message
+        #  - иначе отправить только notification с message=None,
+        #  чтобы API не получил пустой объект message
         original_body = None
         if self.message is not None:
             original_body = self.message.body
@@ -104,7 +107,8 @@ class MessageCallback(Update):
                 new_text is not None or link is not None or format is not None
             ):
                 raise ValueError(
-                    "Невозможно изменить сообщение: исходное сообщение отсутствует"
+                    "Невозможно изменить сообщение: "
+                    "исходное сообщение отсутствует"
                 )
 
             # отправляем только уведомление (без поля message)
@@ -114,7 +118,8 @@ class MessageCallback(Update):
                 notification=notification,
             )
 
-        # Если исходное сообщение есть — собираем MessageForCallback на его основе
+        # Если исходное сообщение есть —
+        # собираем MessageForCallback на его основе
         message_for_callback = MessageForCallback()
         message_for_callback.text = new_text
 

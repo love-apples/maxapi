@@ -47,7 +47,8 @@ class GetMessages(BaseConnection):
 
     async def fetch(self) -> Messages:
         """
-        Выполняет GET-запрос для получения сообщений с учётом параметров фильтрации.
+        Выполняет GET-запрос для получения сообщений с учётом
+        параметров фильтрации.
 
         Преобразует datetime в UNIX timestamp при необходимости.
 

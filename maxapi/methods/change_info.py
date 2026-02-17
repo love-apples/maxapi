@@ -17,8 +17,8 @@ class ChangeInfo(BaseConnection):
     Класс для изменения данных текущего бота.
 
     .. deprecated:: 0.9.8
-        Этот метод отсутствует в официальной swagger-спецификации API MAX.
-        Использование не рекомендуется.
+        Этот метод отсутствует в официальной swagger-спецификации
+        API MAX. Использование не рекомендуется.
 
     https://dev.max.ru/docs-api/methods/PATCH/me
 
@@ -26,11 +26,13 @@ class ChangeInfo(BaseConnection):
         first_name (str, optional): Имя бота (1–64 символа).
         last_name (str, optional): Второе имя бота (1–64 символа).
         description (str, optional): Описание бота (1–16000 символов).
-        commands (list[BotCommand], optional): Список команд (до 32 элементов).
+        commands (list[BotCommand], optional): Список команд
+            (до 32 элементов).
         photo (PhotoAttachmentRequestPayload, optional): Фото бота.
 
     Note:
-        Метод :meth:`fetch` возвращает объект :class:`User` с обновленными данными бота.
+        Метод :meth:`fetch` возвращает объект :class:`User`
+            с обновленными данными бота.
     """
 
     def __init__(
@@ -43,7 +45,8 @@ class ChangeInfo(BaseConnection):
         photo: PhotoAttachmentRequestPayload | None = None,
     ):
         warnings.warn(
-            "ChangeInfo устарел и отсутствует в официальной swagger-спецификации API MAX. "
+            "ChangeInfo устарел и отсутствует в официальной "
+            "swagger-спецификации API MAX. "
             "Использование не рекомендуется.",
             DeprecationWarning,
             stacklevel=2,

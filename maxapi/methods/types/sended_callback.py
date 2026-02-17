@@ -12,13 +12,15 @@ class SendedCallback(BaseModel):
 
     Attributes:
         success (bool): Статус успешности выполнения callback.
-        message (Optional[str]): Дополнительное сообщение или описание ошибки.
-        bot (Optional[Bot]): Внутреннее поле для хранения ссылки на экземпляр бота (не сериализуется).
+        message (Optional[str]): Дополнительное сообщение или описание
+            ошибки.
+        bot (Optional[Bot]): Внутреннее поле для хранения ссылки
+            на экземпляр бота (не сериализуется).
     """
 
     success: bool
     message: str | None = None
-    bot: Any | None = Field(default=None, exclude=True)  # pyright: ignore[reportRedeclaration]
+    bot: Any | None = Field(default=None, exclude=True)
 
     if TYPE_CHECKING:
         bot: Bot | None  # type: ignore

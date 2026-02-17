@@ -31,11 +31,14 @@ class EditMessage(BaseConnection):
         bot (Bot): Экземпляр бота для выполнения запроса.
         message_id (str): Идентификатор сообщения для редактирования.
         text (Optional[str]): Новый текст сообщения.
-        attachments (Optional[List[Attachment | InputMedia | InputMediaBuffer]]):
-            Список вложений для сообщения.
-        link (Optional[NewMessageLink]): Связь с другим сообщением (например, ответ или пересылка).
-        notify (Optional[bool]): Отправлять ли уведомление о сообщении. По умолчанию True.
-        parse_mode (Optional[ParseMode]): Формат разметки текста (например, Markdown, HTML).
+        attachments (Optional[List[Attachment | InputMedia |
+            InputMediaBuffer]]): Список вложений для сообщения.
+        link (Optional[NewMessageLink]): Связь с другим сообщением
+            (например, ответ или пересылка).
+        notify (Optional[bool]): Отправлять ли уведомление о сообщении.
+            По умолчанию True.
+        parse_mode (Optional[ParseMode]): Формат разметки текста
+            (например, Markdown, HTML).
     """
 
     def __init__(
@@ -70,7 +73,8 @@ class EditMessage(BaseConnection):
         """
         Выполняет PUT-запрос для обновления сообщения.
 
-        Формирует тело запроса на основе переданных параметров и отправляет запрос к API.
+        Формирует тело запроса на основе переданных параметров и
+        отправляет запрос к API.
 
         Returns:
             EditedMessage: Обновлённое сообщение.
@@ -132,7 +136,9 @@ class EditMessage(BaseConnection):
                     and e.raw.get("code") == "attachment.not.ready"
                 ):
                     logger_bot.info(
-                        f"Ошибка при отправке загруженного медиа, попытка {attempt + 1}, жду {self.RETRY_DELAY} секунды"
+                        f"Ошибка при отправке загруженного медиа, "
+                        f"попытка {attempt + 1}, "
+                        f"жду {self.RETRY_DELAY} секунды"
                     )
                     await asyncio.sleep(self.RETRY_DELAY)
                     continue

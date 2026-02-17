@@ -13,7 +13,8 @@ class InputMedia:
 
     Attributes:
         path (str): Путь к файлу.
-        type (UploadType): Тип файла, определенный на основе содержимого (MIME-типа).
+        type (UploadType): Тип файла, определенный на основе содержимого
+            (MIME-типа).
     """
 
     def __init__(self, path: str):

@@ -18,7 +18,8 @@ class GetUploadURL(BaseConnection):
 
     Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
-        type (UploadType): Тип загружаемого файла (например, image, video и т.д.).
+        type (UploadType): Тип загружаемого файла (например, image,
+            video и т.д.).
     """
 
     def __init__(self, bot: "Bot", type: UploadType):

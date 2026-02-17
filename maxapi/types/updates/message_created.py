@@ -25,7 +25,8 @@ class MessageCreated(Update):
         Возвращает кортеж идентификаторов (chat_id, user_id).
 
         Returns:
-            tuple[Optional[int], Optional[int]]: Идентификатор чата и пользователя.
+            tuple[Optional[int], Optional[int]]: Идентификатор чата и
+                пользователя.
         """
 
         chat_id = self.message.recipient.chat_id

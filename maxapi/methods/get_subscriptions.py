@@ -11,7 +11,8 @@ if TYPE_CHECKING:
 
 class GetSubscriptions(BaseConnection):
     """
-    Если ваш бот получает данные через WebHook, этот класс возвращает список всех подписок.
+    Если ваш бот получает данные через WebHook, этот класс возвращает
+    список всех подписок.
 
     https://dev.max.ru/docs-api/methods/GET/subscriptions
 

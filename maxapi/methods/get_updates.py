@@ -27,7 +27,8 @@ class GetUpdates(BaseConnection):
         limit (int): Лимит на количество получаемых обновлений.
         timeout (int): Таймаут ожидания.
         marker (Optional[int]): ID последнего обработанного события.
-        types (Optional[Sequence[UpdateType]]): Список типов событий для фильтрации.
+        types (Optional[Sequence[UpdateType]]): Список типов событий
+            для фильтрации.
     """
 
     def __init__(

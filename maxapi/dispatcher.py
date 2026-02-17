@@ -83,9 +83,12 @@ class Dispatcher(BotMixin):
 
         Args:
             router_id (str | None): Идентификатор роутера для логов.
-            use_create_task (bool): Флаг, отвечающий за параллелизацию обработок событий.
-            storage (type[BaseContext]): Класс контекста для хранения данных (MemoryContext, RedisContext и т.д.).
-            **storage_kwargs (Any): Дополнительные аргументы для инициализации хранилища.
+            use_create_task (bool): Флаг, отвечающий за параллелизацию
+                обработок событий.
+            storage (type[BaseContext]): Класс контекста для хранения
+                данных (MemoryContext, RedisContext и т.д.).
+            **storage_kwargs (Any): Дополнительные аргументы для
+                инициализации хранилища.
         """
 
         self.router_id = router_id
@@ -250,7 +253,8 @@ class Dispatcher(BotMixin):
 
     async def __ready(self, bot: Bot) -> None:
         """
-        Подготавливает диспетчер: сохраняет бота, регистрирует обработчики, вызывает on_started.
+        Подготавливает диспетчер: сохраняет бота, регистрирует
+        обработчики, вызывает on_started.
 
         Args:
             bot (Bot): Экземпляр бота.
@@ -267,7 +271,8 @@ class Dispatcher(BotMixin):
                     [s.url for s in response.subscriptions]
                 )
                 logger_dp.warning(
-                    "БОТ ИГНОРИРУЕТ POLLING! Обнаружены установленные подписки: %s",
+                    "БОТ ИГНОРИРУЕТ POLLING! "
+                    "Обнаружены установленные подписки: %s",
                     logger_subscriptions_text,
                 )
 
@@ -313,7 +318,8 @@ class Dispatcher(BotMixin):
         self, chat_id: int | None, user_id: int | None
     ) -> BaseContext:
         """
-        Возвращает существующий или создаёт новый контекст по chat_id и user_id.
+        Возвращает существующий или создаёт новый контекст
+        по chat_id и user_id.
 
         Args:
             chat_id (Optional[int]): Идентификатор чата.
@@ -368,7 +374,8 @@ class Dispatcher(BotMixin):
             filters (List[BaseFilter]): Список фильтров.
 
         Returns:
-            Optional[Dict[str, Any]] | Literal[False]: Словарь с результатом или False.
+            Optional[Dict[str, Any]] | Literal[False]: Словарь с
+                результатом или False.
         """
 
         data = {}
@@ -395,7 +402,8 @@ class Dispatcher(BotMixin):
             router (Router | Dispatcher): Роутер для проверки.
 
         Returns:
-            Optional[Dict[str, Any]] | Literal[False]: Словарь с данными или False, если фильтры не прошли.
+            Optional[Dict[str, Any]] | Literal[False]: Словарь с данными
+                или False, если фильтры не прошли.
         """
         if router.filters and not filter_attrs(event, *router.filters):
             return False
@@ -477,13 +485,15 @@ class Dispatcher(BotMixin):
         process_info: str,
     ) -> None:
         """
-        Выполняет обработчик с построением цепочки middleware и обработкой ошибок.
+        Выполняет обработчик с построением цепочки middleware
+        и обработкой ошибок.
 
         Args:
             handler (Handler): Обработчик для выполнения.
             event (UpdateUnion): Событие.
             data (Dict[str, Any]): Данные для обработчика.
-            handler_middlewares (List[BaseMiddleware]): Middleware для обработчика.
+            handler_middlewares (List[BaseMiddleware]): Middleware для
+                обработчика.
             memory_context (BaseContext): Контекст памяти.
             current_state (Optional[Any]): Текущее состояние.
             router_id (Any): Идентификатор роутера для логов.
@@ -538,7 +548,8 @@ class Dispatcher(BotMixin):
 
     async def handle(self, event_object: UpdateUnion) -> None:
         """
-        Основной обработчик события. Применяет фильтры, middleware и вызывает нужный handler.
+        Основной обработчик события. Применяет фильтры, middleware
+        и вызывает нужный handler.
 
         Args:
             event_object (UpdateUnion): Событие.
@@ -553,7 +564,10 @@ class Dispatcher(BotMixin):
             current_state = await memory_context.get_state()
             kwargs = {"context": memory_context}
 
-            process_info = f"{event_object.update_type} | chat_id: {ids[0]}, user_id: {ids[1]}"
+            process_info = (
+                f"{event_object.update_type} | "
+                f"chat_id: {ids[0]}, user_id: {ids[1]}"
+            )
 
             is_handled = False
 
@@ -614,7 +628,8 @@ class Dispatcher(BotMixin):
                             )
 
                             logger_dp.info(
-                                f"Обработано: router_id: {router_id} | {process_info}"
+                                f"Обработано: "
+                                f"router_id: {router_id} | {process_info}"
                             )
 
                             is_handled = True
@@ -664,7 +679,8 @@ class Dispatcher(BotMixin):
 
         except Exception as e:
             logger_dp.exception(
-                f"Ошибка при обработке события: router_id: {router_id} | {process_info} | {e} "
+                f"Ошибка при обработке события: router_id: "
+                f"{router_id} | {process_info} | {e} "
             )
 
     async def start_polling(
@@ -693,7 +709,8 @@ class Dispatcher(BotMixin):
                 continue
             except (MaxConnection, ClientConnectorError) as e:
                 logger_dp.warning(
-                    f"Ошибка подключения при получении обновлений: {e}, жду {CONNECTION_RETRY_DELAY} секунд"
+                    f"Ошибка подключения при получении обновлений: {e}, "
+                    f"жду {CONNECTION_RETRY_DELAY} секунд"
                 )
                 await asyncio.sleep(CONNECTION_RETRY_DELAY)
                 continue
@@ -703,13 +720,15 @@ class Dispatcher(BotMixin):
                 raise
             except MaxApiError as e:
                 logger_dp.info(
-                    f"Ошибка при получении обновлений: {e}, жду {GET_UPDATES_RETRY_DELAY} секунд"
+                    f"Ошибка при получении обновлений: {e}, "
+                    f"жду {GET_UPDATES_RETRY_DELAY} секунд"
                 )
                 await asyncio.sleep(GET_UPDATES_RETRY_DELAY)
                 continue
             except Exception as e:
                 logger_dp.error(
-                    f"Неожиданная ошибка при получении обновлений: {e.__class__.__name__}: {e}"
+                    f"Неожиданная ошибка при получении обновлений: "
+                    f"{e.__class__.__name__}: {e}"
                 )
                 await asyncio.sleep(GET_UPDATES_RETRY_DELAY)
                 continue
@@ -908,7 +927,8 @@ class Event:
             import warnings
 
             warnings.warn(
-                f"Событие {self.update_type} устарело и будет удалено в будущих версиях.",
+                f"Событие {self.update_type} устарело "
+                f"и будет удалено в будущих версиях.",
                 DeprecationWarning,
                 stacklevel=3,
             )

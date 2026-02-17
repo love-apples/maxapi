@@ -24,11 +24,15 @@ class Command(BaseFilter):
     Фильтр сообщений на соответствие команде.
 
     Args:
-        commands (str | List[str]): Ожидаемая команда или список команд без префикса.
+        commands (str | List[str]): Ожидаемая команда или список команд
+            без префикса.
         prefix (str, optional): Префикс команды (по умолчанию '/').
-        check_case (bool, optional): Учитывать регистр при сравнении (по умолчанию False).
-        ignore_symbol_at_sign (bool, optional): Учитывать символ "@" при отправке команды с упоминанием бота (по умолчанию False).
-        only_with_bot_username (bool, optional): Обязательно упоминать бота при отправке команды (по умолчанию False).
+        check_case (bool, optional): Учитывать регистр при сравнении
+            (по умолчанию False).
+        ignore_symbol_at_sign (bool, optional): Учитывать символ "@" при
+            отправке команды с упоминанием бота (по умолчанию False).
+        only_with_bot_username (bool, optional): Обязательно упоминать
+            бота при отправке команды (по умолчанию False).
     """
 
     def __init__(
@@ -68,8 +72,9 @@ class Command(BaseFilter):
             bot_username (str): Имя пользователя бота.
 
         Returns:
-            Tuple[str, List[str]]: Кортеж из команды без префикса и списка аргументов,
-            либо ('', []) если команда не найдена или текст не соответствует формату.
+            Tuple[str, List[str]]: Кортеж из команды без префикса и
+                списка аргументов, либо ('', []) если команда не найдена
+                или текст не соответствует формату.
         """
 
         if not text.strip():
@@ -124,7 +129,8 @@ class Command(BaseFilter):
             event (MessageCreated): Событие сообщения.
 
         Returns:
-            dict | bool: dict с аргументами команды при совпадении, иначе False.
+            dict | bool: dict с аргументами команды при совпадении,
+                иначе False.
         """
 
         if not isinstance(event, MessageCreated):
@@ -169,9 +175,12 @@ class CommandStart(Command):
 
     Args:
         prefix (str, optional): Префикс команды (по умолчанию '/').
-        check_case (bool, optional): Учитывать регистр (по умолчанию False)
-        ignore_symbol_at_sign (bool, optional): Учитывать символ "@" при отправке команды с упоминанием бота (по умолчанию False).
-        only_with_bot_username (bool, optional): Обязательно упоминать бота при отправке команды (по умолчанию False)..
+        check_case (bool, optional): Учитывать регистр
+            (по умолчанию False)
+        ignore_symbol_at_sign (bool, optional): Учитывать символ "@" при
+            отправке команды с упоминанием бота (по умолчанию False).
+        only_with_bot_username (bool, optional): Обязательно упоминать
+            бота при отправке команды (по умолчанию False)..
     """
 
     def __init__(

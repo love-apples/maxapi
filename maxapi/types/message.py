@@ -76,9 +76,11 @@ class MessageBody(BaseModel):
         mid (str): Уникальный идентификатор сообщения.
         seq (int): Порядковый номер сообщения.
         text (str): Текст сообщения. Может быть None.
-        attachments (Optional[List[Union[AttachmentButton, Audio, Video, File, Image, Sticker, Share]]]):
+        attachments (Optional[List[Union[AttachmentButton, Audio, Video,
+            File, Image, Sticker, Share]]]):
             Список вложений. По умолчанию пустой.
-        markup (Optional[List[Union[MarkupLink, MarkupElement]]]): Список элементов разметки. По умолчанию пустой.
+        markup (Optional[List[Union[MarkupLink, MarkupElement]]]):
+            Список элементов разметки. По умолчанию пустой.
     """
 
     mid: str
@@ -108,7 +110,9 @@ class LinkedMessage(BaseModel):
 
     Attributes:
         type (MessageLinkType): Тип связи.
-        sender (Optional[User]): Отправитель связанного сообщения, может быть None, если связанное сообщение отправлено каналом https://github.com/love-apples/maxapi/issues/11.
+        sender (Optional[User]): Отправитель связанного сообщения,
+            может быть None, если связанное сообщение отправлено каналом
+            https://github.com/love-apples/maxapi/issues/11.
         chat_id (Optional[int]): Идентификатор чата. Может быть None.
         message (MessageBody): Тело связанного сообщения.
     """
@@ -124,7 +128,9 @@ class Message(BaseModel, BotMixin):
     Модель сообщения.
 
     Attributes:
-        sender (Optional[User]): Отправитель сообщения, может быть None, если сообщение отправлено каналом https://github.com/love-apples/maxapi/discussions/14.
+        sender (Optional[User]): Отправитель сообщения, может быть None,
+            если сообщение отправлено каналом
+            https://github.com/love-apples/maxapi/discussions/14.
         recipient (Recipient): Получатель сообщения.
         timestamp (int): Временная метка сообщения.
         link (Optional[LinkedMessage]): Связанное сообщение. Может быть None.
@@ -168,14 +174,20 @@ class Message(BaseModel, BotMixin):
 
         Args:
             text (str, optional): Текст ответа. Может быть None.
-            attachments (List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload], optional): Список вложений. Может быть None.
-            link (NewMessageLink, optional): Связь с другим сообщением. Может быть None.
-            parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
+            attachments (List[Attachment | InputMedia | InputMediaBuffer
+                | AttachmentUpload], optional): Список вложений.
+                Может быть None.
+            link (NewMessageLink, optional): Связь с другим сообщением.
+                Может быть None.
+            parse_mode (ParseMode, optional): Режим форматирования текста.
+                Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
-            sleep_after_input_media (bool, optional): Флаг задержки после отправки вложений типа InputMedia. По умолчанию True.
+            sleep_after_input_media (bool, optional): Флаг задержки
+                после отправки вложений типа InputMedia. По умолчанию True.
 
         Returns:
-            Optional[SendedMessage]: Результат выполнения метода send_message бота.
+            Optional[SendedMessage]: Результат выполнения метода
+                send_message бота.
         """
 
         return await self._ensure_bot().send_message(
@@ -206,13 +218,17 @@ class Message(BaseModel, BotMixin):
 
         Args:
             text (str, optional): Текст ответа. Может быть None.
-            attachments (List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload], optional): Список вложений. Может быть None.
+            attachments (List[Attachment | InputMedia | InputMediaBuffer
+                | AttachmentUpload], optional): Список вложений.
+                Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
-            parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
+            parse_mode (ParseMode, optional): Режим форматирования текста.
+                Может быть None.
             sleep_after_input_media: Optional[bool] = True,
 
         Returns:
-            Optional[SendedMessage]: Результат выполнения метода send_message бота.
+            Optional[SendedMessage]: Результат выполнения метода
+                send_message бота.
         """
 
         if self.body is None:
@@ -248,18 +264,25 @@ class Message(BaseModel, BotMixin):
         sleep_after_input_media: bool | None = True,
     ) -> SendedMessage | None:
         """
-        Пересылает отправленное сообщение в указанный чат (автозаполнение link).
+        Пересылает отправленное сообщение в указанный чат.
+        (автозаполнение link)
 
         Args:
-            chat_id (int): ID чата для отправки (обязателен, если не указан user_id)
-            user_id (int): ID пользователя для отправки (обязателен, если не указан chat_id). По умолчанию None
-            attachments (List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload], optional): Список вложений. Может быть None.
+            chat_id (int): ID чата для отправки (обязателен, если не
+                указан user_id)
+            user_id (int): ID пользователя для отправки (обязателен,
+                если не указан chat_id). По умолчанию None
+            attachments (List[Attachment | InputMedia | InputMediaBuffer
+                | AttachmentUpload], optional): Список вложений.
+                Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
-            parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
+            parse_mode (ParseMode, optional): Режим форматирования
+                текста. Может быть None.
             sleep_after_input_media: Optional[bool] = True,
 
         Returns:
-            Optional[SendedMessage]: Результат выполнения метода send_message бота.
+            Optional[SendedMessage]: Результат выполнения метода
+                send_message бота.
         """
 
         if self.body is None:
@@ -297,13 +320,18 @@ class Message(BaseModel, BotMixin):
 
         Args:
             text (str, optional): Новый текст сообщения. Может быть None.
-            attachments (List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload], optional): Новые вложения. Может быть None.
-            link (NewMessageLink, optional): Новая связь с сообщением. Может быть None.
-            parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
+            attachments (List[Attachment | InputMedia | InputMediaBuffer |
+                AttachmentUpload], optional): Новые вложения. Может быть None.
+            link (NewMessageLink, optional): Новая связь с сообщением.
+                Может быть None.
+            parse_mode (ParseMode, optional): Режим форматирования текста.
+                Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
-            sleep_after_input_media (bool, optional): Флаг задержки после отправки вложений типа InputMedia. По умолчанию True.
+            sleep_after_input_media (bool, optional): Флаг задержки
+                после отправки вложений типа InputMedia. По умолчанию True.
         Returns:
-            Optional[EditedMessage]: Результат выполнения метода edit_message бота.
+            Optional[EditedMessage]: Результат выполнения метода
+                edit_message бота.
         """
 
         if link is None and self.link:

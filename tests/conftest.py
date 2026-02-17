@@ -18,7 +18,8 @@ try:
     env_file = project_root / ".env"
     tests_env = Path(__file__).parent / ".env"
 
-    # Пробуем загрузить .env из разных мест (приоритет: корень проекта, затем tests/)
+    # Пробуем загрузить .env из разных мест
+    # (приоритет: корень проекта, затем tests/)
     if env_file.exists():
         load_dotenv(env_file, override=True)
     elif tests_env.exists():
@@ -43,7 +44,10 @@ def mock_bot_token():
 
 @pytest.fixture
 def bot_token_from_env():
-    """Фикстура для получения токена из окружения (для интеграционных тестов)."""
+    """Фикстура для получения токена из окружения.
+
+    (для интеграционных тестов)
+    """
     return os.environ.get("MAX_BOT_TOKEN")
 
 
@@ -158,8 +162,8 @@ def faker():
 def fake_user(faker):
     """Фабрика данных для создания тестового User.
 
-    Возвращает функцию, принимающую переопределения полей и возвращающую словарь
-    с валидными значениями для модели `User`.
+    Возвращает функцию, принимающую переопределения полей и
+    возвращающую словарь с валидными значениями для модели `User`.
     """
 
     def _factory(**overrides):
@@ -191,7 +195,8 @@ async def integration_bot(bot_token_from_env):
     try:
         yield bot
     finally:
-        # Закрываем сессию после теста для предотвращения "Event loop is closed"
+        # Закрываем сессию после теста для предотвращения
+        # "Event loop is closed"
         if bot.session and not bot.session.closed:
             # Игнорируем ошибки при закрытии, если event loop уже закрыт
             with suppress(Exception):
@@ -216,11 +221,12 @@ def preserve_env_vars():
 
 
 def pytest_collection_modifyitems(config, items):
-    """Автоматически пропускает тесты с маркером integration, если не задан токен."""
+    """Автоматически пропускает тесты с маркером integration,
+    если не задан токен.
+    """
     if not os.environ.get("MAX_BOT_TOKEN"):
-        skip_integration = pytest.mark.skip(
-            reason="Интеграционные тесты пропущены: MAX_BOT_TOKEN не установлен"
-        )
+        reason = "MAX_BOT_TOKEN не установлен, пропускаем интеграционные тесты"
+        skip_integration = pytest.mark.skip(reason=reason)
         for item in items:
             if "integration" in item.keywords:
                 item.add_marker(skip_integration)

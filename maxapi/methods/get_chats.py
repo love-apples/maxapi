@@ -17,7 +17,8 @@ class GetChats(BaseConnection):
 
     Attributes:
         bot (Bot): Инициализированный клиент бота.
-        count (Optional[int]): Максимальное количество чатов, возвращаемых за один запрос.
+        count (Optional[int]): Максимальное количество чатов,
+            возвращаемых за один запрос.
         marker (Optional[int]): Маркер для продолжения пагинации.
     """
 

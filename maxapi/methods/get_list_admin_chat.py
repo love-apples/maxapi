@@ -26,10 +26,12 @@ class GetListAdminChat(BaseConnection):
 
     async def fetch(self) -> GettedListAdminChat:
         """
-        Выполняет GET-запрос для получения списка администраторов указанного чата.
+        Выполняет GET-запрос для получения списка администраторов
+        указанного чата.
 
         Returns:
-            GettedListAdminChat: Объект с информацией о администраторах чата.
+            GettedListAdminChat: Объект с информацией о администраторах
+                чата.
         """
 
         bot = self._ensure_bot()

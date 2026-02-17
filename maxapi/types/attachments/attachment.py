@@ -70,7 +70,8 @@ class ButtonsPayload(BaseModel):
     Данные для вложения с кнопками.
 
     Attributes:
-        buttons (List[List[InlineButtonUnion]]): Двумерный список inline-кнопок.
+        buttons (List[List[InlineButtonUnion]]): Двумерный список
+            inline-кнопок.
     """
 
     buttons: list[list[InlineButtonUnion]]
@@ -85,7 +86,8 @@ class Attachment(BaseModel):
 
     Attributes:
         type (AttachmentType): Тип вложения.
-        payload (Optional[Union[...] ]): Полезная нагрузка, зависит от типа вложения.
+        payload (Optional[Union[...] ]): Полезная нагрузка, зависит
+            от типа вложения.
     """
 
     type: AttachmentType

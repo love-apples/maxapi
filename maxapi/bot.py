@@ -108,15 +108,24 @@ class Bot(BaseConnection):
         Инициализирует экземпляр бота.
 
         Args:
-            token (str): Токен доступа к API бота. При None идет получение из под окружения MAX_BOT_TOKEN.
-            parse_mode (Optional[ParseMode]): Форматирование по умолчанию.
-            notify (Optional[bool]): Отключение уведомлений при отправке сообщений.
-            disable_link_preview (Optional[bool]): Если false, сервер не будет генерировать превью для ссылок в тексте сообщений.
-            auto_requests (bool): Автоматическое заполнение chat/from_user через API (по умолчанию True).
-            default_connection (Optional[DefaultConnectionProperties]): Настройки соединения.
-            after_input_media_delay (Optional[float]): Задержка после загрузки файла.
-            auto_check_subscriptions (bool): Проверка подписок для метода start_polling.
-            marker_updates (Optional[int]): Маркер для получения обновлений.
+            token (str): Токен доступа к API бота. При None идет
+                получение из под окружения MAX_BOT_TOKEN.
+            parse_mode (Optional[ParseMode]): Форматирование по
+                умолчанию.
+            notify (Optional[bool]): Отключение уведомлений при отправке
+                сообщений.
+            disable_link_preview (Optional[bool]): Если false, сервер не
+                будет генерировать превью для ссылок в тексте сообщений.
+            auto_requests (bool): Автоматическое заполнение
+                chat/from_user через API (по умолчанию True).
+            default_connection (Optional[DefaultConnectionProperties]):
+                Настройки соединения.
+            after_input_media_delay (Optional[float]): Задержка после
+                загрузки файла.
+            auto_check_subscriptions (bool): Проверка подписок для
+                метода start_polling.
+            marker_updates (Optional[int]): Маркер для получения
+                обновлений.
         """
 
         super().__init__()
@@ -131,7 +140,9 @@ class Bot(BaseConnection):
         self.__token = token or os.environ.get("MAX_BOT_TOKEN")
         if self.__token is None:
             raise InvalidToken(
-                'Токен не может быть None. Укажите токен в Bot(token="...") или в переменную окружения MAX_BOT_TOKEN'
+                "Токен не может быть None. "
+                'Укажите токен в Bot(token="...") '
+                "или в переменную окружения MAX_BOT_TOKEN"
             )
 
         self.params: dict[str, Any] = {}
@@ -159,7 +170,8 @@ class Bot(BaseConnection):
     @property
     def handlers_commands(self) -> list[CommandsInfo]:
         """
-        Возвращает список команд из зарегистрированных обработчиков текущего инстанса.
+        Возвращает список команд из зарегистрированных обработчиков
+        текущего инстанса.
 
         Returns:
             List[CommandsInfo]: Список команд
@@ -257,15 +269,20 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/POST/messages
 
         Args:
-            chat_id (Optional[int]): ID чата для отправки (если не user_id).
+            chat_id (Optional[int]): ID чата для отправки (если не
+                user_id).
             user_id (Optional[int]): ID пользователя (если не chat_id).
             text (Optional[str]): Текст сообщения.
-            attachments (Optional[List[Attachment | InputMedia | InputMediaBuffer]]): Вложения.
+            attachments (Optional[List[Attachment | InputMedia |
+                InputMediaBuffer]]): Вложения.
             link (Optional[NewMessageLink]): Данные ссылки сообщения.
             notify (Optional[bool]): Флаг уведомления.
-            parse_mode (Optional[ParseMode]): Режим форматирования текста.
-            disable_link_preview (Optional[bool]): Флаг генерации превью.
-            sleep_after_input_media (Optional[bool]): Нужно ли делать задержку после загрузки вложений.
+            parse_mode (Optional[ParseMode]): Режим форматирования
+                текста.
+            disable_link_preview (Optional[bool]): Флаг генерации
+                превью.
+            sleep_after_input_media (Optional[bool]): Нужно ли делать
+                задержку после загрузки вложений.
 
         Returns:
             Optional[SendedMessage]: Отправленное сообщение или ошибка.
@@ -331,13 +348,16 @@ class Bot(BaseConnection):
         Args:
             message_id (str): ID сообщения.
             text (Optional[str]): Новый текст.
-            attachments (Optional[List[Attachment | InputMedia | InputMediaBuffer]]): Новые вложения.
+            attachments (Optional[List[Attachment | InputMedia |
+                InputMediaBuffer]]): Новые вложения.
             link (Optional[NewMessageLink]): Новая ссылка.
             notify (Optional[bool]): Флаг уведомления.
-            parse_mode (Optional[ParseMode]): Режим форматирования текста.
+            parse_mode (Optional[ParseMode]): Режим форматирования
+                текста.
 
         Returns:
-            Optional[EditedMessage]: Отредактированное сообщение или ошибка.
+            Optional[EditedMessage]: Отредактированное сообщение
+                или ошибка.
         """
 
         return await EditMessage(
@@ -482,17 +502,21 @@ class Bot(BaseConnection):
         Args:
             first_name (Optional[str]): Новое имя бота (1–64 символа).
             last_name (str, optional): Второе имя бота (1–64 символа).
-            description (Optional[str]): Новое описание бота (1–16000 символов).
-            commands (Optional[List[BotCommand]]): Список команд бота (до 32 элементов).
-                Передайте пустой список, чтобы удалить все команды.
-            photo (Optional[PhotoAttachmentRequestPayload]): Новое фото бота.
+            description (Optional[str]): Новое описание бота
+                (1–16000 символов).
+            commands (Optional[List[BotCommand]]): Список команд бота
+                (до 32 элементов). Передайте пустой список, чтобы
+                удалить все команды.
+            photo (Optional[PhotoAttachmentRequestPayload]): Новое
+                фото бота.
 
         Returns:
             User: Объект с обновлённой информацией о боте.
         """
 
         warnings.warn(
-            "bot.change_info() устарел и отсутствует в официальной swagger-спецификации API MAX. "
+            "bot.change_info() устарел и отсутствует в официальной "
+            "swagger-спецификации API MAX. "
             "Использование не рекомендуется.",
             DeprecationWarning,
             stacklevel=2,
@@ -802,7 +826,8 @@ class Bot(BaseConnection):
             chat_id (int): ID чата.
             user_ids (Optional[List[int]]): Список ID участников.
             marker (Optional[int]): Маркер для пагинации.
-            count (Optional[int]): Количество участников (по умолчанию 20) (1-100).
+            count (Optional[int]): Количество участников
+                (по умолчанию 20) (1-100).
 
         Returns:
             GettedMembersChat: Список участников.
@@ -942,7 +967,8 @@ class Bot(BaseConnection):
         """
 
         warnings.warn(
-            "bot.change_info() устарел и отсутствует в официальной swagger-спецификации API MAX. "
+            "bot.change_info() устарел и отсутствует в официальной "
+            "swagger-спецификации API MAX. "
             "Использование не рекомендуется.",
             DeprecationWarning,
             stacklevel=2,

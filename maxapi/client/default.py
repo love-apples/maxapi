@@ -5,15 +5,20 @@ from aiohttp import ClientTimeout
 
 class DefaultConnectionProperties:
     """
-    Класс для хранения параметров соединения по умолчанию для aiohttp-клиента.
+    Класс для хранения параметров соединения по умолчанию для
+    aiohttp-клиента.
 
     Args:
-        timeout (float): Таймаут всего соединения в секундах (по умолчанию 5 * 30).
-        sock_connect (int): Таймаут установки TCP-соединения в секундах (по умолчанию 30).
-        **kwargs (Any): Дополнительные параметры, которые будут сохранены как есть.
+        timeout (float): Таймаут всего соединения в секундах
+            (по умолчанию 5 * 30).
+        sock_connect (int): Таймаут установки TCP-соединения в секундах
+            (по умолчанию 30).
+        **kwargs (Any): Дополнительные параметры, которые будут
+            сохранены как есть.
 
     Attributes:
-        timeout (ClientTimeout): Экземпляр aiohttp.ClientTimeout с заданными параметрами.
+        timeout (ClientTimeout): Экземпляр aiohttp.ClientTimeout
+            с заданными параметрами.
         kwargs (dict): Дополнительные параметры.
     """
 

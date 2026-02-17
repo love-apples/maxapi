@@ -12,14 +12,17 @@ if TYPE_CHECKING:
 
 class SendAction(BaseConnection):
     """
-    Класс для отправки действия пользователя (например, индикатора печати) в чат.
+    Класс для отправки действия пользователя (например, индикатора
+    печати) в чат.
 
     https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/actions
 
     Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
-        chat_id (Optional[int]): Идентификатор чата. Если None, действие не отправляется.
-        action (Optional[SenderAction]): Тип действия. По умолчанию SenderAction.TYPING_ON.
+        chat_id (Optional[int]): Идентификатор чата. Если None,
+            действие не отправляется.
+        action (Optional[SenderAction]): Тип действия. По умолчанию
+            SenderAction.TYPING_ON.
     """
 
     def __init__(

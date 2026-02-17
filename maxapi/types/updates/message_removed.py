@@ -20,7 +20,8 @@ class MessageRemoved(Update):
         Возвращает кортеж идентификаторов (chat_id, user_id).
 
         Returns:
-            Tuple[Optional[int], Optional[int]]: Идентификаторы чата и пользователя.
+            Tuple[Optional[int], Optional[int]]: Идентификаторы чата и
+                пользователя.
         """
 
         return (self.chat_id, self.user_id)

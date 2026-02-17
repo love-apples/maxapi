@@ -40,7 +40,8 @@ def test_convert_timestamps_millis_to_datetime():
 
     assert isinstance(chat.participants, dict)
     assert isinstance(chat.participants["u1"], datetime)
-    # преобразованная datetime должна приблизительно соответствовать исходному времени
+    # преобразованная datetime должна приблизительно соответствовать
+    # исходному времени
     assert abs((chat.participants["u1"] - now).total_seconds()) < 1
     assert (
         chat.participants["u2"] - chat.participants["u1"]
@@ -49,7 +50,8 @@ def test_convert_timestamps_millis_to_datetime():
 
 def test_convert_timestamps_with_none_values_raises_validation_error():
     # Если некоторые метки времени равны None, валидация должна упасть,
-    # поскольку значения participants типизированы как datetime (а не Optional[datetime]).
+    # поскольку значения participants типизированы как datetime
+    # (а не Optional[datetime]).
     data = {"u1": None, "u2": 1609459200000}
     with pytest.raises(pydantic_core.ValidationError):
         Chat(
@@ -64,7 +66,9 @@ def test_convert_timestamps_with_none_values_raises_validation_error():
 
 
 def test_serialize_participants_datetime_to_millis():
-    """Проверяем, что словарь participants с datetime значениями сериализуется в миллисекунды."""
+    """Проверяем, что словарь participants с datetime значениями
+    сериализуется в миллисекунды.
+    """
     from datetime import timedelta
 
     now = datetime.now()
