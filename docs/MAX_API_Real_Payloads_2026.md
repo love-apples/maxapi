@@ -1,9 +1,5 @@
 # Real World MAX API Payloads (2026)
 # Reverse engineered JSON payloads for MAX Messenger API (Feb 2026). Real-world examples for developers./
-
-> ⭐️ **Original Source & Updates:**
-> This document is a snapshot of the collection maintained in **[this GitHub Gist](https://gist.github.com/Danya2904/4280c88912090e7440fb7bfc54abdea3)**.
-> Please check the Gist for the most recent updates or to leave comments/stars.
 ---
 # MAX Messenger API & SubCheckerBot Architecture
 
@@ -15,11 +11,11 @@
 ```json
 
 {
-  "user_id": 10002,
-  "first_name": "SubChecker",
+  "user_id": 12345,
+  "first_name": "Bot_Name",
   "username": "example_bot",
   "is_bot": true,
-  "last_activity_time": 1770679711537,
+  "last_activity_time": 1739184000000,
   "description": "🚀 Автовыдача бонусов за подписку! Бот проверяет подписку на ваш канал и мгновенно выдает лид-магнит (файл или ссылку). 📈 Расти аудиторию на автомате. ⚙️ Настройка поста за 1 минуту.",
   "avatar_url": "https://i.oneme.ru/i?r=BTFjO43w8Yr1OSJ4tcurq5HiGFXTgmcNFCqWsL5eFLaBsq_WO3gNo_PCmzpboct_jy8",
   "full_avatar_url": "https://i.oneme.ru/i?r=BTFjO43w8Yr1OSJ4tcurq5HiHBeIhpWE6pyKskhnmJMdXK_WO3gNo_PCmzpboct_jy8",
@@ -37,7 +33,7 @@
       "description": "Помощь"
     }
   ],
-  "name": "SubChecker"
+  "name": "Bot_Name"
 }
 
 2. Real API Events (Webhooks)
@@ -45,25 +41,25 @@
 Triggered when a user sends text. Source: event_message_created_xxxx.json (Text variant)
 JSON
 {
-  "timestamp": 1770679787821,
+  "timestamp": 1739184000000,
   "message": {
     "recipient": {
       "chat_id": -100000000,
       "chat_type": "dialog",
-      "user_id": 10002
+      "user_id": 12345
     },
-    "timestamp": 1770679787821,
+    "timestamp": 1739184000000,
     "body": {
-      "mid": "mid.0000000008a53b9b019c44bd612d33e0",
-      "seq": 116043270574650336,
-      "text": "вапва"
+      "mid": "mid.REDACTED_ID",
+      "seq": 0,
+      "text": "Привет"
     },
     "sender": {
-      "user_id": 10001,
+      "user_id": 54321,
       "first_name": "User_Name",
       "last_name": "",
       "is_bot": false,
-      "last_activity_time": 1770679783000,
+      "last_activity_time": 1739184000000,
       "name": "User_Name"
     }
   },
@@ -77,14 +73,14 @@ Triggered when a user uploads an image. Source: event_message_created_xxxx.json 
 JSON
 {
   "callback": {
-    "timestamp": 1770679806850,
-    "callback_id": "f9LHodD0cOIEr0gCxuvowdetqQYLt6YmbfMaYw-zrjhsUTxjwbp1pu6VGgH9pMTYsOXFc5c9A_ZqxUeu6GqH1jb6vU8p9bC00g4jKPOcprtNbfkT3EKf",
+    "timestamp": 1739184000000,
+    "callback_id": "CALLBACK_ID_REDACTED",
     "user": {
-      "user_id": 10001,
+      "user_id": 54321,
       "first_name": "User_Name",
       "last_name": "",
       "is_bot": false,
-      "last_activity_time": 1770679800000,
+      "last_activity_time": 1739184000000,
       "name": "User_Name"
     },
     "payload": "new_campaign"
@@ -93,16 +89,16 @@ JSON
     "recipient": {
       "chat_id": -100000000,
       "chat_type": "dialog",
-      "user_id": 10001
+      "user_id": 54321
     },
-    "timestamp": 1770659375216,
+    "timestamp": 1739184000000,
     "body": {
-      "mid": "mid.0000000008a53b9b019c4385e870772f",
-      "seq": 116041932814186287,
-      "text": "Я бот для проверки подписки на канал и выдачи бонуса",
+      "mid": "mid.REDACTED_ID",
+      "seq": 0,
+      "text": "Описание бота",
       "attachments": [
         {
-          "callback_id": "f9LHodD0cOLngNLRLPQfSXZgqBDflqFnELT1bmbAqQi_-KxTT5HIDeX8mbroS-_NPPwejDQCmxmqxj_FZOh-_HBHRNUXNQWwswszV-CrIfi236nzywae",
+          "callback_id": "CALLBACK_ID_REDACTED",
           "payload": {
             "buttons": [
               [
@@ -159,24 +155,24 @@ JSON
         },
         {
           "payload": {
-            "photo_id": 4484450835,
-            "token": "r8MRvzDqRDVaw59SP+XQhHBtiSp/U03et076+m7/hTnBn4EEJXhibpkmWTUPRvUyHUdxlK9RVHN7FbvBC8msKja3jADaBs5vdxxl1GxH1VFJPtxhMrVXfSpZjD+j6NEz",
-            "url": "https://i.oneme.ru/i?r=BTGBPUwtwgYUeoFhO7rESmr8FddYu8EkRnc1BbDFbQm1bcgN8COxyU5BTkp85aDzgF4"
+            "photo_id": 0,
+            "token": "MEDIA_TOKEN_REDACTED",
+            "url": "https://example.com/image.png"
           },
           "type": "image"
         }
       ]
     },
     "sender": {
-      "user_id": 10002,
-      "first_name": "SubChecker",
+      "user_id": 12345,
+      "first_name": "Bot_Name",
       "username": "example_bot",
       "is_bot": true,
-      "last_activity_time": 1770679807233,
-      "name": "SubChecker"
+      "last_activity_time": 1739184000000,
+      "name": "Bot_Name"
     }
   },
-  "timestamp": 1770679806850,
+  "timestamp": 1739184000000,
   "user_locale": "ru",
   "update_type": "message_callback"
 }
@@ -186,14 +182,14 @@ Triggered when an inline button is pressed. Source: event_message_callback_xxxx.
 JSON
 {
   "callback": {
-    "timestamp": 1770679803383,
-    "callback_id": "f9LHodD0cOJZOniECmtvwY8SptcuW_9QbNqRyNSQ5VH8nUtIQyScJBMaiaOrNLKI256iC4B88gSGGXjh7dNr00chXOtLf3d5ZKJQMRHaU7kNFeK7YASD",
+    "timestamp": 1739184000000,
+    "callback_id": "CALLBACK_ID_REDACTED",
     "user": {
-      "user_id": 10001,
+      "user_id": 54321,
       "first_name": "User_Name",
       "last_name": "",
       "is_bot": false,
-      "last_activity_time": 1770679800000,
+      "last_activity_time": 1739184000000,
       "name": "User_Name"
     },
     "payload": "utm_view_6"
@@ -202,37 +198,37 @@ JSON
     "recipient": {
       "chat_id": -100000000,
       "chat_type": "dialog",
-      "user_id": 10001
+      "user_id": 54321
     },
-    "timestamp": 1770671779146,
+    "timestamp": 1739184000000,
     "body": {
-      "mid": "mid.0000000008a53b9b019c44432d4a3a70",
-      "seq": 116042745718127216,
-      "text": "🔗 UTM-ссылки проверки 6\n\ntest2 — 1 получивших бонус, 2 пытались забрать бонус, 4 просмотров поста, создана 09.02.2026 16:15\ntest1 — 1 получивших бонус, 1 пытались забрать бонус, 0 просмотров поста, создана 09.02.2026 15:03",
+      "mid": "mid.REDACTED_ID",
+      "seq": 0,
+      "text": "🔗 UTM-ссылки\n\nКампания 1 — 0 получивших бонус, 0 пытались забрать бонус, 0 просмотров поста\nКампания 2 — 0 получивших бонус, 0 пытались забрать бонус, 0 просмотров поста",
       "attachments": [
         {
-          "callback_id": "f9LHodD0cOK60l00EgYGGlKfXneQiTsM6PZhvm7lXk8X350aSp-zTa_3fCXD_XN0keytvDsqDkWue_c0DG89UkvHiIWyEcKXtu8HUnk9eKVDkEfJmE83",
+          "callback_id": "CALLBACK_ID_REDACTED",
           "payload": {
             "buttons": [
               [
                 {
-                  "payload": "utm_view_6",
-                  "text": "🔗 test2",
+                  "payload": "utm_view_2",
+                  "text": "🔗 Кампания 1",
                   "intent": "default",
                   "type": "callback"
                 }
               ],
               [
                 {
-                  "payload": "utm_view_5",
-                  "text": "🔗 test1",
+                  "payload": "utm_view_1",
+                  "text": "🔗 Кампания 2",
                   "intent": "default",
                   "type": "callback"
                 }
               ],
               [
                 {
-                  "payload": "utm_create_6",
+                  "payload": "utm_create",
                   "text": "➕ Создать UTM-ссылку",
                   "intent": "default",
                   "type": "callback"
@@ -240,7 +236,7 @@ JSON
               ],
               [
                 {
-                  "payload": "view_campaign_6",
+                  "payload": "view_campaign",
                   "text": "🔙 К проверке",
                   "intent": "default",
                   "type": "callback"
@@ -254,31 +250,21 @@ JSON
       "markup": [
         {
           "from": 0,
-          "length": 24,
-          "type": "strong"
-        },
-        {
-          "from": 26,
-          "length": 5,
-          "type": "strong"
-        },
-        {
-          "from": 125,
-          "length": 5,
+          "length": 12,
           "type": "strong"
         }
       ]
     },
     "sender": {
-      "user_id": 10002,
-      "first_name": "SubChecker",
+      "user_id": 12345,
+      "first_name": "Bot_Name",
       "username": "example_bot",
       "is_bot": true,
-      "last_activity_time": 1770679803762,
-      "name": "SubChecker"
+      "last_activity_time": 1739184000000,
+      "name": "Bot_Name"
     }
   },
-  "timestamp": 1770679803383,
+  "timestamp": 1739184000000,
   "user_locale": "ru",
   "update_type": "message_callback"
 }
@@ -289,15 +275,15 @@ JSON
 {
   "chat_id": -100000000,
   "user": {
-    "user_id": 10003,
-    "first_name": "Test_User",
+    "user_id": 55555,
+    "first_name": "User_Name",
     "last_name": "",
     "is_bot": false,
-    "last_activity_time": 1770679612000,
-    "name": "Test_User"
+    "last_activity_time": 1739184000000,
+    "name": "User_Name"
   },
   "is_channel": true,
-  "timestamp": 1770679613310,
+  "timestamp": 1739184000000,
   "update_type": "user_added"
 }
 
@@ -320,3 +306,7 @@ IMPORTANT FOR DEVELOPERS: The SubCheckerBot transforms the Raw Data (above) into
 Images: External URLs are forbidden. Flow: POST /uploads -> Get Token -> POST /messages with token.
 
 Deep Links: Parsed from message.body.text (e.g., /start c42) or specific payload fields if available.
+
+>**Original Source & Updates:**
+> This document is a snapshot of the collection maintained in [this GitHub Gist](https://gist.github.com/Danya2904/4280c88912090e7440fb7bfc54abdea3).
+> Please check the Gist for the most recent updates or to leave comments/stars.
