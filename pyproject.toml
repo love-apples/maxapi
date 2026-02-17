@@ -106,7 +106,7 @@ target-version = "py310"
 
 
 [tool.ruff.lint]
-# TODO: добавить BLE
+# TODO: добавить BLE C90 N
 extend-select = [
     "ASYNC",
     "B",
@@ -115,6 +115,7 @@ extend-select = [
     "FA",
     "FAST",
     "FBT",
+    "FLY",
     "G",
     "I",
     "ICN",
@@ -123,6 +124,7 @@ extend-select = [
     "ISC",
     "LOG",
     "PYI",
+    "PERF",
     "PIE",
     "PT",
     "PTH",

@@ -62,8 +62,7 @@ class InlineKeyboardBuilder:
 
         flat_buttons = []
         for row in self.payload:
-            for button in row:
-                flat_buttons.append(button)
+            flat_buttons.extend(row)
 
         if not flat_buttons:
             return self

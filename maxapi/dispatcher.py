@@ -424,11 +424,11 @@ class Dispatcher(BotMixin):
         Returns:
             List[Handler]: Список подходящих обработчиков.
         """
-        matching_handlers = []
-        for handler in router.event_handlers:
-            if handler.update_type == event_type:
-                matching_handlers.append(handler)
-        return matching_handlers
+        return [
+            handler
+            for handler in router.event_handlers
+            if handler.update_type == event_type
+        ]
 
     async def _check_handler_match(
         self,
@@ -531,7 +531,7 @@ class Dispatcher(BotMixin):
             for handler in matching_handlers:
                 try:
                     await self.call_handler(handler, raw_data, {})
-                except Exception as e:
+                except Exception as e:  # noqa: PERF203
                     logger_dp.exception(
                         f"Ошибка в обработчике RAW_API_RESPONSE: {e}"
                     )
