@@ -24,6 +24,7 @@ class GetChatByLink(BaseConnection):
     PATTERN_LINK = r"@?[a-zA-Z]+[a-zA-Z0-9-_]*"
 
     def __init__(self, bot: "Bot", link: str):
+        super().__init__()
         self.bot = bot
         self.link = findall(self.PATTERN_LINK, link)
 

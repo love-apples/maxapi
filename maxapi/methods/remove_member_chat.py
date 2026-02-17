@@ -30,6 +30,7 @@ class RemoveMemberChat(BaseConnection):
         *,
         block: bool = False,
     ):
+        super().__init__()
         self.bot = bot
         self.chat_id = chat_id
         self.user_id = user_id

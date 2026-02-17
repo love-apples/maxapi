@@ -26,6 +26,7 @@ class GetMessage(BaseConnection):
         bot: "Bot",
         message_id: str,
     ):
+        super().__init__()
         self.bot = bot
         self.message_id = message_id
 

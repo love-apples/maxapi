@@ -69,6 +69,7 @@ class ChangeInfo(BaseConnection):
         if commands is not None and len(commands) > 32:
             raise ValueError("commands не может содержать больше 32 элементов")
 
+        super().__init__()
         self.bot = bot
         self.first_name = first_name
         self.last_name = last_name

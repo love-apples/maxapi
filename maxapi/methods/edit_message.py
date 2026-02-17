@@ -57,9 +57,10 @@ class EditMessage(BaseConnection):
         notify: bool | None = None,
         sleep_after_input_media: bool | None = True,
     ):
-        if text is not None and not (len(text) < 4000):
+        if text is not None and len(text) >= 4000:
             raise ValueError("text должен быть меньше 4000 символов")
 
+        super().__init__()
         self.bot = bot
         self.message_id = message_id
         self.text = text

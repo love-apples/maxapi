@@ -27,6 +27,7 @@ class AddMembersChat(BaseConnection):
         chat_id: int,
         user_ids: list[int],
     ):
+        super().__init__()
         self.bot = bot
         self.chat_id = chat_id
         self.user_ids = user_ids

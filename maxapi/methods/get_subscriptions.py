@@ -24,6 +24,7 @@ class GetSubscriptions(BaseConnection):
         self,
         bot: "Bot",
     ):
+        super().__init__()
         self.bot = bot
 
     async def fetch(self) -> GettedSubscriptions:

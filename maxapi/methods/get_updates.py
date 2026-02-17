@@ -45,6 +45,7 @@ class GetUpdates(BaseConnection):
         if timeout is not None and not (0 <= timeout <= 90):
             raise ValueError("timeout не должен быть меньше 0 и больше 90")
 
+        super().__init__()
         self.bot = bot
         self.limit = limit
         self.timeout = timeout

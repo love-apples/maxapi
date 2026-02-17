@@ -21,6 +21,7 @@ class GetChatById(BaseConnection):
     """
 
     def __init__(self, bot: "Bot", id: int):
+        super().__init__()
         self.bot = bot
         self.id = id
 

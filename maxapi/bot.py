@@ -354,6 +354,8 @@ class Bot(BaseConnection):
             notify (Optional[bool]): Флаг уведомления.
             parse_mode (Optional[ParseMode]): Режим форматирования
                 текста.
+            sleep_after_input_media (Optional[bool]): Нужно ли делать
+                задержку после загрузки вложений.
 
         Returns:
             Optional[EditedMessage]: Отредактированное сообщение

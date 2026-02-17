@@ -22,6 +22,7 @@ class GetMe(BaseConnection):
     """
 
     def __init__(self, bot: "Bot"):
+        super().__init__()
         self.bot = bot
 
     async def fetch(self) -> User:

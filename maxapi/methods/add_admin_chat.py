@@ -31,6 +31,7 @@ class AddAdminChat(BaseConnection):
         admins: list[ChatAdmin],
         marker: int | None = None,
     ):
+        super().__init__()
         self.bot = bot
         self.chat_id = chat_id
         self.admins = admins

@@ -21,6 +21,7 @@ class GetVideo(BaseConnection):
     """
 
     def __init__(self, bot: "Bot", video_token: str):
+        super().__init__()
         self.bot = bot
         self.video_token = video_token
 

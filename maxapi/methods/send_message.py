@@ -65,6 +65,7 @@ class SendMessage(BaseConnection):
         if text is not None and not (len(text) < 4000):
             raise ValueError("text должен быть меньше 4000 символов")
 
+        super().__init__()
         self.bot = bot
         self.chat_id = chat_id
         self.user_id = user_id

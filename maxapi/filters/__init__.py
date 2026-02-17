@@ -4,7 +4,7 @@ from .filter import BaseFilter
 
 F = MagicFilter()
 
-__all__ = ["BaseFilter"]
+__all__ = ["BaseFilter", "F"]
 
 
 def filter_attrs(obj: object, *filters: MagicFilter) -> bool:

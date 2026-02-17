@@ -28,6 +28,7 @@ class UnsubscribeWebhook(BaseConnection):
         bot: "Bot",
         url: str,
     ):
+        super().__init__()
         self.bot = bot
         self.url = url
 

@@ -31,6 +31,7 @@ class GetChats(BaseConnection):
         if count is not None and not (1 <= count <= 100):
             raise ValueError("count не должен быть меньше 1 или больше 100")
 
+        super().__init__()
         self.bot = bot
         self.count = count
         self.marker = marker

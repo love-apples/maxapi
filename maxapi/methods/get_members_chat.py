@@ -38,6 +38,7 @@ class GetMembersChat(BaseConnection):
         if count is not None and not (1 <= count <= 100):
             raise ValueError("count не должен быть меньше 1 или больше 100")
 
+        super().__init__()
         self.bot = bot
         self.chat_id = chat_id
         self.user_ids = user_ids

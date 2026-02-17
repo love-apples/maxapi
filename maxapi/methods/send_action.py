@@ -31,6 +31,7 @@ class SendAction(BaseConnection):
         chat_id: int | None = None,
         action: SenderAction = SenderAction.TYPING_ON,
     ):
+        super().__init__()
         self.bot = bot
         self.chat_id = chat_id
         self.action = action

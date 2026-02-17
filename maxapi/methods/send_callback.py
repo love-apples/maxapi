@@ -33,6 +33,7 @@ class SendCallback(BaseConnection):
         message: MessageForCallback | None = None,
         notification: str | None = None,
     ):
+        super().__init__()
         self.bot = bot
         self.callback_id = callback_id
         self.message = message

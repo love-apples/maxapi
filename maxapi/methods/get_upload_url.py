@@ -23,6 +23,7 @@ class GetUploadURL(BaseConnection):
     """
 
     def __init__(self, bot: "Bot", type: UploadType):
+        super().__init__()
         self.bot = bot
         self.type = type
 

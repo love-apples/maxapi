@@ -44,6 +44,7 @@ class SubscribeWebhook(BaseConnection):
                 "secret не должен быть меньше 5 или больше 256 символов"
             )
 
+        super().__init__()
         self.bot = bot
         self.url = url
         self.update_types = update_types

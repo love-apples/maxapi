@@ -105,6 +105,7 @@ class CallbackPayload(BaseModel):
             )
 
         kwargs = dict(zip(field_names, parts[1:], strict=True))
+        # noinspection PyArgumentList
         return cls(**kwargs)
 
     @classmethod
