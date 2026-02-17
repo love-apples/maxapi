@@ -106,17 +106,19 @@ target-version = "py310"
 
 
 [tool.ruff.lint]
-# TODO: добавить BLE C90 N
+# TODO: добавить BLE C90 N PGH PLR
 extend-select = [
     "ASYNC",
     "B",
     "C4",
     "COM",
     "E",
+    "F",
     "FA",
     "FAST",
     "FBT",
     "FLY",
+    "FURB",
     "G",
     "I",
     "ICN",
@@ -127,10 +129,13 @@ extend-select = [
     "PYI",
     "PERF",
     "PIE",
+    "PLE",
+    "PLW",
     "PT",
     "PTH",
     "Q",
     "RSE",
+    "RUF",
     "S",
     "SIM",
     "SLOT",
@@ -139,10 +144,16 @@ extend-select = [
     "TC",
     "UP",
     "YTT",
+    "W",
 ]
 ignore = [
     "COM812",
+    "PLW1641",
     "TC006",
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    "RUF006",  # TODO: требует рефакторинга
     "SIM108",
     "SIM118",
 ]
@@ -154,6 +165,7 @@ flake8-type-checking.runtime-evaluated-base-classes = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**.py" = [
     "ARG",
+    "PL",
     "S"
 ]
 "dispatcher.py" = [
