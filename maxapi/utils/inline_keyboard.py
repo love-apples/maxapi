@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from ..enums.attachment import AttachmentType
 from ..types.attachments.attachment import Attachment, ButtonsPayload
-from ..types.attachments.buttons import InlineButtonUnion
+
+if TYPE_CHECKING:
+    from ..types.attachments.buttons import InlineButtonUnion
 
 
 class InlineKeyboardBuilder:

@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import functools
 from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
-from collections.abc import Awaitable, Callable
 from datetime import datetime
 from re import DOTALL, search
 from typing import (
@@ -14,27 +13,22 @@ from typing import (
 
 from aiohttp import ClientConnectorError
 
-from .bot import Bot
 from .context import BaseContext, MemoryContext
 from .enums.update import UpdateType
 from .exceptions.dispatcher import HandlerException, MiddlewareException
 from .exceptions.max import InvalidToken, MaxApiError, MaxConnection
 from .filters import filter_attrs
 from .filters.command import CommandsInfo
-from .filters.filter import BaseFilter
 from .filters.handler import Handler
-from .filters.middleware import BaseMiddleware
 from .loggers import logger_dp
 from .methods.types.getted_updates import (
     process_update_request,
     process_update_webhook,
 )
 from .types.bot_mixin import BotMixin
-from .types.updates import UpdateUnion
 from .utils.time import from_ms, to_ms
 
 try:
-    from fastapi import FastAPI, Request  # type: ignore
     from fastapi.responses import JSONResponse  # type: ignore
 
     FASTAPI_INSTALLED = True
@@ -51,7 +45,15 @@ except ImportError:
 
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
+    from fastapi import FastAPI, Request
     from magic_filter import MagicFilter
+
+    from .bot import Bot
+    from .filters.filter import BaseFilter
+    from .filters.middleware import BaseMiddleware
+    from .types.updates import UpdateUnion
 
 CONNECTION_RETRY_DELAY = 30
 GET_UPDATES_RETRY_DELAY = 5

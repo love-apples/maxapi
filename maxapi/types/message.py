@@ -6,21 +6,21 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..enums.chat_type import ChatType
 from ..enums.message_link_type import MessageLinkType
-from ..enums.parse_mode import ParseMode
 from ..enums.text_style import TextStyle
 from ..types.attachments import Attachments
 from ..types.bot_mixin import BotMixin
-from .attachments.attachment import Attachment
 from .users import User
 
 if TYPE_CHECKING:
     from ..bot import Bot
+    from ..enums.parse_mode import ParseMode
     from ..methods.types.deleted_message import DeletedMessage
     from ..methods.types.edited_message import EditedMessage
     from ..methods.types.pinned_message import PinnedMessage
     from ..methods.types.sended_message import SendedMessage
     from ..types.attachments.upload import AttachmentUpload
     from ..types.input_media import InputMedia, InputMediaBuffer
+    from .attachments.attachment import Attachment
 
 
 class MarkupElement(BaseModel):

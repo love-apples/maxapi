@@ -8,16 +8,17 @@ from typing import TYPE_CHECKING, Any
 import aiofiles
 import puremagic
 from aiohttp import ClientConnectionError, ClientSession, FormData
-from pydantic import BaseModel
 
 from ..enums.api_path import ApiPath
-from ..enums.http_method import HTTPMethod
-from ..enums.upload_type import UploadType
 from ..exceptions.max import InvalidToken, MaxApiError, MaxConnection
 from ..types.bot_mixin import BotMixin
 
 if TYPE_CHECKING:
+    from pydantic import BaseModel
+
     from ..bot import Bot
+    from ..enums.http_method import HTTPMethod
+    from ..enums.upload_type import UploadType
 
 
 class BaseConnection(BotMixin):

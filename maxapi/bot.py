@@ -2,16 +2,11 @@ from __future__ import annotations
 
 import os
 import warnings
-from collections.abc import Sequence
-from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from .client.default import DefaultConnectionProperties
 from .connection.base import BaseConnection
-from .enums.parse_mode import ParseMode
 from .enums.sender_action import SenderAction
-from .enums.update import UpdateType
-from .enums.upload_type import UploadType
 from .exceptions.max import InvalidToken
 from .loggers import logger_bot
 from .methods.add_admin_chat import AddAdminChat
@@ -44,15 +39,16 @@ from .methods.send_action import SendAction
 from .methods.send_callback import SendCallback
 from .methods.send_message import SendMessage
 from .methods.subscribe_webhook import SubscribeWebhook
-from .methods.types.getted_subscriptions import GettedSubscriptions
-from .methods.types.subscribed import Subscribed
-from .methods.types.unsubscribed import Unsubscribed
 from .methods.unsubscribe_webhook import UnsubscribeWebhook
-from .types.attachments import Attachments
-from .types.input_media import InputMedia, InputMediaBuffer
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from datetime import datetime
+
     from .dispatcher import Dispatcher
+    from .enums.parse_mode import ParseMode
+    from .enums.update import UpdateType
+    from .enums.upload_type import UploadType
     from .filters.command import CommandsInfo
     from .methods.types.added_admin_chat import AddedListAdminChat
     from .methods.types.added_members_chat import AddedMembersChat
@@ -64,6 +60,7 @@ if TYPE_CHECKING:
     from .methods.types.getted_list_admin_chat import GettedListAdminChat
     from .methods.types.getted_members_chat import GettedMembersChat
     from .methods.types.getted_pineed_message import GettedPin
+    from .methods.types.getted_subscriptions import GettedSubscriptions
     from .methods.types.getted_upload_url import GettedUploadUrl
     from .methods.types.pinned_message import PinnedMessage
     from .methods.types.removed_admin import RemovedAdmin
@@ -71,12 +68,16 @@ if TYPE_CHECKING:
     from .methods.types.sended_action import SendedAction
     from .methods.types.sended_callback import SendedCallback
     from .methods.types.sended_message import SendedMessage
+    from .methods.types.subscribed import Subscribed
+    from .methods.types.unsubscribed import Unsubscribed
+    from .types.attachments import Attachments
     from .types.attachments.attachment import Attachment
     from .types.attachments.image import PhotoAttachmentRequestPayload
     from .types.attachments.upload import AttachmentUpload
     from .types.attachments.video import Video
     from .types.chats import Chat, ChatMember, Chats
     from .types.command import BotCommand
+    from .types.input_media import InputMedia, InputMediaBuffer
     from .types.message import Message, Messages, NewMessageLink
     from .types.updates.message_callback import MessageForCallback
     from .types.users import ChatAdmin, User

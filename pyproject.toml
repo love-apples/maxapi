@@ -129,15 +129,22 @@ extend-select = [
     "RSE",
     "S",
     "SIM",
+    "SLOT",
     "T",
     "T20",
+    "TC",
     "UP",
     "YTT",
 ]
 ignore = [
     "COM812",
+    "TC006",
     "SIM108",
     "SIM118",
+]
+
+flake8-type-checking.runtime-evaluated-base-classes = [
+  "pydantic.BaseModel",
 ]
 
 [tool.ruff.lint.per-file-ignores]

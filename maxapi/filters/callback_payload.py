@@ -6,12 +6,15 @@ from typing import (
     ClassVar,
 )
 
-from magic_filter import MagicFilter
 from pydantic import BaseModel
 
-from ..types.updates import UpdateUnion
 from ..types.updates.message_callback import MessageCallback
 from .filter import BaseFilter
+
+if TYPE_CHECKING:
+    from magic_filter import MagicFilter
+
+    from ..types.updates import UpdateUnion
 
 PAYLOAD_MAX = 1024
 

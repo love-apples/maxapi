@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
 from ..enums.http_method import HTTPMethod
-from ..enums.update import UpdateType
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from ..bot import Bot
+    from ..enums.update import UpdateType
 
 
 class GetUpdates(BaseConnection):

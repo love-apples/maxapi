@@ -1,7 +1,11 @@
 from __future__ import annotations
 
-from ...types.message import Message
+from typing import TYPE_CHECKING
+
 from .update import Update
+
+if TYPE_CHECKING:
+    from ...types.message import Message
 
 
 class MessageCreated(Update):

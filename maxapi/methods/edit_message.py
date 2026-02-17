@@ -6,19 +6,19 @@ from typing import TYPE_CHECKING, Any, cast
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
 from ..enums.http_method import HTTPMethod
-from ..enums.parse_mode import ParseMode
 from ..exceptions.max import MaxApiError
 from ..loggers import logger_bot
-from ..types.attachments import Attachments
 from ..types.attachments.attachment import Attachment
 from ..types.attachments.upload import AttachmentUpload
 from ..types.input_media import InputMedia, InputMediaBuffer
-from ..types.message import NewMessageLink
 from ..utils.message import process_input_media
 from .types.edited_message import EditedMessage
 
 if TYPE_CHECKING:
     from ..bot import Bot
+    from ..enums.parse_mode import ParseMode
+    from ..types.attachments import Attachments
+    from ..types.message import NewMessageLink
 
 
 class EditMessage(BaseConnection):
