@@ -106,7 +106,7 @@ target-version = "py310"
 
 
 [tool.ruff.lint]
-# TODO: добавить BLE C90 N PGH PLR
+# TODO: добавить BLE C90 N PGH PLR TRY
 extend-select = [
     "ASYNC",
     "B",
