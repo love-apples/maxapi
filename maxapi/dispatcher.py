@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import warnings
 from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
 from datetime import datetime
 from re import DOTALL, search
@@ -163,7 +164,7 @@ class Dispatcher(BotMixin):
         def decorator(func: Callable[..., Any]) -> Any:
             if self.webhook_app is None:
                 try:
-                    from fastapi import FastAPI  # type: ignore
+                    from fastapi import FastAPI  # noqa: PLC0415
                 except ImportError as exc:
                     raise ImportError(
                         "\n\t Не установлен fastapi!"
@@ -184,7 +185,7 @@ class Dispatcher(BotMixin):
 
         me = await self._ensure_bot().get_me()
 
-        self._ensure_bot()._me = me
+        self._ensure_bot()._me = me  # noqa: SLF001
 
         logger_dp.info(
             f"Бот: @{me.username} first_name={me.first_name} id={me.user_id}"
@@ -924,8 +925,6 @@ class Event:
         """
 
         if self.deprecated:
-            import warnings
-
             warnings.warn(
                 f"Событие {self.update_type} устарело "
                 f"и будет удалено в будущих версиях.",

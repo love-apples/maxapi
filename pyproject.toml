@@ -107,66 +107,47 @@ target-version = "py310"
 
 [tool.ruff.lint]
 # TODO: добавить BLE C90 N PGH PLR TRY
-extend-select = [
-    "ASYNC",
-    "B",
-    "C4",
-    "COM",
-    "E",
-    "F",
-    "FA",
-    "FAST",
-    "FBT",
-    "FLY",
-    "FURB",
-    "G",
-    "I",
-    "ICN",
-    "INP",
-    "INT",
-    "ISC",
-    "LOG",
-    "PYI",
-    "PERF",
-    "PIE",
-    "PLE",
-    "PLW",
-    "PT",
-    "PTH",
-    "Q",
-    "RSE",
-    "RUF",
-    "S",
-    "SIM",
-    "SLOT",
-    "T",
-    "T20",
-    "TC",
-    "UP",
-    "YTT",
-    "W",
-]
+select = ["ALL"]
 ignore = [
+    "BLE", # TODO: требует рефакторинга
+    "C90", # TODO: требует рефакторинга
+    "ERA", # TODO: требует рефакторинга
+    "N", # TODO: требует рефакторинга
+    "PGH", # TODO: требует рефакторинга
+    "PLR", # TODO: требует рефакторинга
+    "TRY", # TODO: требует рефакторинга
+    "RUF006", # TODO: требует рефакторинга
+    "A",
+    "ARG",
+    "ANN",
     "COM812",
+    "D",
+    "DTZ",
+    "EXE",
+    "EM",
+    "FIX",
     "PLW1641",
     "TC006",
+    "RET",
     "RUF001",
     "RUF002",
     "RUF003",
-    "RUF006",  # TODO: требует рефакторинга
     "SIM108",
     "SIM118",
+    "TD",
+    "TID",
 ]
 
 flake8-type-checking.runtime-evaluated-base-classes = [
-  "pydantic.BaseModel",
+    "pydantic.BaseModel",
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**.py" = [
     "ARG",
     "PL",
-    "S"
+    "S",
+    "SLF",
 ]
 "dispatcher.py" = [
     "B023", # TODO: требует рефакторинга dispatcher

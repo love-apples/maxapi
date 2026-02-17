@@ -10,6 +10,7 @@ import puremagic
 from aiohttp import ClientConnectionError, ClientSession, FormData
 
 from ..enums.api_path import ApiPath
+from ..enums.update import UpdateType
 from ..exceptions.max import InvalidToken, MaxApiError, MaxConnection
 from ..types.bot_mixin import BotMixin
 
@@ -115,8 +116,6 @@ class BaseConnection(BotMixin):
         if not r.ok:
             raw = await r.json()
             if bot.dispatcher:
-                from ..enums.update import UpdateType
-
                 asyncio.create_task(
                     bot.dispatcher.handle_raw_response(
                         UpdateType.RAW_API_RESPONSE, raw
@@ -127,8 +126,6 @@ class BaseConnection(BotMixin):
         raw = await r.json()
 
         if bot.dispatcher:
-            from ..enums.update import UpdateType
-
             asyncio.create_task(
                 bot.dispatcher.handle_raw_response(
                     UpdateType.RAW_API_RESPONSE, raw

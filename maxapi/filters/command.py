@@ -145,8 +145,8 @@ class Command(BaseFilter):
         if not text:
             return False
 
-        # временно
-        bot_me = event._ensure_bot().me
+        # TODO: временно
+        bot_me = event._ensure_bot().me  # noqa: SLF001
         bot_username = ""
         if bot_me:
             bot_username = bot_me.username or ""
