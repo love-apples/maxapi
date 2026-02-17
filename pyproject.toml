@@ -125,6 +125,7 @@ extend-select = [
     "PYI",
     "PIE",
     "PT",
+    "PTH",
     "Q",
     "RSE",
     "S",
@@ -149,6 +150,7 @@ flake8-type-checking.runtime-evaluated-base-classes = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**.py" = [
+    "ARG",
     "S"
 ]
 "dispatcher.py" = [

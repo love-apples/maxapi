@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import puremagic
 
 from ..enums.upload_type import UploadType
@@ -36,7 +38,7 @@ class InputMedia:
             UploadType: Тип файла (VIDEO, IMAGE, AUDIO или FILE).
         """
 
-        with open(path, "rb") as f:
+        with Path(path).open("rb") as f:
             sample = f.read(4096)
 
         try:

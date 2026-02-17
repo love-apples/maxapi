@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import mimetypes
-import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import aiofiles
@@ -163,8 +163,9 @@ class BaseConnection(BotMixin):
         async with aiofiles.open(path, "rb") as f:
             file_data = await f.read()
 
-        basename = os.path.basename(path)
-        _, ext = os.path.splitext(basename)
+        path_object = Path(path)
+        basename = path_object.name
+        ext = path_object.suffix
 
         form = FormData(quote_fields=False)
         form.add_field(
