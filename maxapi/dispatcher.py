@@ -214,7 +214,7 @@ class Dispatcher(BotMixin):
             *routers (Router): Роутеры для добавления.
         """
 
-        self.routers += [r for r in routers]
+        self.routers.extend(routers)
 
     def outer_middleware(self, middleware: BaseMiddleware) -> None:
         """
