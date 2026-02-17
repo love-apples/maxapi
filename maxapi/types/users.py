@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel
@@ -41,9 +40,6 @@ class User(BaseModel):
             return self.first_name
 
         return f"{self.first_name} {self.last_name}"
-
-    class Config:
-        json_encoders = {datetime: lambda v: int(v.timestamp() * 1000)}
 
 
 class ChatAdmin(BaseModel):

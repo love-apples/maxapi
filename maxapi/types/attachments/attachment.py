@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Any, List, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ...enums.attachment import AttachmentType
 from ...types.attachments.buttons import InlineButtonUnion
@@ -106,5 +106,6 @@ class Attachment(BaseModel):
     if TYPE_CHECKING:
         bot: Optional[Bot]  # type: ignore
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(
+        use_enum_values=True,
+    )

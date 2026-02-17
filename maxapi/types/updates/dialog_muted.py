@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 from ...types.users import User
+from ...utils.time import from_ms
 from .update import Update
 
 if TYPE_CHECKING:
@@ -28,9 +29,9 @@ class DialogMuted(Update):
         bot: Optional[Bot]  # pyright: ignore[reportGeneralTypeIssues]
 
     @property
-    def muted_until_datetime(self):
+    def muted_until_datetime(self) -> Optional[datetime]:
         try:
-            return datetime.fromtimestamp(self.muted_until // 1000)
+            return from_ms(self.muted_until)
         except (OverflowError, OSError):
             return datetime.max
 

@@ -1,8 +1,7 @@
 import pytest
-
+from maxapi.enums.chat_type import ChatType
 from maxapi.types.message import Message, Recipient
 from maxapi.types.users import User
-from maxapi.enums.chat_type import ChatType
 
 
 @pytest.fixture

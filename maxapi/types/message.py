@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, List, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ..enums.chat_type import ChatType
 from ..enums.message_link_type import MessageLinkType
@@ -37,8 +37,9 @@ class MarkupElement(BaseModel):
     from_: int = Field(..., alias="from")
     length: int
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
 
 
 class MarkupLink(MarkupElement):

@@ -1,13 +1,20 @@
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+)
 
 from ..enums.chat_permission import ChatPermission
 from ..enums.chat_status import ChatStatus
 from ..enums.chat_type import ChatType
 from ..types.message import Message
 from ..types.users import User
+from ..utils.time import from_ms, to_ms
 
 
 class Icon(BaseModel):
@@ -63,23 +70,40 @@ class Chat(BaseModel):
 
     @field_validator("participants", mode="before")
     @classmethod
-    def convert_timestamps(cls, value: Dict[str, int]) -> Dict[str, datetime]:
+    def convert_timestamps(
+        cls,
+        value: Optional[Dict[str, int]],
+    ) -> Optional[Dict[str, Optional[datetime]]]:
         """
-        Преобразует временные метки участников из миллисекунд в объекты datetime.
+        Преобразовать временные метки участников из миллисекунд
+        в объекты datetime.
 
         Args:
-            value (Dict[str, int]): Словарь с временными метками в миллисекундах.
+            value (Optional[Dict[str, int]]): Словарь с временными
+                метками в миллисекундах. Может быть None, если участников нет.
 
         Returns:
-            Dict[str, datetime]: Словарь с временными метками в формате datetime.
+            Optional[Dict[str, Optional[datetime]]]: Словарь с
+                временными метками в формате datetime. Может быть None,
+                если входное значение было None.
         """
+        if value is None:
+            return None
 
-        return {
-            key: datetime.fromtimestamp(ts / 1000) for key, ts in value.items()
-        }
+        return {key: from_ms(ts) for key, ts in value.items()}
 
-    class Config:
-        arbitrary_types_allowed = True
+    @field_serializer("participants")
+    def serialize_participants(
+        self, value: Optional[Dict[str, datetime]], info
+    ):
+        """Serialize participants dict: datetime -> milliseconds"""
+        if value is None:
+            return None
+        return {key: to_ms(dt) for key, dt in value.items()}
+
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
 
 
 class Chats(BaseModel):

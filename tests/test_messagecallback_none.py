@@ -1,12 +1,11 @@
 import pytest
-
+from maxapi.enums.update import UpdateType
+from maxapi.types.callback import Callback
 from maxapi.types.updates.message_callback import (
     MessageCallback,
     MessageForCallback,
 )
-from maxapi.types.callback import Callback
 from maxapi.types.users import User
-from maxapi.enums.update import UpdateType
 
 
 class DummyBot:
