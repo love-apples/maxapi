@@ -127,7 +127,10 @@ class EditMessage(BaseConnection):
                     json=json,
                 )
             except MaxApiError as e:
-                if isinstance(e.raw, dict) and e.raw.get("code") == "attachment.not.ready":
+                if (
+                    isinstance(e.raw, dict)
+                    and e.raw.get("code") == "attachment.not.ready"
+                ):
                     logger_bot.info(
                         f"Ошибка при отправке загруженного медиа, попытка {attempt + 1}, жду {self.RETRY_DELAY} секунды"
                     )
