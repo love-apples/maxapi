@@ -1,6 +1,6 @@
 from collections import Counter
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Dict, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
@@ -35,10 +35,11 @@ class EditChat(BaseConnection):
         self,
         bot: "Bot",
         chat_id: int,
-        icon: Optional[PhotoAttachmentRequestPayload] = None,
-        title: Optional[str] = None,
-        pin: Optional[str] = None,
-        notify: Optional[bool] = None,
+        icon: PhotoAttachmentRequestPayload | None = None,
+        title: str | None = None,
+        pin: str | None = None,
+        *,
+        notify: bool | None = None,
     ):
         if title is not None and not (1 <= len(title) <= 200):
             raise ValueError(
@@ -66,7 +67,7 @@ class EditChat(BaseConnection):
 
         bot = self._ensure_bot()
 
-        json: Dict[str, Any] = {}
+        json: dict[str, Any] = {}
 
         if self.icon:
             dump = self.icon.model_dump()

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from ...types.users import User
 from .update import Update
@@ -20,11 +20,11 @@ class BotStarted(Update):
 
     chat_id: int
     user: User
-    user_locale: Optional[str] = None
-    payload: Optional[str] = None
+    user_locale: str | None = None
+    payload: str | None = None
 
     if TYPE_CHECKING:
-        bot: Optional[Bot]  # pyright: ignore[reportGeneralTypeIssues]
+        bot: Bot | None  # pyright: ignore[reportGeneralTypeIssues]
 
     def get_ids(self):
         return (self.chat_id, self.user.user_id)

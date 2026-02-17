@@ -1,5 +1,3 @@
-from typing import Optional
-
 from ....enums.button_type import ButtonType
 from ....enums.intent import Intent
 from .button import Button
@@ -17,5 +15,5 @@ class CallbackButton(Button):
     """
 
     type: ButtonType = ButtonType.CALLBACK
-    payload: Optional[str] = None
+    payload: str | None = None
     intent: Intent = Intent.DEFAULT

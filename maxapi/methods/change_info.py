@@ -1,5 +1,5 @@
 import warnings
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
@@ -36,11 +36,11 @@ class ChangeInfo(BaseConnection):
     def __init__(
         self,
         bot: "Bot",
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
-        description: Optional[str] = None,
-        commands: Optional[List[BotCommand]] = None,
-        photo: Optional[PhotoAttachmentRequestPayload] = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        description: str | None = None,
+        commands: list[BotCommand] | None = None,
+        photo: PhotoAttachmentRequestPayload | None = None,
     ):
         warnings.warn(
             "ChangeInfo устарел и отсутствует в официальной swagger-спецификации API MAX. "
@@ -83,7 +83,7 @@ class ChangeInfo(BaseConnection):
 
         bot = self._ensure_bot()
 
-        json: Dict[str, Any] = {}
+        json: dict[str, Any] = {}
 
         if self.first_name:
             json["first_name"] = self.first_name

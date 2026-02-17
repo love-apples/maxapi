@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
@@ -28,8 +28,8 @@ class SubscribeWebhook(BaseConnection):
         self,
         bot: "Bot",
         url: str,
-        update_types: Optional[List[UpdateType]] = None,
-        secret: Optional[str] = None,
+        update_types: list[UpdateType] | None = None,
+        secret: str | None = None,
     ):
         if secret is not None and not (5 <= len(secret) <= 256):
             raise ValueError(
@@ -51,7 +51,7 @@ class SubscribeWebhook(BaseConnection):
 
         bot = self._ensure_bot()
 
-        json: Dict[str, Any] = {}
+        json: dict[str, Any] = {}
 
         json["url"] = self.url
 

@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Union
 
 from ..filters.filter import BaseFilter
 from ..types.updates import UpdateUnion
@@ -16,8 +15,8 @@ class CommandsInfo:
         info (Optional[str]): Информация о их предназначениях
     """
 
-    commands: List[str]
-    info: Optional[str] = None
+    commands: list[str]
+    info: str | None = None
 
 
 class Command(BaseFilter):
@@ -34,8 +33,9 @@ class Command(BaseFilter):
 
     def __init__(
         self,
-        commands: str | List[str],
+        commands: str | list[str],
         prefix: str = "/",
+        *,
         check_case: bool = False,
         ignore_symbol_at_sign: bool = False,
         only_with_bot_username: bool = False,
@@ -59,7 +59,7 @@ class Command(BaseFilter):
 
     def parse_command(
         self, text: str, bot_username: str
-    ) -> Tuple[str, List[str]]:
+    ) -> tuple[str, list[str]]:
         """
         Извлекает команду из текста.
 
@@ -117,7 +117,7 @@ class Command(BaseFilter):
 
     async def __call__(
         self, event: UpdateUnion
-    ) -> Union[Dict[str, List[str]], bool]:
+    ) -> dict[str, list[str]] | bool:
         """
         Проверяет, соответствует ли сообщение заданной(ым) команде(ам).
 
@@ -178,19 +178,20 @@ class CommandStart(Command):
     def __init__(
         self,
         prefix: str = "/",
+        *,
         check_case: bool = False,
         ignore_symbol_at_sign: bool = False,
         only_with_bot_username: bool = False,
     ) -> None:
         super().__init__(
             "start",
-            prefix,
-            check_case,
-            ignore_symbol_at_sign,
-            only_with_bot_username,
+            prefix=prefix,
+            check_case=check_case,
+            ignore_symbol_at_sign=ignore_symbol_at_sign,
+            only_with_bot_username=only_with_bot_username,
         )
 
     async def __call__(
         self, event: UpdateUnion
-    ) -> Union[Dict[str, List[str]], bool]:
+    ) -> dict[str, list[str]] | bool:
         return await super().__call__(event)

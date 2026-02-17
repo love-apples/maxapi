@@ -1,5 +1,3 @@
-from typing import List
-
 from pydantic import BaseModel
 
 from ...types.subscription import Subscription
@@ -13,4 +11,4 @@ class GettedSubscriptions(BaseModel):
         message (Message): Объект отправленного сообщения.
     """
 
-    subscriptions: List[Subscription]
+    subscriptions: list[Subscription]

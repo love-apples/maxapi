@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
@@ -42,15 +42,17 @@ class EditMessage(BaseConnection):
         self,
         bot: Bot,
         message_id: str,
-        text: Optional[str] = None,
-        attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
-            | List[Attachments]
-        ] = None,
-        link: Optional[NewMessageLink] = None,
-        notify: Optional[bool] = None,
-        parse_mode: Optional[ParseMode] = None,
-        sleep_after_input_media: Optional[bool] = True,
+        text: str | None = None,
+        attachments: list[
+            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
+        ]
+        | list[Attachments]
+        | None = None,
+        link: NewMessageLink | None = None,
+        parse_mode: ParseMode | None = None,
+        *,
+        notify: bool | None = None,
+        sleep_after_input_media: bool | None = True,
     ):
         if text is not None and not (len(text) < 4000):
             raise ValueError("text должен быть меньше 4000 символов")
@@ -64,7 +66,7 @@ class EditMessage(BaseConnection):
         self.parse_mode = parse_mode
         self.sleep_after_input_media = sleep_after_input_media
 
-    async def fetch(self) -> Optional[EditedMessage]:
+    async def fetch(self) -> EditedMessage | None:
         """
         Выполняет PUT-запрос для обновления сообщения.
 
@@ -78,7 +80,7 @@ class EditMessage(BaseConnection):
 
         params = bot.params.copy()
 
-        json: Dict[str, Any] = {"attachments": []}
+        json: dict[str, Any] = {"attachments": []}
 
         params["message_id"] = self.message_id
 
@@ -142,4 +144,4 @@ class EditMessage(BaseConnection):
         if response is None:
             raise RuntimeError("Не удалось отредактировать сообщение")
 
-        return cast(Optional[EditedMessage], response)
+        return cast(EditedMessage | None, response)

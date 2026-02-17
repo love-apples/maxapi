@@ -1,5 +1,3 @@
-from typing import Optional, Tuple
-
 from ...types.message import Message
 from .update import Update
 
@@ -14,7 +12,7 @@ class MessageEdited(Update):
 
     message: Message
 
-    def get_ids(self) -> Tuple[Optional[int], Optional[int]]:
+    def get_ids(self) -> tuple[int | None, int | None]:
         """
         Возвращает кортеж идентификаторов (chat_id, user_id).
 

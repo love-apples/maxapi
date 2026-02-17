@@ -25,6 +25,7 @@ class RemoveMemberChat(BaseConnection):
         bot: "Bot",
         chat_id: int,
         user_id: int,
+        *,
         block: bool = False,
     ):
         self.bot = bot

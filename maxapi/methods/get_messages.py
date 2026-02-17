@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional, Union, cast
+from typing import TYPE_CHECKING, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
@@ -29,10 +29,10 @@ class GetMessages(BaseConnection):
     def __init__(
         self,
         bot: "Bot",
-        chat_id: Optional[int] = None,
-        message_ids: Optional[List[str]] = None,
-        from_time: Optional[Union[datetime, int]] = None,
-        to_time: Optional[Union[datetime, int]] = None,
+        chat_id: int | None = None,
+        message_ids: list[str] | None = None,
+        from_time: datetime | int | None = None,
+        to_time: datetime | int | None = None,
         count: int = 50,
     ):
         if count is not None and not (1 <= count <= 100):

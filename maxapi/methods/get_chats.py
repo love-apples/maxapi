@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
@@ -24,8 +24,8 @@ class GetChats(BaseConnection):
     def __init__(
         self,
         bot: "Bot",
-        count: Optional[int] = None,
-        marker: Optional[int] = None,
+        count: int | None = None,
+        marker: int | None = None,
     ):
         if count is not None and not (1 <= count <= 100):
             raise ValueError("count не должен быть меньше 1 или больше 100")

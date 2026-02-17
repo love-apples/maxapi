@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Literal, Optional
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -23,13 +23,13 @@ class VideoUrl(BaseModel):
         hls (Optional[str]): URL HLS потока.
     """
 
-    mp4_1080: Optional[str] = None
-    mp4_720: Optional[str] = None
-    mp4_480: Optional[str] = None
-    mp4_360: Optional[str] = None
-    mp4_240: Optional[str] = None
-    mp4_144: Optional[str] = None
-    hls: Optional[str] = None
+    mp4_1080: str | None = None
+    mp4_720: str | None = None
+    mp4_480: str | None = None
+    mp4_360: str | None = None
+    mp4_240: str | None = None
+    mp4_144: str | None = None
+    hls: str | None = None
 
 
 class VideoThumbnail(BaseModel):
@@ -58,13 +58,13 @@ class Video(Attachment):
     """
 
     type: Literal[AttachmentType.VIDEO]  # pyright: ignore[reportIncompatibleVariableOverride]
-    token: Optional[str] = None
-    urls: Optional[VideoUrl] = None
+    token: str | None = None
+    urls: VideoUrl | None = None
     thumbnail: VideoThumbnail
-    width: Optional[int] = None
-    height: Optional[int] = None
-    duration: Optional[int] = None
-    bot: Optional[Any] = Field(default=None, exclude=True)  # pyright: ignore[reportRedeclaration]
+    width: int | None = None
+    height: int | None = None
+    duration: int | None = None
+    bot: Any | None = Field(default=None, exclude=True)  # pyright: ignore[reportRedeclaration]
 
     if TYPE_CHECKING:
-        bot: Optional["Bot"]  # type: ignore
+        bot: "Bot" | None  # type: ignore

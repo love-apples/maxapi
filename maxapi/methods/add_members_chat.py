@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
@@ -25,7 +25,7 @@ class AddMembersChat(BaseConnection):
         self,
         bot: "Bot",
         chat_id: int,
-        user_ids: List[int],
+        user_ids: list[int],
     ):
         self.bot = bot
         self.chat_id = chat_id
@@ -43,7 +43,7 @@ class AddMembersChat(BaseConnection):
 
         bot = self._ensure_bot()
 
-        json: Dict[str, Any] = {}
+        json: dict[str, Any] = {}
 
         json["user_ids"] = self.user_ids
 

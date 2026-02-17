@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from ...types.users import User
 from ...utils.time import from_ms
@@ -23,13 +23,13 @@ class DialogMuted(Update):
     chat_id: int
     muted_until: int
     user: User
-    user_locale: Optional[str] = None
+    user_locale: str | None = None
 
     if TYPE_CHECKING:
-        bot: Optional[Bot]  # pyright: ignore[reportGeneralTypeIssues]
+        bot: Bot | None  # pyright: ignore[reportGeneralTypeIssues]
 
     @property
-    def muted_until_datetime(self) -> Optional[datetime]:
+    def muted_until_datetime(self) -> datetime | None:
         try:
             return from_ms(self.muted_until)
         except (OverflowError, OSError):

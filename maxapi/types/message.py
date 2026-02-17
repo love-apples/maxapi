@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -50,7 +50,7 @@ class MarkupLink(MarkupElement):
         url (Optional[str]): URL ссылки. Может быть None.
     """
 
-    url: Optional[str] = None
+    url: str | None = None
 
 
 class Recipient(BaseModel):
@@ -63,8 +63,8 @@ class Recipient(BaseModel):
         chat_type (ChatType): Тип получателя (диалог или чат).
     """
 
-    user_id: Optional[int] = None
-    chat_id: Optional[int] = None
+    user_id: int | None = None
+    chat_id: int | None = None
     chat_type: ChatType
 
 
@@ -83,10 +83,10 @@ class MessageBody(BaseModel):
 
     mid: str
     seq: int
-    text: Optional[str] = None
-    attachments: Optional[List[Attachments]] = Field(default_factory=list)  # type: ignore
+    text: str | None = None
+    attachments: list[Attachments] | None = Field(default_factory=list)  # type: ignore
 
-    markup: Optional[List[Union[MarkupLink, MarkupElement]]] = Field(
+    markup: list[MarkupLink | MarkupElement] | None = Field(
         default_factory=list
     )  # type: ignore
 
@@ -114,8 +114,8 @@ class LinkedMessage(BaseModel):
     """
 
     type: MessageLinkType
-    sender: Optional[User] = None
-    chat_id: Optional[int] = None
+    sender: User | None = None
+    chat_id: int | None = None
     message: MessageBody
 
 
@@ -136,31 +136,33 @@ class Message(BaseModel, BotMixin):
         bot (Optional[Bot]): Объект бота, исключается из сериализации.
     """
 
-    sender: Optional[User] = None
+    sender: User | None = None
     recipient: Recipient
     timestamp: int
-    link: Optional[LinkedMessage] = None
-    body: Optional[MessageBody] = None
-    stat: Optional[MessageStat] = None
-    url: Optional[str] = None
-    bot: Optional[Any] = Field(  # pyright: ignore[reportRedeclaration]
+    link: LinkedMessage | None = None
+    body: MessageBody | None = None
+    stat: MessageStat | None = None
+    url: str | None = None
+    bot: Any | None = Field(  # pyright: ignore[reportRedeclaration]
         default=None, exclude=True
     )
 
     if TYPE_CHECKING:
-        bot: Optional[Bot]  # type: ignore
+        bot: Bot | None  # type: ignore
 
     async def answer(
         self,
-        text: Optional[str] = None,
-        attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
-        ] = None,
-        link: Optional[NewMessageLink] = None,
-        notify: Optional[bool] = None,
-        parse_mode: Optional[ParseMode] = None,
-        sleep_after_input_media: Optional[bool] = True,
-    ) -> Optional["SendedMessage"]:
+        text: str | None = None,
+        attachments: list[
+            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
+        ]
+        | None = None,
+        link: NewMessageLink | None = None,
+        parse_mode: ParseMode | None = None,
+        *,
+        notify: bool | None = None,
+        sleep_after_input_media: bool | None = True,
+    ) -> SendedMessage | None:
         """
         Отправляет сообщение (автозаполнение chat_id, user_id).
 
@@ -168,8 +170,9 @@ class Message(BaseModel, BotMixin):
             text (str, optional): Текст ответа. Может быть None.
             attachments (List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload], optional): Список вложений. Может быть None.
             link (NewMessageLink, optional): Связь с другим сообщением. Может быть None.
-            notify (bool): Флаг отправки уведомления. По умолчанию True.
             parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
+            notify (bool): Флаг отправки уведомления. По умолчанию True.
+            sleep_after_input_media (bool, optional): Флаг задержки после отправки вложений типа InputMedia. По умолчанию True.
 
         Returns:
             Optional[SendedMessage]: Результат выполнения метода send_message бота.
@@ -188,14 +191,16 @@ class Message(BaseModel, BotMixin):
 
     async def reply(
         self,
-        text: Optional[str] = None,
-        attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
-        ] = None,
-        notify: Optional[bool] = None,
-        parse_mode: Optional[ParseMode] = None,
-        sleep_after_input_media: Optional[bool] = True,
-    ) -> Optional["SendedMessage"]:
+        text: str | None = None,
+        attachments: list[
+            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
+        ]
+        | None = None,
+        parse_mode: ParseMode | None = None,
+        *,
+        notify: bool | None = None,
+        sleep_after_input_media: bool | None = True,
+    ) -> SendedMessage | None:
         """
         Отправляет ответное сообщение (автозаполнение chat_id, user_id, link).
 
@@ -231,19 +236,17 @@ class Message(BaseModel, BotMixin):
 
     async def forward(
         self,
-        chat_id: Optional[int],
-        user_id: Optional[int] = None,
-        attachments: Optional[
-            List[
-                Union[
-                    Attachment, InputMedia, InputMediaBuffer, AttachmentUpload
-                ]
-            ]
-        ] = None,
-        notify: Optional[bool] = None,
-        parse_mode: Optional[ParseMode] = None,
-        sleep_after_input_media: Optional[bool] = True,
-    ) -> Optional["SendedMessage"]:
+        chat_id: int | None,
+        user_id: int | None = None,
+        attachments: list[
+            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
+        ]
+        | None = None,
+        parse_mode: ParseMode | None = None,
+        *,
+        notify: bool | None = None,
+        sleep_after_input_media: bool | None = True,
+    ) -> SendedMessage | None:
         """
         Пересылает отправленное сообщение в указанный чат (автозаполнение link).
 
@@ -277,16 +280,18 @@ class Message(BaseModel, BotMixin):
 
     async def edit(
         self,
-        text: Optional[str] = None,
-        attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
-            | List[Attachments]
-        ] = None,
-        link: Optional[NewMessageLink] = None,
+        text: str | None = None,
+        attachments: list[
+            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
+        ]
+        | list[Attachments]
+        | None = None,
+        link: NewMessageLink | None = None,
+        parse_mode: ParseMode | None = None,
+        *,
         notify: bool = True,
-        parse_mode: Optional[ParseMode] = None,
-        sleep_after_input_media: Optional[bool] = True,
-    ) -> Optional["EditedMessage"]:
+        sleep_after_input_media: bool | None = True,
+    ) -> EditedMessage | None:
         """
         Редактирует текущее сообщение.
 
@@ -294,9 +299,9 @@ class Message(BaseModel, BotMixin):
             text (str, optional): Новый текст сообщения. Может быть None.
             attachments (List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload], optional): Новые вложения. Может быть None.
             link (NewMessageLink, optional): Новая связь с сообщением. Может быть None.
-            notify (bool): Флаг отправки уведомления. По умолчанию True.
             parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
-
+            notify (bool): Флаг отправки уведомления. По умолчанию True.
+            sleep_after_input_media (bool, optional): Флаг задержки после отправки вложений типа InputMedia. По умолчанию True.
         Returns:
             Optional[EditedMessage]: Результат выполнения метода edit_message бота.
         """
@@ -324,7 +329,7 @@ class Message(BaseModel, BotMixin):
             sleep_after_input_media=sleep_after_input_media,
         )
 
-    async def delete(self) -> "DeletedMessage":
+    async def delete(self) -> DeletedMessage:
         """
         Удаляет текущее сообщение.
 
@@ -340,7 +345,7 @@ class Message(BaseModel, BotMixin):
             message_id=self.body.mid,
         )
 
-    async def pin(self, notify: bool = True) -> "PinnedMessage":
+    async def pin(self, *, notify: bool = True) -> PinnedMessage:
         """
         Закрепляет текущее сообщение в чате.
 
@@ -374,13 +379,13 @@ class Messages(BaseModel):
         bot (Optional[Bot]): Объект бота, исключается из сериализации.
     """
 
-    messages: List[Message]
-    bot: Optional[Any] = Field(  # pyright: ignore[reportRedeclaration]
+    messages: list[Message]
+    bot: Any | None = Field(  # pyright: ignore[reportRedeclaration]
         default=None, exclude=True
     )
 
     if TYPE_CHECKING:
-        bot: Optional[Bot]  # type: ignore
+        bot: Bot | None  # type: ignore
 
 
 class NewMessageLink(BaseModel):

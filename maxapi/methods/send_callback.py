@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
@@ -27,10 +27,10 @@ class SendCallback(BaseConnection):
 
     def __init__(
         self,
-        bot: "Bot",
+        bot: Bot,
         callback_id: str,
-        message: Optional[MessageForCallback] = None,
-        notification: Optional[str] = None,
+        message: MessageForCallback | None = None,
+        notification: str | None = None,
     ):
         self.bot = bot
         self.callback_id = callback_id
@@ -53,7 +53,7 @@ class SendCallback(BaseConnection):
 
         params["callback_id"] = self.callback_id
 
-        json: Dict[str, Any] = {}
+        json: dict[str, Any] = {}
 
         if self.message:
             json["message"] = self.message.model_dump()

@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import Literal
 
 from ...enums.attachment import AttachmentType
 from .attachment import Attachment
@@ -14,5 +14,5 @@ class Sticker(Attachment):
     """
 
     type: Literal[AttachmentType.STICKER]  # pyright: ignore[reportIncompatibleVariableOverride]
-    width: Optional[int] = None
-    height: Optional[int] = None
+    width: int | None = None
+    height: int | None = None

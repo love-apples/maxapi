@@ -1,5 +1,3 @@
-from typing import Optional, Tuple
-
 from ...types.users import User
 from .update import Update
 
@@ -15,12 +13,12 @@ class UserRemoved(Update):
         is_channel (bool): Указывает, был ли пользователь удален из канала или нет
     """
 
-    admin_id: Optional[int] = None
+    admin_id: int | None = None
     chat_id: int
     user: User
     is_channel: bool
 
-    def get_ids(self) -> Tuple[Optional[int], Optional[int]]:
+    def get_ids(self) -> tuple[int | None, int | None]:
         """
         Возвращает кортеж идентификаторов (chat_id, user_id).
 

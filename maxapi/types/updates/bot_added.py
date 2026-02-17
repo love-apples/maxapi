@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from ...types.users import User
 from .update import Update
@@ -22,7 +22,7 @@ class BotAdded(Update):
     is_channel: bool
 
     if TYPE_CHECKING:
-        bot: Optional[Bot]  # pyright: ignore[reportGeneralTypeIssues]
+        bot: Bot | None  # pyright: ignore[reportGeneralTypeIssues]
 
     def get_ids(self):
         return (self.chat_id, self.user.user_id)

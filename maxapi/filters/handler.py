@@ -1,4 +1,5 @@
-from typing import Any, Callable, List, Optional
+from collections.abc import Callable
+from typing import Any
 
 from magic_filter import MagicFilter
 
@@ -35,10 +36,10 @@ class Handler:
 
         self.func_event: Callable = func_event
         self.update_type: UpdateType = update_type
-        self.filters: Optional[List[MagicFilter]] = []
-        self.base_filters: Optional[List[BaseFilter]] = []
-        self.states: Optional[List[State | None]] = []
-        self.middlewares: List[BaseMiddleware] = []
+        self.filters: list[MagicFilter] | None = []
+        self.base_filters: list[BaseFilter] | None = []
+        self.states: list[State | None] | None = []
+        self.middlewares: list[BaseMiddleware] = []
 
         for arg in args:
             if isinstance(arg, MagicFilter):

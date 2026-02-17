@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import Literal
 
 from ...enums.attachment import AttachmentType
 from .attachment import Attachment
@@ -13,4 +13,4 @@ class Audio(Attachment):
     """
 
     type: Literal[AttachmentType.AUDIO]  # pyright: ignore[reportIncompatibleVariableOverride]
-    transcription: Optional[str] = None
+    transcription: str | None = None

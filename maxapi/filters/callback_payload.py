@@ -4,11 +4,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
-    Dict,
-    List,
-    Optional,
-    Type,
-    Union,
 )
 
 from magic_filter import MagicFilter
@@ -75,7 +70,7 @@ class CallbackPayload(BaseModel):
         return data
 
     @classmethod
-    def unpack(cls, data: str) -> "CallbackPayload":
+    def unpack(cls, data: str) -> CallbackPayload:
         """
         Десериализует payload из строки.
 
@@ -105,7 +100,7 @@ class CallbackPayload(BaseModel):
         return cls(**kwargs)
 
     @classmethod
-    def attrs(cls) -> List[str]:
+    def attrs(cls) -> list[str]:
         """
         Возвращает список полей для сериализации/десериализации (исключая prefix и separator).
 
@@ -120,7 +115,7 @@ class CallbackPayload(BaseModel):
         ]
 
     @classmethod
-    def filter(cls, rule: Optional[MagicFilter] = None) -> PayloadFilter:
+    def filter(cls, rule: MagicFilter | None = None) -> PayloadFilter:
         """
         Создаёт PayloadFilter для фильтрации callback-ивентов по payload.
 
@@ -139,9 +134,7 @@ class PayloadFilter(BaseFilter):
     Фильтр для MessageCallback по payload.
     """
 
-    def __init__(
-        self, model: Type[CallbackPayload], rule: Optional[MagicFilter]
-    ):
+    def __init__(self, model: type[CallbackPayload], rule: MagicFilter | None):
         """
         Args:
             model (Type[CallbackPayload]): Класс payload для распаковки.
@@ -151,9 +144,7 @@ class PayloadFilter(BaseFilter):
         self.model = model
         self.rule = rule
 
-    async def __call__(
-        self, event: UpdateUnion
-    ) -> Union[Dict[str, Any], bool]:
+    async def __call__(self, event: UpdateUnion) -> dict[str, Any] | bool:
         """
         Проверяет event на MessageCallback и применяет фильтр к payload.
 

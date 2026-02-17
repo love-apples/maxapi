@@ -1,5 +1,5 @@
 import asyncio
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
@@ -41,18 +41,20 @@ class SendMessage(BaseConnection):
     def __init__(
         self,
         bot: "Bot",
-        chat_id: Optional[int] = None,
-        user_id: Optional[int] = None,
-        text: Optional[str] = None,
-        attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
-            | List[Attachments]
-        ] = None,
-        link: Optional[NewMessageLink] = None,
-        notify: Optional[bool] = None,
-        parse_mode: Optional[ParseMode] = None,
-        disable_link_preview: Optional[bool] = None,
-        sleep_after_input_media: Optional[bool] = True,
+        chat_id: int | None = None,
+        user_id: int | None = None,
+        text: str | None = None,
+        attachments: list[
+            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
+        ]
+        | list[Attachments]
+        | None = None,
+        link: NewMessageLink | None = None,
+        parse_mode: ParseMode | None = None,
+        *,
+        notify: bool | None = None,
+        disable_link_preview: bool | None = None,
+        sleep_after_input_media: bool | None = True,
     ):
         if text is not None and not (len(text) < 4000):
             raise ValueError("text должен быть меньше 4000 символов")
@@ -68,7 +70,7 @@ class SendMessage(BaseConnection):
         self.disable_link_preview = disable_link_preview
         self.sleep_after_input_media = sleep_after_input_media
 
-    async def fetch(self) -> Optional[SendedMessage]:
+    async def fetch(self) -> SendedMessage | None:
         """
         Отправляет сообщение с вложениями (если есть), с обработкой задержки готовности вложений.
 
@@ -82,7 +84,7 @@ class SendMessage(BaseConnection):
 
         params = bot.params.copy()
 
-        json: Dict[str, Any] = {"attachments": []}
+        json: dict[str, Any] = {"attachments": []}
 
         if self.chat_id:
             params["chat_id"] = self.chat_id
@@ -152,4 +154,4 @@ class SendMessage(BaseConnection):
         if response is None:
             raise RuntimeError("Не удалось отправить сообщение")
 
-        return cast(Optional[SendedMessage], response)
+        return cast(SendedMessage | None, response)

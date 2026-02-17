@@ -98,14 +98,31 @@ filterwarnings = [
 
 
 [tool.ruff]
-src = [ "maxapi", "tests" ]
+src = ["maxapi", "tests"]
 exclude = ["core/yandex/cloud", "core/google"]
 line-length = 79
 indent-width = 4
 target-version = "py310"
 
+
+[tool.ruff.lint]
+# TODO: добавить BLE
+extend-select = [
+    "ASYNC",
+    "FAST",
+    "FBT",
+    "I",
+    "S",
+    "UP",
+    "YTT",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**.py" = [
+    "S"
+]
+
 [tool.ruff.format]
-# Настройки форматтера Ruff для единообразного стиля кода
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
@@ -17,8 +17,8 @@ class SendedCallback(BaseModel):
     """
 
     success: bool
-    message: Optional[str] = None
-    bot: Optional[Any] = Field(default=None, exclude=True)  # pyright: ignore[reportRedeclaration]
+    message: str | None = None
+    bot: Any | None = Field(default=None, exclude=True)  # pyright: ignore[reportRedeclaration]
 
     if TYPE_CHECKING:
-        bot: Optional[Bot]  # type: ignore
+        bot: Bot | None  # type: ignore

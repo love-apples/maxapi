@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
@@ -25,11 +25,11 @@ class MessageForCallback(BaseModel):
         format (Optional[ParseMode]): Режим разбора текста.
     """
 
-    text: Optional[str] = None
-    attachments: Optional[List[Attachments]] = Field(default_factory=list)  # type: ignore
-    link: Optional[NewMessageLink] = None
-    notify: Optional[bool] = True
-    format: Optional[ParseMode] = None
+    text: str | None = None
+    attachments: list[Attachments] | None = Field(default_factory=list)  # type: ignore
+    link: NewMessageLink | None = None
+    notify: bool | None = True
+    format: ParseMode | None = None
 
 
 class MessageCallback(Update):
@@ -44,11 +44,11 @@ class MessageCallback(Update):
         callback (Callback): Объект callback.
     """
 
-    message: Optional[Message] = None
-    user_locale: Optional[str] = None
+    message: Message | None = None
+    user_locale: str | None = None
     callback: Callback
 
-    def get_ids(self) -> Tuple[Optional[int], int]:
+    def get_ids(self) -> tuple[int | None, int]:
         """
         Возвращает кортеж идентификаторов (chat_id, user_id).
 
@@ -56,7 +56,7 @@ class MessageCallback(Update):
             tuple[Optional[int], int]: Идентификаторы чата и пользователя.
         """
 
-        chat_id: Optional[int] = None
+        chat_id: int | None = None
         if self.message is not None:
             chat_id = self.message.recipient.chat_id
 
@@ -64,11 +64,12 @@ class MessageCallback(Update):
 
     async def answer(
         self,
-        notification: Optional[str] = None,
-        new_text: Optional[str] = None,
-        link: Optional[NewMessageLink] = None,
+        notification: str | None = None,
+        new_text: str | None = None,
+        link: NewMessageLink | None = None,
+        format: ParseMode | None = None,
+        *,
         notify: bool = True,
-        format: Optional[ParseMode] = None,
         raise_if_not_exists: bool = True,
     ) -> "SendedCallback":
         """
@@ -117,7 +118,7 @@ class MessageCallback(Update):
         message_for_callback = MessageForCallback()
         message_for_callback.text = new_text
 
-        attachments: List[Attachments] = original_body.attachments or []
+        attachments: list[Attachments] = original_body.attachments or []
 
         message_for_callback.attachments = attachments
         message_for_callback.link = link

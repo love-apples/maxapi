@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, cast
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
@@ -31,10 +32,10 @@ class GetUpdates(BaseConnection):
     def __init__(
         self,
         bot: Bot,
-        limit: Optional[int],
-        timeout: Optional[int],
-        marker: Optional[int] = None,
-        types: Optional[Sequence[UpdateType]] = None,
+        limit: int | None,
+        timeout: int | None,
+        marker: int | None = None,
+        types: Sequence[UpdateType] | None = None,
     ):
         if limit is not None and not (1 <= limit <= 1000):
             raise ValueError("limit не должен быть меньше 1 и больше 1000")
@@ -48,7 +49,7 @@ class GetUpdates(BaseConnection):
         self.marker = marker
         self.types = types
 
-    async def fetch(self) -> Dict[str, Any]:
+    async def fetch(self) -> dict[str, Any]:
         """
         Выполняет GET-запрос к API для получения новых событий.
 
@@ -76,4 +77,4 @@ class GetUpdates(BaseConnection):
             is_return_raw=True,
         )
 
-        return cast(Dict[str, Any], event_json)
+        return cast(dict[str, Any], event_json)

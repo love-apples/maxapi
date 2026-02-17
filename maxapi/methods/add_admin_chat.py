@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
@@ -27,8 +27,8 @@ class AddAdminChat(BaseConnection):
         self,
         bot: "Bot",
         chat_id: int,
-        admins: List[ChatAdmin],
-        marker: Optional[int] = None,
+        admins: list[ChatAdmin],
+        marker: int | None = None,
     ):
         self.bot = bot
         self.chat_id = chat_id
@@ -47,7 +47,7 @@ class AddAdminChat(BaseConnection):
 
         bot = self._ensure_bot()
 
-        json: Dict[str, Any] = {}
+        json: dict[str, Any] = {}
 
         json["admins"] = [admin.model_dump() for admin in self.admins]
         json["marker"] = self.marker

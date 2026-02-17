@@ -3,17 +3,13 @@ from __future__ import annotations
 import asyncio
 import functools
 from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from re import DOTALL, search
 from typing import (
     TYPE_CHECKING,
     Any,
-    Awaitable,
-    Callable,
-    Dict,
-    List,
     Literal,
-    Optional,
 )
 
 from aiohttp import ClientConnectorError
@@ -75,8 +71,9 @@ class Dispatcher(BotMixin):
     def __init__(
         self,
         router_id: str | None = None,
-        use_create_task: bool = False,
         storage: Any = MemoryContext,
+        *,
+        use_create_task: bool = False,
         **storage_kwargs: Any,
     ) -> None:
         """
@@ -93,16 +90,16 @@ class Dispatcher(BotMixin):
         self.storage = storage
         self.storage_kwargs = storage_kwargs
 
-        self.event_handlers: List[Handler] = []
-        self.contexts: Dict[tuple[int | None, int | None], BaseContext] = {}
-        self.routers: List[Router | Dispatcher] = []
-        self.filters: List[MagicFilter] = []
-        self.base_filters: List[BaseFilter] = []
-        self.middlewares: List[BaseMiddleware] = []
+        self.event_handlers: list[Handler] = []
+        self.contexts: dict[tuple[int | None, int | None], BaseContext] = {}
+        self.routers: list[Router | Dispatcher] = []
+        self.filters: list[MagicFilter] = []
+        self.base_filters: list[BaseFilter] = []
+        self.middlewares: list[BaseMiddleware] = []
 
-        self.bot: Optional[Bot] = None
-        self.webhook_app: Optional[FastAPI] = None
-        self.on_started_func: Optional[Callable] = None
+        self.bot: Bot | None = None
+        self.webhook_app: FastAPI | None = None
+        self.on_started_func: Callable | None = None
         self.polling = False
         self.use_create_task = use_create_task
 
@@ -190,9 +187,9 @@ class Dispatcher(BotMixin):
 
     def build_middleware_chain(
         self,
-        middlewares: List[BaseMiddleware],
-        handler: Callable[[Any, Dict[str, Any]], Awaitable[Any]],
-    ) -> Callable[[Any, Dict[str, Any]], Awaitable[Any]]:
+        middlewares: list[BaseMiddleware],
+        handler: Callable[[Any, dict[str, Any]], Awaitable[Any]],
+    ) -> Callable[[Any, dict[str, Any]], Awaitable[Any]]:
         """
         Формирует цепочку вызова middleware вокруг хендлера.
 
@@ -209,7 +206,7 @@ class Dispatcher(BotMixin):
 
         return handler
 
-    def include_routers(self, *routers: "Router") -> None:
+    def include_routers(self, *routers: Router) -> None:
         """
         Добавляет указанные роутеры в диспетчер.
 
@@ -311,7 +308,7 @@ class Dispatcher(BotMixin):
             await self.on_started_func()
 
     def __get_context(
-        self, chat_id: Optional[int], user_id: Optional[int]
+        self, chat_id: int | None, user_id: int | None
     ) -> BaseContext:
         """
         Возвращает существующий или создаёт новый контекст по chat_id и user_id.
@@ -335,8 +332,8 @@ class Dispatcher(BotMixin):
     async def call_handler(
         self,
         handler: Handler,
-        event_object: UpdateType | Dict[str, Any],
-        data: Dict[str, Any],
+        event_object: UpdateType | dict[str, Any],
+        data: dict[str, Any],
     ) -> None:
         """
         Вызывает хендлер с нужными аргументами.
@@ -359,8 +356,8 @@ class Dispatcher(BotMixin):
             await handler.func_event(event_object)
 
     async def process_base_filters(
-        self, event: UpdateUnion, filters: List[BaseFilter]
-    ) -> Optional[Dict[str, Any]] | Literal[False]:
+        self, event: UpdateUnion, filters: list[BaseFilter]
+    ) -> dict[str, Any] | None | Literal[False]:
         """
         Асинхронно применяет фильтры к событию.
 
@@ -386,8 +383,8 @@ class Dispatcher(BotMixin):
         return data
 
     async def _check_router_filters(
-        self, event: UpdateUnion, router: "Router | Dispatcher"
-    ) -> Optional[Dict[str, Any]] | Literal[False]:
+        self, event: UpdateUnion, router: Router | Dispatcher
+    ) -> dict[str, Any] | None | Literal[False]:
         """
         Проверяет фильтры роутера для события.
 
@@ -414,8 +411,8 @@ class Dispatcher(BotMixin):
         return {}
 
     def _find_matching_handlers(
-        self, router: "Router | Dispatcher", event_type: UpdateType
-    ) -> List[Handler]:
+        self, router: Router | Dispatcher, event_type: UpdateType
+    ) -> list[Handler]:
         """
         Находит обработчики, соответствующие типу события в роутере.
 
@@ -436,8 +433,8 @@ class Dispatcher(BotMixin):
         self,
         handler: Handler,
         event: UpdateUnion,
-        current_state: Optional[Any],
-    ) -> Optional[Dict[str, Any]] | Literal[False]:
+        current_state: Any | None,
+    ) -> dict[str, Any] | None | Literal[False]:
         """
         Проверяет, подходит ли обработчик для события (фильтры, состояние).
 
@@ -472,10 +469,10 @@ class Dispatcher(BotMixin):
         self,
         handler: Handler,
         event: UpdateUnion,
-        data: Dict[str, Any],
-        handler_middlewares: List[BaseMiddleware],
+        data: dict[str, Any],
+        handler_middlewares: list[BaseMiddleware],
         memory_context: BaseContext,
-        current_state: Optional[Any],
+        current_state: Any | None,
         router_id: Any,
         process_info: str,
     ) -> None:
@@ -522,7 +519,7 @@ class Dispatcher(BotMixin):
             ) from e
 
     async def handle_raw_response(
-        self, event_type: UpdateType, raw_data: Dict[str, Any]
+        self, event_type: UpdateType, raw_data: dict[str, Any]
     ) -> None:
         """
         Специальный метод для обработки сырых ответов API.
@@ -561,7 +558,7 @@ class Dispatcher(BotMixin):
             is_handled = False
 
             async def _process_event(
-                _: UpdateUnion, data: Dict[str, Any]
+                _: UpdateUnion, data: dict[str, Any]
             ) -> None:
                 nonlocal router_id, is_handled, memory_context, current_state
 
@@ -588,7 +585,7 @@ class Dispatcher(BotMixin):
                     )
 
                     async def _process_handlers(
-                        event: UpdateUnion, handler_data: Dict[str, Any]
+                        event: UpdateUnion, handler_data: dict[str, Any]
                     ) -> None:
                         nonlocal is_handled
 
@@ -671,7 +668,7 @@ class Dispatcher(BotMixin):
             )
 
     async def start_polling(
-        self, bot: Bot, skip_updates: bool = False
+        self, bot: Bot, *, skip_updates: bool = False
     ) -> None:
         """
         Запускает цикл получения обновлений (long polling).
@@ -689,7 +686,7 @@ class Dispatcher(BotMixin):
 
         while self.polling:
             try:
-                events: Dict = await self._ensure_bot().get_updates(
+                events: dict = await self._ensure_bot().get_updates(
                     marker=self._ensure_bot().marker_updates
                 )
             except AsyncioTimeoutError:
@@ -877,6 +874,7 @@ class Event:
         self,
         update_type: UpdateType,
         router: Dispatcher | Router,
+        *,
         deprecated: bool = False,
     ):
         """

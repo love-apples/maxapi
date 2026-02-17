@@ -1,5 +1,4 @@
 import warnings
-from typing import Optional
 
 from ...types.chats import Chat
 from .update import Update
@@ -20,9 +19,9 @@ class MessageChatCreated(Update):
     """
 
     chat: Chat  # type: ignore[assignment]
-    title: Optional[str] = None
-    message_id: Optional[str] = None
-    start_payload: Optional[str] = None
+    title: str | None = None
+    message_id: str | None = None
+    start_payload: str | None = None
 
     def __init__(self, **data):
         super().__init__(**data)

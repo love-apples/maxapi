@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
@@ -25,7 +25,7 @@ class SendAction(BaseConnection):
     def __init__(
         self,
         bot: "Bot",
-        chat_id: Optional[int] = None,
+        chat_id: int | None = None,
         action: SenderAction = SenderAction.TYPING_ON,
     ):
         self.bot = bot
@@ -42,7 +42,7 @@ class SendAction(BaseConnection):
 
         bot = self._ensure_bot()
 
-        json: Dict[str, Any] = {}
+        json: dict[str, Any] = {}
 
         json["action"] = self.action.value
 

@@ -1,5 +1,3 @@
-from typing import Optional
-
 from ....enums.button_type import ButtonType
 from .button import Button
 
@@ -17,6 +15,6 @@ class OpenAppButton(Button):
 
     type: ButtonType = ButtonType.OPEN_APP
     text: str
-    web_app: Optional[str] = None
-    contact_id: Optional[int] = None
-    payload: Optional[str] = None
+    web_app: str | None = None
+    contact_id: int | None = None
+    payload: str | None = None

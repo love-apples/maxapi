@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import mimetypes
 import os
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 import aiofiles
 import puremagic
@@ -42,8 +42,8 @@ class BaseConnection(BotMixin):
             after_input_media_delay (float): Задержка после ввода медиа.
         """
 
-        self.bot: Optional[Bot] = None
-        self.session: Optional[ClientSession] = None
+        self.bot: Bot | None = None
+        self.session: ClientSession | None = None
         self.after_input_media_delay: float = self.AFTER_MEDIA_INPUT_DELAY
         self.api_url = self.API_URL
 
@@ -62,6 +62,7 @@ class BaseConnection(BotMixin):
         method: HTTPMethod,
         path: ApiPath | str,
         model: BaseModel | Any = None,
+        *,
         is_return_raw: bool = False,
         **kwargs: Any,
     ) -> Any | BaseModel:

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 from ..enums.attachment import AttachmentType
 from ..types.attachments.attachment import Attachment, ButtonsPayload
 from ..types.attachments.buttons import InlineButtonUnion
@@ -16,7 +14,7 @@ class InlineKeyboardBuilder:
     """
 
     def __init__(self):
-        self.payload: List[List[InlineButtonUnion]] = [[]]
+        self.payload: list[list[InlineButtonUnion]] = [[]]
 
     def row(self, *buttons: InlineButtonUnion) -> InlineKeyboardBuilder:
         """
@@ -66,7 +64,7 @@ class InlineKeyboardBuilder:
         if not flat_buttons:
             return self
 
-        new_payload: List[List[InlineButtonUnion]] = []
+        new_payload: list[list[InlineButtonUnion]] = []
         button_index = 0
         size_index = 0
 
