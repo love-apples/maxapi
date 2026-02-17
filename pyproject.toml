@@ -122,8 +122,11 @@ extend-select = [
     "INT",
     "ISC",
     "LOG",
+    "PYI",
     "PIE",
     "S",
+    "T",
+    "T20",
     "UP",
     "YTT",
 ]

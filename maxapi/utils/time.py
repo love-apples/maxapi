@@ -1,7 +1,7 @@
 from datetime import datetime
 
 
-def to_ms(value: datetime | int | float) -> int:
+def to_ms(value: datetime | float) -> int:
     """Преобразует datetime или числовую метку времени в миллисекунды (int).
 
     Если `value` — объект datetime, возвращает int(timestamp * 1000).
@@ -12,7 +12,7 @@ def to_ms(value: datetime | int | float) -> int:
     return int(value)
 
 
-def from_ms(value: int | float | None) -> datetime | None:
+def from_ms(value: float | None) -> datetime | None:
     """Преобразует миллисекунды с эпохи в объект datetime.
 
     Если value равен None, возвращает None.
