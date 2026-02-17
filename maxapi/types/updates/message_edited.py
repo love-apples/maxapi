@@ -21,4 +21,4 @@ class MessageEdited(Update):
                 пользователя.
         """
 
-        return (self.message.recipient.chat_id, self.message.recipient.user_id)
+        return self.message.recipient.chat_id, self.message.recipient.user_id

@@ -36,4 +36,4 @@ class DialogMuted(Update):
             return datetime.max
 
     def get_ids(self):
-        return (self.chat_id, self.user.user_id)
+        return self.chat_id, self.user.user_id

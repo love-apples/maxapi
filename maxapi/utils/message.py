@@ -57,6 +57,7 @@ async def process_input_media(
             type=att.type,
         )
 
+    # noinspection HardcodedPassword
     token = ""
 
     if att.type in (UploadType.VIDEO, UploadType.AUDIO):

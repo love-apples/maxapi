@@ -77,7 +77,10 @@ class ButtonsPayload(BaseModel):
     buttons: list[list[InlineButtonUnion]]
 
     def pack(self):
-        return Attachment(type=AttachmentType.INLINE_KEYBOARD, payload=self)  # type: ignore
+        return Attachment(  # type: ignore[call-arg]
+            type=AttachmentType.INLINE_KEYBOARD,
+            payload=self,
+        )
 
 
 class Attachment(BaseModel):
@@ -100,12 +103,10 @@ class Attachment(BaseModel):
         | StickerAttachmentPayload
         | None
     ) = None
-    bot: Any | None = Field(  # pyright: ignore[reportRedeclaration]
-        default=None, exclude=True
-    )
+    bot: Any | None = Field(default=None, exclude=True)
 
     if TYPE_CHECKING:
-        bot: Bot | None  # type: ignore
+        bot: Bot | None  # type: ignore[no-redef]
 
     model_config = ConfigDict(
         use_enum_values=True,

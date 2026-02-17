@@ -22,7 +22,7 @@ class DialogUnmuted(Update):
     user_locale: str | None = None
 
     if TYPE_CHECKING:
-        bot: Bot | None  # pyright: ignore[reportGeneralTypeIssues]
+        bot: Bot | None
 
     def get_ids(self):
-        return (self.chat_id, self.user.user_id)
+        return self.chat_id, self.user.user_id

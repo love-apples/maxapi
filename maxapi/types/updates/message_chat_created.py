@@ -32,4 +32,4 @@ class MessageChatCreated(Update):
         )
 
     def get_ids(self):
-        return (self.chat.chat_id, self.chat.owner_id)
+        return self.chat.chat_id, self.chat.owner_id

@@ -29,4 +29,4 @@ class UserAdded(Update):
                 пользователя.
         """
 
-        return (self.chat_id, self.inviter_id)
+        return self.chat_id, self.inviter_id

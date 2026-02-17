@@ -9,4 +9,4 @@ class Contact(Attachment):
     Вложение с типом контакта.
     """
 
-    type: Literal[AttachmentType.CONTACT]  # pyright: ignore[reportIncompatibleVariableOverride]
+    type: Literal[AttachmentType.CONTACT]

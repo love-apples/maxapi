@@ -654,7 +654,7 @@ class Dispatcher(BotMixin):
                 mem_data = await memory_context.get_data()
 
                 if hasattr(global_chain, "func"):
-                    middleware_title = global_chain.func.__class__.__name__  # type: ignore[attr-defined]
+                    middleware_title = global_chain.func.__class__.__name__
                 else:
                     middleware_title = getattr(
                         global_chain,
@@ -822,9 +822,7 @@ class Dispatcher(BotMixin):
             else:
                 await self.handle(event_object)
 
-            return JSONResponse(  # pyright: ignore[reportPossiblyUnboundVariable]
-                content={"ok": True}, status_code=200
-            )
+            return JSONResponse(content={"ok": True}, status_code=200)
 
         await self.init_serve(bot=bot, host=host, port=port, **kwargs)
 

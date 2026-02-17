@@ -31,4 +31,4 @@ class MessageCreated(Update):
 
         chat_id = self.message.recipient.chat_id
         user_id = self.message.sender.user_id if self.message.sender else None
-        return (chat_id, user_id)
+        return chat_id, user_id

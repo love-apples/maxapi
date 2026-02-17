@@ -24,4 +24,4 @@ class MessageRemoved(Update):
                 пользователя.
         """
 
-        return (self.chat_id, self.user_id)
+        return self.chat_id, self.user_id
