@@ -305,7 +305,9 @@ class Dispatcher(BotMixin):
             len(router.event_handlers) for router in self.routers
         )
 
-        logger_dp.info(f"{handlers_count} событий на обработку")
+        logger_dp.info(
+            f"Зарегистрировано {handlers_count} обработчиков событий"
+        )
 
         if self.on_started_func:
             await self.on_started_func()
