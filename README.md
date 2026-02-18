@@ -117,7 +117,7 @@ async def main():
         bot=bot, 
         host='localhost',
         port=8080,
-        log_level='critical' # Можно убрать для подробного логгирования
+        log_level=logging.CRITICAL  # Можно убрать для подробного логирования
     )
 
 
