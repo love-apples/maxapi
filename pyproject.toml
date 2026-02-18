@@ -98,14 +98,62 @@ filterwarnings = [
 
 
 [tool.ruff]
-src = [ "maxapi", "tests" ]
+src = ["maxapi", "tests"]
 exclude = ["core/yandex/cloud", "core/google"]
 line-length = 79
 indent-width = 4
 target-version = "py310"
 
+
+[tool.ruff.lint]
+# TODO: добавить BLE C90 N PGH PLR TRY
+select = ["ALL"]
+ignore = [
+    "BLE", # TODO: требует рефакторинга
+    "C90", # TODO: требует рефакторинга
+    "ERA", # TODO: требует рефакторинга
+    "N", # TODO: требует рефакторинга
+    "PGH", # TODO: требует рефакторинга
+    "PLR", # TODO: требует рефакторинга
+    "TRY", # TODO: требует рефакторинга
+    "RUF006", # TODO: требует рефакторинга
+    "A",
+    "ARG",
+    "ANN",
+    "COM812",
+    "D",
+    "DTZ",
+    "EXE",
+    "EM",
+    "FIX",
+    "PLW1641",
+    "TC006",
+    "RET",
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    "SIM108",
+    "SIM118",
+    "TD",
+    "TID",
+]
+
+flake8-type-checking.runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**.py" = [
+    "ARG",
+    "PL",
+    "S",
+    "SLF",
+]
+"dispatcher.py" = [
+    "B023", # TODO: требует рефакторинга dispatcher
+]
+
 [tool.ruff.format]
-# Настройки форматтера Ruff для единообразного стиля кода
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"

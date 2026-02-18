@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic import BaseModel
 
 from ...types.message import Message
@@ -13,4 +11,4 @@ class GettedPin(BaseModel):
         message (Optional[Message]): Закреплённое сообщение, если оно есть.
     """
 
-    message: Optional[Message] = None
+    message: Message | None = None

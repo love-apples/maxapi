@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import Literal
 
 from ...enums.attachment import AttachmentType
 from .attachment import Attachment
@@ -17,6 +17,6 @@ class Share(Attachment):
     type: Literal[  # pyright: ignore[reportIncompatibleVariableOverride]
         AttachmentType.SHARE
     ]
-    title: Optional[str] = None
-    description: Optional[str] = None
-    image_url: Optional[str] = None
+    title: str | None = None
+    description: str | None = None
+    image_url: str | None = None

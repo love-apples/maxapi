@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, List, Optional, Tuple
+__all__ = ["Message", "MessageCallback", "MessageForCallback"]
+
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
@@ -18,18 +20,19 @@ class MessageForCallback(BaseModel):
 
     Attributes:
         text (Optional[str]): Текст сообщения.
-        attachments (Optional[List[Union[AttachmentButton, Audio, Video, File, Image, Sticker, Share]]]):
+        attachments (Optional[List[Union[AttachmentButton, Audio, Video,
+            File, Image, Sticker, Share]]]):
             Список вложений.
         link (Optional[NewMessageLink]): Связь с другим сообщением.
         notify (Optional[bool]): Отправлять ли уведомление.
         format (Optional[ParseMode]): Режим разбора текста.
     """
 
-    text: Optional[str] = None
-    attachments: Optional[List[Attachments]] = Field(default_factory=list)  # type: ignore
-    link: Optional[NewMessageLink] = None
-    notify: Optional[bool] = True
-    format: Optional[ParseMode] = None
+    text: str | None = None
+    attachments: list[Attachments] | None = Field(default_factory=list)  # type: ignore
+    link: NewMessageLink | None = None
+    notify: bool | None = True
+    format: ParseMode | None = None
 
 
 class MessageCallback(Update):
@@ -37,18 +40,18 @@ class MessageCallback(Update):
     Обновление с callback-событием сообщения.
 
     Attributes:
-        message (Optional[Message]): Изначальное сообщение, содержащее встроенную
-            клавиатуру. Может быть null, если оно было удалено к моменту,
-            когда бот получил это обновление.
+        message (Optional[Message]): Изначальное сообщение, содержащее
+            встроенную клавиатуру. Может быть null, если оно было
+            удалено к моменту, когда бот получил это обновление.
         user_locale (Optional[str]): Локаль пользователя.
         callback (Callback): Объект callback.
     """
 
-    message: Optional[Message] = None
-    user_locale: Optional[str] = None
+    message: Message | None = None
+    user_locale: str | None = None
     callback: Callback
 
-    def get_ids(self) -> Tuple[Optional[int], int]:
+    def get_ids(self) -> tuple[int | None, int]:
         """
         Возвращает кортеж идентификаторов (chat_id, user_id).
 
@@ -56,7 +59,7 @@ class MessageCallback(Update):
             tuple[Optional[int], int]: Идентификаторы чата и пользователя.
         """
 
-        chat_id: Optional[int] = None
+        chat_id: int | None = None
         if self.message is not None:
             chat_id = self.message.recipient.chat_id
 
@@ -64,15 +67,17 @@ class MessageCallback(Update):
 
     async def answer(
         self,
-        notification: Optional[str] = None,
-        new_text: Optional[str] = None,
-        link: Optional[NewMessageLink] = None,
+        notification: str | None = None,
+        new_text: str | None = None,
+        link: NewMessageLink | None = None,
+        format: ParseMode | None = None,
+        *,
         notify: bool = True,
-        format: Optional[ParseMode] = None,
         raise_if_not_exists: bool = True,
     ) -> "SendedCallback":
         """
-        Отправляет ответ на callback с возможностью изменить текст, вложения и параметры уведомления.
+        Отправляет ответ на callback с возможностью изменить текст,
+        вложения и параметры уведомления.
 
         Args:
             notification (str): Текст уведомления.
@@ -87,12 +92,13 @@ class MessageCallback(Update):
             SendedCallback: Результат вызова send_callback бота.
         """
 
-        # Если исходного сообщения нет (например, оно удалено), не стоит синтезировать
-        # пустой payload message. Два варианта поведения:
+        # Если исходного сообщения нет (например, оно удалено),
+        # не стоит синтезировать пустой payload message.
+        # Два варианта поведения:
         #  - если вызывающий просит изменить сообщение (new_text/link/format)
         #    => выбросить исключение
-        #  - иначе отправить только notification с message=None, чтобы API не получил
-        #    пустой объект message
+        #  - иначе отправить только notification с message=None,
+        #  чтобы API не получил пустой объект message
         original_body = None
         if self.message is not None:
             original_body = self.message.body
@@ -103,7 +109,8 @@ class MessageCallback(Update):
                 new_text is not None or link is not None or format is not None
             ):
                 raise ValueError(
-                    "Невозможно изменить сообщение: исходное сообщение отсутствует"
+                    "Невозможно изменить сообщение: "
+                    "исходное сообщение отсутствует"
                 )
 
             # отправляем только уведомление (без поля message)
@@ -113,11 +120,12 @@ class MessageCallback(Update):
                 notification=notification,
             )
 
-        # Если исходное сообщение есть — собираем MessageForCallback на его основе
+        # Если исходное сообщение есть —
+        # собираем MessageForCallback на его основе
         message_for_callback = MessageForCallback()
         message_for_callback.text = new_text
 
-        attachments: List[Attachments] = original_body.attachments or []
+        attachments: list[Attachments] = original_body.attachments or []
 
         message_for_callback.attachments = attachments
         message_for_callback.link = link

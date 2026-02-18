@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
@@ -20,16 +20,18 @@ class AddAdminChat(BaseConnection):
         bot (Bot): Экземпляр бота, через который выполняется запрос.
         chat_id (int): Идентификатор чата.
         admins (List[ChatAdmin]): Список администраторов для добавления.
-        marker (int, optional): Маркер для пагинации или дополнительных настроек. По умолчанию None.
+        marker (int, optional): Маркер для пагинации или дополнительных
+            настроек. По умолчанию None.
     """
 
     def __init__(
         self,
         bot: "Bot",
         chat_id: int,
-        admins: List[ChatAdmin],
-        marker: Optional[int] = None,
+        admins: list[ChatAdmin],
+        marker: int | None = None,
     ):
+        super().__init__()
         self.bot = bot
         self.chat_id = chat_id
         self.admins = admins
@@ -39,15 +41,17 @@ class AddAdminChat(BaseConnection):
         """
         Выполняет HTTP POST запрос для добавления администраторов в чат.
 
-        Формирует JSON с данными администраторов и отправляет запрос на соответствующий API-эндпоинт.
+        Формирует JSON с данными администраторов и отправляет запрос на
+        соответствующий API-эндпоинт.
 
         Returns:
-            AddedListAdminChat: Результат операции с информацией об успешности.
+            AddedListAdminChat: Результат операции с информацией
+                об успешности.
         """
 
         bot = self._ensure_bot()
 
-        json: Dict[str, Any] = {}
+        json: dict[str, Any] = {}
 
         json["admins"] = [admin.model_dump() for admin in self.admins]
         json["marker"] = self.marker

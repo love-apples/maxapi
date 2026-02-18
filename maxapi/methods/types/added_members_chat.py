@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic import BaseModel
 
 
@@ -13,4 +11,4 @@ class AddedMembersChat(BaseModel):
     """
 
     success: bool
-    message: Optional[str] = None
+    message: str | None = None

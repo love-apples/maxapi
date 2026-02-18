@@ -17,7 +17,8 @@ class GetMessage(BaseConnection):
 
     Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
-        message_id (Optional[str]): ID сообщения (mid), чтобы получить одно сообщение в чате.
+        message_id (Optional[str]): ID сообщения (mid), чтобы получить
+            одно сообщение в чате.
     """
 
     def __init__(
@@ -25,6 +26,7 @@ class GetMessage(BaseConnection):
         bot: "Bot",
         message_id: str,
     ):
+        super().__init__()
         self.bot = bot
         self.message_id = message_id
 

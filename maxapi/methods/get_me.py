@@ -11,7 +11,8 @@ if TYPE_CHECKING:
 
 class GetMe(BaseConnection):
     """
-    Возвращает информацию о текущем боте, который идентифицируется с помощью токена доступа.
+    Возвращает информацию о текущем боте, который идентифицируется
+    с помощью токена доступа.
     Метод возвращает ID бота, его имя и аватар (если есть).
 
     https://dev.max.ru/docs-api/methods/GET/me
@@ -21,6 +22,7 @@ class GetMe(BaseConnection):
     """
 
     def __init__(self, bot: "Bot"):
+        super().__init__()
         self.bot = bot
 
     async def fetch(self) -> User:

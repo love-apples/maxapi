@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from ...types.users import User
 from .update import Update
@@ -14,7 +14,8 @@ class BotRemoved(Update):
     Attributes:
         chat_id (int): Идентификатор чата, из которого удалён бот.
         user (User): Объект пользователя-бота.
-        is_channel (bool): Указывает, был ли пользователь добавлен в канал или нет
+        is_channel (bool): Указывает, был ли пользователь добавлен
+            в канал или нет
     """
 
     chat_id: int
@@ -22,7 +23,7 @@ class BotRemoved(Update):
     is_channel: bool
 
     if TYPE_CHECKING:
-        bot: Optional[Bot]  # pyright: ignore[reportGeneralTypeIssues]
+        bot: Bot | None  # pyright: ignore[reportGeneralTypeIssues]
 
     def get_ids(self):
-        return (self.chat_id, self.user.user_id)
+        return self.chat_id, self.user.user_id

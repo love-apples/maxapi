@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
 from ..enums.http_method import HTTPMethod
-from ..enums.update import UpdateType
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from ..bot import Bot
+    from ..enums.update import UpdateType
 
 
 class GetUpdates(BaseConnection):
@@ -25,16 +27,17 @@ class GetUpdates(BaseConnection):
         limit (int): Лимит на количество получаемых обновлений.
         timeout (int): Таймаут ожидания.
         marker (Optional[int]): ID последнего обработанного события.
-        types (Optional[Sequence[UpdateType]]): Список типов событий для фильтрации.
+        types (Optional[Sequence[UpdateType]]): Список типов событий
+            для фильтрации.
     """
 
     def __init__(
         self,
         bot: Bot,
-        limit: Optional[int],
-        timeout: Optional[int],
-        marker: Optional[int] = None,
-        types: Optional[Sequence[UpdateType]] = None,
+        limit: int | None,
+        timeout: int | None,
+        marker: int | None = None,
+        types: Sequence[UpdateType] | None = None,
     ):
         if limit is not None and not (1 <= limit <= 1000):
             raise ValueError("limit не должен быть меньше 1 и больше 1000")
@@ -42,13 +45,14 @@ class GetUpdates(BaseConnection):
         if timeout is not None and not (0 <= timeout <= 90):
             raise ValueError("timeout не должен быть меньше 0 и больше 90")
 
+        super().__init__()
         self.bot = bot
         self.limit = limit
         self.timeout = timeout
         self.marker = marker
         self.types = types
 
-    async def fetch(self) -> Dict[str, Any]:
+    async def fetch(self) -> dict[str, Any]:
         """
         Выполняет GET-запрос к API для получения новых событий.
 
@@ -76,4 +80,4 @@ class GetUpdates(BaseConnection):
             is_return_raw=True,
         )
 
-        return cast(Dict[str, Any], event_json)
+        return cast(dict[str, Any], event_json)

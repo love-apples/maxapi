@@ -95,9 +95,9 @@ class TestBotResolveMethods:
     def test_resolve_notify(self, bot):
         """Тест _resolve_notify."""
         bot.notify = True
-        assert bot._resolve_notify(None) is True
-        assert bot._resolve_notify(False) is False
-        assert bot._resolve_notify(True) is True
+        assert bot._resolve_notify(notify=None) is True
+        assert bot._resolve_notify(notify=False) is False
+        assert bot._resolve_notify(notify=True) is True
 
     def test_resolve_parse_mode(self, bot):
         """Тест _resolve_parse_mode."""
@@ -108,8 +108,14 @@ class TestBotResolveMethods:
     def test_resolve_disable_link_preview(self, bot):
         """Тест _resolve_disable_link_preview."""
         bot.disable_link_preview = True
-        assert bot._resolve_disable_link_preview(None) is True
-        assert bot._resolve_disable_link_preview(False) is False
+        assert (
+            bot._resolve_disable_link_preview(disable_link_preview=None)
+            is True
+        )
+        assert (
+            bot._resolve_disable_link_preview(disable_link_preview=False)
+            is False
+        )
 
 
 class TestBotSessionManagement:

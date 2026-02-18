@@ -1,4 +1,4 @@
-from typing import Annotated, Union
+from typing import Annotated
 
 from pydantic import Field
 
@@ -13,16 +13,14 @@ from ..attachments.sticker import Sticker
 from ..attachments.video import Video
 
 Attachments = Annotated[
-    Union[
-        Audio,
-        Video,
-        File,
-        Image,
-        Sticker,
-        Share,
-        Location,
-        AttachmentButton,
-        Contact,
-    ],
+    Audio
+    | Video
+    | File
+    | Image
+    | Sticker
+    | Share
+    | Location
+    | AttachmentButton
+    | Contact,
     Field(discriminator="type"),
 ]

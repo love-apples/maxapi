@@ -48,11 +48,9 @@ async def enrich_event(event_object: Any, bot: Bot) -> Any:
             event_object.chat = None
 
     if isinstance(event_object, (MessageCreated, MessageEdited)):
-        if event_object.message.recipient.chat_id is not None:
-            if not hasattr(event_object, "chat"):
-                event_object.chat = await bot.get_chat_by_id(
-                    event_object.message.recipient.chat_id
-                )
+        recipient = event_object.message.recipient
+        if recipient.chat_id is not None and not hasattr(event_object, "chat"):
+            event_object.chat = await bot.get_chat_by_id(recipient.chat_id)
 
         event_object.from_user = getattr(event_object.message, "sender", None)
 
@@ -75,7 +73,7 @@ async def enrich_event(event_object: Any, bot: Bot) -> Any:
             )
 
         elif event_object.chat and event_object.chat.type == ChatType.DIALOG:
-            event_object.from_user = event_object.chat  # pyright: ignore[reportAttributeAccessIssue]
+            event_object.from_user = event_object.chat
 
     elif isinstance(event_object, UserRemoved):
         if not hasattr(event_object, "chat"):
@@ -85,14 +83,10 @@ async def enrich_event(event_object: Any, bot: Bot) -> Any:
                 chat_id=event_object.chat_id, user_id=event_object.admin_id
             )
 
-    elif isinstance(event_object, UserAdded):
-        if not hasattr(event_object, "chat"):
-            event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
-        event_object.from_user = event_object.user
-
     elif isinstance(
         event_object,
         (
+            UserAdded,
             BotAdded,
             BotRemoved,
             BotStarted,
@@ -110,7 +104,7 @@ async def enrich_event(event_object: Any, bot: Bot) -> Any:
     if isinstance(
         event_object, (MessageCreated, MessageEdited, MessageCallback)
     ):
-        object_message = event_object.message  # pyright: ignore[reportAttributeAccessIssue]
+        object_message = event_object.message
 
         if object_message is not None:
             object_message.bot = bot

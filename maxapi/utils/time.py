@@ -1,8 +1,7 @@
 from datetime import datetime
-from typing import Optional, Union
 
 
-def to_ms(value: Union[datetime, int, float]) -> int:
+def to_ms(value: datetime | float) -> int:
     """Преобразует datetime или числовую метку времени в миллисекунды (int).
 
     Если `value` — объект datetime, возвращает int(timestamp * 1000).
@@ -13,7 +12,7 @@ def to_ms(value: Union[datetime, int, float]) -> int:
     return int(value)
 
 
-def from_ms(value: Optional[Union[int, float]]) -> Optional[datetime]:
+def from_ms(value: float | None) -> datetime | None:
     """Преобразует миллисекунды с эпохи в объект datetime.
 
     Если value равен None, возвращает None.

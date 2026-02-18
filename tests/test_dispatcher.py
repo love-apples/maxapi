@@ -254,7 +254,8 @@ class TestDispatcherMiddlewareChain:
             [middleware1, middleware2], handler
         )
 
-        # Проверяем, что цепочка создана (не вызываем, так как нужен реальный event)
+        # Проверяем, что цепочка создана
+        # (не вызываем, так как нужен реальный event)
         assert callable(chain)
 
 

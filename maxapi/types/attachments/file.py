@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import Literal
 
 from ...enums.attachment import AttachmentType
 from .attachment import Attachment
@@ -13,6 +13,6 @@ class File(Attachment):
         size (Optional[int]): Размер файла в байтах.
     """
 
-    type: Literal[AttachmentType.FILE]  # pyright: ignore[reportIncompatibleVariableOverride]
-    filename: Optional[str] = None
-    size: Optional[int] = None
+    type: Literal[AttachmentType.FILE]
+    filename: str | None = None
+    size: int | None = None

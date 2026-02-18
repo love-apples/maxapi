@@ -26,9 +26,11 @@ async def process_input_media(
     Загружает файл вложения и формирует объект AttachmentUpload.
 
     Args:
-        base_connection (BaseConnection): Базовое соединение для загрузки файла.
+        base_connection (BaseConnection): Базовое соединение для
+            загрузки файла.
         bot (Bot): Экземпляр бота.
-        att (InputMedia | InputMediaBuffer): Объект вложения для загрузки.
+        att (InputMedia | InputMediaBuffer): Объект вложения
+            для загрузки.
 
     Returns:
         AttachmentUpload: Загруженное вложение с токеном.
@@ -39,7 +41,7 @@ async def process_input_media(
     except MaxApiError as e:
         raise MaxUploadFileFailed(
             f"Ошибка при загрузке файла: code={e.code}, raw={e.raw}"
-        )
+        ) from e
 
     if isinstance(att, InputMedia):
         upload_file_response = await base_connection.upload_file(
@@ -55,6 +57,7 @@ async def process_input_media(
             type=att.type,
         )
 
+    # noinspection HardcodedPassword
     token = ""
 
     if att.type in (UploadType.VIDEO, UploadType.AUDIO):

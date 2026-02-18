@@ -2,29 +2,32 @@ from __future__ import annotations
 
 import asyncio
 import mimetypes
-import os
-from typing import TYPE_CHECKING, Any, Optional
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import aiofiles
 import puremagic
 from aiohttp import ClientConnectionError, ClientSession, FormData
-from pydantic import BaseModel
 
 from ..enums.api_path import ApiPath
-from ..enums.http_method import HTTPMethod
-from ..enums.upload_type import UploadType
+from ..enums.update import UpdateType
 from ..exceptions.max import InvalidToken, MaxApiError, MaxConnection
 from ..types.bot_mixin import BotMixin
 
 if TYPE_CHECKING:
+    from pydantic import BaseModel
+
     from ..bot import Bot
+    from ..enums.http_method import HTTPMethod
+    from ..enums.upload_type import UploadType
 
 
 class BaseConnection(BotMixin):
     """
     Базовый класс для всех методов API.
 
-    Содержит общую логику выполнения запроса (сериализация, отправка HTTP-запроса, обработка ответа).
+    Содержит общую логику выполнения запроса (сериализация, отправка
+    HTTP-запроса, обработка ответа).
     """
 
     API_URL = "https://platform-api.max.ru"
@@ -42,8 +45,8 @@ class BaseConnection(BotMixin):
             after_input_media_delay (float): Задержка после ввода медиа.
         """
 
-        self.bot: Optional[Bot] = None
-        self.session: Optional[ClientSession] = None
+        self.bot: Bot | None = None
+        self.session: ClientSession | None = None
         self.after_input_media_delay: float = self.AFTER_MEDIA_INPUT_DELAY
         self.api_url = self.API_URL
 
@@ -62,6 +65,7 @@ class BaseConnection(BotMixin):
         method: HTTPMethod,
         path: ApiPath | str,
         model: BaseModel | Any = None,
+        *,
         is_return_raw: bool = False,
         **kwargs: Any,
     ) -> Any | BaseModel:
@@ -71,8 +75,10 @@ class BaseConnection(BotMixin):
         Args:
             method (HTTPMethod): HTTP-метод (GET, POST и т.д.).
             path (ApiPath | str): Путь до конечной точки.
-            model (BaseModel | Any, optional): Pydantic-модель для десериализации ответа, если is_return_raw=False.
-            is_return_raw (bool, optional): Если True — вернуть сырой ответ, иначе — результат десериализации.
+            model (BaseModel | Any, optional): Pydantic-модель для
+                десериализации ответа, если is_return_raw=False.
+            is_return_raw (bool, optional): Если True — вернуть сырой
+                ответ, иначе — результат десериализации.
             **kwargs: Дополнительные параметры (query, headers, json).
 
         Returns:
@@ -101,7 +107,7 @@ class BaseConnection(BotMixin):
                 **kwargs,
             )
         except ClientConnectionError as e:
-            raise MaxConnection(f"Ошибка при отправке запроса: {e}")
+            raise MaxConnection(f"Ошибка при отправке запроса: {e}") from e
 
         if r.status == 401:
             await bot.session.close()
@@ -110,8 +116,6 @@ class BaseConnection(BotMixin):
         if not r.ok:
             raw = await r.json()
             if bot.dispatcher:
-                from ..enums.update import UpdateType
-
                 asyncio.create_task(
                     bot.dispatcher.handle_raw_response(
                         UpdateType.RAW_API_RESPONSE, raw
@@ -122,8 +126,6 @@ class BaseConnection(BotMixin):
         raw = await r.json()
 
         if bot.dispatcher:
-            from ..enums.update import UpdateType
-
             asyncio.create_task(
                 bot.dispatcher.handle_raw_response(
                     UpdateType.RAW_API_RESPONSE, raw
@@ -136,7 +138,7 @@ class BaseConnection(BotMixin):
         model = model(**raw)  # type: ignore
 
         if hasattr(model, "message"):
-            attr = getattr(model, "message")
+            attr = model.message
             if hasattr(attr, "bot"):
                 attr.bot = bot
 
@@ -161,8 +163,9 @@ class BaseConnection(BotMixin):
         async with aiofiles.open(path, "rb") as f:
             file_data = await f.read()
 
-        basename = os.path.basename(path)
-        _, ext = os.path.splitext(basename)
+        path_object = Path(path)
+        basename = path_object.name
+        ext = path_object.suffix
 
         form = FormData(quote_fields=False)
         form.add_field(

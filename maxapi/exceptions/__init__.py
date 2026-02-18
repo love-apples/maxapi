@@ -10,11 +10,11 @@ from .max import (
 
 __all__ = [
     "HandlerException",
-    "MiddlewareException",
     "InvalidToken",
-    "MaxConnection",
-    "MaxUploadFileFailed",
-    "MaxIconParamsException",
     "MaxApiError",
+    "MaxConnection",
+    "MaxIconParamsException",
+    "MaxUploadFileFailed",
+    "MiddlewareException",
     "NotAvailableForDownload",
 ]

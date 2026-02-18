@@ -1,4 +1,7 @@
-from typing import Optional, Tuple
+__all__ = [
+    "Message",  # для своевременной инициализации в pydantic
+    "MessageEdited",
+]
 
 from ...types.message import Message
 from .update import Update
@@ -14,12 +17,13 @@ class MessageEdited(Update):
 
     message: Message
 
-    def get_ids(self) -> Tuple[Optional[int], Optional[int]]:
+    def get_ids(self) -> tuple[int | None, int | None]:
         """
         Возвращает кортеж идентификаторов (chat_id, user_id).
 
         Returns:
-            Tuple[Optional[int], Optional[int]]: Идентификаторы чата и пользователя.
+            Tuple[Optional[int], Optional[int]]: Идентификаторы чата и
+                пользователя.
         """
 
-        return (self.message.recipient.chat_id, self.message.recipient.user_id)
+        return self.message.recipient.chat_id, self.message.recipient.user_id

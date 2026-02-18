@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -16,9 +16,9 @@ class PhotoAttachmentRequestPayload(BaseModel):
         photos (Optional[str]): Дополнительные данные о фотографиях.
     """
 
-    url: Optional[str] = None
-    token: Optional[str] = None
-    photos: Optional[str] = None
+    url: str | None = None
+    token: str | None = None
+    photos: str | None = None
 
 
 class Image(Attachment):

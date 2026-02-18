@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
@@ -25,8 +25,9 @@ class AddMembersChat(BaseConnection):
         self,
         bot: "Bot",
         chat_id: int,
-        user_ids: List[int],
+        user_ids: list[int],
     ):
+        super().__init__()
         self.bot = bot
         self.chat_id = chat_id
         self.user_ids = user_ids
@@ -35,15 +36,17 @@ class AddMembersChat(BaseConnection):
         """
         Отправляет POST-запрос на добавление пользователей в чат.
 
-        Формирует JSON с ID пользователей и вызывает базовый метод запроса.
+        Формирует JSON с ID пользователей и вызывает базовый
+        метод запроса.
 
         Returns:
-            AddedMembersChat: Результат операции с информацией об успешности добавления.
+            AddedMembersChat: Результат операции с информацией
+                об успешности добавления.
         """
 
         bot = self._ensure_bot()
 
-        json: Dict[str, Any] = {}
+        json: dict[str, Any] = {}
 
         json["user_ids"] = self.user_ids
 

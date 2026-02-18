@@ -1,5 +1,3 @@
-from typing import Optional
-
 from ....enums.button_type import ButtonType
 from .button import Button
 
@@ -13,4 +11,4 @@ class LinkButton(Button):
     """
 
     type: ButtonType = ButtonType.LINK
-    url: Optional[str] = None
+    url: str | None = None

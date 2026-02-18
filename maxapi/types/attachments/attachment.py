@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, List, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -49,7 +49,7 @@ class OtherAttachmentPayload(BaseModel):
     """
 
     url: str
-    token: Optional[str] = None
+    token: str | None = None
 
 
 class ContactAttachmentPayload(BaseModel):
@@ -62,7 +62,7 @@ class ContactAttachmentPayload(BaseModel):
     """
 
     vcf_info: str = ""  # для корректного определения
-    max_info: Optional[User] = None
+    max_info: User | None = None
 
 
 class ButtonsPayload(BaseModel):
@@ -70,13 +70,17 @@ class ButtonsPayload(BaseModel):
     Данные для вложения с кнопками.
 
     Attributes:
-        buttons (List[List[InlineButtonUnion]]): Двумерный список inline-кнопок.
+        buttons (List[List[InlineButtonUnion]]): Двумерный список
+            inline-кнопок.
     """
 
-    buttons: List[List[InlineButtonUnion]]
+    buttons: list[list[InlineButtonUnion]]
 
     def pack(self):
-        return Attachment(type=AttachmentType.INLINE_KEYBOARD, payload=self)  # type: ignore
+        return Attachment(  # type: ignore[call-arg]
+            type=AttachmentType.INLINE_KEYBOARD,
+            payload=self,
+        )
 
 
 class Attachment(BaseModel):
@@ -85,26 +89,24 @@ class Attachment(BaseModel):
 
     Attributes:
         type (AttachmentType): Тип вложения.
-        payload (Optional[Union[...] ]): Полезная нагрузка, зависит от типа вложения.
+        payload (Optional[Union[...] ]): Полезная нагрузка, зависит
+            от типа вложения.
     """
 
     type: AttachmentType
-    payload: Optional[
-        Union[
-            AttachmentUpload,
-            PhotoAttachmentPayload,
-            OtherAttachmentPayload,
-            ButtonsPayload,
-            ContactAttachmentPayload,
-            StickerAttachmentPayload,
-        ]
-    ] = None
-    bot: Optional[Any] = Field(  # pyright: ignore[reportRedeclaration]
-        default=None, exclude=True
-    )
+    payload: (
+        AttachmentUpload
+        | PhotoAttachmentPayload
+        | OtherAttachmentPayload
+        | ButtonsPayload
+        | ContactAttachmentPayload
+        | StickerAttachmentPayload
+        | None
+    ) = None
+    bot: Any | None = Field(default=None, exclude=True)
 
     if TYPE_CHECKING:
-        bot: Optional[Bot]  # type: ignore
+        bot: Bot | None  # type: ignore[no-redef]
 
     model_config = ConfigDict(
         use_enum_values=True,

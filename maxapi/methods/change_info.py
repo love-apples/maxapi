@@ -1,5 +1,5 @@
 import warnings
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
@@ -17,8 +17,8 @@ class ChangeInfo(BaseConnection):
     Класс для изменения данных текущего бота.
 
     .. deprecated:: 0.9.8
-        Этот метод отсутствует в официальной swagger-спецификации API MAX.
-        Использование не рекомендуется.
+        Этот метод отсутствует в официальной swagger-спецификации
+        API MAX. Использование не рекомендуется.
 
     https://dev.max.ru/docs-api/methods/PATCH/me
 
@@ -26,24 +26,27 @@ class ChangeInfo(BaseConnection):
         first_name (str, optional): Имя бота (1–64 символа).
         last_name (str, optional): Второе имя бота (1–64 символа).
         description (str, optional): Описание бота (1–16000 символов).
-        commands (list[BotCommand], optional): Список команд (до 32 элементов).
+        commands (list[BotCommand], optional): Список команд
+            (до 32 элементов).
         photo (PhotoAttachmentRequestPayload, optional): Фото бота.
 
     Note:
-        Метод :meth:`fetch` возвращает объект :class:`User` с обновленными данными бота.
+        Метод :meth:`fetch` возвращает объект :class:`User`
+            с обновленными данными бота.
     """
 
     def __init__(
         self,
         bot: "Bot",
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
-        description: Optional[str] = None,
-        commands: Optional[List[BotCommand]] = None,
-        photo: Optional[PhotoAttachmentRequestPayload] = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        description: str | None = None,
+        commands: list[BotCommand] | None = None,
+        photo: PhotoAttachmentRequestPayload | None = None,
     ):
         warnings.warn(
-            "ChangeInfo устарел и отсутствует в официальной swagger-спецификации API MAX. "
+            "ChangeInfo устарел и отсутствует в официальной "
+            "swagger-спецификации API MAX. "
             "Использование не рекомендуется.",
             DeprecationWarning,
             stacklevel=2,
@@ -66,6 +69,7 @@ class ChangeInfo(BaseConnection):
         if commands is not None and len(commands) > 32:
             raise ValueError("commands не может содержать больше 32 элементов")
 
+        super().__init__()
         self.bot = bot
         self.first_name = first_name
         self.last_name = last_name
@@ -83,7 +87,7 @@ class ChangeInfo(BaseConnection):
 
         bot = self._ensure_bot()
 
-        json: Dict[str, Any] = {}
+        json: dict[str, Any] = {}
 
         if self.first_name:
             json["first_name"] = self.first_name

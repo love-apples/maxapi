@@ -1,6 +1,6 @@
 import asyncio
 import json
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 from ..context.base import BaseContext
 from ..context.state_machine import State
@@ -12,14 +12,14 @@ class MemoryContext(BaseContext):
     """
 
     def __init__(
-        self, chat_id: Optional[int], user_id: Optional[int], **kwargs: Any
+        self, chat_id: int | None, user_id: int | None, **kwargs: Any
     ) -> None:
         super().__init__(chat_id, user_id, **kwargs)
-        self._context: Dict[str, Any] = {}
+        self._context: dict[str, Any] = {}
         self._state: State | str | None = None
         self._lock = asyncio.Lock()
 
-    async def get_data(self) -> Dict[str, Any]:
+    async def get_data(self) -> dict[str, Any]:
         """
         Возвращает текущий контекст данных.
 
@@ -30,7 +30,7 @@ class MemoryContext(BaseContext):
         async with self._lock:
             return self._context
 
-    async def set_data(self, data: Dict[str, Any]) -> None:
+    async def set_data(self, data: dict[str, Any]) -> None:
         """
         Полностью заменяет контекст данных.
 
@@ -52,9 +52,7 @@ class MemoryContext(BaseContext):
         async with self._lock:
             self._context.update(kwargs)
 
-    async def set_state(
-        self, state: Optional[Union[State, str]] = None
-    ) -> None:
+    async def set_state(self, state: State | str | None = None) -> None:
         """
         Устанавливает новое состояние.
 
@@ -65,7 +63,7 @@ class MemoryContext(BaseContext):
         async with self._lock:
             self._state = state
 
-    async def get_state(self) -> Optional[Union[State, str]]:
+    async def get_state(self) -> State | str | None:
         """
         Возвращает текущее состояние.
 
@@ -94,8 +92,8 @@ class RedisContext(BaseContext):
 
     def __init__(
         self,
-        chat_id: Optional[int],
-        user_id: Optional[int],
+        chat_id: int | None,
+        user_id: int | None,
         redis_client: Any,  # redis.asyncio.Redis
         key_prefix: str = "maxapi",
         **kwargs: Any,
@@ -106,11 +104,11 @@ class RedisContext(BaseContext):
         self.data_key = f"{self.prefix}:data"
         self.state_key = f"{self.prefix}:state"
 
-    async def get_data(self) -> Dict[str, Any]:
+    async def get_data(self) -> dict[str, Any]:
         data = await self.redis.get(self.data_key)
         return json.loads(data) if data else {}
 
-    async def set_data(self, data: Dict[str, Any]) -> None:
+    async def set_data(self, data: dict[str, Any]) -> None:
         await self.redis.set(self.data_key, json.dumps(data))
 
     async def update_data(self, **kwargs: Any) -> None:
@@ -132,9 +130,7 @@ class RedisContext(BaseContext):
         """
         await self.redis.eval(lua_script, 1, self.data_key, json.dumps(kwargs))
 
-    async def set_state(
-        self, state: Optional[Union[State, str]] = None
-    ) -> None:
+    async def set_state(self, state: State | str | None = None) -> None:
         if state is None:
             await self.redis.delete(self.state_key)
         else:
@@ -142,7 +138,7 @@ class RedisContext(BaseContext):
             state_val = state.name if isinstance(state, State) else state
             await self.redis.set(self.state_key, str(state_val))
 
-    async def get_state(self) -> Optional[Union[State, str]]:
+    async def get_state(self) -> State | str | None:
         state = await self.redis.get(self.state_key)
         if isinstance(state, bytes):
             return state.decode("utf-8")

@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from pydantic import BaseModel
 
 
@@ -15,4 +13,4 @@ class Subscription(BaseModel):
 
     url: str
     time: int
-    update_types: Optional[List[str]] = None
+    update_types: list[str] | None = None

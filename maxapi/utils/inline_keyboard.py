@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import List
+from typing import TYPE_CHECKING
 
 from ..enums.attachment import AttachmentType
 from ..types.attachments.attachment import Attachment, ButtonsPayload
-from ..types.attachments.buttons import InlineButtonUnion
+
+if TYPE_CHECKING:
+    from ..types.attachments.buttons import InlineButtonUnion
 
 
 class InlineKeyboardBuilder:
@@ -16,7 +18,7 @@ class InlineKeyboardBuilder:
     """
 
     def __init__(self):
-        self.payload: List[List[InlineButtonUnion]] = [[]]
+        self.payload: list[list[InlineButtonUnion]] = [[]]
 
     def row(self, *buttons: InlineButtonUnion) -> InlineKeyboardBuilder:
         """
@@ -50,7 +52,8 @@ class InlineKeyboardBuilder:
 
         Args:
             *sizes: Количество кнопок в каждом ряду.
-                   Если кнопок больше, чем сумма размеров, размеры повторяются циклично.
+                   Если кнопок больше, чем сумма размеров, размеры
+                   повторяются циклично.
 
         Returns:
             InlineKeyboardBuilder: Текущий объект для цепочки вызовов.
@@ -60,13 +63,12 @@ class InlineKeyboardBuilder:
 
         flat_buttons = []
         for row in self.payload:
-            for button in row:
-                flat_buttons.append(button)
+            flat_buttons.extend(row)
 
         if not flat_buttons:
             return self
 
-        new_payload: List[List[InlineButtonUnion]] = []
+        new_payload: list[list[InlineButtonUnion]] = []
         button_index = 0
         size_index = 0
 

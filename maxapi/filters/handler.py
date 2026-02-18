@@ -1,4 +1,5 @@
-from typing import Any, Callable, List, Optional
+from collections.abc import Callable
+from typing import Any
 
 from magic_filter import MagicFilter
 
@@ -27,7 +28,8 @@ class Handler:
         Создаёт обработчик события.
 
         Args:
-            *args (Any): Список фильтров (MagicFilter, State, Command, BaseFilter, BaseMiddleware).
+            *args (Any): Список фильтров (MagicFilter, State, Command,
+                BaseFilter, BaseMiddleware).
             func_event (Callable): Функция-обработчик.
             update_type (UpdateType): Тип обновления.
             **kwargs (Any): Дополнительные параметры.
@@ -35,10 +37,10 @@ class Handler:
 
         self.func_event: Callable = func_event
         self.update_type: UpdateType = update_type
-        self.filters: Optional[List[MagicFilter]] = []
-        self.base_filters: Optional[List[BaseFilter]] = []
-        self.states: Optional[List[State | None]] = []
-        self.middlewares: List[BaseMiddleware] = []
+        self.filters: list[MagicFilter] | None = []
+        self.base_filters: list[BaseFilter] | None = []
+        self.states: list[State | None] | None = []
+        self.middlewares: list[BaseMiddleware] = []
 
         for arg in args:
             if isinstance(arg, MagicFilter):
@@ -51,5 +53,6 @@ class Handler:
                 self.base_filters.append(arg)
             else:
                 logger_dp.info(
-                    f"Неизвестный фильтр `{arg}` при регистрации `{func_event.__name__}`"
+                    f"Неизвестный фильтр `{arg}` "
+                    f"при регистрации `{func_event.__name__}`"
                 )

@@ -12,8 +12,9 @@ if TYPE_CHECKING:
 class UnsubscribeWebhook(BaseConnection):
     """
     Отписывает бота от получения обновлений через WebHook.
-    После вызова этого метода бот перестает получать уведомления о новых событиях,
-    и доступна доставка уведомлений через API с длительным опросом.
+    После вызова этого метода бот перестает получать уведомления
+    о новых событиях, и доступна доставка уведомлений через API
+    с длительным опросом.
 
     https://dev.max.ru/docs-api/methods/DELETE/subscriptions
 
@@ -27,12 +28,14 @@ class UnsubscribeWebhook(BaseConnection):
         bot: "Bot",
         url: str,
     ):
+        super().__init__()
         self.bot = bot
         self.url = url
 
     async def fetch(self) -> Unsubscribed:
         """
-        Отправляет запрос на подписку бота на получение обновлений через WebHook
+        Отправляет запрос на подписку бота на получение обновлений
+        через WebHook.
 
         Returns:
             Unsubscribed: Объект с информацией об операции

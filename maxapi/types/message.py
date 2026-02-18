@@ -1,26 +1,26 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..enums.chat_type import ChatType
 from ..enums.message_link_type import MessageLinkType
-from ..enums.parse_mode import ParseMode
 from ..enums.text_style import TextStyle
 from ..types.attachments import Attachments
 from ..types.bot_mixin import BotMixin
-from .attachments.attachment import Attachment
 from .users import User
 
 if TYPE_CHECKING:
     from ..bot import Bot
+    from ..enums.parse_mode import ParseMode
     from ..methods.types.deleted_message import DeletedMessage
     from ..methods.types.edited_message import EditedMessage
     from ..methods.types.pinned_message import PinnedMessage
     from ..methods.types.sended_message import SendedMessage
     from ..types.attachments.upload import AttachmentUpload
     from ..types.input_media import InputMedia, InputMediaBuffer
+    from .attachments.attachment import Attachment
 
 
 class MarkupElement(BaseModel):
@@ -50,7 +50,7 @@ class MarkupLink(MarkupElement):
         url (Optional[str]): URL ссылки. Может быть None.
     """
 
-    url: Optional[str] = None
+    url: str | None = None
 
 
 class Recipient(BaseModel):
@@ -63,8 +63,8 @@ class Recipient(BaseModel):
         chat_type (ChatType): Тип получателя (диалог или чат).
     """
 
-    user_id: Optional[int] = None
-    chat_id: Optional[int] = None
+    user_id: int | None = None
+    chat_id: int | None = None
     chat_type: ChatType
 
 
@@ -76,17 +76,19 @@ class MessageBody(BaseModel):
         mid (str): Уникальный идентификатор сообщения.
         seq (int): Порядковый номер сообщения.
         text (str): Текст сообщения. Может быть None.
-        attachments (Optional[List[Union[AttachmentButton, Audio, Video, File, Image, Sticker, Share]]]):
+        attachments (Optional[List[Union[AttachmentButton, Audio, Video,
+            File, Image, Sticker, Share]]]):
             Список вложений. По умолчанию пустой.
-        markup (Optional[List[Union[MarkupLink, MarkupElement]]]): Список элементов разметки. По умолчанию пустой.
+        markup (Optional[List[Union[MarkupLink, MarkupElement]]]):
+            Список элементов разметки. По умолчанию пустой.
     """
 
     mid: str
     seq: int
-    text: Optional[str] = None
-    attachments: Optional[List[Attachments]] = Field(default_factory=list)  # type: ignore
+    text: str | None = None
+    attachments: list[Attachments] | None = Field(default_factory=list)  # type: ignore
 
-    markup: Optional[List[Union[MarkupLink, MarkupElement]]] = Field(
+    markup: list[MarkupLink | MarkupElement] | None = Field(
         default_factory=list
     )  # type: ignore
 
@@ -108,14 +110,16 @@ class LinkedMessage(BaseModel):
 
     Attributes:
         type (MessageLinkType): Тип связи.
-        sender (Optional[User]): Отправитель связанного сообщения, может быть None, если связанное сообщение отправлено каналом https://github.com/love-apples/maxapi/issues/11.
+        sender (Optional[User]): Отправитель связанного сообщения,
+            может быть None, если связанное сообщение отправлено каналом
+            https://github.com/love-apples/maxapi/issues/11.
         chat_id (Optional[int]): Идентификатор чата. Может быть None.
         message (MessageBody): Тело связанного сообщения.
     """
 
     type: MessageLinkType
-    sender: Optional[User] = None
-    chat_id: Optional[int] = None
+    sender: User | None = None
+    chat_id: int | None = None
     message: MessageBody
 
 
@@ -124,7 +128,9 @@ class Message(BaseModel, BotMixin):
     Модель сообщения.
 
     Attributes:
-        sender (Optional[User]): Отправитель сообщения, может быть None, если сообщение отправлено каналом https://github.com/love-apples/maxapi/discussions/14.
+        sender (Optional[User]): Отправитель сообщения, может быть None,
+            если сообщение отправлено каналом
+            https://github.com/love-apples/maxapi/discussions/14.
         recipient (Recipient): Получатель сообщения.
         timestamp (int): Временная метка сообщения.
         link (Optional[LinkedMessage]): Связанное сообщение. Может быть None.
@@ -136,43 +142,52 @@ class Message(BaseModel, BotMixin):
         bot (Optional[Bot]): Объект бота, исключается из сериализации.
     """
 
-    sender: Optional[User] = None
+    sender: User | None = None
     recipient: Recipient
     timestamp: int
-    link: Optional[LinkedMessage] = None
-    body: Optional[MessageBody] = None
-    stat: Optional[MessageStat] = None
-    url: Optional[str] = None
-    bot: Optional[Any] = Field(  # pyright: ignore[reportRedeclaration]
+    link: LinkedMessage | None = None
+    body: MessageBody | None = None
+    stat: MessageStat | None = None
+    url: str | None = None
+    bot: Any | None = Field(  # pyright: ignore[reportRedeclaration]
         default=None, exclude=True
     )
 
     if TYPE_CHECKING:
-        bot: Optional[Bot]  # type: ignore
+        bot: Bot | None  # type: ignore
 
     async def answer(
         self,
-        text: Optional[str] = None,
-        attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
-        ] = None,
-        link: Optional[NewMessageLink] = None,
-        notify: Optional[bool] = None,
-        parse_mode: Optional[ParseMode] = None,
-        sleep_after_input_media: Optional[bool] = True,
-    ) -> Optional["SendedMessage"]:
+        text: str | None = None,
+        attachments: list[
+            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
+        ]
+        | None = None,
+        link: NewMessageLink | None = None,
+        parse_mode: ParseMode | None = None,
+        *,
+        notify: bool | None = None,
+        sleep_after_input_media: bool | None = True,
+    ) -> SendedMessage | None:
         """
         Отправляет сообщение (автозаполнение chat_id, user_id).
 
         Args:
             text (str, optional): Текст ответа. Может быть None.
-            attachments (List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload], optional): Список вложений. Может быть None.
-            link (NewMessageLink, optional): Связь с другим сообщением. Может быть None.
+            attachments (List[Attachment | InputMedia | InputMediaBuffer
+                | AttachmentUpload], optional): Список вложений.
+                Может быть None.
+            link (NewMessageLink, optional): Связь с другим сообщением.
+                Может быть None.
+            parse_mode (ParseMode, optional): Режим форматирования текста.
+                Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
-            parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
+            sleep_after_input_media (bool, optional): Флаг задержки
+                после отправки вложений типа InputMedia. По умолчанию True.
 
         Returns:
-            Optional[SendedMessage]: Результат выполнения метода send_message бота.
+            Optional[SendedMessage]: Результат выполнения метода
+                send_message бота.
         """
 
         return await self._ensure_bot().send_message(
@@ -188,26 +203,32 @@ class Message(BaseModel, BotMixin):
 
     async def reply(
         self,
-        text: Optional[str] = None,
-        attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
-        ] = None,
-        notify: Optional[bool] = None,
-        parse_mode: Optional[ParseMode] = None,
-        sleep_after_input_media: Optional[bool] = True,
-    ) -> Optional["SendedMessage"]:
+        text: str | None = None,
+        attachments: list[
+            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
+        ]
+        | None = None,
+        parse_mode: ParseMode | None = None,
+        *,
+        notify: bool | None = None,
+        sleep_after_input_media: bool | None = True,
+    ) -> SendedMessage | None:
         """
         Отправляет ответное сообщение (автозаполнение chat_id, user_id, link).
 
         Args:
             text (str, optional): Текст ответа. Может быть None.
-            attachments (List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload], optional): Список вложений. Может быть None.
+            attachments (List[Attachment | InputMedia | InputMediaBuffer
+                | AttachmentUpload], optional): Список вложений.
+                Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
-            parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
+            parse_mode (ParseMode, optional): Режим форматирования текста.
+                Может быть None.
             sleep_after_input_media: Optional[bool] = True,
 
         Returns:
-            Optional[SendedMessage]: Результат выполнения метода send_message бота.
+            Optional[SendedMessage]: Результат выполнения метода
+                send_message бота.
         """
 
         if self.body is None:
@@ -231,32 +252,37 @@ class Message(BaseModel, BotMixin):
 
     async def forward(
         self,
-        chat_id: Optional[int],
-        user_id: Optional[int] = None,
-        attachments: Optional[
-            List[
-                Union[
-                    Attachment, InputMedia, InputMediaBuffer, AttachmentUpload
-                ]
-            ]
-        ] = None,
-        notify: Optional[bool] = None,
-        parse_mode: Optional[ParseMode] = None,
-        sleep_after_input_media: Optional[bool] = True,
-    ) -> Optional["SendedMessage"]:
+        chat_id: int | None,
+        user_id: int | None = None,
+        attachments: list[
+            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
+        ]
+        | None = None,
+        parse_mode: ParseMode | None = None,
+        *,
+        notify: bool | None = None,
+        sleep_after_input_media: bool | None = True,
+    ) -> SendedMessage | None:
         """
-        Пересылает отправленное сообщение в указанный чат (автозаполнение link).
+        Пересылает отправленное сообщение в указанный чат.
+        (автозаполнение link)
 
         Args:
-            chat_id (int): ID чата для отправки (обязателен, если не указан user_id)
-            user_id (int): ID пользователя для отправки (обязателен, если не указан chat_id). По умолчанию None
-            attachments (List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload], optional): Список вложений. Может быть None.
+            chat_id (int): ID чата для отправки (обязателен, если не
+                указан user_id)
+            user_id (int): ID пользователя для отправки (обязателен,
+                если не указан chat_id). По умолчанию None
+            attachments (List[Attachment | InputMedia | InputMediaBuffer
+                | AttachmentUpload], optional): Список вложений.
+                Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
-            parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
+            parse_mode (ParseMode, optional): Режим форматирования
+                текста. Может быть None.
             sleep_after_input_media: Optional[bool] = True,
 
         Returns:
-            Optional[SendedMessage]: Результат выполнения метода send_message бота.
+            Optional[SendedMessage]: Результат выполнения метода
+                send_message бота.
         """
 
         if self.body is None:
@@ -277,28 +303,35 @@ class Message(BaseModel, BotMixin):
 
     async def edit(
         self,
-        text: Optional[str] = None,
-        attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
-            | List[Attachments]
-        ] = None,
-        link: Optional[NewMessageLink] = None,
+        text: str | None = None,
+        attachments: list[
+            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
+        ]
+        | list[Attachments]
+        | None = None,
+        link: NewMessageLink | None = None,
+        parse_mode: ParseMode | None = None,
+        *,
         notify: bool = True,
-        parse_mode: Optional[ParseMode] = None,
-        sleep_after_input_media: Optional[bool] = True,
-    ) -> Optional["EditedMessage"]:
+        sleep_after_input_media: bool | None = True,
+    ) -> EditedMessage | None:
         """
         Редактирует текущее сообщение.
 
         Args:
             text (str, optional): Новый текст сообщения. Может быть None.
-            attachments (List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload], optional): Новые вложения. Может быть None.
-            link (NewMessageLink, optional): Новая связь с сообщением. Может быть None.
+            attachments (List[Attachment | InputMedia | InputMediaBuffer |
+                AttachmentUpload], optional): Новые вложения. Может быть None.
+            link (NewMessageLink, optional): Новая связь с сообщением.
+                Может быть None.
+            parse_mode (ParseMode, optional): Режим форматирования текста.
+                Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
-            parse_mode (ParseMode, optional): Режим форматирования текста. Может быть None.
-
+            sleep_after_input_media (bool, optional): Флаг задержки
+                после отправки вложений типа InputMedia. По умолчанию True.
         Returns:
-            Optional[EditedMessage]: Результат выполнения метода edit_message бота.
+            Optional[EditedMessage]: Результат выполнения метода
+                edit_message бота.
         """
 
         if link is None and self.link:
@@ -306,9 +339,12 @@ class Message(BaseModel, BotMixin):
                 type=self.link.type, mid=self.link.message.mid
             )
 
-        if attachments is None:
-            if self.body is not None and self.body.attachments:
-                attachments = self.body.attachments
+        if (
+            attachments is None
+            and self.body is not None
+            and self.body.attachments
+        ):
+            attachments = self.body.attachments
 
         if self.body is None:
             msg = "Невозможно редактировать: поле body отсутствует у сообщения"
@@ -324,7 +360,7 @@ class Message(BaseModel, BotMixin):
             sleep_after_input_media=sleep_after_input_media,
         )
 
-    async def delete(self) -> "DeletedMessage":
+    async def delete(self) -> DeletedMessage:
         """
         Удаляет текущее сообщение.
 
@@ -340,7 +376,7 @@ class Message(BaseModel, BotMixin):
             message_id=self.body.mid,
         )
 
-    async def pin(self, notify: bool = True) -> "PinnedMessage":
+    async def pin(self, *, notify: bool = True) -> PinnedMessage:
         """
         Закрепляет текущее сообщение в чате.
 
@@ -374,13 +410,13 @@ class Messages(BaseModel):
         bot (Optional[Bot]): Объект бота, исключается из сериализации.
     """
 
-    messages: List[Message]
-    bot: Optional[Any] = Field(  # pyright: ignore[reportRedeclaration]
+    messages: list[Message]
+    bot: Any | None = Field(  # pyright: ignore[reportRedeclaration]
         default=None, exclude=True
     )
 
     if TYPE_CHECKING:
-        bot: Optional[Bot]  # type: ignore
+        bot: Bot | None  # type: ignore
 
 
 class NewMessageLink(BaseModel):

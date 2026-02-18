@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from pydantic import BaseModel
 
 from ..enums.chat_permission import ChatPermission
@@ -19,20 +17,22 @@ class User(BaseModel):
         last_activity_time (int): Временная метка последней активности.
         description (Optional[str]): Описание пользователя. Может быть None.
         avatar_url (Optional[str]): URL аватара пользователя. Может быть None.
-        full_avatar_url (Optional[str]): URL полного аватара пользователя. Может быть None.
-        commands (Optional[List[BotCommand]]): Список команд бота. Может быть None.
+        full_avatar_url (Optional[str]): URL полного аватара пользователя.
+            Может быть None.
+        commands (Optional[List[BotCommand]]): Список команд бота.
+            Может быть None.
     """
 
     user_id: int
     first_name: str
-    last_name: Optional[str] = None
-    username: Optional[str] = None
+    last_name: str | None = None
+    username: str | None = None
     is_bot: bool
     last_activity_time: int
-    description: Optional[str] = None
-    avatar_url: Optional[str] = None
-    full_avatar_url: Optional[str] = None
-    commands: Optional[List[BotCommand]] = None
+    description: str | None = None
+    avatar_url: str | None = None
+    full_avatar_url: str | None = None
+    commands: list[BotCommand] | None = None
 
     @property
     def full_name(self):
@@ -52,4 +52,4 @@ class ChatAdmin(BaseModel):
     """
 
     user_id: int
-    permissions: List[ChatPermission]
+    permissions: list[ChatPermission]

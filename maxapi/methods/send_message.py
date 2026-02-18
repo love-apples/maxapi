@@ -1,5 +1,5 @@
 import asyncio
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
@@ -21,42 +21,51 @@ if TYPE_CHECKING:
 
 class SendMessage(BaseConnection):
     """
-    Класс для отправки сообщения в чат или пользователю с поддержкой вложений и форматирования.
+    Класс для отправки сообщения в чат или пользователю с поддержкой
+    вложений и форматирования.
 
     https://dev.max.ru/docs-api/methods/POST/messages
 
     Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
-        chat_id (Optional[int]): Идентификатор чата, куда отправлять сообщение.
-        user_id (Optional[int]): Идентификатор пользователя, если нужно отправить личное сообщение.
+        chat_id (Optional[int]): Идентификатор чата, куда отправлять
+            сообщение.
+        user_id (Optional[int]): Идентификатор пользователя, если нужно
+            отправить личное сообщение.
         text (Optional[str]): Текст сообщения.
-        attachments (Optional[List[Attachment | InputMedia | InputMediaBuffer]]):
-            Список вложений к сообщению.
-        link (Optional[NewMessageLink]): Связь с другим сообщением (например, ответ или пересылка).
-        notify (Optional[bool]): Отправлять ли уведомление о сообщении. По умолчанию True.
-        parse_mode (Optional[ParseMode]): Режим разбора текста (например, Markdown, HTML).
+        attachments (Optional[List[Attachment | InputMedia |
+            InputMediaBuffer]]): Список вложений к сообщению.
+        link (Optional[NewMessageLink]): Связь с другим сообщением
+            (например, ответ или пересылка).
+        notify (Optional[bool]): Отправлять ли уведомление о сообщении.
+            По умолчанию True.
+        parse_mode (Optional[ParseMode]): Режим разбора текста
+            (например, Markdown, HTML).
         disable_link_preview (Optional[bool]): Флаг генерации превью.
     """
 
     def __init__(
         self,
         bot: "Bot",
-        chat_id: Optional[int] = None,
-        user_id: Optional[int] = None,
-        text: Optional[str] = None,
-        attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
-            | List[Attachments]
-        ] = None,
-        link: Optional[NewMessageLink] = None,
-        notify: Optional[bool] = None,
-        parse_mode: Optional[ParseMode] = None,
-        disable_link_preview: Optional[bool] = None,
-        sleep_after_input_media: Optional[bool] = True,
+        chat_id: int | None = None,
+        user_id: int | None = None,
+        text: str | None = None,
+        attachments: list[
+            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
+        ]
+        | list[Attachments]
+        | None = None,
+        link: NewMessageLink | None = None,
+        parse_mode: ParseMode | None = None,
+        *,
+        notify: bool | None = None,
+        disable_link_preview: bool | None = None,
+        sleep_after_input_media: bool | None = True,
     ):
         if text is not None and not (len(text) < 4000):
             raise ValueError("text должен быть меньше 4000 символов")
 
+        super().__init__()
         self.bot = bot
         self.chat_id = chat_id
         self.user_id = user_id
@@ -68,9 +77,10 @@ class SendMessage(BaseConnection):
         self.disable_link_preview = disable_link_preview
         self.sleep_after_input_media = sleep_after_input_media
 
-    async def fetch(self) -> Optional[SendedMessage]:
+    async def fetch(self) -> SendedMessage | None:
         """
-        Отправляет сообщение с вложениями (если есть), с обработкой задержки готовности вложений.
+        Отправляет сообщение с вложениями (если есть),
+        с обработкой задержки готовности вложений.
 
         Возвращает результат отправки или ошибку.
 
@@ -82,7 +92,7 @@ class SendMessage(BaseConnection):
 
         params = bot.params.copy()
 
-        json: Dict[str, Any] = {"attachments": []}
+        json: dict[str, Any] = {"attachments": []}
 
         if self.chat_id:
             params["chat_id"] = self.chat_id
@@ -91,12 +101,12 @@ class SendMessage(BaseConnection):
 
         json["text"] = self.text
 
-        HAS_INPUT_MEDIA = False
+        has_input_media = False
 
         if self.attachments:
             for att in self.attachments:
                 if isinstance(att, (InputMedia, InputMediaBuffer)):
-                    HAS_INPUT_MEDIA = True
+                    has_input_media = True
 
                     input_media = await process_input_media(
                         base_connection=self, bot=bot, att=att
@@ -121,7 +131,7 @@ class SendMessage(BaseConnection):
         if self.parse_mode is not None:
             json["format"] = self.parse_mode.value
 
-        if HAS_INPUT_MEDIA and self.sleep_after_input_media:
+        if has_input_media and self.sleep_after_input_media:
             await asyncio.sleep(bot.after_input_media_delay)
 
         response = None
@@ -140,7 +150,8 @@ class SendMessage(BaseConnection):
                     and e.raw.get("code") == "attachment.not.ready"
                 ):
                     logger_bot.info(
-                        f"Ошибка при отправке загруженного медиа, попытка {attempt + 1}, жду {self.RETRY_DELAY} секунды"
+                        f"Ошибка при отправке загруженного медиа, попытка "
+                        f"{attempt + 1}, жду {self.RETRY_DELAY} секунды"
                     )
                     await asyncio.sleep(self.RETRY_DELAY)
                     continue
@@ -152,4 +163,4 @@ class SendMessage(BaseConnection):
         if response is None:
             raise RuntimeError("Не удалось отправить сообщение")
 
-        return cast(Optional[SendedMessage], response)
+        return cast(SendedMessage | None, response)

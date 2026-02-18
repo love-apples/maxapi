@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Dict, List, Optional
 
 from pydantic import (
     BaseModel,
@@ -38,42 +37,48 @@ class Chat(BaseModel):
         status (ChatStatus): Статус чата.
         title (Optional[str]): Название чата.
         icon (Optional[Icon]): Иконка чата. Может быть None.
-        last_event_time (int): Временная метка последнего события в чате.
+        last_event_time (int): Временная метка последнего события
+            в чате.
         participants_count (int): Количество участников чата.
         owner_id (Optional[int]): Идентификатор владельца чата.
-        participants (Optional[Dict[str, datetime]]): Словарь участников с временными метками. Может быть None.
+        participants (Optional[Dict[str, datetime]]): Словарь участников
+            с временными метками. Может быть None.
         is_public (bool): Флаг публичности чата.
         link (Optional[str]): Ссылка на чат. Может быть None.
         description (Optional[str]): Описание чата. Может быть None.
-        dialog_with_user (Optional[User]): Пользователь, с которым ведется диалог. Может быть None.
-        messages_count (Optional[int]): Количество сообщений в чате. Может быть None.
-        chat_message_id (Optional[str]): Идентификатор сообщения чата. Может быть None.
-        pinned_message (Optional[Message]): Закрепленное сообщение. Может быть None.
+        dialog_with_user (Optional[User]): Пользователь, с которым
+            ведется диалог. Может быть None.
+        messages_count (Optional[int]): Количество сообщений в чате.
+            Может быть None.
+        chat_message_id (Optional[str]): Идентификатор сообщения чата.
+            Может быть None.
+        pinned_message (Optional[Message]): Закрепленное сообщение.
+            Может быть None.
     """
 
     chat_id: int
     type: ChatType
     status: ChatStatus
-    title: Optional[str] = None
-    icon: Optional[Icon] = None
+    title: str | None = None
+    icon: Icon | None = None
     last_event_time: int
     participants_count: int
-    owner_id: Optional[int] = None
-    participants: Optional[Dict[str, datetime]] = None
+    owner_id: int | None = None
+    participants: dict[str, datetime] | None = None
     is_public: bool
-    link: Optional[str] = None
-    description: Optional[str] = None
-    dialog_with_user: Optional[User] = None
-    messages_count: Optional[int] = None
-    chat_message_id: Optional[str] = None
-    pinned_message: Optional[Message] = None
+    link: str | None = None
+    description: str | None = None
+    dialog_with_user: User | None = None
+    messages_count: int | None = None
+    chat_message_id: str | None = None
+    pinned_message: Message | None = None
 
     @field_validator("participants", mode="before")
     @classmethod
     def convert_timestamps(
         cls,
-        value: Optional[Dict[str, int]],
-    ) -> Optional[Dict[str, Optional[datetime]]]:
+        value: dict[str, int] | None,
+    ) -> dict[str, datetime | None] | None:
         """
         Преобразовать временные метки участников из миллисекунд
         в объекты datetime.
@@ -93,9 +98,7 @@ class Chat(BaseModel):
         return {key: from_ms(ts) for key, ts in value.items()}
 
     @field_serializer("participants")
-    def serialize_participants(
-        self, value: Optional[Dict[str, datetime]], info
-    ):
+    def serialize_participants(self, value: dict[str, datetime] | None, info):
         """Serialize participants dict: datetime -> milliseconds"""
         if value is None:
             return None
@@ -115,8 +118,8 @@ class Chats(BaseModel):
         marker (Optional[int]): Маркер для пагинации. Может быть None.
     """
 
-    chats: List[Chat] = Field(default_factory=list)
-    marker: Optional[int] = None
+    chats: list[Chat] = Field(default_factory=list)
+    marker: int | None = None
 
 
 class ChatMember(User):
@@ -124,17 +127,22 @@ class ChatMember(User):
     Модель участника чата.
 
     Attributes:
-        last_access_time (Optional[int]): Время последнего доступа. Может быть None.
+        last_access_time (Optional[int]): Время последнего доступа.
+            Может быть None.
         is_owner (Optional[bool]): Флаг владельца чата. Может быть None.
-        is_admin (Optional[bool]): Флаг администратора чата. Может быть None.
-        join_time (Optional[int]): Время присоединения к чату. Может быть None.
-        permissions (Optional[List[ChatPermission]]): Список разрешений участника. Может быть None.
-        alias (Optional[str]): Заголовок, который будет показан на клиент. Может быть None.
+        is_admin (Optional[bool]): Флаг администратора чата.
+        Может быть None.
+        join_time (Optional[int]): Время присоединения к чату.
+            Может быть None.
+        permissions (Optional[List[ChatPermission]]): Список разрешений
+            участника. Может быть None.
+        alias (Optional[str]): Заголовок, который будет показан
+            на клиент. Может быть None.
     """
 
-    last_access_time: Optional[int] = None
-    is_owner: Optional[bool] = None
-    is_admin: Optional[bool] = None
-    join_time: Optional[int] = None
-    permissions: Optional[List[ChatPermission]] = None
-    alias: Optional[str] = None
+    last_access_time: int | None = None
+    is_owner: bool | None = None
+    is_admin: bool | None = None
+    join_time: int | None = None
+    permissions: list[ChatPermission] | None = None
+    alias: str | None = None

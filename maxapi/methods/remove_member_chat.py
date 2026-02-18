@@ -16,8 +16,10 @@ class RemoveMemberChat(BaseConnection):
     Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
         chat_id (int): Идентификатор чата.
-        user_id (int): Идентификатор пользователя, которого необходимо удалить.
-        block (bool, optional): Блокировать пользователя после удаления. По умолчанию False.
+        user_id (int): Идентификатор пользователя, которого необходимо
+            удалить.
+        block (bool, optional): Блокировать пользователя после удаления.
+            По умолчанию False.
     """
 
     def __init__(
@@ -25,8 +27,10 @@ class RemoveMemberChat(BaseConnection):
         bot: "Bot",
         chat_id: int,
         user_id: int,
+        *,
         block: bool = False,
     ):
+        super().__init__()
         self.bot = bot
         self.chat_id = chat_id
         self.user_id = user_id
@@ -36,7 +40,8 @@ class RemoveMemberChat(BaseConnection):
         """
         Выполняет DELETE-запрос для удаления пользователя из чата.
 
-        Параметр `block` определяет, будет ли пользователь заблокирован после удаления.
+        Параметр `block` определяет, будет ли пользователь заблокирован
+        после удаления.
 
         Returns:
             RemovedMemberChat: Результат удаления участника.

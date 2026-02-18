@@ -17,7 +17,8 @@ class DeletePinMessage(BaseConnection):
 
     Attributes:
         bot (Bot): Экземпляр бота для выполнения запроса.
-        chat_id (int): Идентификатор чата, из которого нужно удалить закреплённое сообщение.
+        chat_id (int): Идентификатор чата, из которого нужно удалить
+            закреплённое сообщение.
     """
 
     def __init__(
@@ -25,6 +26,7 @@ class DeletePinMessage(BaseConnection):
         bot: "Bot",
         chat_id: int,
     ):
+        super().__init__()
         self.bot = bot
         self.chat_id = chat_id
 
@@ -33,7 +35,8 @@ class DeletePinMessage(BaseConnection):
         Выполняет DELETE-запрос для удаления закреплённого сообщения.
 
         Returns:
-            DeletedPinMessage: Результат операции удаления закреплённого сообщения.
+            DeletedPinMessage: Результат операции удаления закреплённого
+                сообщения.
         """
 
         bot = self._ensure_bot()

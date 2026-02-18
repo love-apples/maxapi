@@ -28,6 +28,7 @@ class DeleteMessage(BaseConnection):
         if len(message_id) < 1:
             raise ValueError("message_id не должен быть меньше 1 символа")
 
+        super().__init__()
         self.bot = bot
         self.message_id = message_id
 

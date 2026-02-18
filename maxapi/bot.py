@@ -2,15 +2,11 @@ from __future__ import annotations
 
 import os
 import warnings
-from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any
 
 from .client.default import DefaultConnectionProperties
 from .connection.base import BaseConnection
-from .enums.parse_mode import ParseMode
 from .enums.sender_action import SenderAction
-from .enums.update import UpdateType
-from .enums.upload_type import UploadType
 from .exceptions.max import InvalidToken
 from .loggers import logger_bot
 from .methods.add_admin_chat import AddAdminChat
@@ -43,15 +39,16 @@ from .methods.send_action import SendAction
 from .methods.send_callback import SendCallback
 from .methods.send_message import SendMessage
 from .methods.subscribe_webhook import SubscribeWebhook
-from .methods.types.getted_subscriptions import GettedSubscriptions
-from .methods.types.subscribed import Subscribed
-from .methods.types.unsubscribed import Unsubscribed
 from .methods.unsubscribe_webhook import UnsubscribeWebhook
-from .types.attachments import Attachments
-from .types.input_media import InputMedia, InputMediaBuffer
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from datetime import datetime
+
     from .dispatcher import Dispatcher
+    from .enums.parse_mode import ParseMode
+    from .enums.update import UpdateType
+    from .enums.upload_type import UploadType
     from .filters.command import CommandsInfo
     from .methods.types.added_admin_chat import AddedListAdminChat
     from .methods.types.added_members_chat import AddedMembersChat
@@ -63,6 +60,7 @@ if TYPE_CHECKING:
     from .methods.types.getted_list_admin_chat import GettedListAdminChat
     from .methods.types.getted_members_chat import GettedMembersChat
     from .methods.types.getted_pineed_message import GettedPin
+    from .methods.types.getted_subscriptions import GettedSubscriptions
     from .methods.types.getted_upload_url import GettedUploadUrl
     from .methods.types.pinned_message import PinnedMessage
     from .methods.types.removed_admin import RemovedAdmin
@@ -70,12 +68,16 @@ if TYPE_CHECKING:
     from .methods.types.sended_action import SendedAction
     from .methods.types.sended_callback import SendedCallback
     from .methods.types.sended_message import SendedMessage
+    from .methods.types.subscribed import Subscribed
+    from .methods.types.unsubscribed import Unsubscribed
+    from .types.attachments import Attachments
     from .types.attachments.attachment import Attachment
     from .types.attachments.image import PhotoAttachmentRequestPayload
     from .types.attachments.upload import AttachmentUpload
     from .types.attachments.video import Video
     from .types.chats import Chat, ChatMember, Chats
     from .types.command import BotCommand
+    from .types.input_media import InputMedia, InputMediaBuffer
     from .types.message import Message, Messages, NewMessageLink
     from .types.updates.message_callback import MessageForCallback
     from .types.users import ChatAdmin, User
@@ -91,29 +93,39 @@ class Bot(BaseConnection):
 
     def __init__(
         self,
-        token: Optional[str] = None,
-        parse_mode: Optional[ParseMode] = None,
-        notify: Optional[bool] = None,
-        disable_link_preview: Optional[bool] = None,
+        token: str | None = None,
+        *,
+        parse_mode: ParseMode | None = None,
+        notify: bool | None = None,
+        disable_link_preview: bool | None = None,
         auto_requests: bool = True,
-        default_connection: Optional[DefaultConnectionProperties] = None,
-        after_input_media_delay: Optional[float] = None,
+        default_connection: DefaultConnectionProperties | None = None,
+        after_input_media_delay: float | None = None,
         auto_check_subscriptions: bool = True,
-        marker_updates: Optional[int] = None,
+        marker_updates: int | None = None,
     ):
         """
         Инициализирует экземпляр бота.
 
         Args:
-            token (str): Токен доступа к API бота. При None идет получение из под окружения MAX_BOT_TOKEN.
-            parse_mode (Optional[ParseMode]): Форматирование по умолчанию.
-            notify (Optional[bool]): Отключение уведомлений при отправке сообщений.
-            disable_link_preview (Optional[bool]): Если false, сервер не будет генерировать превью для ссылок в тексте сообщений.
-            auto_requests (bool): Автоматическое заполнение chat/from_user через API (по умолчанию True).
-            default_connection (Optional[DefaultConnectionProperties]): Настройки соединения.
-            after_input_media_delay (Optional[float]): Задержка после загрузки файла.
-            auto_check_subscriptions (bool): Проверка подписок для метода start_polling.
-            marker_updates (Optional[int]): Маркер для получения обновлений.
+            token (str): Токен доступа к API бота. При None идет
+                получение из под окружения MAX_BOT_TOKEN.
+            parse_mode (Optional[ParseMode]): Форматирование по
+                умолчанию.
+            notify (Optional[bool]): Отключение уведомлений при отправке
+                сообщений.
+            disable_link_preview (Optional[bool]): Если false, сервер не
+                будет генерировать превью для ссылок в тексте сообщений.
+            auto_requests (bool): Автоматическое заполнение
+                chat/from_user через API (по умолчанию True).
+            default_connection (Optional[DefaultConnectionProperties]):
+                Настройки соединения.
+            after_input_media_delay (Optional[float]): Задержка после
+                загрузки файла.
+            auto_check_subscriptions (bool): Проверка подписок для
+                метода start_polling.
+            marker_updates (Optional[int]): Маркер для получения
+                обновлений.
         """
 
         super().__init__()
@@ -123,16 +135,18 @@ class Bot(BaseConnection):
         )
         self.after_input_media_delay = after_input_media_delay or 2.0
         self.auto_check_subscriptions = auto_check_subscriptions
-        self.commands: List[CommandsInfo] = []
+        self.commands: list[CommandsInfo] = []
 
         self.__token = token or os.environ.get("MAX_BOT_TOKEN")
         if self.__token is None:
             raise InvalidToken(
-                'Токен не может быть None. Укажите токен в Bot(token="...") или в переменную окружения MAX_BOT_TOKEN'
+                "Токен не может быть None. "
+                'Укажите токен в Bot(token="...") '
+                "или в переменную окружения MAX_BOT_TOKEN"
             )
 
-        self.params: Dict[str, Any] = {}
-        self.headers: Dict[str, Any] = {"Authorization": self.__token}
+        self.params: dict[str, Any] = {}
+        self.headers: dict[str, Any] = {"Authorization": self.__token}
         self.marker_updates = marker_updates
 
         self.parse_mode = parse_mode
@@ -140,7 +154,7 @@ class Bot(BaseConnection):
         self.disable_link_preview = disable_link_preview
         self.auto_requests = auto_requests
 
-        self.dispatcher: Optional[Dispatcher] = None
+        self.dispatcher: Dispatcher | None = None
         self._me: User | None = None
 
     def set_marker_updates(self, marker_updates: int) -> None:
@@ -154,9 +168,10 @@ class Bot(BaseConnection):
         self.marker_updates = marker_updates
 
     @property
-    def handlers_commands(self) -> List[CommandsInfo]:
+    def handlers_commands(self) -> list[CommandsInfo]:
         """
-        Возвращает список команд из зарегистрированных обработчиков текущего инстанса.
+        Возвращает список команд из зарегистрированных обработчиков
+        текущего инстанса.
 
         Returns:
             List[CommandsInfo]: Список команд
@@ -165,7 +180,7 @@ class Bot(BaseConnection):
         return self.commands
 
     @property
-    def me(self) -> Optional[User]:
+    def me(self) -> User | None:
         """
         Возвращает объект пользователя (бота).
 
@@ -176,8 +191,8 @@ class Bot(BaseConnection):
         return self._me
 
     def _resolve_disable_link_preview(
-        self, disable_link_preview: Optional[bool]
-    ) -> Optional[bool]:
+        self, *, disable_link_preview: bool | None
+    ) -> bool | None:
         """
         Определяет флаг превью.
 
@@ -194,7 +209,7 @@ class Bot(BaseConnection):
             else self.disable_link_preview
         )
 
-    def _resolve_notify(self, notify: Optional[bool]) -> Optional[bool]:
+    def _resolve_notify(self, *, notify: bool | None) -> bool | None:
         """
         Определяет флаг уведомления.
 
@@ -207,9 +222,7 @@ class Bot(BaseConnection):
 
         return notify if notify is not None else self.notify
 
-    def _resolve_parse_mode(
-        self, mode: Optional[ParseMode]
-    ) -> Optional[ParseMode]:
+    def _resolve_parse_mode(self, mode: ParseMode | None) -> ParseMode | None:
         """
         Определяет режим форматирования.
 
@@ -235,33 +248,41 @@ class Bot(BaseConnection):
 
     async def send_message(
         self,
-        chat_id: Optional[int] = None,
-        user_id: Optional[int] = None,
-        text: Optional[str] = None,
-        attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
-            | List[Attachments]
-        ] = None,
-        link: Optional[NewMessageLink] = None,
-        notify: Optional[bool] = None,
-        parse_mode: Optional[ParseMode] = None,
-        disable_link_preview: Optional[bool] = None,
-        sleep_after_input_media: Optional[bool] = True,
-    ) -> Optional[SendedMessage]:
+        chat_id: int | None = None,
+        user_id: int | None = None,
+        text: str | None = None,
+        attachments: list[
+            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
+        ]
+        | list[Attachments]
+        | None = None,
+        link: NewMessageLink | None = None,
+        parse_mode: ParseMode | None = None,
+        *,
+        notify: bool | None = None,
+        disable_link_preview: bool | None = None,
+        sleep_after_input_media: bool | None = True,
+    ) -> SendedMessage | None:
         """
         Отправляет сообщение в чат или пользователю.
 
         https://dev.max.ru/docs-api/methods/POST/messages
 
         Args:
-            chat_id (Optional[int]): ID чата для отправки (если не user_id).
+            chat_id (Optional[int]): ID чата для отправки (если не
+                user_id).
             user_id (Optional[int]): ID пользователя (если не chat_id).
             text (Optional[str]): Текст сообщения.
-            attachments (Optional[List[Attachment | InputMedia | InputMediaBuffer]]): Вложения.
+            attachments (Optional[List[Attachment | InputMedia |
+                InputMediaBuffer]]): Вложения.
             link (Optional[NewMessageLink]): Данные ссылки сообщения.
             notify (Optional[bool]): Флаг уведомления.
-            parse_mode (Optional[ParseMode]): Режим форматирования текста.
-            disable_link_preview (Optional[bool]): Флаг генерации превью.
+            parse_mode (Optional[ParseMode]): Режим форматирования
+                текста.
+            disable_link_preview (Optional[bool]): Флаг генерации
+                превью.
+            sleep_after_input_media (Optional[bool]): Нужно ли делать
+                задержку после загрузки вложений.
 
         Returns:
             Optional[SendedMessage]: Отправленное сообщение или ошибка.
@@ -274,17 +295,17 @@ class Bot(BaseConnection):
             text=text,
             attachments=attachments,
             link=link,
-            notify=self._resolve_notify(notify),
+            notify=self._resolve_notify(notify=notify),
             parse_mode=self._resolve_parse_mode(parse_mode),
             disable_link_preview=self._resolve_disable_link_preview(
-                disable_link_preview
+                disable_link_preview=disable_link_preview,
             ),
             sleep_after_input_media=sleep_after_input_media,
         ).fetch()
 
     async def send_action(
         self,
-        chat_id: Optional[int] = None,
+        chat_id: int | None = None,
         action: SenderAction = SenderAction.TYPING_ON,
     ) -> SendedAction:
         """
@@ -307,16 +328,18 @@ class Bot(BaseConnection):
     async def edit_message(
         self,
         message_id: str,
-        text: Optional[str] = None,
-        attachments: Optional[
-            List[Attachment | InputMedia | InputMediaBuffer | AttachmentUpload]
-            | List[Attachments]
-        ] = None,
-        link: Optional[NewMessageLink] = None,
-        notify: Optional[bool] = None,
-        parse_mode: Optional[ParseMode] = None,
-        sleep_after_input_media: Optional[bool] = True,
-    ) -> Optional[EditedMessage]:
+        text: str | None = None,
+        attachments: list[
+            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
+        ]
+        | list[Attachments]
+        | None = None,
+        link: NewMessageLink | None = None,
+        parse_mode: ParseMode | None = None,
+        *,
+        notify: bool | None = None,
+        sleep_after_input_media: bool | None = True,
+    ) -> EditedMessage | None:
         """
         Редактирует существующее сообщение.
 
@@ -325,13 +348,18 @@ class Bot(BaseConnection):
         Args:
             message_id (str): ID сообщения.
             text (Optional[str]): Новый текст.
-            attachments (Optional[List[Attachment | InputMedia | InputMediaBuffer]]): Новые вложения.
+            attachments (Optional[List[Attachment | InputMedia |
+                InputMediaBuffer]]): Новые вложения.
             link (Optional[NewMessageLink]): Новая ссылка.
             notify (Optional[bool]): Флаг уведомления.
-            parse_mode (Optional[ParseMode]): Режим форматирования текста.
+            parse_mode (Optional[ParseMode]): Режим форматирования
+                текста.
+            sleep_after_input_media (Optional[bool]): Нужно ли делать
+                задержку после загрузки вложений.
 
         Returns:
-            Optional[EditedMessage]: Отредактированное сообщение или ошибка.
+            Optional[EditedMessage]: Отредактированное сообщение
+                или ошибка.
         """
 
         return await EditMessage(
@@ -340,7 +368,7 @@ class Bot(BaseConnection):
             text=text,
             attachments=attachments,
             link=link,
-            notify=self._resolve_notify(notify),
+            notify=self._resolve_notify(notify=notify),
             parse_mode=self._resolve_parse_mode(parse_mode),
             sleep_after_input_media=sleep_after_input_media,
         ).fetch()
@@ -383,10 +411,10 @@ class Bot(BaseConnection):
 
     async def get_messages(
         self,
-        chat_id: Optional[int] = None,
-        message_ids: Optional[List[str]] = None,
-        from_time: Optional[Union[datetime, int]] = None,
-        to_time: Optional[Union[datetime, int]] = None,
+        chat_id: int | None = None,
+        message_ids: list[str] | None = None,
+        from_time: datetime | int | None = None,
+        to_time: datetime | int | None = None,
         count: int = 50,
     ) -> Messages:
         """
@@ -458,11 +486,11 @@ class Bot(BaseConnection):
 
     async def change_info(
         self,
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
-        description: Optional[str] = None,
-        commands: Optional[List[BotCommand]] = None,
-        photo: Optional[PhotoAttachmentRequestPayload] = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        description: str | None = None,
+        commands: list[BotCommand] | None = None,
+        photo: PhotoAttachmentRequestPayload | None = None,
     ) -> User:
         """
         Изменяет данные текущего бота (PATCH /me).
@@ -476,17 +504,21 @@ class Bot(BaseConnection):
         Args:
             first_name (Optional[str]): Новое имя бота (1–64 символа).
             last_name (str, optional): Второе имя бота (1–64 символа).
-            description (Optional[str]): Новое описание бота (1–16000 символов).
-            commands (Optional[List[BotCommand]]): Список команд бота (до 32 элементов).
-                Передайте пустой список, чтобы удалить все команды.
-            photo (Optional[PhotoAttachmentRequestPayload]): Новое фото бота.
+            description (Optional[str]): Новое описание бота
+                (1–16000 символов).
+            commands (Optional[List[BotCommand]]): Список команд бота
+                (до 32 элементов). Передайте пустой список, чтобы
+                удалить все команды.
+            photo (Optional[PhotoAttachmentRequestPayload]): Новое
+                фото бота.
 
         Returns:
             User: Объект с обновлённой информацией о боте.
         """
 
         warnings.warn(
-            "bot.change_info() устарел и отсутствует в официальной swagger-спецификации API MAX. "
+            "bot.change_info() устарел и отсутствует в официальной "
+            "swagger-спецификации API MAX. "
             "Использование не рекомендуется.",
             DeprecationWarning,
             stacklevel=2,
@@ -502,7 +534,7 @@ class Bot(BaseConnection):
         ).fetch()
 
     async def get_chats(
-        self, count: Optional[int] = None, marker: Optional[int] = None
+        self, count: int | None = None, marker: int | None = None
     ) -> Chats:
         """
         Получает список чатов бота.
@@ -552,10 +584,11 @@ class Bot(BaseConnection):
     async def edit_chat(
         self,
         chat_id: int,
-        icon: Optional[PhotoAttachmentRequestPayload] = None,
-        title: Optional[str] = None,
-        pin: Optional[str] = None,
-        notify: Optional[bool] = None,
+        icon: PhotoAttachmentRequestPayload | None = None,
+        title: str | None = None,
+        pin: str | None = None,
+        *,
+        notify: bool | None = None,
     ) -> Chat:
         """
         Редактирует информацию о чате.
@@ -579,7 +612,7 @@ class Bot(BaseConnection):
             icon=icon,
             title=title,
             pin=pin,
-            notify=self._resolve_notify(notify),
+            notify=self._resolve_notify(notify=notify),
         ).fetch()
 
     async def get_video(self, video_token: str) -> Video:
@@ -600,8 +633,8 @@ class Bot(BaseConnection):
     async def send_callback(
         self,
         callback_id: str,
-        message: Optional[MessageForCallback] = None,
-        notification: Optional[str] = None,
+        message: MessageForCallback | None = None,
+        notification: str | None = None,
     ) -> SendedCallback:
         """
         Отправляет callback ответ.
@@ -625,7 +658,7 @@ class Bot(BaseConnection):
         ).fetch()
 
     async def pin_message(
-        self, chat_id: int, message_id: str, notify: Optional[bool] = None
+        self, chat_id: int, message_id: str, *, notify: bool | None = None
     ) -> PinnedMessage:
         """
         Закрепляет сообщение в чате.
@@ -645,7 +678,7 @@ class Bot(BaseConnection):
             bot=self,
             chat_id=chat_id,
             message_id=message_id,
-            notify=self._resolve_notify(notify),
+            notify=self._resolve_notify(notify=notify),
         ).fetch()
 
     async def delete_pin_message(
@@ -735,8 +768,8 @@ class Bot(BaseConnection):
     async def add_list_admin_chat(
         self,
         chat_id: int,
-        admins: List[ChatAdmin],
-        marker: Optional[int] = None,
+        admins: list[ChatAdmin],
+        marker: int | None = None,
     ) -> AddedListAdminChat:
         """
         Добавляет администраторов в чат.
@@ -782,9 +815,9 @@ class Bot(BaseConnection):
     async def get_chat_members(
         self,
         chat_id: int,
-        user_ids: Optional[List[int]] = None,
-        marker: Optional[int] = None,
-        count: Optional[int] = None,
+        user_ids: list[int] | None = None,
+        marker: int | None = None,
+        count: int | None = None,
     ) -> GettedMembersChat:
         """
         Получает участников чата.
@@ -795,7 +828,8 @@ class Bot(BaseConnection):
             chat_id (int): ID чата.
             user_ids (Optional[List[int]]): Список ID участников.
             marker (Optional[int]): Маркер для пагинации.
-            count (Optional[int]): Количество участников (по умолчанию 20) (1-100).
+            count (Optional[int]): Количество участников
+                (по умолчанию 20) (1-100).
 
         Returns:
             GettedMembersChat: Список участников.
@@ -813,7 +847,7 @@ class Bot(BaseConnection):
         self,
         chat_id: int,
         user_id: int,
-    ) -> Optional[ChatMember]:
+    ) -> ChatMember | None:
         """
         Получает участника чата.
 
@@ -839,7 +873,7 @@ class Bot(BaseConnection):
     async def add_chat_members(
         self,
         chat_id: int,
-        user_ids: List[int],
+        user_ids: list[int],
     ) -> AddedMembersChat:
         """
         Добавляет участников в чат.
@@ -864,6 +898,7 @@ class Bot(BaseConnection):
         self,
         chat_id: int,
         user_id: int,
+        *,
         block: bool = False,
     ) -> RemovedMemberChat:
         """
@@ -889,11 +924,11 @@ class Bot(BaseConnection):
 
     async def get_updates(
         self,
-        limit: Optional[int] = None,
-        timeout: Optional[int] = None,
-        marker: Optional[int] = None,
-        types: Optional[Sequence[UpdateType]] = None,
-    ) -> Dict:
+        limit: int | None = None,
+        timeout: int | None = None,
+        marker: int | None = None,
+        types: Sequence[UpdateType] | None = None,
+    ) -> dict:
         """
         Получает обновления для бота.
 
@@ -934,7 +969,8 @@ class Bot(BaseConnection):
         """
 
         warnings.warn(
-            "bot.change_info() устарел и отсутствует в официальной swagger-спецификации API MAX. "
+            "bot.change_info() устарел и отсутствует в официальной "
+            "swagger-спецификации API MAX. "
             "Использование не рекомендуется.",
             DeprecationWarning,
             stacklevel=2,
@@ -957,8 +993,8 @@ class Bot(BaseConnection):
     async def subscribe_webhook(
         self,
         url: str,
-        update_types: Optional[List[UpdateType]] = None,
-        secret: Optional[str] = None,
+        update_types: list[UpdateType] | None = None,
+        secret: str | None = None,
     ) -> Subscribed:
         """
         Подписывает бота на получение обновлений через WebHook.
