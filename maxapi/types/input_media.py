@@ -17,16 +17,18 @@ class InputMedia:
             (MIME-типа).
     """
 
-    def __init__(self, path: str):
+    def __init__(self, path: str, type: UploadType | None = None):
         """
         Инициализирует объект медиафайла.
 
         Args:
             path (str): Путь к файлу.
+            type (UploadType, optional): Тип файла. Если не указан,
+                определяется автоматически.
         """
 
         self.path = path
-        self.type = self.__detect_file_type(path)
+        self.type = type or self.__detect_file_type(path)
 
     def __detect_file_type(self, path: str) -> UploadType:
         """
@@ -73,18 +75,26 @@ class InputMediaBuffer:
         type (UploadType): Тип файла, определенный по содержимому.
     """
 
-    def __init__(self, buffer: bytes, filename: str | None = None):
+    def __init__(
+        self,
+        buffer: bytes,
+        filename: str | None = None,
+        type: UploadType | None = None,
+    ):
         """
         Инициализирует объект медиафайла из буфера.
 
         Args:
-            buffer (IO): Буфер с содержимым файла.
-            filename (str): Название файла (по умолчанию присваивается uuid4).
+            buffer (bytes): Буфер с содержимым файла.
+            filename (str, optional): Название файла (по умолчанию
+                присваивается uuid4).
+            type (UploadType, optional): Тип файла. Если не указан,
+                определяется автоматически.
         """
 
         self.filename = filename
         self.buffer = buffer
-        self.type = self.__detect_file_type(buffer)
+        self.type = type or self.__detect_file_type(buffer)
 
     def __detect_file_type(self, buffer: bytes) -> UploadType:
         try:
