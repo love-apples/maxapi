@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+__all__ = ["Message", "MessageCreated"]
 
+from ...types.message import Message
 from .update import Update
-
-if TYPE_CHECKING:
-    from ...types.message import Message
 
 
 class MessageCreated(Update):

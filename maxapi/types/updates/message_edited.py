@@ -1,3 +1,8 @@
+__all__ = [
+    "Message",  # для своевременной инициализации в pydantic
+    "MessageEdited",
+]
+
 from ...types.message import Message
 from .update import Update
 
