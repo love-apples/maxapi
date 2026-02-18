@@ -74,7 +74,7 @@ async def bot_started(event: BotStarted):
 # Ответ бота на команду /start
 @dp.message_created(Command('start'))
 async def hello(event: MessageCreated):
-    await event.message.answer(f"Пример чат-бота для MAX 💙")
+    await event.message.answer("Пример чат-бота для MAX 💙")
 
 
 async def main():
@@ -109,7 +109,7 @@ dp = Dispatcher()
 # Команда /start боту
 @dp.message_created(Command('start'))
 async def hello(event: MessageCreated):
-    await event.message.answer(f"Привет из вебхука!")
+    await event.message.answer("Привет из вебхука!")
 
 
 async def main():
