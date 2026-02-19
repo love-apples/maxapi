@@ -38,7 +38,12 @@ from maxapi.enums.update import UpdateType
 
 pytest_plugins = ["tests.fixtures.updates"]
 
-_FIXTURE_NAME_BY_UPDATE = {
+# Консистентность данного маппинга проверяется в тесте
+# test_fixtures_cover_all_update_union_types.
+# Т.е. если появится новый тип обновления, но не будет добавлена
+# соответствующая фикстура, тест упадет и напомнит о необходимости
+# обновить этот словарь и проверить работу приложения с новым типом
+_FIXTURE_NAME_BY_UPDATE: dict[UpdateType, str] = {
     UpdateType.MESSAGE_CREATED: "fixture_message_created",
     UpdateType.MESSAGE_EDITED: "fixture_message_edited",
     UpdateType.MESSAGE_REMOVED: "fixture_message_removed",
