@@ -99,6 +99,11 @@ class SendMessage(BaseConnection):
         elif self.user_id:
             params["user_id"] = self.user_id
 
+        if self.disable_link_preview is not None:
+            params["disable_link_preview"] = str(
+                self.disable_link_preview
+            ).lower()
+
         json["text"] = self.text
 
         has_input_media = False
@@ -122,11 +127,8 @@ class SendMessage(BaseConnection):
         if self.link is not None:
             json["link"] = self.link.model_dump()
 
-        if self.notify:
+        if self.notify is not None:
             json["notify"] = self.notify
-
-        if self.disable_link_preview:
-            json["disable_link_preview"] = self.disable_link_preview
 
         if self.parse_mode is not None:
             json["format"] = self.parse_mode.value

@@ -167,6 +167,7 @@ class Message(BaseModel, BotMixin):
         parse_mode: ParseMode | None = None,
         *,
         notify: bool | None = None,
+        disable_link_preview: bool | None = None,
         sleep_after_input_media: bool | None = True,
     ) -> SendedMessage | None:
         """
@@ -182,6 +183,7 @@ class Message(BaseModel, BotMixin):
             parse_mode (ParseMode, optional): Режим форматирования текста.
                 Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
+            disable_link_preview (bool, optional): Флаг генерации превью.
             sleep_after_input_media (bool, optional): Флаг задержки
                 после отправки вложений типа InputMedia. По умолчанию True.
 
@@ -198,6 +200,7 @@ class Message(BaseModel, BotMixin):
             link=link,
             notify=notify,
             parse_mode=parse_mode,
+            disable_link_preview=disable_link_preview,
             sleep_after_input_media=sleep_after_input_media,
         )
 
@@ -211,6 +214,7 @@ class Message(BaseModel, BotMixin):
         parse_mode: ParseMode | None = None,
         *,
         notify: bool | None = None,
+        disable_link_preview: bool | None = None,
         sleep_after_input_media: bool | None = True,
     ) -> SendedMessage | None:
         """
@@ -224,6 +228,7 @@ class Message(BaseModel, BotMixin):
             notify (bool): Флаг отправки уведомления. По умолчанию True.
             parse_mode (ParseMode, optional): Режим форматирования текста.
                 Может быть None.
+            disable_link_preview (bool, optional): Флаг генерации превью.
             sleep_after_input_media: Optional[bool] = True,
 
         Returns:
@@ -247,6 +252,7 @@ class Message(BaseModel, BotMixin):
             link=NewMessageLink(type=MessageLinkType.REPLY, mid=self.body.mid),
             notify=notify,
             parse_mode=parse_mode,
+            disable_link_preview=disable_link_preview,
             sleep_after_input_media=sleep_after_input_media,
         )
 
@@ -261,6 +267,7 @@ class Message(BaseModel, BotMixin):
         parse_mode: ParseMode | None = None,
         *,
         notify: bool | None = None,
+        disable_link_preview: bool | None = None,
         sleep_after_input_media: bool | None = True,
     ) -> SendedMessage | None:
         """
@@ -278,6 +285,7 @@ class Message(BaseModel, BotMixin):
             notify (bool): Флаг отправки уведомления. По умолчанию True.
             parse_mode (ParseMode, optional): Режим форматирования
                 текста. Может быть None.
+            disable_link_preview (bool, optional): Флаг генерации превью.
             sleep_after_input_media: Optional[bool] = True,
 
         Returns:
@@ -298,6 +306,7 @@ class Message(BaseModel, BotMixin):
             ),
             notify=notify,
             parse_mode=parse_mode,
+            disable_link_preview=disable_link_preview,
             sleep_after_input_media=sleep_after_input_media,
         )
 
