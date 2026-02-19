@@ -59,6 +59,7 @@ dev = [
     "pymdown-extensions>=10.21",
     "python-dotenv>=1.2.1",
     "Faker>=40.4.0",
+    "httpx>=0.28.1,<1",
 ]
 
 [tool.uv]
