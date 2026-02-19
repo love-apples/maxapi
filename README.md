@@ -13,6 +13,8 @@
   <img src='https://img.shields.io/pypi/v/maxapi.svg' alt='PyPI version'></a>
 <a href='https://pypi.org/project/maxapi/'>
   <img src='https://img.shields.io/pypi/pyversions/maxapi.svg' alt='Python Version'></a>
+<a href='https://codecov.io/gh/love-apples/maxapi'>
+  <img src='https://img.shields.io/codecov/c/github/love-apples/maxapi.svg' alt='Coverage'></a>
 <a href='https://love-apples/maxapi/blob/main/LICENSE'>
   <img src='https://img.shields.io/github/license/love-apples/maxapi.svg' alt='License'></a>
 </p>
