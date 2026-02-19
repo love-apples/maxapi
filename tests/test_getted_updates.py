@@ -1,6 +1,5 @@
 from unittest.mock import AsyncMock, call, patch
 
-import pytest
 from maxapi.methods.types.getted_updates import (
     get_update_model,
     process_update_request,
@@ -8,7 +7,6 @@ from maxapi.methods.types.getted_updates import (
 )
 
 
-@pytest.mark.asyncio
 async def test_process_update_request_calls_get_update_model_and_returns_list(
     bot,
 ):
@@ -38,7 +36,6 @@ async def test_process_update_request_calls_get_update_model_and_returns_list(
     ]
 
 
-@pytest.mark.asyncio
 async def test_process_update_request_logs_and_skips_unknown_updates(
     bot, caplog
 ):
@@ -66,7 +63,6 @@ async def test_process_update_request_logs_and_skips_unknown_updates(
     assert any("неизвестный тип обновления" in msg.lower() for msg in logged)
 
 
-@pytest.mark.asyncio
 async def test_process_update_request_builds_model_from_event(bot, update):
     """Для каждой фикстуры обновления проверяет, что
     `process_update_request` строит корректную модель.
@@ -93,7 +89,6 @@ async def test_process_update_request_builds_model_from_event(bot, update):
     assert res_obj.update_type == update.update_type
 
 
-@pytest.mark.asyncio
 async def test_process_update_webhook_builds_model_from_event(bot, update):
     """Для каждой фикстуры обновления проверяет, что
     `process_update_webhook` строит корректную модель.
@@ -115,7 +110,6 @@ async def test_process_update_webhook_builds_model_from_event(bot, update):
     assert res_obj.update_type == update.update_type
 
 
-@pytest.mark.asyncio
 async def test_get_update_model_returns_none_for_unknown_type(bot):
     """Проверяет, что get_update_model возвращает None при
     неизвестном значении update_type (новая логика).

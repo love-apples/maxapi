@@ -10,7 +10,6 @@ from maxapi.dispatcher import Dispatcher
 from maxapi.types.updates import UNKNOWN_UPDATE_DISCLAIMER
 
 
-@pytest.mark.asyncio
 async def test_handle_webhook_unknown_update_logs_and_returns_ok(
     monkeypatch, caplog
 ):
@@ -84,7 +83,6 @@ class DummyEvent:
         return (123, 456)
 
 
-@pytest.mark.asyncio
 async def test_handle_webhook_with_event_calls_handle_and_returns_ok(
     monkeypatch,
 ):
