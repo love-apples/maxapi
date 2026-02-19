@@ -39,7 +39,9 @@ async def test_process_update_request_calls_get_update_model_and_returns_list(
 
 
 @pytest.mark.asyncio
-async def test_process_update_request_logs_and_skips_unknown_updates(bot, caplog):
+async def test_process_update_request_logs_and_skips_unknown_updates(
+    bot, caplog
+):
     """При неизвестном update_type функция должна залогировать
     предупреждение и пропустить событие.
     """
