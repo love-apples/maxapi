@@ -114,7 +114,7 @@ async def test_process_update_webhook_builds_model_from_event(bot, update):
 
 
 @pytest.mark.asyncio
-async def test_get_update_model_raises_value_error_for_unknown_type(bot):
+async def test_get_update_model_returns_none_for_unknown_type(bot):
     """Проверяет, что get_update_model возвращает None при
     неизвестном значении update_type (новая логика).
     """
