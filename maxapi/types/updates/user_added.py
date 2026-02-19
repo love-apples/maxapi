@@ -1,8 +1,11 @@
+from typing import Literal
+
+from ...enums.update import UpdateType
 from ...types.users import User
-from .update import Update
+from .base_update import BaseUpdate
 
 
-class UserAdded(Update):
+class UserAdded(BaseUpdate):
     """
     Класс для обработки события добавления пользователя в чат.
 
@@ -19,6 +22,7 @@ class UserAdded(Update):
     chat_id: int
     user: User
     is_channel: bool
+    update_type: Literal[UpdateType.USER_ADDED] = UpdateType.USER_ADDED
 
     def get_ids(self) -> tuple[int | None, int | None]:
         """

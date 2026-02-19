@@ -1,13 +1,14 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
+from ...enums.update import UpdateType
 from ...types.users import User
-from .update import Update
+from .base_update import BaseUpdate
 
 if TYPE_CHECKING:
     from ...bot import Bot
 
 
-class BotStarted(Update):
+class BotStarted(BaseUpdate):
     """
     Обновление, сигнализирующее о первом старте бота.
 
@@ -22,6 +23,7 @@ class BotStarted(Update):
     user: User
     user_locale: str | None = None
     payload: str | None = None
+    update_type: Literal[UpdateType.BOT_STARTED] = UpdateType.BOT_STARTED
 
     if TYPE_CHECKING:
         bot: Bot | None  # pyright: ignore[reportGeneralTypeIssues]

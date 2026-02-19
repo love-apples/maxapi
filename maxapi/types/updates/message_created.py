@@ -2,11 +2,14 @@ from __future__ import annotations
 
 __all__ = ["Message", "MessageCreated"]
 
+from typing import Literal
+
+from ...enums.update import UpdateType
 from ...types.message import Message
-from .update import Update
+from .base_update import BaseUpdate
 
 
-class MessageCreated(Update):
+class MessageCreated(BaseUpdate):
     """
     Обновление, сигнализирующее о создании нового сообщения.
 
@@ -17,6 +20,9 @@ class MessageCreated(Update):
 
     message: Message
     user_locale: str | None = None
+    update_type: Literal[UpdateType.MESSAGE_CREATED] = (
+        UpdateType.MESSAGE_CREATED
+    )
 
     def get_ids(self) -> tuple[int | None, int | None]:
         """

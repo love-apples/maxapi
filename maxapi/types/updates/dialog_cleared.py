@@ -1,13 +1,14 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
+from ...enums.update import UpdateType
 from ...types.users import User
-from .update import Update
+from .base_update import BaseUpdate
 
 if TYPE_CHECKING:
     from ...bot import Bot
 
 
-class DialogCleared(Update):
+class DialogCleared(BaseUpdate):
     """
     Обновление, сигнализирующее об очистке диалога с ботом.
 
@@ -20,6 +21,7 @@ class DialogCleared(Update):
     chat_id: int
     user: User
     user_locale: str | None = None
+    update_type: Literal[UpdateType.DIALOG_CLEARED] = UpdateType.DIALOG_CLEARED
 
     if TYPE_CHECKING:
         bot: Bot | None  # pyright: ignore[reportGeneralTypeIssues]

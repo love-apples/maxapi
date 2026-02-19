@@ -1,15 +1,16 @@
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
+from ...enums.update import UpdateType
 from ...types.users import User
 from ...utils.time import from_ms
-from .update import Update
+from .base_update import BaseUpdate
 
 if TYPE_CHECKING:
     from ...bot import Bot
 
 
-class DialogMuted(Update):
+class DialogMuted(BaseUpdate):
     """
     Обновление, сигнализирующее об отключении оповещений от бота.
 
@@ -24,6 +25,7 @@ class DialogMuted(Update):
     muted_until: int
     user: User
     user_locale: str | None = None
+    update_type: Literal[UpdateType.DIALOG_MUTED] = UpdateType.DIALOG_MUTED
 
     if TYPE_CHECKING:
         bot: Bot | None  # pyright: ignore[reportGeneralTypeIssues]

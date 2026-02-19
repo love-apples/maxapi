@@ -1,8 +1,11 @@
+from typing import Literal
+
+from ...enums.update import UpdateType
 from ...types.users import User
-from .update import Update
+from .base_update import BaseUpdate
 
 
-class UserRemoved(Update):
+class UserRemoved(BaseUpdate):
     """
     Класс для обработки события выходе/удаления пользователя из чата.
 
@@ -20,6 +23,7 @@ class UserRemoved(Update):
     chat_id: int
     user: User
     is_channel: bool
+    update_type: Literal[UpdateType.USER_REMOVED] = UpdateType.USER_REMOVED
 
     def get_ids(self) -> tuple[int | None, int | None]:
         """

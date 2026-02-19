@@ -6,11 +6,7 @@ import warnings
 from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
 from datetime import datetime
 from re import DOTALL, search
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Literal,
-)
+from typing import TYPE_CHECKING, Any, Literal
 
 from aiohttp import ClientConnectorError
 
@@ -27,6 +23,7 @@ from .methods.types.getted_updates import (
     process_update_webhook,
 )
 from .types.bot_mixin import BotMixin
+from .types.updates import UNKNOWN_UPDATE_DISCLAIMER, UpdateUnion
 from .utils.time import from_ms, to_ms
 
 try:
@@ -36,14 +33,12 @@ try:
 except ImportError:
     FASTAPI_INSTALLED = False
 
-
 try:
     from uvicorn import Config, Server  # type: ignore
 
     UVICORN_INSTALLED = True
 except ImportError:
     UVICORN_INSTALLED = False
-
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -54,7 +49,6 @@ if TYPE_CHECKING:
     from .bot import Bot
     from .filters.filter import BaseFilter
     from .filters.middleware import BaseMiddleware
-    from .types.updates import UpdateUnion
 
 CONNECTION_RETRY_DELAY = 30
 GET_UPDATES_RETRY_DELAY = 5
@@ -557,7 +551,6 @@ class Dispatcher(BotMixin):
         Args:
             event_object (UpdateUnion): Событие.
         """
-
         router_id = None
         process_info = "нет данных"
 
@@ -818,6 +811,13 @@ class Dispatcher(BotMixin):
             event_object = await process_update_webhook(
                 event_json=event_json, bot=bot
             )
+
+            if event_object is None:
+                msg = UNKNOWN_UPDATE_DISCLAIMER.format(
+                    update_type=event_json.get("update_type")
+                )
+                logger_dp.warning(msg)
+                return JSONResponse(content={"ok": True}, status_code=200)
 
             if self.use_create_task:
                 asyncio.create_task(self.handle(event_object))

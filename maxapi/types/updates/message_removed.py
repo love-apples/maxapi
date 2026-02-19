@@ -1,7 +1,10 @@
-from .update import Update
+from typing import Literal
+
+from ...enums.update import UpdateType
+from .base_update import BaseUpdate
 
 
-class MessageRemoved(Update):
+class MessageRemoved(BaseUpdate):
     """
     Класс для обработки события удаления сообщения в чате.
 
@@ -14,6 +17,9 @@ class MessageRemoved(Update):
     message_id: str
     chat_id: int
     user_id: int
+    update_type: Literal[UpdateType.MESSAGE_REMOVED] = (
+        UpdateType.MESSAGE_REMOVED
+    )
 
     def get_ids(self) -> tuple[int | None, int | None]:
         """
