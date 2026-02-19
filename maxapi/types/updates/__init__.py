@@ -20,7 +20,7 @@ from ...types.updates.user_removed import UserRemoved
 from .dialog_removed import DialogRemoved
 
 UNKNOWN_UPDATE_DISCLAIMER = (
-    "Получен неизвестный тип обновления через вебхук: {update_type}"
+    "Получен неизвестный тип обновления: {update_type}. "
     "Убедитесь, что используете актуальную версию maxapi. "
     "Если проблема сохраняется, создайте issue в репозитории проекта: "
     "https://github.com/love-apples/maxapi/issues"
