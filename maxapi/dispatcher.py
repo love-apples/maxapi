@@ -30,6 +30,7 @@ from .types.bot_mixin import BotMixin
 from .utils.time import from_ms, to_ms
 
 try:
+    from fastapi import Request  # type: ignore
     from fastapi.responses import JSONResponse  # type: ignore
 
     FASTAPI_INSTALLED = True
