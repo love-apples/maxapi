@@ -131,7 +131,7 @@ class ChatMember(User):
             Может быть None.
         is_owner (Optional[bool]): Флаг владельца чата. Может быть None.
         is_admin (Optional[bool]): Флаг администратора чата.
-        Может быть None.
+            Может быть None.
         join_time (Optional[int]): Время присоединения к чату.
             Может быть None.
         permissions (Optional[List[ChatPermission]]): Список разрешений

@@ -72,3 +72,33 @@ async def no_state_handler(event: MessageCreated):
 async def multi_state_handler(event: MessageCreated):
     ...
 ```
+
+## Хранение в Redis
+
+Для сохранения состояний и данных между перезапусками бота можно использовать Redis.
+
+### Установка зависимостей
+
+```bash
+pip install redis
+```
+
+### Пример использования
+
+```python
+import redis.asyncio as redis
+from maxapi import Dispatcher
+from maxapi.context import RedisContext
+
+# Инициализация клиента Redis
+redis_client = redis.Redis(host='localhost', port=6379, db=0)
+
+# Передача RedisContext в Диспетчер
+dp = Dispatcher(
+    storage=RedisContext,
+    redis_client=redis_client,
+    key_prefix="my_bot"
+)
+```
+
+`RedisContext` автоматически сериализует данные в JSON и поддерживает атомарные обновления через Lua-скрипты.

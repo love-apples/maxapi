@@ -38,10 +38,7 @@ theme:
 plugins:
   - search:
       lang: ru
-  - autorefs:
-      # Выбирать наиболее специфичный (самый глубокий) URL как основной
-      # Это уменьшит количество предупреждений о дублирующихся URL
-      fallback_to_title: true
+  - autorefs
   - mkdocstrings:
       handlers:
         python:

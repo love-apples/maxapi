@@ -31,8 +31,8 @@ class EditMessage(BaseConnection):
         bot (Bot): Экземпляр бота для выполнения запроса.
         message_id (str): Идентификатор сообщения для редактирования.
         text (Optional[str]): Новый текст сообщения.
-        attachments (Optional[List[Attachment | InputMedia |
-            InputMediaBuffer]]): Список вложений для сообщения.
+        attachments (List[Attachment | InputMedia | InputMediaBuffer] | None):
+            Список вложений для сообщения.
         link (Optional[NewMessageLink]): Связь с другим сообщением
             (например, ответ или пересылка).
         notify (Optional[bool]): Отправлять ли уведомление о сообщении.
