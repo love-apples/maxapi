@@ -1,13 +1,14 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
+from ...enums.update import UpdateType
 from ...types.users import User
-from .update import Update
+from .base_update import BaseUpdate
 
 if TYPE_CHECKING:
     from ...bot import Bot
 
 
-class BotAdded(Update):
+class BotAdded(BaseUpdate):
     """
     Обновление, сигнализирующее о добавлении бота в чат.
 
@@ -20,6 +21,7 @@ class BotAdded(Update):
     chat_id: int
     user: User
     is_channel: bool
+    update_type: Literal[UpdateType.BOT_ADDED] = UpdateType.BOT_ADDED
 
     if TYPE_CHECKING:
         bot: Bot | None  # pyright: ignore[reportGeneralTypeIssues]

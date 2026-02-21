@@ -1,14 +1,15 @@
 __all__ = ["Message", "MessageCallback", "MessageForCallback"]
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, Field
 
 from ...enums.parse_mode import ParseMode
+from ...enums.update import UpdateType
 from ...types.attachments import Attachments
 from ...types.callback import Callback
 from ...types.message import Message, NewMessageLink
-from .update import Update
+from .base_update import BaseUpdate
 
 if TYPE_CHECKING:
     from ...methods.types.sended_callback import SendedCallback
@@ -35,7 +36,7 @@ class MessageForCallback(BaseModel):
     format: ParseMode | None = None
 
 
-class MessageCallback(Update):
+class MessageCallback(BaseUpdate):
     """
     Обновление с callback-событием сообщения.
 
@@ -50,6 +51,9 @@ class MessageCallback(Update):
     message: Message | None = None
     user_locale: str | None = None
     callback: Callback
+    update_type: Literal[UpdateType.MESSAGE_CALLBACK] = (
+        UpdateType.MESSAGE_CALLBACK
+    )
 
     def get_ids(self) -> tuple[int | None, int]:
         """

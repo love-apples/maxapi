@@ -3,11 +3,14 @@ __all__ = [
     "MessageEdited",
 ]
 
+from typing import Literal
+
+from ...enums.update import UpdateType
 from ...types.message import Message
-from .update import Update
+from .base_update import BaseUpdate
 
 
-class MessageEdited(Update):
+class MessageEdited(BaseUpdate):
     """
     Обновление, сигнализирующее об изменении сообщения.
 
@@ -16,6 +19,7 @@ class MessageEdited(Update):
     """
 
     message: Message
+    update_type: Literal[UpdateType.MESSAGE_EDITED] = UpdateType.MESSAGE_EDITED
 
     def get_ids(self) -> tuple[int | None, int | None]:
         """

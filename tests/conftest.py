@@ -34,6 +34,44 @@ except ImportError:
 # Core Stuff
 from maxapi import Bot, Dispatcher
 from maxapi.client.default import DefaultConnectionProperties
+from maxapi.enums.update import UpdateType
+
+pytest_plugins = ["tests.fixtures.updates"]
+
+# Консистентность данного маппинга проверяется в тесте
+# test_fixtures_cover_all_update_union_types.
+# Т.е. если появится новый тип обновления, но не будет добавлена
+# соответствующая фикстура, тест упадет и напомнит о необходимости
+# обновить этот словарь и проверить работу приложения с новым типом
+_FIXTURE_NAME_BY_UPDATE: dict[UpdateType, str] = {
+    UpdateType.MESSAGE_CREATED: "fixture_message_created",
+    UpdateType.MESSAGE_EDITED: "fixture_message_edited",
+    UpdateType.MESSAGE_REMOVED: "fixture_message_removed",
+    UpdateType.MESSAGE_CALLBACK: "fixture_message_callback",
+    UpdateType.MESSAGE_CHAT_CREATED: "fixture_message_chat_created",
+    UpdateType.BOT_ADDED: "fixture_bot_added",
+    UpdateType.BOT_REMOVED: "fixture_bot_removed",
+    UpdateType.BOT_STARTED: "fixture_bot_started",
+    UpdateType.BOT_STOPPED: "fixture_bot_stopped",
+    UpdateType.USER_ADDED: "fixture_user_added",
+    UpdateType.USER_REMOVED: "fixture_user_removed",
+    UpdateType.DIALOG_CLEARED: "fixture_dialog_cleared",
+    UpdateType.DIALOG_MUTED: "fixture_dialog_muted",
+    UpdateType.DIALOG_UNMUTED: "fixture_dialog_unmuted",
+    UpdateType.DIALOG_REMOVED: "fixture_dialog_removed",
+    UpdateType.CHAT_TITLE_CHANGED: "fixture_chat_title_changed",
+}
+
+
+@pytest.fixture(
+    params=list(_FIXTURE_NAME_BY_UPDATE.keys()),
+    ids=lambda ut: ut.name.lower(),
+)
+def update(request):
+    """Параметризованная фикстура со всеми типами обновлений."""
+    update_type = request.param
+    fixture_name = _FIXTURE_NAME_BY_UPDATE[update_type]
+    return request.getfixturevalue(fixture_name)
 
 
 @pytest.fixture

@@ -1,10 +1,12 @@
 import warnings
+from typing import Literal
 
+from ...enums.update import UpdateType
 from ...types.chats import Chat
-from .update import Update
+from .base_update import BaseUpdate
 
 
-class MessageChatCreated(Update):
+class MessageChatCreated(BaseUpdate):
     """
     .. deprecated:: 0.9.14
         Это событие устарело и будет удалено в будущих версиях.
@@ -22,6 +24,9 @@ class MessageChatCreated(Update):
     title: str | None = None
     message_id: str | None = None
     start_payload: str | None = None
+    update_type: Literal[UpdateType.MESSAGE_CHAT_CREATED] = (
+        UpdateType.MESSAGE_CHAT_CREATED
+    )
 
     def __init__(self, **data):
         super().__init__(**data)

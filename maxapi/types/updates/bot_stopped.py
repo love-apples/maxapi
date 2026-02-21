@@ -1,13 +1,14 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
+from ...enums.update import UpdateType
 from ...types.users import User
-from .update import Update
+from .base_update import BaseUpdate
 
 if TYPE_CHECKING:
     from ...bot import Bot
 
 
-class BotStopped(Update):
+class BotStopped(BaseUpdate):
     """
     Обновление, сигнализирующее об остановке бота.
 
@@ -22,6 +23,7 @@ class BotStopped(Update):
     user: User
     user_locale: str | None = None
     payload: str | None = None
+    update_type: Literal[UpdateType.BOT_STOPPED] = UpdateType.BOT_STOPPED
 
     if TYPE_CHECKING:
         bot: Bot | None  # pyright: ignore[reportGeneralTypeIssues]

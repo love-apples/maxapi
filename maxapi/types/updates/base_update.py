@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from ...types.users import User
 
 
-class Update(BaseModel, BotMixin):
+class BaseUpdate(BaseModel, BotMixin):
     """
     Базовая модель обновления.
 
