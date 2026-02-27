@@ -131,8 +131,6 @@ def test_all_button_types():
     builder.add(RequestGeoLocationButton(text="Location"))
 
     # MessageButton и OpenAppButton требуют дополнительные параметры
-    # builder.add(MessageButton(...))
-    # builder.add(OpenAppButton(...))
 
     markup = builder.as_markup()
     assert markup.type == AttachmentType.INLINE_KEYBOARD
