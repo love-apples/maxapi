@@ -39,7 +39,14 @@ class Handler:
         self.update_type: UpdateType = update_type
         self.filters: list[MagicFilter] | None = []
         self.base_filters: list[BaseFilter] | None = []
-        self.states: list[State | None] | None = []
+
+        states_kwargs = kwargs.pop("states", [])
+        self.states: list[State | None] | None
+        if isinstance(states_kwargs, (list, tuple, set)):
+            self.states = list(states_kwargs)
+        else:
+            self.states = [states_kwargs]
+
         self.middlewares: list[BaseMiddleware] = []
 
         for arg in args:
