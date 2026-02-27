@@ -9,6 +9,17 @@ from ..enums.message_link_type import MessageLinkType
 from ..enums.text_style import TextStyle
 from ..types.attachments import Attachments
 from ..types.bot_mixin import BotMixin
+from ..utils.formatting import (
+    Bold,
+    Code,
+    Heading,
+    Italic,
+    Link,
+    Strikethrough,
+    Text,
+    Underline,
+    UserMention,
+)
 from .users import User
 
 if TYPE_CHECKING:
@@ -92,12 +103,52 @@ class MessageBody(BaseModel):
         default_factory=list
     )  # type: ignore
 
-    def _get_char_styles(self) -> list[list[tuple[TextStyle, str | None]]]:
-        """Возвращает список применённых стилей для каждого символа."""
-        text = self.text or ""
+    @property
+    def html_text(self) -> str | None:
+        """
+        Преобразует исходный текст сообщения в HTML строку,
+        основываясь на разметке markup с помощью класса Text.
+        """
+        if self.text is None:
+            return None
+
+        decorated = self.text_decorated
+        if decorated:
+            return decorated.as_html()
+        return None
+
+    @property
+    def md_text(self) -> str | None:
+        """
+        Преобразует исходный текст сообщения в Markdown строку,
+        основываясь на разметке markup с помощью класса Text.
+        """
+        if self.text is None:
+            return None
+
+        decorated = self.text_decorated
+        if decorated:
+            return decorated.as_markdown()
+        return None
+
+    @property
+    def text_decorated(self) -> Text | None:  # noqa: C901
+        """
+        Разбирает текст и разметку сообщения в дерево форматирования.
+        Если текст отсутствует, возвращает ``None``.
+        Если разметка отсутствует, возвращает ``Text`` с простым текстом.
+
+        Returns:
+            Optional[Text]: Дерево форматирования или None.
+        """
+        if self.text is None:
+            return None
+
+        text = self.text
         markup = self.markup or []
 
-        char_styles: list[list[tuple[TextStyle, str | None]]] = []
+        if not markup:
+            return Text(text)
 
         order = {
             TextStyle.STRONG: 1,
@@ -110,183 +161,64 @@ class MessageBody(BaseModel):
             TextStyle.USER_MENTION: 8,
         }
 
+        char_styles: list[list[tuple[TextStyle, str | None]]] = []
         for i in range(len(text)):
             active = []
             for m in markup:
                 if m.from_ <= i < m.from_ + m.length:
-                    val = (
-                        getattr(m, "url", None)
-                        if m.type == TextStyle.LINK
-                        else None
-                    )
-                    if m.type == TextStyle.USER_MENTION:
+                    if m.type == TextStyle.LINK:
+                        val = getattr(m, "url", None)
+                    elif m.type == TextStyle.USER_MENTION:
                         val = text[m.from_ : m.from_ + m.length]
+                    else:
+                        val = None
                     active.append((m.type, val))
 
             active.sort(key=lambda x: order.get(x[0], 99))
-
             unique_active = []
             for a in active:
                 if a not in unique_active:
                     unique_active.append(a)
             char_styles.append(unique_active)
 
-        return char_styles
+        parts: list = []
+        current_chunk = ""
+        current_tags = char_styles[0] if char_styles else []
 
-    @property
-    def html_text(self) -> str | None:  # noqa: C901
-        """
-        Преобразует исходный текст сообщения в HTML строку,
-        основываясь на разметке markup.
-        """
-        if self.text is None:
-            return None
+        style_to_node: dict[Any, Any] = {
+            TextStyle.STRONG: Bold,
+            TextStyle.EMPHASIZED: Italic,
+            TextStyle.UNDERLINE: Underline,
+            TextStyle.STRIKETHROUGH: Strikethrough,
+            TextStyle.MONOSPACED: Code,
+            TextStyle.HEADING: Heading,
+        }
 
-        if not self.markup:
-            return self.text
+        def wrap_chunk(
+            chunk: str, tags: list[tuple[TextStyle, str | None]]
+        ) -> object:
+            node: object = chunk
+            for style, val in reversed(tags):
+                if style == TextStyle.LINK:
+                    node = Link(node, url=val or "")
+                elif style == TextStyle.USER_MENTION:
+                    node = UserMention(node)
+                elif style in style_to_node:
+                    node = style_to_node[style](node)
+            return node
 
-        char_styles = self._get_char_styles()
+        for i, tags in enumerate(char_styles):
+            if tags == current_tags:
+                current_chunk += text[i]
+            else:
+                parts.append(wrap_chunk(current_chunk, current_tags))
+                current_chunk = text[i]
+                current_tags = tags
 
-        result: list[str] = []
-        current_tags: list[tuple[TextStyle, str | None]] = []
+        if current_chunk:
+            parts.append(wrap_chunk(current_chunk, current_tags))
 
-        def get_open_tag(t: TextStyle, val: str | None) -> str:
-            tags = {
-                TextStyle.STRONG: "<b>",
-                TextStyle.EMPHASIZED: "<i>",
-                TextStyle.UNDERLINE: "<ins>",
-                TextStyle.STRIKETHROUGH: "<s>",
-                TextStyle.MONOSPACED: "<code>",
-                TextStyle.HEADING: "<b>",
-            }
-            if t in tags:
-                return tags[t]
-            if t == TextStyle.LINK and val:
-                return f'<a href="{val}">'
-            if t == TextStyle.USER_MENTION and val:
-                return f'<a href="max://user/{val}">'
-            return ""
-
-        def get_close_tag(t: TextStyle) -> str:
-            tags = {
-                TextStyle.STRONG: "</b>",
-                TextStyle.EMPHASIZED: "</i>",
-                TextStyle.UNDERLINE: "</ins>",
-                TextStyle.STRIKETHROUGH: "</s>",
-                TextStyle.MONOSPACED: "</code>",
-                TextStyle.HEADING: "</b>",
-            }
-            if t in tags:
-                return tags[t]
-            if t in (TextStyle.LINK, TextStyle.USER_MENTION):
-                return "</a>"
-            return ""
-
-        for i in range(len(self.text)):
-            target_tags = char_styles[i]
-
-            common_len = 0
-            for curr, tgt in zip(current_tags, target_tags, strict=False):
-                if curr == tgt:
-                    common_len += 1
-                else:
-                    break
-
-            result.extend(
-                get_close_tag(curr[0])
-                for curr in reversed(current_tags[common_len:])
-            )
-            result.extend(
-                get_open_tag(tgt[0], tgt[1])
-                for tgt in target_tags[common_len:]
-            )
-
-            current_tags = target_tags
-            result.append(self.text[i])
-
-        result.extend(
-            get_close_tag(curr[0]) for curr in reversed(current_tags)
-        )
-
-        return "".join(result)
-
-    @property
-    def md_text(self) -> str | None:  # noqa: C901
-        """
-        Преобразует исходный текст сообщения в Markdown строку,
-        основываясь на разметке markup.
-        """
-        if self.text is None:
-            return None
-
-        if not self.markup:
-            return self.text
-
-        char_styles = self._get_char_styles()
-
-        result: list[str] = []
-        current_tags: list[tuple[TextStyle, str | None]] = []
-
-        def get_open_tag(t: TextStyle, val: str | None) -> str:
-            tags = {
-                TextStyle.STRONG: "**",
-                TextStyle.EMPHASIZED: "*",
-                TextStyle.UNDERLINE: "++",
-                TextStyle.STRIKETHROUGH: "~~",
-                TextStyle.MONOSPACED: "`",
-                TextStyle.HEADING: "### ",
-            }
-            if t in tags:
-                return tags[t]
-            if t in (TextStyle.LINK, TextStyle.USER_MENTION) and val:
-                return "["
-            return ""
-
-        def get_close_tag(t: TextStyle, val: str | None) -> str:
-            tags = {
-                TextStyle.STRONG: "**",
-                TextStyle.EMPHASIZED: "*",
-                TextStyle.UNDERLINE: "++",
-                TextStyle.STRIKETHROUGH: "~~",
-                TextStyle.MONOSPACED: "`",
-                TextStyle.HEADING: "",
-            }
-            if t in tags:
-                return tags[t]
-            if t == TextStyle.LINK and val:
-                return f"]({val})"
-            if t == TextStyle.USER_MENTION and val:
-                return f"](max://user/{val})"
-            return ""
-
-        for i in range(len(self.text)):
-            target_tags = char_styles[i]
-
-            common_len = 0
-            for curr, tgt in zip(current_tags, target_tags, strict=False):
-                if curr == tgt:
-                    common_len += 1
-                else:
-                    break
-
-            result.extend(
-                get_close_tag(curr[0], curr[1])
-                for curr in reversed(current_tags[common_len:])
-            )
-            result.extend(
-                get_open_tag(tgt[0], tgt[1])
-                for tgt in target_tags[common_len:]
-            )
-
-            current_tags = target_tags
-
-            result.append(self.text[i])
-
-        result.extend(
-            get_close_tag(curr[0], curr[1]) for curr in reversed(current_tags)
-        )
-
-        return "".join(result)
+        return Text(*parts)
 
 
 class MessageStat(BaseModel):
