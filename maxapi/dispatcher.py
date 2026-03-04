@@ -54,6 +54,7 @@ CONNECTION_RETRY_DELAY = 30
 GET_UPDATES_RETRY_DELAY = 5
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8080
+DEFAULT_PATH = "/"
 
 
 class Dispatcher(BotMixin):
@@ -764,6 +765,7 @@ class Dispatcher(BotMixin):
         bot: Bot,
         host: str = DEFAULT_HOST,
         port: int = DEFAULT_PORT,
+        path: str = DEFAULT_PATH,
         **kwargs: Any,
     ) -> None:
         """
@@ -773,6 +775,7 @@ class Dispatcher(BotMixin):
             bot (Bot): Экземпляр бота.
             host (str): Хост сервера.
             port (int): Порт сервера.
+            path (str): Путь для вебхука.
         """
 
         if not FASTAPI_INSTALLED:
@@ -793,7 +796,7 @@ class Dispatcher(BotMixin):
                 "\n\t pip install maxapi[webhook]"
             )
 
-        @self.webhook_post("/")
+        @self.webhook_post(path)
         async def _(request: Request) -> JSONResponse:
             event_json = await request.json()
             event_object = await process_update_webhook(
