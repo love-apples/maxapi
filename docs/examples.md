@@ -860,6 +860,34 @@ async def hello(event: MessageCreated):
     )
 ```
 
+
+### Отправка файлов
+
+Отправка файла пользователю:
+```python
+from maxapi.types import InputMedia
+
+@dp.message_created()
+async def start_handler(event: MessageCreated):
+    await event.message.answer(
+        attachments=[InputMedia('путь к файлу')]
+    )
+```
+
+Отправка файла по токену нескольким пользователям:
+```python
+from maxapi.utils.message import process_input_media
+
+# WARN: как указано в комментарии к функции:
+#   очень нестабильный метод независящий от модуля
+#   ждем обновлений MAX API
+file = await process_input_media(bot, bot, InputMedia('путь к файлу'))
+
+for chat in chats:
+    await bot.send_message(chat_id=chat, text='какой-то текст', attachments=[file])
+```
+
+
 ## Webhook
 
 ### Высокоуровневый подход
