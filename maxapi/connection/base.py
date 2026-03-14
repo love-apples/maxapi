@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import mimetypes
+import mimetypes, logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -175,16 +175,9 @@ class BaseConnection(BotMixin):
             content_type=f"{type.value}/{ext.lstrip('.')}",
         )
 
-        bot = self._ensure_bot()
-
-        session = bot.session
-        if session is not None and not session.closed:
-            response = await session.post(url=url, data=form)
+        async with ClientSession() as temp_session:
+            response = await temp_session.post(url=url, data=form)
             return await response.text()
-        else:
-            async with ClientSession() as temp_session:
-                response = await temp_session.post(url=url, data=form)
-                return await response.text()
 
     async def upload_file_buffer(
         self, filename: str, url: str, buffer: bytes, type: UploadType
@@ -223,14 +216,7 @@ class BaseConnection(BotMixin):
             filename=basename,
             content_type=mime_type,
         )
-
-        bot = self._ensure_bot()
-
-        session = bot.session
-        if session is not None and not session.closed:
-            response = await session.post(url=url, data=form)
+        
+        async with ClientSession() as temp_session:
+            response = await temp_session.post(url=url, data=form)
             return await response.text()
-        else:
-            async with ClientSession() as temp_session:
-                response = await temp_session.post(url=url, data=form)
-                return await response.text()
