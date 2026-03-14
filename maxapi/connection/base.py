@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import mimetypes, logging
+import mimetypes
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
