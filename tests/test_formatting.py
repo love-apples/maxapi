@@ -40,9 +40,9 @@ def test_link_and_mention():
     assert link.as_html() == '<a href="https://google.com">google</a>'
     assert link.as_markdown() == "[google](https://google.com)"
 
-    mention = UserMention("Alice")
-    assert mention.as_html() == '<a href="max://user/Alice">Alice</a>'
-    assert mention.as_markdown() == "[Alice](max://user/Alice)"
+    mention = UserMention("Alice", user_id=1)
+    assert mention.as_html() == '<a href="max://user/1">Alice</a>'
+    assert mention.as_markdown() == "[Alice](max://user/1)"
 
 
 def test_text_container():
@@ -202,8 +202,42 @@ def test_mention_in_body():
         "mid": "t",
         "seq": 1,
         "text": "Alice",
-        "markup": [{"from": 0, "length": 5, "type": TextStyle.USER_MENTION}],
+        "markup": [
+            {
+                "from": 0,
+                "length": 5,
+                "type": TextStyle.USER_MENTION,
+                "user_id": 42,
+            }
+        ],
     }
     body = MessageBody(**data)
-    assert body.md_text == "[Alice](max://user/Alice)"
-    assert body.html_text == '<a href="max://user/Alice">Alice</a>'
+    assert body.md_text == "[Alice](max://user/42)"
+    assert body.html_text == '<a href="max://user/42">Alice</a>'
+
+
+def test_mention_in_body_with_user_link():
+    """MarkupUserMention может содержать user_link; парсинг и вывод ок."""
+    data = {
+        "mid": "t",
+        "seq": 1,
+        "text": "Bob",
+        "markup": [
+            {
+                "from": 0,
+                "length": 3,
+                "type": TextStyle.USER_MENTION,
+                "user_id": 100,
+                "user_link": "max://user/100",
+            }
+        ],
+    }
+    body = MessageBody(**data)
+    assert body.md_text == "[Bob](max://user/100)"
+    assert body.html_text == '<a href="max://user/100">Bob</a>'
+    # Проверяем, что разметка распарсилась в MarkupUserMention с user_link
+    assert len(body.markup) == 1
+    mention = body.markup[0]
+    assert mention.type == TextStyle.USER_MENTION
+    assert getattr(mention, "user_id", None) == 100
+    assert getattr(mention, "user_link", None) == "max://user/100"

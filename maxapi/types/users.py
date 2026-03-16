@@ -2,6 +2,7 @@ from pydantic import BaseModel
 
 from ..enums.chat_permission import ChatPermission
 from ..types.command import BotCommand
+from ..utils.formatting import UserMention
 
 
 class User(BaseModel):
@@ -35,11 +36,31 @@ class User(BaseModel):
     commands: list[BotCommand] | None = None
 
     @property
-    def full_name(self):
+    def full_name(self) -> str:
+        """Полное имя пользователя"""
+
         if self.last_name is None:
             return self.first_name
 
         return f"{self.first_name} {self.last_name}"
+
+    @property
+    def mention_html(self) -> str:
+        """Упоминание пользователя в формате HTML.
+
+        Ссылка max://user/user_id, текст — полное имя из профиля MAX.
+        Пример: <a href="max://user/12345">Имя Фамилия</a>
+        """
+        return UserMention(self.full_name, user_id=self.user_id).as_html()
+
+    @property
+    def mention_markdown(self) -> str:
+        """Упоминание пользователя в формате Markdown.
+
+        Ссылка max://user/user_id, текст — полное имя из профиля MAX.
+        Пример: [Имя Фамилия](max://user/12345)
+        """
+        return UserMention(self.full_name, user_id=self.user_id).as_markdown()
 
 
 class ChatAdmin(BaseModel):

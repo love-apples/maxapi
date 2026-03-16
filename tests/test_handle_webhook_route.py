@@ -6,7 +6,7 @@ pytest.importorskip("fastapi")
 import maxapi.dispatcher as dispatcher_module
 from fastapi import Request
 from fastapi.testclient import TestClient
-from maxapi.dispatcher import Dispatcher
+from maxapi.dispatcher import DEFAULT_PATH, Dispatcher
 from maxapi.types.updates import UNKNOWN_UPDATE_DISCLAIMER
 
 
@@ -136,3 +136,85 @@ async def test_handle_webhook_with_event_calls_handle_and_returns_ok(
 
     # проверяем, что обработчик был вызван нашим объектом
     assert handled.get("obj") is event
+
+
+async def test_handle_webhook_default_path_serves_at_root(monkeypatch):
+    """При path по умолчанию (DEFAULT_PATH) ручка доступна по POST /."""
+    dp = Dispatcher()
+
+    async def fake_init_serve(*args, **kwargs):
+        return None
+
+    dp.init_serve = fake_init_serve
+    monkeypatch.setattr(dispatcher_module, "UVICORN_INSTALLED", True)
+    monkeypatch.setattr(dispatcher_module, "Request", Request, raising=False)
+
+    async def fake_process_update_webhook(event_json, bot):
+        return None
+
+    monkeypatch.setattr(
+        dispatcher_module,
+        "process_update_webhook",
+        fake_process_update_webhook,
+    )
+
+    async def fake_handle_noop(event_object):
+        pass
+
+    dp.handle = fake_handle_noop
+
+    class DummyBot:
+        pass
+
+    await dp.handle_webhook(bot=DummyBot(), path=DEFAULT_PATH)
+
+    client = TestClient(dp.webhook_app)
+    resp = client.post("/", json={"update_type": "unknown"})
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True}
+
+
+async def test_handle_webhook_custom_path_serves_at_that_path(monkeypatch):
+    """При path ручка доступна по этому пути; POST / возвращает 404."""
+    dp = Dispatcher()
+
+    async def fake_init_serve(*args, **kwargs):
+        return None
+
+    dp.init_serve = fake_init_serve
+    monkeypatch.setattr(dispatcher_module, "UVICORN_INSTALLED", True)
+    monkeypatch.setattr(dispatcher_module, "Request", Request, raising=False)
+
+    event = DummyEvent(update_type="MESSAGE_CREATED")
+
+    async def fake_process_update_webhook(event_json, bot):
+        return event
+
+    monkeypatch.setattr(
+        dispatcher_module,
+        "process_update_webhook",
+        fake_process_update_webhook,
+    )
+    handled = {}
+
+    async def fake_handle(event_object):
+        handled["obj"] = event_object
+
+    dp.handle = fake_handle
+
+    class DummyBot:
+        pass
+
+    webhook_path = "/webhook/custom"
+    await dp.handle_webhook(bot=DummyBot(), path=webhook_path)
+
+    client = TestClient(dp.webhook_app)
+    payload = {"update_type": "MESSAGE_CREATED", "payload": {}}
+
+    resp_custom = client.post(webhook_path, json=payload)
+    assert resp_custom.status_code == 200
+    assert resp_custom.json() == {"ok": True}
+    assert handled.get("obj") is event
+
+    resp_root = client.post("/", json=payload)
+    assert resp_root.status_code == 404

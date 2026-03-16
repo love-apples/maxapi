@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -61,7 +61,22 @@ class MarkupLink(MarkupElement):
         url (Optional[str]): URL ссылки. Может быть None.
     """
 
+    type: Literal[TextStyle.LINK] = TextStyle.LINK
     url: str | None = None
+
+
+class MarkupUserMention(MarkupElement):
+    """
+    Модель разметки упоминания пользователя.
+
+    Attributes:
+        user_id (Optional[int]): Идентификатор пользователя. Может быть None.
+        user_link (Optional[str]): Ссылка на пользователя. Может быть None.
+    """
+
+    type: Literal[TextStyle.USER_MENTION] = TextStyle.USER_MENTION
+    user_id: int | None = None
+    user_link: str | None = None
 
 
 class Recipient(BaseModel):
@@ -90,8 +105,8 @@ class MessageBody(BaseModel):
         attachments (Optional[List[Union[AttachmentButton, Audio, Video,
             File, Image, Sticker, Share]]]):
             Список вложений. По умолчанию пустой.
-        markup (Optional[List[Union[MarkupLink, MarkupElement]]]):
-            Список элементов разметки. По умолчанию пустой.
+        markup (Optional[List[Union[MarkupLink, MarkupUserMention,
+            MarkupElement]]]): Список элементов разметки. По умолчанию пустой.
     """
 
     mid: str
@@ -99,8 +114,8 @@ class MessageBody(BaseModel):
     text: str | None = None
     attachments: list[Attachments] | None = Field(default_factory=list)  # type: ignore
 
-    markup: list[MarkupLink | MarkupElement] | None = Field(
-        default_factory=list
+    markup: list[MarkupUserMention | MarkupLink | MarkupElement] | None = (
+        Field(default_factory=list)
     )  # type: ignore
 
     @property
@@ -161,7 +176,9 @@ class MessageBody(BaseModel):
             TextStyle.USER_MENTION: 8,
         }
 
-        char_styles: list[list[tuple[TextStyle, str | None]]] = []
+        char_styles: list[
+            list[tuple[TextStyle, str | None | tuple[str, int]]]
+        ] = []
         for i in range(len(text)):
             active = []
             for m in markup:
@@ -169,7 +186,9 @@ class MessageBody(BaseModel):
                     if m.type == TextStyle.LINK:
                         val = getattr(m, "url", None)
                     elif m.type == TextStyle.USER_MENTION:
-                        val = text[m.from_ : m.from_ + m.length]
+                        display_text = text[m.from_ : m.from_ + m.length]
+                        uid = getattr(m, "user_id", None) or 0
+                        val = (display_text, uid)
                     else:
                         val = None
                     active.append((m.type, val))
@@ -195,14 +214,18 @@ class MessageBody(BaseModel):
         }
 
         def wrap_chunk(
-            chunk: str, tags: list[tuple[TextStyle, str | None]]
+            chunk: str,
+            tags: list[tuple[TextStyle, str | None | tuple[str, int]]],
         ) -> object:
             node: object = chunk
             for style, val in reversed(tags):
                 if style == TextStyle.LINK:
-                    node = Link(node, url=val or "")
+                    node = Link(node, url=val or "")  # type: ignore[arg-type]
                 elif style == TextStyle.USER_MENTION:
-                    node = UserMention(node)
+                    display_text, uid = (
+                        val if isinstance(val, tuple) else (chunk, 0)
+                    )
+                    node = UserMention(display_text, user_id=uid)
                 elif style in style_to_node:
                     node = style_to_node[style](node)
             return node

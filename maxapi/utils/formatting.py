@@ -227,32 +227,34 @@ class Link(_Node):
 
 
 class UserMention(_Node):
-    """Упоминание пользователя по его отображаемому тексту (фрагменту).
+    """Упоминание пользователя по отображаемому тексту и user_id.
 
-    В MAX API упоминания хранятся как обычный текст с типом ``user_mention``.
-    При рендеринге используется ссылка ``max://user/<display_text>``.
+    В MAX API: ссылка ``max://user/<user_id>``, текст — полное имя.
 
     Args:
-        display_text: Текст упоминания (обычно имя пользователя).
+        display_text: Текст упоминания (полное имя: имя и фамилия,
+            или только имя).
+        user_id: ID пользователя для URL (max://user/user_id).
     """
 
-    def __init__(self, display_text: Any) -> None:
+    def __init__(self, display_text: Any, user_id: int) -> None:
         self._text = str(display_text)
+        self._user_id = user_id
 
     def as_html(self) -> str:
         return (
-            f'<a href="max://user/{_escape_html(self._text)}">'
+            f'<a href="max://user/{self._user_id}">'
             f"{_escape_html(self._text)}</a>"
         )
 
     def as_markdown(self) -> str:
-        return f"[{_escape_md(self._text)}](max://user/{self._text})"
+        return f"[{_escape_md(self._text)}](max://user/{self._user_id})"
 
     def __str__(self) -> str:
         return self._text
 
     def __repr__(self) -> str:
-        return f"UserMention({self._text!r})"
+        return f"UserMention({self._text!r}, user_id={self._user_id!r})"
 
 
 def as_html(*parts: Any) -> str:
