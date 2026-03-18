@@ -98,6 +98,21 @@ info = parse_vcf_info(contact.payload.vcf_info)
 print(info.full_name, info.phones)
 ```
 
+## ChannelPostFilter (посты из канала)
+
+Фильтр срабатывает на `MessageCreated` и `MessageEdited`, если сообщение пришло
+из **канала** (то есть `recipient.chat_type == ChatType.CHANNEL`).
+
+```python
+from maxapi.filters.channel_post import ChannelPostFilter
+from maxapi.types import MessageCreated
+
+
+@dp.message_created(ChannelPostFilter())
+async def on_channel_post(event: MessageCreated):
+    await event.message.answer("Пост из канала получен")
+```
+
 ## Комбинация фильтров
 
 ```python

@@ -1,11 +1,18 @@
 from magic_filter import MagicFilter
 
+from .channel_post import ChannelPostFilter
 from .contact import Contact, ContactFilter
 from .filter import BaseFilter
 
 F = MagicFilter()
 
-__all__ = ["BaseFilter", "Contact", "ContactFilter", "F"]
+__all__ = [
+    "BaseFilter",
+    "ChannelPostFilter",
+    "Contact",
+    "ContactFilter",
+    "F",
+]
 
 
 def filter_attrs(obj: object, *filters: MagicFilter) -> bool:
