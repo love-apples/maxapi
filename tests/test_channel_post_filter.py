@@ -1,5 +1,4 @@
 import pytest
-
 from maxapi.enums.chat_type import ChatType
 from maxapi.filters.channel_post import ChannelPostFilter
 from maxapi.types import MessageCreated
