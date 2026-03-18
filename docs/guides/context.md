@@ -102,3 +102,75 @@ dp = Dispatcher(
 ```
 
 `RedisContext` автоматически сериализует данные в JSON и поддерживает атомарные обновления через Lua-скрипты.
+
+### Маркер обновлений (`get_updates`)
+
+В MAX API у `get_updates` есть **маркер обновлений** — это внутренняя “позиция” в ленте событий (по сути, пагинация). Если запускать бота **без маркера**, API может начать отдавать **старые обновления** (с “начального” маркера), и бот будет повторно обрабатывать прошлые события.
+
+Решение простое: **сохраняйте маркер** и **передавайте его в бота при старте**.
+
+Ниже пример хранения маркера в Redis (асинхронный клиент), ровно как ключ `bot:marker`:
+
+```python
+import redis.asyncio as redis
+
+r = redis.Redis(host="localhost", port=6379, decode_responses=True)
+
+
+async def load_marker() -> str | None:
+    return await r.get("bot:marker")
+
+
+async def save_marker(marker: str) -> None:
+    await r.set("bot:marker", marker)
+```
+
+Пример простого **глобального middleware**, который сохраняет текущий маркер в Redis после обработки события:
+
+```python
+from maxapi.filters.middleware import BaseMiddleware
+from maxapi.types import UpdateUnion
+from typing import Any, Awaitable, Callable
+
+
+class SaveMarkerMiddleware(BaseMiddleware):
+    async def __call__(
+        self,
+        handler: Callable[[UpdateUnion, dict[str, Any]], Awaitable[Any]],
+        event_object: UpdateUnion,
+        data: dict[str, Any],
+    ) -> Any:
+        result = await handler(event_object, data)
+
+        marker: int | None = event_object.bot.marker_updates
+        if marker is not None:
+            await save_marker(str(marker))
+
+        return result
+```
+
+Использование (при старте загрузили маркер, установили через `set_marker_updates`, подключили middleware):
+
+- при запуске загрузить маркер и установить через `bot.set_marker_updates(...)`, например в `async main()`:
+
+```python
+import asyncio
+from maxapi import Bot, Dispatcher
+
+bot = Bot()
+dp = Dispatcher()
+dp.middleware(SaveMarkerMiddleware())
+
+async def main() -> None:
+    marker = await load_marker()  # str | None
+
+    if marker is not None:
+        bot.set_marker_updates(int(marker))
+
+    await dp.start_polling(bot)
+
+
+asyncio.run(main())
+```
+
+- во время работы middleware будет обновлять сохранённый маркер на основании `event_object.bot.marker_updates`.
