@@ -37,4 +37,3 @@ async def test_channel_post_filter_false_for_non_channel_message():
     )
 
     assert await ChannelPostFilter()(event) is False
-

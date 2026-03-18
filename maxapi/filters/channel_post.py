@@ -14,5 +14,3 @@ class ChannelPostFilter(BaseFilter):
             return False
 
         return event.message.recipient.chat_type == ChatType.CHANNEL
-
-
