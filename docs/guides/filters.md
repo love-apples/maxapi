@@ -69,6 +69,35 @@ async def callback_handler(event: MessageCallback, payload: MyPayload):
     await event.answer(f"Edit action: {payload.value}")
 ```
 
+## ContactFilter (сообщения с контактом)
+
+Фильтр срабатывает на `MessageCreated` и `MessageEdited`, если в сообщении есть
+вложение типа `contact`. При совпадении возвращает `dict` с ключом `contact`,
+который будет прокинут в хэндлер как аргумент.
+
+```python
+from maxapi.filters.contact import ContactFilter
+from maxapi.types.attachments.contact import Contact
+
+
+@dp.message_created(ContactFilter())
+async def on_contact(event, contact: Contact):
+    # contact.payload.vcf_info — исходная VCF строка (не изменяется)
+    # contact.payload.vcf — высокоуровневый доступ к распарсенному vCard
+    full_name = contact.payload.vcf.full_name
+    phone = contact.payload.vcf.phone
+    await event.message.answer(f"{full_name=}, {phone=}")
+```
+
+Если нужно разобрать VCF вручную, можно использовать `parse_vcf_info`:
+
+```python
+from maxapi.utils.vcf import parse_vcf_info
+
+info = parse_vcf_info(contact.payload.vcf_info)
+print(info.full_name, info.phones)
+```
+
 ## Комбинация фильтров
 
 ```python

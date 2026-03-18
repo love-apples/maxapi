@@ -112,6 +112,7 @@ nav:
     - Max: exceptions/max.md
   - Filters:
     - Callback_payload: filters/callback_payload.md
+    - Contact: filters/contact.md
     - Command: filters/command.md
     - Filter: filters/filter.md
     - Handler: filters/handler.md
@@ -230,3 +231,4 @@ nav:
     - Message: utils/message.md
     - Overview: utils/index.md
     - Updates: utils/updates.md
+    - Vcf: utils/vcf.md
