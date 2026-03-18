@@ -6,6 +6,7 @@ from ...enums.attachment import AttachmentType
 from ...types.attachments.buttons import InlineButtonUnion
 from ...types.attachments.upload import AttachmentUpload
 from ...types.users import User
+from ...utils.vcf import VcfInfo, parse_vcf_info
 
 if TYPE_CHECKING:
     from ...bot import Bot
@@ -63,6 +64,12 @@ class ContactAttachmentPayload(BaseModel):
 
     vcf_info: str = ""  # для корректного определения
     max_info: User | None = None
+
+    @property
+    def vcf(self) -> VcfInfo:
+        """Доступ к данным из `vcf_info`."""
+
+        return parse_vcf_info(self.vcf_info)
 
 
 class ButtonsPayload(BaseModel):
