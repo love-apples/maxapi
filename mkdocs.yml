@@ -112,6 +112,7 @@ nav:
     - Max: exceptions/max.md
   - Filters:
     - Callback_payload: filters/callback_payload.md
+    - Channel_post: filters/channel_post.md
     - Contact: filters/contact.md
     - Command: filters/command.md
     - Filter: filters/filter.md
