@@ -41,7 +41,7 @@ except ImportError:
     UVICORN_INSTALLED = False
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Awaitable, Callable, Iterator
 
     from fastapi import FastAPI, Request
     from magic_filter import MagicFilter
@@ -273,8 +273,13 @@ class Dispatcher(BotMixin):
         """Подготовить обработчики событий."""
 
         handlers_count = 0
+        seen: set[int] = set()
 
-        for router in self.routers:
+        for router, *_ in self._iter_routers(self.routers):
+            if id(router) in seen:
+                continue
+            seen.add(id(router))
+
             router.bot = bot
 
             for handler in router.event_handlers:
@@ -377,26 +382,81 @@ class Dispatcher(BotMixin):
 
         return data
 
+    def _iter_routers(
+        self,
+        routers: list[Router | Dispatcher],
+        parent_middlewares: list[BaseMiddleware] | None = None,
+        parent_filters: list[MagicFilter] | None = None,
+        parent_base_filters: list[BaseFilter] | None = None,
+    ) -> Iterator[
+        tuple[
+            Router | Dispatcher,
+            list[BaseMiddleware],
+            list[MagicFilter],
+            list[BaseFilter],
+        ]
+    ]:
+        """
+        Рекурсивно обходит роутеры, накапливая middleware и фильтры родителей.
+
+        Args:
+            routers: Список роутеров для обхода.
+            parent_middlewares: Накопленные middleware от родительских роутеров.
+            parent_filters: Накопленные MagicFilter от родительских роутеров.
+            parent_base_filters: Накопленные BaseFilter от родительских роутеров.
+
+        Yields:
+            Кортеж (роутер, middleware, MagicFilter, BaseFilter) с накопленными
+            значениями от всех родителей.
+        """
+        parent_middlewares = parent_middlewares or []
+        parent_filters = parent_filters or []
+        parent_base_filters = parent_base_filters or []
+
+        for router in routers:
+            if router is self:
+                accumulated_middlewares = parent_middlewares
+            else:
+                accumulated_middlewares = parent_middlewares + router.middlewares
+
+            accumulated_filters = parent_filters + router.filters
+            accumulated_base_filters = parent_base_filters + router.base_filters
+
+            yield router, accumulated_middlewares, accumulated_filters, accumulated_base_filters
+
+            sub_routers = [r for r in router.routers if r is not self]
+            if sub_routers:
+                yield from self._iter_routers(
+                    routers=sub_routers,
+                    parent_middlewares=accumulated_middlewares,
+                    parent_filters=accumulated_filters,
+                    parent_base_filters=accumulated_base_filters,
+                )
+
     async def _check_router_filters(
-        self, event: UpdateUnion, router: Router | Dispatcher
+        self,
+        event: UpdateUnion,
+        filters: list[MagicFilter],
+        base_filters: list[BaseFilter],
     ) -> dict[str, Any] | None | Literal[False]:
         """
-        Проверяет фильтры роутера для события.
+        Проверяет накопленные фильтры роутера для события.
 
         Args:
             event (UpdateUnion): Событие.
-            router (Router | Dispatcher): Роутер для проверки.
+            filters: Накопленные MagicFilter.
+            base_filters: Накопленные BaseFilter.
 
         Returns:
             Optional[Dict[str, Any]] | Literal[False]: Словарь с данными
                 или False, если фильтры не прошли.
         """
-        if router.filters and not filter_attrs(event, *router.filters):
+        if filters and not filter_attrs(event, *filters):
             return False
 
-        if router.base_filters:
+        if base_filters:
             result = await self.process_base_filters(
-                event=event, filters=router.base_filters
+                event=event, filters=base_filters
             )
             if isinstance(result, dict):
                 return result
@@ -520,7 +580,7 @@ class Dispatcher(BotMixin):
         """
         Специальный метод для обработки сырых ответов API.
         """
-        for router in self.routers:
+        for router, *_ in self._iter_routers(self.routers):
             matching_handlers = self._find_matching_handlers(
                 router, event_type
             )
@@ -563,14 +623,19 @@ class Dispatcher(BotMixin):
 
                 data["context"] = memory_context
 
-                for index, router in enumerate(self.routers):
+                for index, (
+                    router,
+                    router_middlewares,
+                    router_filters,
+                    router_base_filters,
+                ) in enumerate(self._iter_routers(self.routers)):
                     if is_handled:
                         break
 
                     router_id = router.router_id or index
 
                     router_filter_result = await self._check_router_filters(
-                        event_object, router
+                        event_object, router_filters, router_base_filters
                     )
 
                     if router_filter_result is False:
@@ -582,6 +647,9 @@ class Dispatcher(BotMixin):
                     matching_handlers = self._find_matching_handlers(
                         router, event_object.update_type
                     )
+
+                    if not matching_handlers:
+                        continue
 
                     async def _process_handlers(
                         event: UpdateUnion, handler_data: dict[str, Any]
@@ -620,9 +688,9 @@ class Dispatcher(BotMixin):
                             is_handled = True
                             break
 
-                    if isinstance(router, Router) and router.middlewares:
+                    if router_middlewares:
                         router_chain = self.build_middleware_chain(
-                            router.middlewares, _process_handlers
+                            router_middlewares, _process_handlers
                         )
                         await router_chain(event_object, data)
                     else:
