@@ -81,7 +81,7 @@ class SendMessage(BaseConnection):
             warnings.warn(
                 "Параметр parse_mode устарел, используйте format.",
                 DeprecationWarning,
-                stacklevel=2,
+                stacklevel=4,
             )
         self.format = format if format is not None else parse_mode
         self.disable_link_preview = disable_link_preview

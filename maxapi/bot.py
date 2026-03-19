@@ -156,7 +156,7 @@ class Bot(BaseConnection):
             warnings.warn(
                 "Параметр parse_mode устарел, используйте format.",
                 DeprecationWarning,
-                stacklevel=2,
+                stacklevel=3,
             )
         self.parse_mode = parse_mode if parse_mode is not None else format
         self.notify = notify
@@ -251,7 +251,7 @@ class Bot(BaseConnection):
             warnings.warn(
                 "Параметр parse_mode устарел, используйте format.",
                 DeprecationWarning,
-                stacklevel=2,
+                stacklevel=5,
             )
 
         return (
@@ -266,7 +266,7 @@ class Bot(BaseConnection):
         warnings.warn(
             "Метод _resolve_parse_mode устарел, используйте _resolve_format.",
             DeprecationWarning,
-            stacklevel=2,
+            stacklevel=3,
         )
         return self._resolve_format(None, mode)
 

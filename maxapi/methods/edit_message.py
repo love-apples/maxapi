@@ -75,7 +75,7 @@ class EditMessage(BaseConnection):
             warnings.warn(
                 "Параметр parse_mode устарел, используйте format.",
                 DeprecationWarning,
-                stacklevel=2,
+                stacklevel=4,
             )
         self.format = format if format is not None else parse_mode
         self.sleep_after_input_media = sleep_after_input_media
