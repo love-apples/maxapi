@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from datetime import datetime
 
     from .dispatcher import Dispatcher
-    from .enums.parse_mode import ParseMode
+    from .enums.parse_mode import Format, ParseMode
     from .enums.update import UpdateType
     from .enums.upload_type import UploadType
     from .filters.command import CommandsInfo
@@ -95,6 +95,7 @@ class Bot(BaseConnection):
         self,
         token: str | None = None,
         *,
+        format: Format | None = None,
         parse_mode: ParseMode | None = None,
         notify: bool | None = None,
         disable_link_preview: bool | None = None,
@@ -110,6 +111,8 @@ class Bot(BaseConnection):
         Args:
             token (str): Токен доступа к API бота. При None идет
                 получение из под окружения MAX_BOT_TOKEN.
+            format (Optional[Format]): Форматирование по
+                умолчанию.
             parse_mode (Optional[ParseMode]): Форматирование по
                 умолчанию.
             notify (Optional[bool]): Отключение уведомлений при отправке
@@ -149,7 +152,13 @@ class Bot(BaseConnection):
         self.headers: dict[str, Any] = {"Authorization": self.__token}
         self.marker_updates = marker_updates
 
-        self.parse_mode = parse_mode
+        if parse_mode is not None:
+            warnings.warn(
+                "Параметр parse_mode устарел, используйте format.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        self.parse_mode = parse_mode if parse_mode is not None else format
         self.notify = notify
         self.disable_link_preview = disable_link_preview
         self.auto_requests = auto_requests
@@ -222,18 +231,44 @@ class Bot(BaseConnection):
 
         return notify if notify is not None else self.notify
 
-    def _resolve_parse_mode(self, mode: ParseMode | None) -> ParseMode | None:
+    def _resolve_format(
+        self,
+        format: Format | None,
+        parse_mode: ParseMode | None = None,
+    ) -> Format | None:
         """
         Определяет режим форматирования.
 
         Args:
-            mode (Optional[ParseMode]): Локальный режим.
+            format (Optional[Format]): Локальный режим.
+            parse_mode (Optional[ParseMode]): Устаревший локальный режим.
 
         Returns:
-            Optional[ParseMode]: Итоговый режим.
+            Optional[Format]: Итоговый режим.
         """
 
-        return mode if mode is not None else self.parse_mode
+        if parse_mode is not None:
+            warnings.warn(
+                "Параметр parse_mode устарел, используйте format.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+        return (
+            format
+            if format is not None
+            else parse_mode
+            if parse_mode is not None
+            else self.parse_mode
+        )
+
+    def _resolve_parse_mode(self, mode: ParseMode | None) -> ParseMode | None:
+        warnings.warn(
+            "Метод _resolve_parse_mode устарел, используйте _resolve_format.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._resolve_format(None, mode)
 
     async def close_session(self) -> None:
         """
@@ -257,6 +292,7 @@ class Bot(BaseConnection):
         | list[Attachments]
         | None = None,
         link: NewMessageLink | None = None,
+        format: Format | None = None,
         parse_mode: ParseMode | None = None,
         *,
         notify: bool | None = None,
@@ -277,6 +313,8 @@ class Bot(BaseConnection):
                 InputMediaBuffer]]): Вложения.
             link (Optional[NewMessageLink]): Данные ссылки сообщения.
             notify (Optional[bool]): Флаг уведомления.
+            format (Optional[Format]): Режим форматирования
+                текста.
             parse_mode (Optional[ParseMode]): Режим форматирования
                 текста.
             disable_link_preview (Optional[bool]): Флаг генерации
@@ -296,7 +334,8 @@ class Bot(BaseConnection):
             attachments=attachments,
             link=link,
             notify=self._resolve_notify(notify=notify),
-            parse_mode=self._resolve_parse_mode(parse_mode),
+            format=self._resolve_format(format, parse_mode),
+            parse_mode=parse_mode,
             disable_link_preview=self._resolve_disable_link_preview(
                 disable_link_preview=disable_link_preview,
             ),
@@ -335,6 +374,7 @@ class Bot(BaseConnection):
         | list[Attachments]
         | None = None,
         link: NewMessageLink | None = None,
+        format: Format | None = None,
         parse_mode: ParseMode | None = None,
         *,
         notify: bool | None = None,
@@ -352,6 +392,8 @@ class Bot(BaseConnection):
                 InputMediaBuffer]]): Новые вложения.
             link (Optional[NewMessageLink]): Новая ссылка.
             notify (Optional[bool]): Флаг уведомления.
+            format (Optional[Format]): Режим форматирования
+                текста.
             parse_mode (Optional[ParseMode]): Режим форматирования
                 текста.
             sleep_after_input_media (Optional[bool]): Нужно ли делать
@@ -369,7 +411,8 @@ class Bot(BaseConnection):
             attachments=attachments,
             link=link,
             notify=self._resolve_notify(notify=notify),
-            parse_mode=self._resolve_parse_mode(parse_mode),
+            format=self._resolve_format(format, parse_mode),
+            parse_mode=parse_mode,
             sleep_after_input_media=sleep_after_input_media,
         ).fetch()
 

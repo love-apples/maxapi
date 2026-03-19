@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import warnings
 from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
@@ -16,7 +17,7 @@ from .types.edited_message import EditedMessage
 
 if TYPE_CHECKING:
     from ..bot import Bot
-    from ..enums.parse_mode import ParseMode
+    from ..enums.parse_mode import Format, ParseMode
     from ..types.attachments import Attachments
     from ..types.message import NewMessageLink
 
@@ -37,7 +38,9 @@ class EditMessage(BaseConnection):
             (например, ответ или пересылка).
         notify (Optional[bool]): Отправлять ли уведомление о сообщении.
             По умолчанию True.
-        parse_mode (Optional[ParseMode]): Формат разметки текста
+        format (Optional[Format]): Формат разметки текста
+            (например, Markdown, HTML).
+        parse_mode (Optional[ParseMode]): Устаревший формат разметки текста
             (например, Markdown, HTML).
     """
 
@@ -52,6 +55,7 @@ class EditMessage(BaseConnection):
         | list[Attachments]
         | None = None,
         link: NewMessageLink | None = None,
+        format: Format | None = None,
         parse_mode: ParseMode | None = None,
         *,
         notify: bool | None = None,
@@ -67,7 +71,13 @@ class EditMessage(BaseConnection):
         self.attachments = attachments
         self.link = link
         self.notify = notify
-        self.parse_mode = parse_mode
+        if parse_mode is not None:
+            warnings.warn(
+                "Параметр parse_mode устарел, используйте format.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        self.format = format if format is not None else parse_mode
         self.sleep_after_input_media = sleep_after_input_media
 
     async def fetch(self) -> EditedMessage | None:
@@ -114,8 +124,8 @@ class EditMessage(BaseConnection):
             json["link"] = self.link.model_dump()
         if self.notify is not None:
             json["notify"] = self.notify
-        if self.parse_mode is not None:
-            json["format"] = self.parse_mode.value
+        if self.format is not None:
+            json["format"] = self.format.value
 
         if has_input_media and self.sleep_after_input_media:
             await asyncio.sleep(bot.after_input_media_delay)

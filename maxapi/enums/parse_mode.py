@@ -11,3 +11,6 @@ class ParseMode(str, Enum):
 
     MARKDOWN = "markdown"
     HTML = "html"
+
+
+Format = ParseMode

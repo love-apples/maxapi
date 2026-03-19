@@ -8,7 +8,7 @@ import pytest
 # Core Stuff
 from maxapi import Bot
 from maxapi.client.default import DefaultConnectionProperties
-from maxapi.enums.parse_mode import ParseMode
+from maxapi.enums.parse_mode import Format, ParseMode
 from maxapi.enums.sender_action import SenderAction
 from maxapi.exceptions.max import InvalidToken
 
@@ -44,7 +44,13 @@ class TestBotInitialization:
 
     def test_bot_init_with_parse_mode(self, mock_bot_token):
         """Тест создания бота с parse_mode."""
-        bot = Bot(token=mock_bot_token, parse_mode=ParseMode.MARKDOWN)
+        with pytest.deprecated_call():
+            bot = Bot(token=mock_bot_token, parse_mode=ParseMode.MARKDOWN)
+        assert bot.parse_mode == ParseMode.MARKDOWN
+
+    def test_bot_init_with_format(self, mock_bot_token):
+        """Тест создания бота с format."""
+        bot = Bot(token=mock_bot_token, format=Format.MARKDOWN)
         assert bot.parse_mode == ParseMode.MARKDOWN
 
     def test_bot_init_with_notify(self, mock_bot_token):
@@ -99,11 +105,14 @@ class TestBotResolveMethods:
         assert bot._resolve_notify(notify=False) is False
         assert bot._resolve_notify(notify=True) is True
 
-    def test_resolve_parse_mode(self, bot):
-        """Тест _resolve_parse_mode."""
+    def test_resolve_format(self, bot):
+        """Тест _resolve_format."""
         bot.parse_mode = ParseMode.MARKDOWN
-        assert bot._resolve_parse_mode(None) == ParseMode.MARKDOWN
-        assert bot._resolve_parse_mode(ParseMode.HTML) == ParseMode.HTML
+        assert bot._resolve_format(None) == ParseMode.MARKDOWN
+        assert bot._resolve_format(Format.HTML) == ParseMode.HTML
+
+        with pytest.deprecated_call():
+            assert bot._resolve_format(None, ParseMode.HTML) == ParseMode.HTML
 
     def test_resolve_disable_link_preview(self, bot):
         """Тест _resolve_disable_link_preview."""
