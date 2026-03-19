@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from datetime import datetime
 
     from .dispatcher import Dispatcher
-    from .enums.parse_mode import Format, ParseMode
+    from .enums.parse_mode import ParseMode, TextFormat
     from .enums.update import UpdateType
     from .enums.upload_type import UploadType
     from .filters.command import CommandsInfo
@@ -95,7 +95,7 @@ class Bot(BaseConnection):
         self,
         token: str | None = None,
         *,
-        format: Format | None = None,
+        format: TextFormat | None = None,
         parse_mode: ParseMode | None = None,
         notify: bool | None = None,
         disable_link_preview: bool | None = None,
@@ -111,7 +111,7 @@ class Bot(BaseConnection):
         Args:
             token (str): Токен доступа к API бота. При None идет
                 получение из под окружения MAX_BOT_TOKEN.
-            format (Optional[Format]): Форматирование по
+            format (Optional[TextFormat]): Форматирование по
                 умолчанию.
             parse_mode (Optional[ParseMode]): Форматирование по
                 умолчанию.
@@ -233,18 +233,18 @@ class Bot(BaseConnection):
 
     def _resolve_format(
         self,
-        format: Format | None,
+        format: TextFormat | None,
         parse_mode: ParseMode | None = None,
-    ) -> Format | None:
+    ) -> TextFormat | None:
         """
         Определяет режим форматирования.
 
         Args:
-            format (Optional[Format]): Локальный режим.
+            format (Optional[TextFormat]): Локальный режим.
             parse_mode (Optional[ParseMode]): Устаревший локальный режим.
 
         Returns:
-            Optional[Format]: Итоговый режим.
+            Optional[TextFormat]: Итоговый режим.
         """
 
         if parse_mode is not None:
@@ -292,7 +292,7 @@ class Bot(BaseConnection):
         | list[Attachments]
         | None = None,
         link: NewMessageLink | None = None,
-        format: Format | None = None,
+        format: TextFormat | None = None,
         parse_mode: ParseMode | None = None,
         *,
         notify: bool | None = None,
@@ -313,7 +313,7 @@ class Bot(BaseConnection):
                 InputMediaBuffer]]): Вложения.
             link (Optional[NewMessageLink]): Данные ссылки сообщения.
             notify (Optional[bool]): Флаг уведомления.
-            format (Optional[Format]): Режим форматирования
+            format (Optional[TextFormat]): Режим форматирования
                 текста.
             parse_mode (Optional[ParseMode]): Режим форматирования
                 текста.
@@ -374,7 +374,7 @@ class Bot(BaseConnection):
         | list[Attachments]
         | None = None,
         link: NewMessageLink | None = None,
-        format: Format | None = None,
+        format: TextFormat | None = None,
         parse_mode: ParseMode | None = None,
         *,
         notify: bool | None = None,
@@ -392,7 +392,7 @@ class Bot(BaseConnection):
                 InputMediaBuffer]]): Новые вложения.
             link (Optional[NewMessageLink]): Новая ссылка.
             notify (Optional[bool]): Флаг уведомления.
-            format (Optional[Format]): Режим форматирования
+            format (Optional[TextFormat]): Режим форматирования
                 текста.
             parse_mode (Optional[ParseMode]): Режим форматирования
                 текста.

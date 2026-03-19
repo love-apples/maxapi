@@ -13,4 +13,5 @@ class ParseMode(str, Enum):
     HTML = "html"
 
 
-Format = ParseMode
+TextFormat = ParseMode
+Format = TextFormat

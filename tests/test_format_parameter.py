@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from maxapi.connection.base import BaseConnection
 from maxapi.enums.chat_type import ChatType
-from maxapi.enums.parse_mode import Format
+from maxapi.enums.parse_mode import TextFormat
 from maxapi.methods.edit_message import EditMessage
 from maxapi.methods.send_message import SendMessage
 from maxapi.types.message import Message
@@ -19,10 +19,10 @@ async def test_bot_send_message_passes_format(bot):
     with patch.object(
         bot_module, "SendMessage", return_value=send_message_instance
     ) as mocked_send_message:
-        await bot.send_message(chat_id=1, text="hello", format=Format.HTML)
+        await bot.send_message(chat_id=1, text="hello", format=TextFormat.HTML)
 
     called_kwargs = mocked_send_message.call_args.kwargs
-    assert called_kwargs["format"] == Format.HTML
+    assert called_kwargs["format"] == TextFormat.HTML
 
 
 @pytest.mark.asyncio
@@ -36,11 +36,11 @@ async def test_bot_edit_message_passes_format(bot):
         bot_module, "EditMessage", return_value=edit_message_instance
     ) as mocked_edit_message:
         await bot.edit_message(
-            message_id="msg_1", text="hello", format=Format.MARKDOWN
+            message_id="msg_1", text="hello", format=TextFormat.MARKDOWN
         )
 
     called_kwargs = mocked_edit_message.call_args.kwargs
-    assert called_kwargs["format"] == Format.MARKDOWN
+    assert called_kwargs["format"] == TextFormat.MARKDOWN
 
 
 @pytest.mark.asyncio
@@ -49,7 +49,7 @@ async def test_send_message_fetch_uses_format_in_json(bot):
         bot=bot,
         chat_id=1,
         text="hello",
-        format=Format.HTML,
+        format=TextFormat.HTML,
     )
 
     with patch.object(
@@ -58,7 +58,7 @@ async def test_send_message_fetch_uses_format_in_json(bot):
         await method.fetch()
 
     request_kwargs = mocked_request.call_args.kwargs
-    assert request_kwargs["json"]["format"] == Format.HTML.value
+    assert request_kwargs["json"]["format"] == TextFormat.HTML.value
 
 
 @pytest.mark.asyncio
@@ -67,7 +67,7 @@ async def test_edit_message_fetch_uses_format_in_json(bot):
         bot=bot,
         message_id="msg_1",
         text="hello",
-        format=Format.MARKDOWN,
+        format=TextFormat.MARKDOWN,
     )
 
     with patch.object(
@@ -76,7 +76,7 @@ async def test_edit_message_fetch_uses_format_in_json(bot):
         await method.fetch()
 
     request_kwargs = mocked_request.call_args.kwargs
-    assert request_kwargs["json"]["format"] == Format.MARKDOWN.value
+    assert request_kwargs["json"]["format"] == TextFormat.MARKDOWN.value
 
 
 @pytest.mark.asyncio
@@ -98,10 +98,10 @@ async def test_message_helpers_pass_format_to_bot():
     )
     message.bot = bot
 
-    await message.answer(text="a", format=Format.MARKDOWN)
-    await message.reply(text="b", format=Format.HTML)
-    await message.forward(chat_id=3, format=Format.MARKDOWN)
-    await message.edit(text="c", format=Format.HTML)
+    await message.answer(text="a", format=TextFormat.MARKDOWN)
+    await message.reply(text="b", format=TextFormat.HTML)
+    await message.forward(chat_id=3, format=TextFormat.MARKDOWN)
+    await message.edit(text="c", format=TextFormat.HTML)
 
     assert bot.send_message.await_count == 3
     assert bot.edit_message.await_count == 1
@@ -111,7 +111,7 @@ async def test_message_helpers_pass_format_to_bot():
     forward_call = bot.send_message.await_args_list[2].kwargs
     edit_call = bot.edit_message.await_args_list[0].kwargs
 
-    assert answer_call["format"] == Format.MARKDOWN
-    assert reply_call["format"] == Format.HTML
-    assert forward_call["format"] == Format.MARKDOWN
-    assert edit_call["format"] == Format.HTML
+    assert answer_call["format"] == TextFormat.MARKDOWN
+    assert reply_call["format"] == TextFormat.HTML
+    assert forward_call["format"] == TextFormat.MARKDOWN
+    assert edit_call["format"] == TextFormat.HTML

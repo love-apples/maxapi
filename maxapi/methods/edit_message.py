@@ -17,7 +17,7 @@ from .types.edited_message import EditedMessage
 
 if TYPE_CHECKING:
     from ..bot import Bot
-    from ..enums.parse_mode import Format, ParseMode
+    from ..enums.parse_mode import ParseMode, TextFormat
     from ..types.attachments import Attachments
     from ..types.message import NewMessageLink
 
@@ -38,7 +38,7 @@ class EditMessage(BaseConnection):
             (например, ответ или пересылка).
         notify (Optional[bool]): Отправлять ли уведомление о сообщении.
             По умолчанию True.
-        format (Optional[Format]): Формат разметки текста
+        format (Optional[TextFormat]): Формат разметки текста
             (например, Markdown, HTML).
         parse_mode (Optional[ParseMode]): Устаревший формат разметки текста
             (например, Markdown, HTML).
@@ -55,7 +55,7 @@ class EditMessage(BaseConnection):
         | list[Attachments]
         | None = None,
         link: NewMessageLink | None = None,
-        format: Format | None = None,
+        format: TextFormat | None = None,
         parse_mode: ParseMode | None = None,
         *,
         notify: bool | None = None,

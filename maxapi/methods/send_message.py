@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, cast
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
 from ..enums.http_method import HTTPMethod
-from ..enums.parse_mode import Format, ParseMode
+from ..enums.parse_mode import ParseMode, TextFormat
 from ..exceptions.max import MaxApiError
 from ..loggers import logger_bot
 from ..types.attachments import Attachments
@@ -40,7 +40,7 @@ class SendMessage(BaseConnection):
             (например, ответ или пересылка).
         notify (Optional[bool]): Отправлять ли уведомление о сообщении.
             По умолчанию True.
-        format (Optional[Format]): Режим форматирования
+        format (Optional[TextFormat]): Режим форматирования
             (например, Markdown, HTML).
         parse_mode (Optional[ParseMode]): Режим форматирования текста
             (например, Markdown, HTML).
@@ -59,7 +59,7 @@ class SendMessage(BaseConnection):
         | list[Attachments]
         | None = None,
         link: NewMessageLink | None = None,
-        format: Format | None = None,
+        format: TextFormat | None = None,
         parse_mode: ParseMode | None = None,
         *,
         notify: bool | None = None,

@@ -24,7 +24,7 @@ from .users import User
 
 if TYPE_CHECKING:
     from ..bot import Bot
-    from ..enums.parse_mode import Format, ParseMode
+    from ..enums.parse_mode import ParseMode, TextFormat
     from ..methods.types.deleted_message import DeletedMessage
     from ..methods.types.edited_message import EditedMessage
     from ..methods.types.pinned_message import PinnedMessage
@@ -315,7 +315,7 @@ class Message(BaseModel, BotMixin):
         ]
         | None = None,
         link: NewMessageLink | None = None,
-        format: Format | None = None,
+        format: TextFormat | None = None,
         parse_mode: ParseMode | None = None,
         *,
         notify: bool | None = None,
@@ -332,7 +332,7 @@ class Message(BaseModel, BotMixin):
                 Может быть None.
             link (NewMessageLink, optional): Связь с другим сообщением.
                 Может быть None.
-            format (Format, optional): Режим форматирования текста.
+            format (TextFormat, optional): Режим форматирования текста.
                 Может быть None.
             parse_mode (ParseMode, optional): Режим форматирования текста.
                 Может быть None.
@@ -366,7 +366,7 @@ class Message(BaseModel, BotMixin):
             Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
         ]
         | None = None,
-        format: Format | None = None,
+        format: TextFormat | None = None,
         parse_mode: ParseMode | None = None,
         *,
         notify: bool | None = None,
@@ -382,7 +382,7 @@ class Message(BaseModel, BotMixin):
                 | AttachmentUpload], optional): Список вложений.
                 Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
-            format (Format, optional): Режим форматирования текста.
+            format (TextFormat, optional): Режим форматирования текста.
                 Может быть None.
             parse_mode (ParseMode, optional): Режим форматирования текста.
                 Может быть None.
@@ -423,7 +423,7 @@ class Message(BaseModel, BotMixin):
             Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
         ]
         | None = None,
-        format: Format | None = None,
+        format: TextFormat | None = None,
         parse_mode: ParseMode | None = None,
         *,
         notify: bool | None = None,
@@ -443,7 +443,7 @@ class Message(BaseModel, BotMixin):
                 | AttachmentUpload], optional): Список вложений.
                 Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
-            format (Format, optional): Режим форматирования
+            format (TextFormat, optional): Режим форматирования
                 текста. Может быть None.
             parse_mode (ParseMode, optional): Режим форматирования
                 текста. Может быть None.
@@ -482,7 +482,7 @@ class Message(BaseModel, BotMixin):
         | list[Attachments]
         | None = None,
         link: NewMessageLink | None = None,
-        format: Format | None = None,
+        format: TextFormat | None = None,
         parse_mode: ParseMode | None = None,
         *,
         notify: bool = True,
@@ -497,7 +497,7 @@ class Message(BaseModel, BotMixin):
                 AttachmentUpload], optional): Новые вложения. Может быть None.
             link (NewMessageLink, optional): Новая связь с сообщением.
                 Может быть None.
-            format (Format, optional): Режим форматирования текста.
+            format (TextFormat, optional): Режим форматирования текста.
                 Может быть None.
             parse_mode (ParseMode, optional): Режим форматирования текста.
                 Может быть None.
