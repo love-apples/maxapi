@@ -89,9 +89,10 @@ if __name__ == '__main__':
 
 ### ● Запуск Webhook
 
-Перед запуском бота через Webhook, вам нужно установить дополнительные зависимости (fastapi, uvicorn). Можно это сделать через команду:
+Webhook работает «из коробки» — aiohttp уже включён в базовый пакет:
+
 ```bash
-pip install maxapi[webhook]
+pip install maxapi
 ```
 
 Указан пример простого запуска, для более низкого уровня можете рассмотреть [этот пример](https://love-apples.github.io/maxapi/examples/#_6).
@@ -116,13 +117,22 @@ async def hello(event: MessageCreated):
 
 async def main():
     await dp.handle_webhook(
-        bot=bot, 
-        host='localhost',
+        bot=bot,
+        host='0.0.0.0',
         port=8080,
-        log_level=logging.CRITICAL  # Можно убрать для подробного логирования
     )
 
 
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+
+> **Хотите использовать FastAPI или Litestar вместо aiohttp?**
+> Установите нужную опциональную зависимость:
+> ```bash
+> pip install maxapi[fastapi]   # FastAPI + uvicorn
+> pip install maxapi[litestar]  # Litestar + uvicorn
+> ```
 if __name__ == '__main__':
     asyncio.run(main())
 ```

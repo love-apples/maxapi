@@ -38,8 +38,12 @@ build-backend = "setuptools.build_meta"
 include = ["maxapi*", "wiki*", "examples*"]
 
 [project.optional-dependencies]
-webhook = [
+fastapi = [
     "fastapi>=0.103.0,<1",
+    "uvicorn>=0.15.0,<1",
+]
+litestar = [
+    "litestar>=2.0.0,<3",
     "uvicorn>=0.15.0,<1",
 ]
 
@@ -60,6 +64,9 @@ dev = [
     "python-dotenv>=1.2.1",
     "Faker>=40.4.0",
     "httpx>=0.28.1,<1",
+    "fastapi>=0.103.0,<1",
+    "uvicorn>=0.15.0,<1",
+    "litestar>=2.0.0,<3",
 ]
 
 [tool.uv]

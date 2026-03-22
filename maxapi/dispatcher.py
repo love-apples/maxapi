@@ -6,6 +6,7 @@ import warnings
 from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal
+from warnings import warn
 
 from aiohttp import ClientConnectorError
 
@@ -16,45 +17,25 @@ from .exceptions.max import InvalidToken, MaxApiError, MaxConnection
 from .filters import filter_attrs
 from .filters.handler import Handler
 from .loggers import logger_dp
-from .methods.types.getted_updates import (
-    process_update_request,
-    process_update_webhook,
-)
+from .methods.types.getted_updates import process_update_request
 from .types.bot_mixin import BotMixin
-from .types.updates import UNKNOWN_UPDATE_DISCLAIMER, UpdateUnion
 from .utils.commands import extract_commands
 from .utils.time import from_ms, to_ms
-
-try:
-    from fastapi import Request  # type: ignore
-    from fastapi.responses import JSONResponse  # type: ignore
-
-    FASTAPI_INSTALLED = True
-except ImportError:
-    FASTAPI_INSTALLED = False
-
-try:
-    from uvicorn import Config, Server  # type: ignore
-
-    UVICORN_INSTALLED = True
-except ImportError:
-    UVICORN_INSTALLED = False
+from .webhook import DEFAULT_HOST, DEFAULT_PATH, DEFAULT_PORT
+from .webhook.aiohttp import AiohttpMaxWebhook
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
-    from fastapi import FastAPI, Request
     from magic_filter import MagicFilter
 
     from .bot import Bot
     from .filters.filter import BaseFilter
     from .filters.middleware import BaseMiddleware
+    from .types.updates import UpdateUnion
 
 CONNECTION_RETRY_DELAY = 30
 GET_UPDATES_RETRY_DELAY = 5
-DEFAULT_HOST = "localhost"
-DEFAULT_PORT = 8080
-DEFAULT_PATH = "/"
 
 
 class Dispatcher(BotMixin):
@@ -98,7 +79,6 @@ class Dispatcher(BotMixin):
         self.middlewares: list[BaseMiddleware] = []
 
         self.bot: Bot | None = None
-        self.webhook_app: FastAPI | None = None
         self.on_started_func: Callable | None = None
         self.polling = False
         self.use_create_task = use_create_task
@@ -153,24 +133,6 @@ class Dispatcher(BotMixin):
             update_type=UpdateType.USER_REMOVED, router=self
         )
         self.on_started = Event(update_type=UpdateType.ON_STARTED, router=self)
-
-    def webhook_post(self, path: str) -> Callable[[Callable[..., Any]], Any]:
-        def decorator(func: Callable[..., Any]) -> Any:
-            if self.webhook_app is None:
-                try:
-                    from fastapi import FastAPI  # noqa: PLC0415
-                except ImportError as exc:
-                    raise ImportError(
-                        "\n\t Не установлен fastapi!"
-                        "\n\t Выполните команду для установки fastapi: "
-                        "\n\t pip install fastapi"
-                        "\n\t Или сразу все зависимости для работы вебхука:"
-                        "\n\t pip install maxapi[webhook]"
-                    ) from exc
-                self.webhook_app = FastAPI()
-            return self.webhook_app.post(path)(func)
-
-        return decorator
 
     async def check_me(self) -> None:
         """
@@ -760,64 +722,52 @@ class Dispatcher(BotMixin):
             self.polling = False
             logger_dp.info("Polling остановлен")
 
-    async def handle_webhook(
-        self,
-        bot: Bot,
-        host: str = DEFAULT_HOST,
-        port: int = DEFAULT_PORT,
-        path: str = DEFAULT_PATH,
-        **kwargs: Any,
-    ) -> None:
+    async def startup(self, bot: Bot) -> None:
         """
-        Запускает FastAPI-приложение для приёма обновлений через вебхук.
+        Инициализирует диспетчер: сохраняет бота, подготавливает
+        обработчики и вызывает on_started.
+
+        Используется интеграционными модулями (например,
+        maxapi.webhook.fastapi) для инициализации в lifespan
+        веб-фреймворка.
 
         Args:
             bot (Bot): Экземпляр бота.
-            host (str): Хост сервера.
-            port (int): Порт сервера.
-            path (str): Путь для вебхука.
         """
+        await self.__ready(bot)
 
-        if not FASTAPI_INSTALLED:
-            raise ImportError(
-                "\n\t Не установлен fastapi!"
-                "\n\t Выполните команду для установки fastapi: "
-                "\n\t pip install fastapi>=0.68.0"
-                "\n\t Или сразу все зависимости для работы вебхука:"
-                "\n\t pip install maxapi[webhook]"
-            )
+    async def handle_webhook(
+        self,
+        bot: Bot,
+        *,
+        host: str = DEFAULT_HOST,
+        port: int = DEFAULT_PORT,
+        path: str = DEFAULT_PATH,
+        secret: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Запускает вебхук-сервер (aiohttp) для приёма обновлений.
 
-        elif not UVICORN_INSTALLED:
-            raise ImportError(
-                "\n\t Не установлен uvicorn!"
-                "\n\t Выполните команду для установки uvicorn: "
-                "\n\t pip install uvicorn>=0.15.0"
-                "\n\t Или сразу все зависимости для работы вебхука:"
-                "\n\t pip install maxapi[webhook]"
-            )
+        Удобный метод «всё в одном»: создаёт aiohttp-приложение через
+        :class:`~maxapi.webhook.aiohttp.AiohttpMaxWebhook`,
+        регистрирует маршрут и запускает сервер.
 
-        @self.webhook_post(path)
-        async def _(request: Request) -> JSONResponse:
-            event_json = await request.json()
-            event_object = await process_update_webhook(
-                event_json=event_json, bot=bot
-            )
+        Для более гибкого управления жизненным циклом сервера используйте
+        :class:`~maxapi.webhook.aiohttp.AiohttpMaxWebhook` напрямую.
 
-            if event_object is None:
-                msg = UNKNOWN_UPDATE_DISCLAIMER.format(
-                    update_type=event_json.get("update_type")
-                )
-                logger_dp.warning(msg)
-                return JSONResponse(content={"ok": True}, status_code=200)
-
-            if self.use_create_task:
-                asyncio.create_task(self.handle(event_object))
-            else:
-                await self.handle(event_object)
-
-            return JSONResponse(content={"ok": True}, status_code=200)
-
-        await self.init_serve(bot=bot, host=host, port=port, **kwargs)
+        Args:
+            bot (Bot): Экземпляр бота.
+            host (str): Хост сервера (по умолчанию ``"0.0.0.0"``).
+            port (int): Порт сервера (по умолчанию ``8080``).
+            path (str): URL-путь для маршрута вебхука.
+            secret (str | None): Секрет для проверки заголовка
+                ``X-Max-Bot-Api-Secret``. Должен совпадать со значением,
+                переданным в :meth:`~maxapi.Bot.subscribe_webhook`.
+            **kwargs: Дополнительные аргументы для ``aiohttp.web.AppRunner``.
+        """
+        webhook = AiohttpMaxWebhook(dp=self, bot=bot, secret=secret)
+        await webhook.run(host=host, port=port, path=path, **kwargs)
 
     async def init_serve(
         self,
@@ -827,36 +777,22 @@ class Dispatcher(BotMixin):
         **kwargs: Any,
     ) -> None:
         """
-        Запускает сервер для обработки вебхуков.
+        .. deprecated::
+            Используйте :meth:`handle_webhook` вместо ``init_serve``.
+            Метод будет удалён в одной из следующих версий.
 
         Args:
             bot (Bot): Экземпляр бота.
             host (str): Хост.
             port (int): Порт.
         """
-
-        if not UVICORN_INSTALLED:
-            raise ImportError(
-                "\n\t Не установлен uvicorn!"
-                "\n\t Выполните команду для установки uvicorn: "
-                "\n\t pip install uvicorn>=0.15.0"
-                "\n\t Или сразу все зависимости для работы вебхука:"
-                "\n\t pip install maxapi[webhook]"
-            )
-
-        if self.webhook_app is None:
-            raise RuntimeError("webhook_app не инициализирован")
-
-        config = Config(  # pyright: ignore[reportPossiblyUnboundVariable]
-            app=self.webhook_app, host=host, port=port, **kwargs
+        warn(
+            "init_serve устарел и будет удалён в следующих версиях. "
+            "Используйте handle_webhook вместо него.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        server = Server(  # pyright: ignore[reportPossiblyUnboundVariable]
-            config
-        )
-
-        await self.__ready(bot)
-
-        await server.serve()
+        await self.handle_webhook(bot, host=host, port=port, **kwargs)
 
 
 class Router(Dispatcher):

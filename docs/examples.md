@@ -864,7 +864,7 @@ async def hello(event: MessageCreated):
 
 ### Высокоуровневый подход
 
-Простой способ работы с webhook через встроенный метод:
+Простой способ работы с webhook через встроенный метод (использует aiohttp, входит в базовый пакет):
 
 ```python
 import asyncio
@@ -886,10 +886,9 @@ async def handle_message(event: MessageCreated):
 
 async def main():
     await dp.handle_webhook(
-        bot=bot, 
-        host='localhost',
+        bot=bot,
+        host='0.0.0.0',
         port=8080,
-        log_level='critical'
     )
 
 
@@ -899,65 +898,54 @@ if __name__ == '__main__':
 
 ### Низкоуровневый подход
 
-Более гибкий способ с использованием FastAPI:
+Более гибкий способ: получаем FastAPI-приложение, регистрируем собственные маршруты
+(например, healthcheck) и отдельно подключаем MAX webhook-модуль.
+
+Требует опциональных зависимостей:
+```bash
+pip install maxapi[fastapi]
+```
 
 ```python
 import asyncio
 import logging
 
-try:
-    from fastapi import Request
-    from fastapi.responses import JSONResponse
-except ImportError:
-    raise ImportError(
-        '\n\t Не установлен fastapi!'
-        '\n\t Выполните команду для установки fastapi: '
-        '\n\t pip install fastapi>=0.68.0'
-        '\n\t Или сразу все зависимости для работы вебхука:'
-        '\n\t pip install maxapi[webhook]'
-    )
+import uvicorn
+from fastapi import FastAPI
 
 from maxapi import Bot, Dispatcher
-from maxapi.methods.types.getted_updates import process_update_webhook
 from maxapi.types import MessageCreated
+from maxapi.webhook.fastapi import FastAPIMaxWebhook
 
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot()
 dp = Dispatcher()
 
- 
+
 @dp.message_created()
 async def handle_message(event: MessageCreated):
     await event.message.answer('Бот работает через вебхук!')
 
-# Регистрация обработчика для вебхука
-@dp.webhook_post('/')
-async def _(request: Request):
-    
-    # Сериализация полученного запроса
-    event_json = await request.json()
-    
-    # Десериализация полученного запроса в pydantic
-    event_object = await process_update_webhook(
-        event_json=event_json,
-        bot=bot
-    )
-    
-    # ...свой код
-    print(f'Информация из вебхука: {event_json}')
-    # ...свой код
-
-    # Окончательная обработка запроса
-    await dp.handle(event_object)
-    
-    # Ответ вебхука
-    return JSONResponse(content={'ok': True}, status_code=200)
-
 
 async def main():
-    # Запуск сервера
-    await dp.init_serve(bot, log_level='critical')
+    webhook = FastAPIMaxWebhook(dp=dp, bot=bot)
+
+    # Создаём FastAPI-приложение с lifespan-инициализацией диспетчера
+    app = FastAPI(lifespan=webhook.lifespan)
+
+    # Собственные маршруты — например, healthcheck
+    @app.get('/health')
+    async def health():
+        return {'status': 'ok'}
+
+    # Подключаем MAX webhook-обработчик к нашему приложению
+    webhook.setup(app, path='/webhook')
+
+    # Запускаем сервер uvicorn
+    config = uvicorn.Config(app=app, host='0.0.0.0', port=8080)
+    server = uvicorn.Server(config)
+    await server.serve()
 
 
 if __name__ == '__main__':

@@ -26,13 +26,13 @@ async def main():
 
 ```python
 async def main():
-    await dp.handle_webhook(bot, host='localhost', port=8080)
+    await dp.handle_webhook(bot, host='0.0.0.0', port=8080)
 ```
 
 **Параметры:**
 
 - `bot` — экземпляр бота
-- `host` — хост сервера (по умолчанию `'localhost'`)
+- `host` — хост сервера (по умолчанию `'0.0.0.0'`)
 - `port` — порт сервера (по умолчанию `8080`)
 - `**kwargs` — дополнительные параметры для `init_serve`
 
@@ -46,7 +46,6 @@ async def main():
 
 - Требует публичный URL
 - Нужна настройка сервера
-- Требует `maxapi[webhook]`
 
 
 !!! warning "Важно"
