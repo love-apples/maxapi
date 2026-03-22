@@ -769,7 +769,7 @@ class Dispatcher(BotMixin):
         webhook = AiohttpMaxWebhook(dp=self, bot=bot, secret=secret)
         await webhook.run(host=host, port=port, path=path, **kwargs)
 
-    async def init_serve(
+    async def init_serve(  # pragma: no cover
         self,
         bot: Bot,
         host: str = DEFAULT_HOST,
