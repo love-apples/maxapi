@@ -3,12 +3,13 @@ import sys
 
 import maxapi.webhook.base as integration_module
 import pytest
+
+pytest.importorskip("fastapi")
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from maxapi import Dispatcher
 from maxapi.webhook.fastapi import FastAPIMaxWebhook
-
-pytest.importorskip("fastapi")
 
 
 class DummyBot:

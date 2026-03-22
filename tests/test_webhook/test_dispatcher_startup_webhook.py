@@ -1,9 +1,6 @@
 """Тесты Dispatcher.startup."""
 
-import pytest
 from maxapi import Dispatcher
-
-pytest.importorskip("fastapi")
 
 
 class DummyBot:

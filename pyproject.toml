@@ -38,6 +38,10 @@ build-backend = "setuptools.build_meta"
 include = ["maxapi*", "wiki*", "examples*"]
 
 [project.optional-dependencies]
+webhook = [
+    "fastapi>=0.103.0,<1",
+    "uvicorn>=0.15.0,<1",
+]
 fastapi = [
     "fastapi>=0.103.0,<1",
     "uvicorn>=0.15.0,<1",
@@ -153,6 +157,7 @@ flake8-type-checking.runtime-evaluated-base-classes = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**.py" = [
     "ARG",
+    "E402",
     "PL",
     "S",
     "SLF",

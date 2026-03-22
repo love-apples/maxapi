@@ -21,7 +21,7 @@ from .methods.types.getted_updates import process_update_request
 from .types.bot_mixin import BotMixin
 from .utils.commands import extract_commands
 from .utils.time import from_ms, to_ms
-from .webhook import DEFAULT_HOST, DEFAULT_PATH, DEFAULT_PORT
+from .webhook import DEFAULT_HOST, DEFAULT_PATH, DEFAULT_PORT, BaseMaxWebhook
 from .webhook.aiohttp import AiohttpMaxWebhook
 
 if TYPE_CHECKING:
@@ -744,17 +744,19 @@ class Dispatcher(BotMixin):
         port: int = DEFAULT_PORT,
         path: str = DEFAULT_PATH,
         secret: str | None = None,
+        webhook_type: type[BaseMaxWebhook] = AiohttpMaxWebhook,
         **kwargs: Any,
     ) -> None:
         """
         Запускает вебхук-сервер (aiohttp) для приёма обновлений.
 
         Удобный метод «всё в одном»: создаёт aiohttp-приложение через
-        :class:`~maxapi.webhook.aiohttp.AiohttpMaxWebhook`,
+        :class:`~maxapi.webhook.aiohttp.BaseMaxWebhook`,
         регистрирует маршрут и запускает сервер.
 
         Для более гибкого управления жизненным циклом сервера используйте
-        :class:`~maxapi.webhook.aiohttp.AiohttpMaxWebhook` напрямую.
+        одну из реализаций BaseMaxWebhook напрямую, например
+        :class:`~maxapi.webhook.aiohttp.BaseMaxWebhook`.
 
         Args:
             bot (Bot): Экземпляр бота.
@@ -764,9 +766,10 @@ class Dispatcher(BotMixin):
             secret (str | None): Секрет для проверки заголовка
                 ``X-Max-Bot-Api-Secret``. Должен совпадать со значением,
                 переданным в :meth:`~maxapi.Bot.subscribe_webhook`.
+            webhook_type (type[BaseMaxWebhook]): Класс вебхука.
             **kwargs: Дополнительные аргументы для ``aiohttp.web.AppRunner``.
         """
-        webhook = AiohttpMaxWebhook(dp=self, bot=bot, secret=secret)
+        webhook = webhook_type(dp=self, bot=bot, secret=secret)
         await webhook.run(host=host, port=port, path=path, **kwargs)
 
     async def init_serve(  # pragma: no cover

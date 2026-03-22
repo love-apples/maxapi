@@ -6,7 +6,10 @@ import maxapi.webhook.base as integration_module
 from fastapi.testclient import TestClient
 from maxapi import Dispatcher
 from maxapi.types.updates import UNKNOWN_UPDATE_DISCLAIMER
-from maxapi.webhook.fastapi import DEFAULT_PATH, FastAPIMaxWebhook
+from maxapi.webhook.fastapi import (
+    DEFAULT_PATH,
+    FastAPIMaxWebhook,
+)
 
 
 class DummyBot:
