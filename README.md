@@ -133,6 +133,33 @@ if __name__ == '__main__':
 > pip install maxapi[fastapi]   # FastAPI + uvicorn
 > pip install maxapi[litestar]  # Litestar + uvicorn
 > ```
-if __name__ == '__main__':
-    asyncio.run(main())
-```
+>
+> Пример запуска через **FastAPI**:
+> ```python
+> import asyncio
+> import uvicorn
+> from fastapi import FastAPI
+> from maxapi.webhook.fastapi import FastAPIMaxWebhook
+>
+> async def main():
+>     webhook = FastAPIMaxWebhook(dp=dp, bot=bot)
+>     app = FastAPI(lifespan=webhook.lifespan)
+>     webhook.setup(app, path='/webhook')
+>     await uvicorn.Server(uvicorn.Config(app, host='0.0.0.0', port=8080)).serve()
+>
+> asyncio.run(main())
+> ```
+>
+> Пример запуска через **Litestar**:
+> ```python
+> import asyncio
+> import uvicorn
+> from maxapi.webhook.litestar import LitestarMaxWebhook
+>
+> async def main():
+>     webhook = LitestarMaxWebhook(dp=dp, bot=bot)
+>     app = webhook.create_app(path='/webhook')
+>     await uvicorn.Server(uvicorn.Config(app, host='0.0.0.0', port=8080)).serve()
+>
+> asyncio.run(main())
+> ```
