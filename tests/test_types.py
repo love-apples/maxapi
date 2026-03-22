@@ -1,6 +1,9 @@
 """Тесты для типов и моделей."""
 
 # Core Stuff
+from datetime import datetime
+from typing import Any, ClassVar
+
 from maxapi.enums.attachment import AttachmentType
 from maxapi.enums.message_link_type import MessageLinkType
 from maxapi.enums.upload_type import UploadType
@@ -125,3 +128,41 @@ class TestEnums:
         assert UploadType.VIDEO
         assert UploadType.AUDIO
         assert UploadType.FILE
+
+
+class TestDialogMuted:
+    """Тесты для DialogMuted."""
+
+    _USER: ClassVar[dict[str, Any]] = {
+        "user_id": 1,
+        "first_name": "Bot",
+        "is_bot": True,
+        "last_activity_time": 0,
+    }
+
+    def _make_event(self, muted_until: int):
+        from maxapi.types.updates.dialog_muted import DialogMuted
+
+        return DialogMuted(
+            timestamp=0,
+            chat_id=100,
+            muted_until=muted_until,
+            user=self._USER,
+        )
+
+    def test_muted_until_datetime_forever(self):
+        """При муте навсегда (INT64_MAX) возвращает datetime.max."""
+        INT64_MAX = 9223372036854775807
+        event = self._make_event(INT64_MAX)
+        result = event.muted_until_datetime
+        assert result == datetime.max
+
+    def test_muted_until_datetime_normal(self):
+        """При обычном значении возвращает корректный datetime."""
+        # 1 января 2030 года в миллисекундах
+        ts_ms = 1893456000000
+        event = self._make_event(ts_ms)
+        result = event.muted_until_datetime
+        assert result is not None
+        assert isinstance(result, datetime)
+        assert result == datetime.fromtimestamp(ts_ms / 1000)
