@@ -27,6 +27,7 @@ from ..types.updates.bot_stopped import BotStopped
 from ..types.updates.chat_title_changed import ChatTitleChanged
 from ..types.updates.dialog_cleared import DialogCleared
 from ..types.updates.dialog_muted import DialogMuted
+from ..types.updates.dialog_removed import DialogRemoved
 from ..types.updates.dialog_unmuted import DialogUnmuted
 from ..types.updates.message_callback import MessageCallback
 from ..types.updates.message_chat_created import MessageChatCreated
@@ -53,6 +54,7 @@ __all__ = [
     "ContactAttachmentPayload",
     "DialogCleared",
     "DialogMuted",
+    "DialogRemoved",
     "DialogUnmuted",
     "InputMedia",
     "InputMediaBuffer",
