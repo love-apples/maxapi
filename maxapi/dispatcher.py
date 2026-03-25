@@ -385,6 +385,7 @@ class Dispatcher(BotMixin):
         parent_middlewares: list[BaseMiddleware] | None = None,
         parent_filters: list[MagicFilter] | None = None,
         parent_base_filters: list[BaseFilter] | None = None,
+        path: set[int] | None = None,
     ) -> Iterator[
         tuple[
             Router | Dispatcher,
@@ -401,6 +402,9 @@ class Dispatcher(BotMixin):
             parent_middlewares: Накопленные middleware от родительских роутеров.
             parent_filters: Накопленные MagicFilter от родительских роутеров.
             parent_base_filters: Накопленные BaseFilter от родительских роутеров.
+            path: Идентификаторы роутеров в текущей ветви обхода; используется,
+                чтобы не уходить в бесконечную рекурсию при циклических
+                включениях между роутерами.
 
         Yields:
             Кортеж (роутер, middleware, MagicFilter, BaseFilter) с накопленными
@@ -409,8 +413,13 @@ class Dispatcher(BotMixin):
         parent_middlewares = parent_middlewares or []
         parent_filters = parent_filters or []
         parent_base_filters = parent_base_filters or []
+        path = path if path is not None else set()
 
         for router in routers:
+            router_key = id(router)
+            if router_key in path:
+                continue
+
             if router is self:
                 accumulated_middlewares = parent_middlewares
             else:
@@ -423,12 +432,17 @@ class Dispatcher(BotMixin):
 
             sub_routers = [r for r in router.routers if r is not self]
             if sub_routers:
-                yield from self._iter_routers(
-                    routers=sub_routers,
-                    parent_middlewares=accumulated_middlewares,
-                    parent_filters=accumulated_filters,
-                    parent_base_filters=accumulated_base_filters,
-                )
+                path.add(router_key)
+                try:
+                    yield from self._iter_routers(
+                        routers=sub_routers,
+                        parent_middlewares=accumulated_middlewares,
+                        parent_filters=accumulated_filters,
+                        parent_base_filters=accumulated_base_filters,
+                        path=path,
+                    )
+                finally:
+                    path.discard(router_key)
 
     def _iter_unique_routers(
         self,

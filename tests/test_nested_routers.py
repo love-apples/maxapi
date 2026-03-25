@@ -217,6 +217,24 @@ class TestIterRouters:
         assert mw_a not in results[r_b]
         assert results[r_b] == []
 
+    def test_cycle_between_routers_does_not_recurse_infinitely(self):
+        """
+        Взаимное включение роутеров (a в b и b в a) не должно приводить к
+        бесконечной рекурсии: полный обход _iter_routers остаётся конечным.
+        """
+        dp = Dispatcher()
+        router_a = Router("a")
+        router_b = Router("b")
+        router_a.include_routers(router_b)
+        router_b.include_routers(router_a)
+        dp.include_routers(router_a)
+
+        result = list(dp._iter_routers(dp.routers))
+        routers_found = [r for r, *_ in result]
+
+        assert len(result) == 2
+        assert set(routers_found) == {router_a, router_b}
+
 
 @pytest.mark.asyncio
 class TestNestedRouterDispatch:
