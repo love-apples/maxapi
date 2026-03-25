@@ -130,9 +130,12 @@ class EditMessage(BaseConnection):
         if has_input_media and self.sleep_after_input_media:
             await asyncio.sleep(bot.after_input_media_delay)
 
+        attempts = bot.after_upload_attempts
+        retry_delay = bot.after_upload_retry_delay
+
         response = None
 
-        for attempt in range(self.ATTEMPTS_COUNT):
+        for attempt in range(attempts):
             try:
                 response = await super().request(
                     method=HTTPMethod.PUT,
@@ -147,16 +150,20 @@ class EditMessage(BaseConnection):
                     and e.raw.get("code") == "attachment.not.ready"
                 ):
                     logger_bot.info(
-                        f"Ошибка при отправке загруженного медиа, "
-                        f"попытка {attempt + 1}, "
-                        f"жду {self.RETRY_DELAY} секунды"
+                        f"Ошибка при отправке загруженного медиа,"
+                        f" попытка {attempt + 1},"
+                        f" жду {retry_delay} секунды"
                     )
-                    await asyncio.sleep(self.RETRY_DELAY)
+                    await asyncio.sleep(retry_delay)
                     continue
+                else:
+                    raise e
 
             break
 
         if response is None:
-            raise RuntimeError("Не удалось отредактировать сообщение")
+            raise RuntimeError(
+                "Не удалось отредактировать сообщение"
+            )
 
         return cast(EditedMessage | None, response)

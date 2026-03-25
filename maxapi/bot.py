@@ -102,6 +102,8 @@ class Bot(BaseConnection):
         auto_requests: bool = True,
         default_connection: DefaultConnectionProperties | None = None,
         after_input_media_delay: float | None = None,
+        after_upload_attempts: int | None = None,
+        after_upload_retry_delay: float | None = None,
         auto_check_subscriptions: bool = True,
         marker_updates: int | None = None,
     ):
@@ -125,6 +127,12 @@ class Bot(BaseConnection):
                 Настройки соединения.
             after_input_media_delay (Optional[float]): Задержка после
                 загрузки файла.
+            after_upload_attempts (Optional[int]): Количество попыток
+                отправки сообщения после загрузки медиа
+                (по умолчанию 5).
+            after_upload_retry_delay (Optional[float]): Задержка между
+                попытками отправки после загрузки медиа в секундах
+                (по умолчанию 2.0).
             auto_check_subscriptions (bool): Проверка подписок для
                 метода start_polling.
             marker_updates (Optional[int]): Маркер для получения
@@ -137,6 +145,25 @@ class Bot(BaseConnection):
             default_connection or DefaultConnectionProperties()
         )
         self.after_input_media_delay = after_input_media_delay or 2.0
+        self.after_upload_attempts = (
+            after_upload_attempts
+            if after_upload_attempts is not None
+            else 5
+        )
+        if self.after_upload_attempts < 1:
+            raise ValueError(
+                "after_upload_attempts должно быть >= 1"
+            )
+        self.after_upload_retry_delay = (
+            after_upload_retry_delay
+            if after_upload_retry_delay is not None
+            else 2.0
+        )
+        if self.after_upload_retry_delay < 0:
+            raise ValueError(
+                "after_upload_retry_delay не может быть"
+                " отрицательным"
+            )
         self.auto_check_subscriptions = auto_check_subscriptions
         self.commands: list[CommandsInfo] = []
 
