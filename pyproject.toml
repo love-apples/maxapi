@@ -42,6 +42,14 @@ webhook = [
     "fastapi>=0.103.0,<1",
     "uvicorn>=0.15.0,<1",
 ]
+fastapi = [
+    "fastapi>=0.103.0,<1",
+    "uvicorn>=0.15.0,<1",
+]
+litestar = [
+    "litestar>=2.0.0,<3",
+    "uvicorn>=0.15.0,<1",
+]
 
 [dependency-groups]
 dev = [
@@ -60,6 +68,9 @@ dev = [
     "python-dotenv>=1.2.1",
     "Faker>=40.4.0",
     "httpx>=0.28.1,<1",
+    "fastapi>=0.103.0,<1",
+    "uvicorn>=0.15.0,<1",
+    "litestar>=2.0.0,<3",
 ]
 
 [tool.uv]
@@ -146,6 +157,7 @@ flake8-type-checking.runtime-evaluated-base-classes = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**.py" = [
     "ARG",
+    "E402",
     "PL",
     "S",
     "SLF",

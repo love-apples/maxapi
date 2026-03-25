@@ -6,10 +6,17 @@
 pip install maxapi
 ```
 
-## С дополнительными зависимостями для Webhook
+## Webhook
+
+Webhook-сервер на `aiohttp` уже входит в базовый пакет — дополнительных зависимостей не требуется.
+
+## Опциональные зависимости для ASGI-фреймворков
+
+Если вы хотите использовать **FastAPI** или **Litestar** вместо встроенного aiohttp-сервера:
 
 ```bash
-pip install maxapi[webhook]
+pip install maxapi[fastapi]   # FastAPI + uvicorn
+pip install maxapi[litestar]  # Litestar + uvicorn
 ```
 
 ## Из GitHub
