@@ -12,6 +12,7 @@ from aiohttp import ClientConnectionError, ClientSession, FormData
 from ..enums.api_path import ApiPath
 from ..enums.update import UpdateType
 from ..exceptions.max import InvalidToken, MaxApiError, MaxConnection
+from ..loggers import logger_bot
 from ..types.bot_mixin import BotMixin
 
 if TYPE_CHECKING:
@@ -70,7 +71,12 @@ class BaseConnection(BotMixin):
         **kwargs: Any,
     ) -> Any | BaseModel:
         """
-        Выполняет HTTP-запрос к API.
+        Выполняет HTTP-запрос к API с автоматическим retry
+        при серверных ошибках.
+
+        При получении HTTP-статуса из списка ``retry_on_statuses``
+        (по умолчанию 502, 503, 504) запрос повторяется до
+        ``max_retries`` раз с экспоненциальной задержкой.
 
         Args:
             method (HTTPMethod): HTTP-метод (GET, POST и т.д.).
@@ -88,6 +94,7 @@ class BaseConnection(BotMixin):
             RuntimeError: Если бот не инициализирован.
             MaxConnection: Ошибка соединения.
             InvalidToken: Ошибка авторизации (401).
+            MaxApiError: Ошибка API (после исчерпания retry).
         """
 
         bot = self._ensure_bot()
@@ -100,28 +107,60 @@ class BaseConnection(BotMixin):
                 **bot.default_connection.kwargs,
             )
 
-        try:
-            r = await bot.session.request(
-                method=method.value,
-                url=path.value if isinstance(path, ApiPath) else path,
-                **kwargs,
-            )
-        except ClientConnectionError as e:
-            raise MaxConnection(f"Ошибка при отправке запроса: {e}") from e
+        conn = bot.default_connection
+        max_retries = conn.max_retries
+        retry_statuses = conn.retry_on_statuses
+        backoff_factor = conn.retry_backoff_factor
 
-        if r.status == 401:
-            await bot.session.close()
-            raise InvalidToken("Неверный токен!")
+        url = path.value if isinstance(path, ApiPath) else path
 
-        if not r.ok:
-            raw = await r.json()
-            if bot.dispatcher:
-                asyncio.create_task(
-                    bot.dispatcher.handle_raw_response(
-                        UpdateType.RAW_API_RESPONSE, raw
-                    )
+        for attempt in range(max_retries + 1):
+            try:
+                r = await bot.session.request(
+                    method=method.value,
+                    url=url,
+                    **kwargs,
                 )
-            raise MaxApiError(code=r.status, raw=raw)
+            except ClientConnectionError as e:
+                if attempt < max_retries:
+                    delay = backoff_factor * (2**attempt)
+                    logger_bot.warning(
+                        f"Ошибка соединения ({e}), "
+                        f"попытка {attempt + 1}/{max_retries + 1}, "
+                        f"жду {delay:.1f}с"
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                raise MaxConnection(
+                    f"Ошибка при отправке запроса: {e}"
+                ) from e
+
+            if r.status == 401:
+                await bot.session.close()
+                raise InvalidToken("Неверный токен!")
+
+            if r.status in retry_statuses and attempt < max_retries:
+                await r.read()
+                delay = backoff_factor * (2**attempt)
+                logger_bot.warning(
+                    f"Серверная ошибка {r.status}, "
+                    f"попытка {attempt + 1}/{max_retries + 1}, "
+                    f"жду {delay:.1f}с"
+                )
+                await asyncio.sleep(delay)
+                continue
+
+            if not r.ok:
+                raw = await r.json()
+                if bot.dispatcher:
+                    asyncio.create_task(
+                        bot.dispatcher.handle_raw_response(
+                            UpdateType.RAW_API_RESPONSE, raw
+                        )
+                    )
+                raise MaxApiError(code=r.status, raw=raw)
+
+            break
 
         raw = await r.json()
 
