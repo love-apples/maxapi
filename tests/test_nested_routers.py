@@ -1,10 +1,32 @@
 """Тесты вложенных роутеров — наследование middleware, фильтров и BaseFilter."""
 
+from unittest.mock import Mock
+
 import pytest
 
 from maxapi.dispatcher import Dispatcher, Router
 from maxapi.filters.filter import BaseFilter
 from maxapi.filters.middleware import BaseMiddleware
+
+
+_ADMIN_USER_ID = 90001
+_REGULAR_USER_ID = 50002
+
+
+def _message_created_event_with_sender_user_id_and_is_bot(
+    event,
+    *,
+    user_id: int,
+    is_bot: bool,
+) -> None:
+    """
+    Задаёт у события message.sender поля user_id и is_bot для MagicFilter
+    (как у maxapi.types.users.User).
+    """
+    sender = Mock()
+    sender.user_id = user_id
+    sender.is_bot = is_bot
+    event.message.sender = sender
 
 
 class TrackingMiddleware(BaseMiddleware):
@@ -803,3 +825,115 @@ class TestNestedMagicFilterInheritance:
         await dp.handle(sample_message_created_event)
 
         assert called == ["handler"]
+
+    async def test_three_levels_magic_filters_r1_and_r2_match_grandchild_handler(
+        self, sample_message_created_event
+    ):
+        """
+        MagicFilter на r1 (не бот) и r2 (только «админский» user_id)
+        одновременно совместимы с событием — хендлер на r3 вызывается.
+        """
+        from maxapi.filters import F
+
+        _message_created_event_with_sender_user_id_and_is_bot(
+            sample_message_created_event,
+            user_id=_ADMIN_USER_ID,
+            is_bot=False,
+        )
+
+        dp = Dispatcher()
+        r1 = Router("r1")
+        r2 = Router("r2")
+        r3 = Router("r3")
+        called = []
+
+        r1.filters.append(F.message.sender.is_bot == False)
+        r2.filters.append(F.message.sender.user_id == _ADMIN_USER_ID)
+
+        @r3.message_created()
+        async def handler(event):
+            called.append("handler")
+
+        r2.include_routers(r3)
+        r1.include_routers(r2)
+        dp.include_routers(r1)
+        dp.routers.append(dp)
+
+        await dp.handle(sample_message_created_event)
+
+        assert called == ["handler"]
+
+    async def test_three_levels_magic_filters_r1_matches_r2_blocks_grandchild_handler(
+        self, sample_message_created_event
+    ):
+        """
+        MagicFilter на r1 по is_bot совместим с событием, на r2 по user_id — нет;
+        хендлер на r3 не вызывается.
+        """
+        from maxapi.filters import F
+
+        _message_created_event_with_sender_user_id_and_is_bot(
+            sample_message_created_event,
+            user_id=_REGULAR_USER_ID,
+            is_bot=False,
+        )
+
+        dp = Dispatcher()
+        r1 = Router("r1")
+        r2 = Router("r2")
+        r3 = Router("r3")
+        called = []
+
+        r1.filters.append(F.message.sender.is_bot == False)
+        r2.filters.append(F.message.sender.user_id == _ADMIN_USER_ID)
+
+        @r3.message_created()
+        async def handler(event):
+            called.append("handler")
+
+        r2.include_routers(r3)
+        r1.include_routers(r2)
+        dp.include_routers(r1)
+        dp.routers.append(dp)
+
+        await dp.handle(sample_message_created_event)
+
+        assert called == []
+
+    async def test_three_levels_magic_filters_r1_blocks_r2_matches_grandchild_handler(
+        self, sample_message_created_event
+    ):
+        """
+        MagicFilter на r1 по is_bot не совместим с событием, на r2 по user_id —
+        совместим; хендлер на r3 не вызывается (все накопленные фильтры
+        должны пройти).
+        """
+        from maxapi.filters import F
+
+        _message_created_event_with_sender_user_id_and_is_bot(
+            sample_message_created_event,
+            user_id=_ADMIN_USER_ID,
+            is_bot=True,
+        )
+
+        dp = Dispatcher()
+        r1 = Router("r1")
+        r2 = Router("r2")
+        r3 = Router("r3")
+        called = []
+
+        r1.filters.append(F.message.sender.is_bot == False)
+        r2.filters.append(F.message.sender.user_id == _ADMIN_USER_ID)
+
+        @r3.message_created()
+        async def handler(event):
+            called.append("handler")
+
+        r2.include_routers(r3)
+        r1.include_routers(r2)
+        dp.include_routers(r1)
+        dp.routers.append(dp)
+
+        await dp.handle(sample_message_created_event)
+
+        assert called == []
