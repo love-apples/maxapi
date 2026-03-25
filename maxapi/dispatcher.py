@@ -498,7 +498,7 @@ class Dispatcher(BotMixin):
         event: UpdateUnion,
         filters: list[MagicFilter],
         base_filters: list[BaseFilter],
-    ) -> dict[str, Any] | None | Literal[False]:
+    ) -> dict[str, Any] | Literal[False]:
         """
         Проверяет накопленные фильтры роутера для события.
 
@@ -508,8 +508,8 @@ class Dispatcher(BotMixin):
             base_filters: Накопленные BaseFilter.
 
         Returns:
-            Optional[Dict[str, Any]] | Literal[False]: Словарь с данными
-                или False, если фильтры не прошли.
+            Dict[str, Any] | Literal[False]: Словарь с данными или False,
+                если фильтры не прошли.
         """
         if filters and not filter_attrs(event, *filters):
             return False
