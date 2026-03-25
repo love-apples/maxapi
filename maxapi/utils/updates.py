@@ -10,6 +10,7 @@ from ..types.updates.bot_stopped import BotStopped
 from ..types.updates.chat_title_changed import ChatTitleChanged
 from ..types.updates.dialog_cleared import DialogCleared
 from ..types.updates.dialog_muted import DialogMuted
+from ..types.updates.dialog_removed import DialogRemoved
 from ..types.updates.dialog_unmuted import DialogUnmuted
 from ..types.updates.message_callback import MessageCallback
 from ..types.updates.message_created import MessageCreated
@@ -37,12 +38,15 @@ async def enrich_event(event_object: Any, bot: Bot) -> Any:
     if not bot.auto_requests:
         return event_object
 
+    # Определяем заранее: чат недоступен (удалён или бот убран из канала)
+    is_chat_unavailable = isinstance(event_object, DialogRemoved) or (
+        isinstance(event_object, BotRemoved)
+        and getattr(event_object, "is_channel", False)
+    )
+
     if hasattr(event_object, "chat_id"):
-        # Если это удаление бота из канала, мы не сможем получить инфо о чате
-        is_bot_removed_from_channel = isinstance(
-            event_object, BotRemoved
-        ) and getattr(event_object, "is_channel", False)
-        if not is_bot_removed_from_channel:
+        # Если чат недоступен — не пытаемся его получить
+        if not is_chat_unavailable:
             event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
         else:
             event_object.chat = None
@@ -97,8 +101,12 @@ async def enrich_event(event_object: Any, bot: Bot) -> Any:
             DialogUnmuted,
         ),
     ):
-        if event_object.chat is None:
+        if event_object.chat is None and not is_chat_unavailable:
             event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
+        event_object.from_user = event_object.user
+
+    elif isinstance(event_object, DialogRemoved):
+        # Чат уже удалён — получить его невозможно
         event_object.from_user = event_object.user
 
     if isinstance(
