@@ -1,13 +1,11 @@
-"""Тесты вложенных роутеров — наследование middleware, фильтров и BaseFilter."""
+"""Тесты вложенных роутеров: middleware, фильтры и BaseFilter."""
 
 from unittest.mock import Mock
 
 import pytest
-
 from maxapi.dispatcher import Dispatcher, Router
 from maxapi.filters.filter import BaseFilter
 from maxapi.filters.middleware import BaseMiddleware
-
 
 _ADMIN_USER_ID = 90001
 _REGULAR_USER_ID = 50002
@@ -148,7 +146,9 @@ class TestIterRouters:
         assert results[child] == [bf_p, bf_c]
 
     def test_three_levels_accumulate_all_middlewares(self):
-        """Три уровня вложенности — middleware накапливаются по всей цепочке."""
+        """
+        Три уровня вложенности — middleware накапливаются по всей цепочке.
+        """
         dp = Dispatcher()
         r1 = Router("r1")
         r2 = Router("r2")
@@ -172,7 +172,9 @@ class TestIterRouters:
         assert results[r3] == [mw1, mw2, mw3]
 
     def test_three_levels_accumulate_all_base_filters(self):
-        """Три уровня вложенности — base_filters накапливаются по всей цепочке."""
+        """
+        Три уровня вложенности — base_filters накапливаются по всей цепочке.
+        """
         dp = Dispatcher()
         r1 = Router("r1")
         r2 = Router("r2")
@@ -334,7 +336,7 @@ class TestNestedRouterDispatch:
 
         assert called == ["parent"]
 
-    async def test_message_created_router_is_not_processed_twice_when_duplicated(
+    async def test_message_created_not_twice_when_router_duplicated(
         self, sample_message_created_event
     ):
         """
@@ -509,8 +511,8 @@ class TestNestedMiddlewareInheritance:
         self, sample_message_created_event
     ):
         """
-        BlockingMiddleware одного роутера не блокирует хендлеры соседнего роутера:
-        middleware изолированы в рамках своего роутера.
+        BlockingMiddleware одного роутера не блокирует хендлеры соседнего
+        роутера: middleware изолированы в рамках своего роутера.
         """
         dp = Dispatcher()
         router_a = Router("a")
@@ -611,7 +613,9 @@ class TestNestedBaseFilterInheritance:
     async def test_middle_level_block_filter_blocks_deepest_handler(
         self, sample_message_created_event
     ):
-        """BlockFilter промежуточного уровня блокирует самый глубокий хендлер."""
+        """
+        BlockFilter промежуточного уровня блокирует самый глубокий хендлер.
+        """
         dp = Dispatcher()
         r1 = Router("r1")
         r2 = Router("r2")
@@ -637,7 +641,9 @@ class TestNestedBaseFilterInheritance:
     async def test_three_levels_all_allow_filters_pass(
         self, sample_message_created_event
     ):
-        """Три AllowFilter на трёх уровнях пропускают самый глубокий хендлер."""
+        """
+        Три AllowFilter на трёх уровнях пропускают самый глубокий хендлер.
+        """
         dp = Dispatcher()
         r1 = Router("r1")
         r2 = Router("r2")
@@ -826,7 +832,7 @@ class TestNestedMagicFilterInheritance:
 
         assert called == ["handler"]
 
-    async def test_three_levels_magic_filters_r1_and_r2_match_grandchild_handler(
+    async def test_magic_filters_r1_r2_match_grandchild(
         self, sample_message_created_event
     ):
         """
@@ -847,7 +853,7 @@ class TestNestedMagicFilterInheritance:
         r3 = Router("r3")
         called = []
 
-        r1.filters.append(F.message.sender.is_bot == False)
+        r1.filters.append(~F.message.sender.is_bot)
         r2.filters.append(F.message.sender.user_id == _ADMIN_USER_ID)
 
         @r3.message_created()
@@ -863,12 +869,12 @@ class TestNestedMagicFilterInheritance:
 
         assert called == ["handler"]
 
-    async def test_three_levels_magic_filters_r1_matches_r2_blocks_grandchild_handler(
+    async def test_magic_filters_r1_ok_r2_blocks_grandchild(
         self, sample_message_created_event
     ):
         """
-        MagicFilter на r1 по is_bot совместим с событием, на r2 по user_id — нет;
-        хендлер на r3 не вызывается.
+        MagicFilter на r1 по is_bot совместим с событием, на r2 по user_id —
+        нет; хендлер на r3 не вызывается.
         """
         from maxapi.filters import F
 
@@ -884,7 +890,7 @@ class TestNestedMagicFilterInheritance:
         r3 = Router("r3")
         called = []
 
-        r1.filters.append(F.message.sender.is_bot == False)
+        r1.filters.append(~F.message.sender.is_bot)
         r2.filters.append(F.message.sender.user_id == _ADMIN_USER_ID)
 
         @r3.message_created()
@@ -900,7 +906,7 @@ class TestNestedMagicFilterInheritance:
 
         assert called == []
 
-    async def test_three_levels_magic_filters_r1_blocks_r2_matches_grandchild_handler(
+    async def test_magic_filters_r1_blocks_r2_ok_grandchild(
         self, sample_message_created_event
     ):
         """
@@ -922,7 +928,7 @@ class TestNestedMagicFilterInheritance:
         r3 = Router("r3")
         called = []
 
-        r1.filters.append(F.message.sender.is_bot == False)
+        r1.filters.append(~F.message.sender.is_bot)
         r2.filters.append(F.message.sender.user_id == _ADMIN_USER_ID)
 
         @r3.message_created()

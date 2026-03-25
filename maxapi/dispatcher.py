@@ -399,9 +399,12 @@ class Dispatcher(BotMixin):
 
         Args:
             routers: Список роутеров для обхода.
-            parent_middlewares: Накопленные middleware от родительских роутеров.
-            parent_filters: Накопленные MagicFilter от родительских роутеров.
-            parent_base_filters: Накопленные BaseFilter от родительских роутеров.
+            parent_middlewares: Накопленные middleware от родительских
+                роутеров.
+            parent_filters: Накопленные MagicFilter от родительских
+                роутеров.
+            parent_base_filters: Накопленные BaseFilter от родительских
+                роутеров.
             path: Идентификаторы роутеров в текущей ветви обхода; используется,
                 чтобы не уходить в бесконечную рекурсию при циклических
                 включениях между роутерами.
@@ -423,12 +426,21 @@ class Dispatcher(BotMixin):
             if router is self:
                 accumulated_middlewares = parent_middlewares
             else:
-                accumulated_middlewares = parent_middlewares + router.middlewares
+                accumulated_middlewares = (
+                    parent_middlewares + router.middlewares
+                )
 
             accumulated_filters = parent_filters + router.filters
-            accumulated_base_filters = parent_base_filters + router.base_filters
+            accumulated_base_filters = (
+                parent_base_filters + router.base_filters
+            )
 
-            yield router, accumulated_middlewares, accumulated_filters, accumulated_base_filters
+            yield (
+                router,
+                accumulated_middlewares,
+                accumulated_filters,
+                accumulated_base_filters,
+            )
 
             sub_routers = [r for r in router.routers if r is not self]
             if sub_routers:
@@ -468,9 +480,12 @@ class Dispatcher(BotMixin):
 
         Args:
             routers: Список роутеров для обхода.
-            parent_middlewares: Накопленные middleware от родительских роутеров.
-            parent_filters: Накопленные MagicFilter от родительских роутеров.
-            parent_base_filters: Накопленные BaseFilter от родительских роутеров.
+            parent_middlewares: Накопленные middleware от родительских
+                роутеров.
+            parent_filters: Накопленные MagicFilter от родительских
+                роутеров.
+            parent_base_filters: Накопленные BaseFilter от родительских
+                роутеров.
             warn_duplicates: Если True, выводит предупреждение при обнаружении
                 повторных включений одного и того же экземпляра роутера.
         """
