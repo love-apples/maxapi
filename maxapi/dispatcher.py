@@ -273,13 +273,10 @@ class Dispatcher(BotMixin):
         """Подготовить обработчики событий."""
 
         handlers_count = 0
-        seen: set[int] = set()
 
-        for router, *_ in self._iter_routers(self.routers):
-            if id(router) in seen:
-                continue
-            seen.add(id(router))
-
+        for router, *_ in self._iter_unique_routers(
+            self.routers, warn_duplicates=True
+        ):
             router.bot = bot
 
             for handler in router.event_handlers:
@@ -433,6 +430,69 @@ class Dispatcher(BotMixin):
                     parent_base_filters=accumulated_base_filters,
                 )
 
+    def _iter_unique_routers(
+        self,
+        routers: list[Router | Dispatcher],
+        parent_middlewares: list[BaseMiddleware] | None = None,
+        parent_filters: list[MagicFilter] | None = None,
+        parent_base_filters: list[BaseFilter] | None = None,
+        *,
+        warn_duplicates: bool = False,
+    ) -> Iterator[
+        tuple[
+            Router | Dispatcher,
+            list[BaseMiddleware],
+            list[MagicFilter],
+            list[BaseFilter],
+        ]
+    ]:
+        """
+        Обходит дерево роутеров и исключает повторные экземпляры роутеров.
+
+        При повторном включении одного и того же объекта роутера используется
+        контекст первого вхождения (накопленные middleware и фильтры).
+
+        Args:
+            routers: Список роутеров для обхода.
+            parent_middlewares: Накопленные middleware от родительских роутеров.
+            parent_filters: Накопленные MagicFilter от родительских роутеров.
+            parent_base_filters: Накопленные BaseFilter от родительских роутеров.
+            warn_duplicates: Если True, выводит предупреждение при обнаружении
+                повторных включений одного и того же экземпляра роутера.
+        """
+        seen: set[int] = set()
+        duplicate_keys: set[int] = set()
+        duplicate_titles: list[str] = []
+        try:
+            for item in self._iter_routers(
+                routers=routers,
+                parent_middlewares=parent_middlewares,
+                parent_filters=parent_filters,
+                parent_base_filters=parent_base_filters,
+            ):
+                router = item[0]
+                router_key = id(router)
+                if router_key in seen:
+                    if warn_duplicates and router_key not in duplicate_keys:
+                        duplicate_keys.add(router_key)
+                        rid = getattr(router, "router_id", None)
+                        router_title = (
+                            str(rid)
+                            if rid is not None
+                            else router.__class__.__name__
+                        )
+                        duplicate_titles.append(router_title)
+                    continue
+                seen.add(router_key)
+                yield item
+        finally:
+            if warn_duplicates and duplicate_titles:
+                logger_dp.warning(
+                    "Обнаружены повторные включения роутеров: %s. "
+                    "Повторные вхождения будут дедуплицированы.",
+                    ", ".join(duplicate_titles),
+                )
+
     async def _check_router_filters(
         self,
         event: UpdateUnion,
@@ -580,7 +640,7 @@ class Dispatcher(BotMixin):
         """
         Специальный метод для обработки сырых ответов API.
         """
-        for router, *_ in self._iter_routers(self.routers):
+        for router, *_ in self._iter_unique_routers(self.routers):
             matching_handlers = self._find_matching_handlers(
                 router, event_type
             )
@@ -628,7 +688,7 @@ class Dispatcher(BotMixin):
                     router_middlewares,
                     router_filters,
                     router_base_filters,
-                ) in enumerate(self._iter_routers(self.routers)):
+                ) in enumerate(self._iter_unique_routers(self.routers)):
                     if is_handled:
                         break
 

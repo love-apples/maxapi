@@ -294,6 +294,76 @@ class TestNestedRouterDispatch:
 
         assert called == ["parent"]
 
+    async def test_message_created_router_is_not_processed_twice_when_duplicated(
+        self, sample_message_created_event
+    ):
+        """
+        Один и тот же экземпляр роутера не должен обрабатывать событие
+        дважды, даже если включён в дерево роутеров в двух местах.
+        """
+        dp = Dispatcher()
+        parent = Router("parent")
+        shared = Router("shared")
+        called = []
+
+        @shared.message_created()
+        async def handler(event):
+            called.append("handler")
+
+        parent.include_routers(shared)
+        dp.include_routers(parent, shared)
+        dp.routers.append(dp)
+
+        await dp.handle(sample_message_created_event)
+
+        assert called == ["handler"]
+
+    async def test_raw_response_router_is_not_processed_twice_when_duplicated(
+        self,
+    ):
+        """
+        Один и тот же экземпляр роутера не должен обрабатывать RAW событие
+        дважды, даже если включён в дерево роутеров в двух местах.
+        """
+        from maxapi.enums.update import UpdateType
+
+        dp = Dispatcher()
+        parent = Router("parent")
+        shared = Router("shared")
+        called = []
+
+        @shared.raw_api_response()
+        async def handler(event):
+            called.append("handler")
+
+        parent.include_routers(shared)
+        dp.include_routers(parent, shared)
+
+        await dp.handle_raw_response(UpdateType.RAW_API_RESPONSE, {"k": "v"})
+
+        assert called == ["handler"]
+
+    async def test_prepare_handlers_warns_about_duplicated_routers(
+        self, bot, caplog
+    ):
+        """
+        При подготовке обработчиков должно логироваться предупреждение,
+        если один и тот же экземпляр роутера включён в дерево несколько раз.
+        """
+        dp = Dispatcher()
+        parent = Router("parent")
+        shared = Router("shared")
+
+        parent.include_routers(shared)
+        dp.include_routers(parent, shared)
+
+        dp._prepare_handlers(bot)
+
+        warnings_text = "\n".join(
+            r.message for r in caplog.records if r.levelname == "WARNING"
+        )
+        assert "повторные включения роутеров" in warnings_text.lower()
+
 
 @pytest.mark.asyncio
 class TestNestedMiddlewareInheritance:
