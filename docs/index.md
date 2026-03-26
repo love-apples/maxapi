@@ -12,11 +12,12 @@
 pip install maxapi
 ```
 
-Для работы с Webhook установите дополнительные зависимости:
-
-```bash
-pip install maxapi[webhook]
-```
+> **Примечание про Webhook:** сервер на `aiohttp` уже включён в базовый пакет — дополнительных зависимостей не нужно.
+> Если хотите использовать **FastAPI** или **Litestar** вместо aiohttp:
+> ```bash
+> pip install maxapi[fastapi]   # FastAPI + uvicorn
+> pip install maxapi[litestar]  # Litestar + uvicorn
+> ```
 
 ### Простой пример
 

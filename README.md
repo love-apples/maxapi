@@ -89,9 +89,10 @@ if __name__ == '__main__':
 
 ### ● Запуск Webhook
 
-Перед запуском бота через Webhook, вам нужно установить дополнительные зависимости (fastapi, uvicorn). Можно это сделать через команду:
+Webhook работает «из коробки» — aiohttp уже включён в базовый пакет:
+
 ```bash
-pip install maxapi[webhook]
+pip install maxapi
 ```
 
 Указан пример простого запуска, для более низкого уровня можете рассмотреть [этот пример](https://love-apples.github.io/maxapi/examples/#_6).
@@ -116,13 +117,49 @@ async def hello(event: MessageCreated):
 
 async def main():
     await dp.handle_webhook(
-        bot=bot, 
-        host='localhost',
+        bot=bot,
+        host='0.0.0.0',
         port=8080,
-        log_level=logging.CRITICAL  # Можно убрать для подробного логирования
     )
 
 
 if __name__ == '__main__':
     asyncio.run(main())
 ```
+
+> **Хотите использовать FastAPI или Litestar вместо aiohttp?**
+> Установите нужную опциональную зависимость:
+> ```bash
+> pip install maxapi[fastapi]   # FastAPI + uvicorn
+> pip install maxapi[litestar]  # Litestar + uvicorn
+> ```
+>
+> Пример запуска через **FastAPI**:
+> ```python
+> import asyncio
+> import uvicorn
+> from fastapi import FastAPI
+> from maxapi.webhook.fastapi import FastAPIMaxWebhook
+>
+> async def main():
+>     webhook = FastAPIMaxWebhook(dp=dp, bot=bot)
+>     app = FastAPI(lifespan=webhook.lifespan)
+>     webhook.setup(app, path='/webhook')
+>     await uvicorn.Server(uvicorn.Config(app, host='0.0.0.0', port=8080)).serve()
+>
+> asyncio.run(main())
+> ```
+>
+> Пример запуска через **Litestar**:
+> ```python
+> import asyncio
+> import uvicorn
+> from maxapi.webhook.litestar import LitestarMaxWebhook
+>
+> async def main():
+>     webhook = LitestarMaxWebhook(dp=dp, bot=bot)
+>     app = webhook.create_app(path='/webhook')
+>     await uvicorn.Server(uvicorn.Config(app, host='0.0.0.0', port=8080)).serve()
+>
+> asyncio.run(main())
+> ```

@@ -34,7 +34,7 @@ class DialogMuted(BaseUpdate):
     def muted_until_datetime(self) -> datetime | None:
         try:
             return from_ms(self.muted_until)
-        except (OverflowError, OSError):
+        except (OverflowError, OSError, ValueError):
             return datetime.max
 
     def get_ids(self):
