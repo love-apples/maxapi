@@ -42,4 +42,3 @@ def test_added_members_chat_error_code_enum_rejects_unknown_code():
 
     with pytest.raises(ValidationError):
         AddedMembersChat.model_validate(payload)
-

@@ -8,4 +8,3 @@ class AddChatMembersErrorCode(str, Enum):
 
     ADD_PARTICIPANT_PRIVACY = "add.participant.privacy"
     ADD_PARTICIPANT_NOT_FOUND = "add.participant.not.found"
-
