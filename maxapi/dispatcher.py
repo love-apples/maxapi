@@ -442,7 +442,11 @@ class Dispatcher(BotMixin):
                 accumulated_base_filters,
             )
 
-            sub_routers = [r for r in router.routers if r is not self]
+            sub_routers = (
+                []
+                if router is self
+                else [r for r in router.routers if r is not self]
+            )
             if sub_routers:
                 path.add(router_key)
                 try:

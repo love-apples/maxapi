@@ -406,6 +406,27 @@ class TestNestedRouterDispatch:
         )
         assert "повторные включения роутеров" in warnings_text.lower()
 
+    async def test_prepare_handlers_no_false_warning_for_dispatcher_self(
+        self, bot, caplog
+    ):
+        """
+        Наличие Dispatcher в списке dp.routers не должно считаться дублем
+        пользовательских роутеров при подготовке обработчиков.
+        """
+        dp = Dispatcher()
+        start_router = Router("start")
+        common_router = Router("common")
+
+        dp.include_routers(start_router, common_router)
+        dp.routers.append(dp)
+
+        dp._prepare_handlers(bot)
+
+        warnings_text = "\n".join(
+            r.message for r in caplog.records if r.levelname == "WARNING"
+        )
+        assert "повторные включения роутеров" not in warnings_text.lower()
+
 
 @pytest.mark.asyncio
 class TestNestedMiddlewareInheritance:
