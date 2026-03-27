@@ -165,6 +165,24 @@ class MessageBody(BaseModel):
         if not markup:
             return Text(text)
 
+        def _utf16_units(ch: str) -> int:
+            return 2 if ord(ch) > 0xFFFF else 1
+
+        utf16_offsets: list[int] = []
+        _cum = 0
+        for ch in text:
+            utf16_offsets.append(_cum)
+            _cum += _utf16_units(ch)
+
+        def _utf16_to_py_index(utf16_pos: int) -> int:
+            if utf16_pos <= 0:
+                return 0
+
+            for i, off in enumerate(utf16_offsets):
+                if off >= utf16_pos:
+                    return i
+            return len(text)
+
         order = {
             TextStyle.STRONG: 1,
             TextStyle.EMPHASIZED: 2,
@@ -180,13 +198,16 @@ class MessageBody(BaseModel):
             list[tuple[TextStyle, str | None | tuple[str, int]]]
         ] = []
         for i in range(len(text)):
+            utf16_i = utf16_offsets[i] if i < len(utf16_offsets) else 0
             active = []
             for m in markup:
-                if m.from_ <= i < m.from_ + m.length:
+                if m.from_ <= utf16_i < m.from_ + m.length:
                     if m.type == TextStyle.LINK:
                         val = getattr(m, "url", None)
                     elif m.type == TextStyle.USER_MENTION:
-                        display_text = text[m.from_ : m.from_ + m.length]
+                        start = _utf16_to_py_index(m.from_)
+                        end = _utf16_to_py_index(m.from_ + m.length)
+                        display_text = text[start:end]
                         uid = getattr(m, "user_id", None) or 0
                         val = (display_text, uid)
                     else:

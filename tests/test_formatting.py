@@ -241,3 +241,37 @@ def test_mention_in_body_with_user_link():
     assert mention.type == TextStyle.USER_MENTION
     assert getattr(mention, "user_id", None) == 100
     assert getattr(mention, "user_link", None) == "max://user/100"
+
+
+def test_message_body_markup_uses_utf16_offsets_with_emoji():
+    data = {
+        "mid": "utf16-emoji",
+        "seq": 1,
+        "text": "🛒 Привет мир",
+        "markup": [
+            {"from": 3, "length": 6, "type": TextStyle.STRONG},  # Привет
+            {"from": 10, "length": 3, "type": TextStyle.EMPHASIZED},  # мир
+        ],
+    }
+    body = MessageBody(**data)
+    assert body.html_text == "🛒 <b>Привет</b> <i>мир</i>"
+    assert body.md_text == "🛒 **Привет** *мир*"
+
+
+def test_message_body_user_mention_uses_utf16_offsets():
+    data = {
+        "mid": "utf16-mention",
+        "seq": 1,
+        "text": "🛒 Alice",
+        "markup": [
+            {
+                "from": 3,
+                "length": 5,
+                "type": TextStyle.USER_MENTION,
+                "user_id": 42,
+            }
+        ],
+    }
+    body = MessageBody(**data)
+    assert body.md_text == "🛒 [Alice](max://user/42)"
+    assert body.html_text == '🛒 <a href="max://user/42">Alice</a>'
