@@ -14,7 +14,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-    "aiohttp>=3.10,<4",
+    "aiohttp>=3.13,<4",
     "magic_filter>=1.0.0,<2",
     "pydantic>=2,<3",
     "aiofiles>=24.1,<26",
