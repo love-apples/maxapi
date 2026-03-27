@@ -860,6 +860,44 @@ async def hello(event: MessageCreated):
     )
 ```
 
+## Отправка файлов
+
+Два основных способа отправить файл:
+
+1. Передать `InputMedia` напрямую в `attachments`.
+2. Предварительно загрузить файл через `bot.upload_media(...)`, а затем отправить полученный объект вложения.
+
+```python
+import asyncio
+
+from maxapi import Bot
+from maxapi.types import InputMedia
+
+bot = Bot()
+
+
+async def main():
+    # Вариант 1: отправка напрямую через InputMedia
+    await bot.send_message(
+        chat_id=...,
+        attachments=[
+            InputMedia(path="logo.png"),
+        ],
+    )
+
+    # Вариант 2: ручная загрузка + отправка attachment. (Подходит для рассылок)
+    media = InputMedia("logo.png")
+    attachment = await bot.upload_media(media)
+    await bot.send_message(
+        chat_id=...,
+        attachments=[attachment],
+    )
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
 ## Webhook
 
 ### Высокоуровневый подход

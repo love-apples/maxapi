@@ -40,6 +40,7 @@ from .methods.send_callback import SendCallback
 from .methods.send_message import SendMessage
 from .methods.subscribe_webhook import SubscribeWebhook
 from .methods.unsubscribe_webhook import UnsubscribeWebhook
+from .utils.message import process_input_media
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -999,6 +1000,28 @@ class Bot(BaseConnection):
         """
 
         return await GetUploadURL(bot=self, type=type).fetch()
+
+    async def upload_media(
+        self, media: InputMedia | InputMediaBuffer
+    ) -> AttachmentUpload:
+        """
+        Загружает медиа и возвращает вложение с токеном.
+
+        Упрощает пользовательский сценарий получения token для
+        `attachments` без ручного вызова низкоуровневых upload-методов.
+
+        Args:
+            media (InputMedia | InputMediaBuffer): Медиафайл для загрузки.
+
+        Returns:
+            AttachmentUpload: Вложение типа upload с payload.token.
+        """
+
+        return await process_input_media(
+            base_connection=self,
+            bot=self,
+            att=media,
+        )
 
     async def set_my_commands(self, *commands: BotCommand) -> User:
         """
