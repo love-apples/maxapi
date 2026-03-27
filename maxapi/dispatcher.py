@@ -10,7 +10,12 @@ from warnings import warn
 
 from aiohttp import ClientConnectorError
 
-from .context import BaseContext, MemoryContext
+from .context import (
+    BaseContext,
+    BaseStorage,
+    LegacyContextStorageAdapter,
+    MemoryStorage,
+)
 from .enums.update import UpdateType
 from .exceptions.dispatcher import HandlerException, MiddlewareException
 from .exceptions.max import InvalidToken, MaxApiError, MaxConnection
@@ -49,7 +54,7 @@ class Dispatcher(BotMixin):
     def __init__(
         self,
         router_id: str | None = None,
-        storage: Any = MemoryContext,
+        storage: BaseStorage | type[BaseContext] | Any | None = None,
         *,
         use_create_task: bool = False,
         **storage_kwargs: Any,
@@ -61,18 +66,20 @@ class Dispatcher(BotMixin):
             router_id (str | None): Идентификатор роутера для логов.
             use_create_task (bool): Флаг, отвечающий за параллелизацию
                 обработок событий.
-            storage (type[BaseContext]): Класс контекста для хранения
-                данных (MemoryContext, RedisContext и т.д.).
+            storage (BaseStorage | type[BaseContext]): Хранилище
+                контекстов. Передача класса контекста
+                (MemoryContext, RedisContext и т.д.) поддерживается
+                только для обратной совместимости и устарела;
+                используйте MemoryStorage/RedisStorage.
             **storage_kwargs (Any): Дополнительные аргументы для
                 инициализации хранилища.
         """
 
         self.router_id = router_id
-        self.storage = storage
+        self.storage = self._resolve_storage(storage, storage_kwargs)
         self.storage_kwargs = storage_kwargs
 
         self.event_handlers: list[Handler] = []
-        self.contexts: dict[tuple[int | None, int | None], BaseContext] = {}
         self.routers: list[Router | Dispatcher] = []
         self.filters: list[MagicFilter] = []
         self.base_filters: list[BaseFilter] = []
@@ -133,6 +140,56 @@ class Dispatcher(BotMixin):
             update_type=UpdateType.USER_REMOVED, router=self
         )
         self.on_started = Event(update_type=UpdateType.ON_STARTED, router=self)
+
+    @staticmethod
+    def _resolve_storage(
+        storage: BaseStorage | type[BaseContext] | Any | None,
+        storage_kwargs: dict[str, Any],
+    ) -> BaseStorage:
+        """Нормализовать переданный storage к объекту BaseStorage."""
+
+        if storage is None:
+            return MemoryStorage(**storage_kwargs)
+
+        if isinstance(storage, BaseStorage):
+            if storage_kwargs:
+                logger_dp.warning(
+                    "Переданы storage_kwargs вместе с экземпляром storage. "
+                    "Дополнительные аргументы будут проигнорированы."
+                )
+            return storage
+
+        if isinstance(storage, type) and issubclass(storage, BaseContext):
+            warnings.warn(
+                "Передача класса контекста в Dispatcher(storage=...) "
+                "устарела и будет удалена в будущих версиях. "
+                "Используйте экземпляр storage, например "
+                "MemoryStorage() или RedisStorage(...).",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+            return LegacyContextStorageAdapter(storage, **storage_kwargs)
+
+        if callable(storage):
+            warnings.warn(
+                "Передача фабрики/класса контекста в Dispatcher(storage=...) "
+                "устарела и будет удалена в будущих версиях. "
+                "Используйте экземпляр storage, например "
+                "MemoryStorage() или RedisStorage(...).",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+            return LegacyContextStorageAdapter(storage, **storage_kwargs)
+
+        raise TypeError(
+            "storage должен быть экземпляром BaseStorage "
+            "или классом BaseContext"
+        )
+
+    @property
+    def contexts(self) -> dict[tuple[int | None, int | None], BaseContext]:
+        """Совместимый view закэшированных контекстов."""
+        return self.storage.get_cached_contexts()
 
     async def check_me(self) -> None:
         """
@@ -277,13 +334,7 @@ class Dispatcher(BotMixin):
             BaseContext: Контекст.
         """
 
-        key = (chat_id, user_id)
-        if key in self.contexts:
-            return self.contexts[key]
-
-        new_ctx = self.storage(chat_id, user_id, **self.storage_kwargs)
-        self.contexts[key] = new_ctx
-        return new_ctx
+        return self.storage.get_context(chat_id, user_id)
 
     async def call_handler(
         self,
@@ -735,6 +786,10 @@ class Dispatcher(BotMixin):
             bot (Bot): Экземпляр бота.
         """
         await self.__ready(bot)
+
+    async def close(self) -> None:
+        """Закрыть storage диспетчера и освободить ресурсы."""
+        await self.storage.close()
 
     async def handle_webhook(
         self,

@@ -28,7 +28,7 @@ class MemoryContext(BaseContext):
         """
 
         async with self._lock:
-            return self._context
+            return self._context.copy()
 
     async def set_data(self, data: dict[str, Any]) -> None:
         """
@@ -39,7 +39,7 @@ class MemoryContext(BaseContext):
         """
 
         async with self._lock:
-            self._context = data
+            self._context = data.copy()
 
     async def update_data(self, **kwargs: Any) -> None:
         """
@@ -96,6 +96,8 @@ class RedisContext(BaseContext):
         user_id: int | None,
         redis_client: Any,  # redis.asyncio.Redis
         key_prefix: str = "maxapi",
+        state_ttl: int | None = None,
+        data_ttl: int | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(chat_id, user_id, **kwargs)
@@ -103,6 +105,8 @@ class RedisContext(BaseContext):
         self.prefix = f"{key_prefix}:{chat_id}:{user_id}"
         self.data_key = f"{self.prefix}:data"
         self.state_key = f"{self.prefix}:state"
+        self.state_ttl = state_ttl
+        self.data_ttl = data_ttl
 
     async def get_data(self) -> dict[str, Any]:
         data = await self.redis.get(self.data_key)
@@ -110,6 +114,7 @@ class RedisContext(BaseContext):
 
     async def set_data(self, data: dict[str, Any]) -> None:
         await self.redis.set(self.data_key, json.dumps(data))
+        await self._touch_data_ttl()
 
     async def update_data(self, **kwargs: Any) -> None:
         """
@@ -129,6 +134,7 @@ class RedisContext(BaseContext):
         return redis.status_reply("OK")
         """
         await self.redis.eval(lua_script, 1, self.data_key, json.dumps(kwargs))
+        await self._touch_data_ttl()
 
     async def set_state(self, state: State | str | None = None) -> None:
         if state is None:
@@ -137,6 +143,7 @@ class RedisContext(BaseContext):
             # Сохраняем имя состояния, если это объект State
             state_val = state.name if isinstance(state, State) else state
             await self.redis.set(self.state_key, str(state_val))
+            await self._touch_state_ttl()
 
     async def get_state(self) -> State | str | None:
         state = await self.redis.get(self.state_key)
@@ -152,3 +159,11 @@ class RedisContext(BaseContext):
 
     async def clear(self) -> None:
         await self.redis.delete(self.data_key, self.state_key)
+
+    async def _touch_data_ttl(self) -> None:
+        if self.data_ttl is not None:
+            await self.redis.expire(self.data_key, self.data_ttl)
+
+    async def _touch_state_ttl(self) -> None:
+        if self.state_ttl is not None:
+            await self.redis.expire(self.state_key, self.state_ttl)
