@@ -134,6 +134,14 @@ class SendMessage(BaseConnection):
 
         if self.attachments:
             for att in self.attachments:
+                if (
+                    isinstance(att, Attachment)
+                    and str(att.type) == "inline_keyboard"
+                    and hasattr(att.payload, "buttons")
+                    and not any(att.payload.buttons)
+                ):
+                    continue
+
                 if isinstance(att, (InputMedia, InputMediaBuffer)):
                     has_input_media = True
 
