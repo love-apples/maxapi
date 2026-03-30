@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from types import UnionType
 from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
+    Union,
+    get_args,
+    get_origin,
 )
 
 from pydantic import BaseModel
@@ -104,9 +108,26 @@ class CallbackPayload(BaseModel):
                 f"получено {len(parts) - 1}"
             )
 
-        kwargs = dict(zip(field_names, parts[1:], strict=True))
+        kwargs: dict[str, Any] = {}
+        for field_name, raw_value in zip(field_names, parts[1:], strict=True):
+            if raw_value == "" and cls._is_nullable_field(field_name):
+                kwargs[field_name] = None
+            else:
+                kwargs[field_name] = raw_value
+
         # noinspection PyArgumentList
         return cls(**kwargs)
+
+    @classmethod
+    def _is_nullable_field(cls, field_name: str) -> bool:
+        field = cls.model_fields[field_name]
+        annotation = field.annotation
+        origin = get_origin(annotation)
+
+        if origin in (Union, UnionType):
+            return type(None) in get_args(annotation)
+
+        return False
 
     @classmethod
     def attrs(cls) -> list[str]:
