@@ -104,6 +104,7 @@ class Bot(BaseConnection):
         after_input_media_delay: float | None = None,
         after_upload_attempts: int | None = None,
         after_upload_retry_delay: float | None = None,
+        after_upload_give_up_timeout: float | None = None,
         auto_check_subscriptions: bool = True,
         marker_updates: int | None = None,
     ):
@@ -133,6 +134,10 @@ class Bot(BaseConnection):
             after_upload_retry_delay (Optional[float]): Задержка между
                 попытками отправки после загрузки медиа в секундах
                 (по умолчанию 2.0).
+            after_upload_give_up_timeout (Optional[float]): Максимальное
+                общее время ожидания готовности медиа в секундах.
+                None — без ограничения по времени, только по количеству
+                попыток (по умолчанию None).
             auto_check_subscriptions (bool): Проверка подписок для
                 метода start_polling.
             marker_updates (Optional[int]): Маркер для получения
@@ -163,6 +168,14 @@ class Bot(BaseConnection):
             raise ValueError(
                 "after_upload_retry_delay не может быть"
                 " отрицательным"
+            )
+        self.after_upload_give_up_timeout = after_upload_give_up_timeout
+        if (
+            self.after_upload_give_up_timeout is not None
+            and self.after_upload_give_up_timeout <= 0
+        ):
+            raise ValueError(
+                "after_upload_give_up_timeout должно быть > 0"
             )
         self.auto_check_subscriptions = auto_check_subscriptions
         self.commands: list[CommandsInfo] = []

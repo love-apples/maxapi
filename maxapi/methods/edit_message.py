@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 import warnings
 from typing import TYPE_CHECKING, Any, cast
 
@@ -132,9 +133,11 @@ class EditMessage(BaseConnection):
 
         attempts = bot.after_upload_attempts
         retry_delay = bot.after_upload_retry_delay
+        give_up_timeout = bot.after_upload_give_up_timeout
 
         response = None
 
+        start_time = time.monotonic()
         for attempt in range(attempts):
             try:
                 response = await super().request(
@@ -149,6 +152,17 @@ class EditMessage(BaseConnection):
                     isinstance(e.raw, dict)
                     and e.raw.get("code") == "attachment.not.ready"
                 ):
+                    elapsed = time.monotonic() - start_time
+                    if (
+                        give_up_timeout is not None
+                        and elapsed + retry_delay > give_up_timeout
+                    ):
+                        raise RuntimeError(
+                            f"Превышено максимальное время ожидания"
+                            f" готовности медиа"
+                            f" ({give_up_timeout}с),"
+                            f" прошло {elapsed:.1f}с"
+                        ) from e
                     logger_bot.info(
                         f"Ошибка при отправке загруженного медиа,"
                         f" попытка {attempt + 1},"
