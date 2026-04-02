@@ -133,13 +133,9 @@ class TestRetryOnServerErrors:
     @pytest.mark.asyncio
     async def test_retry_exhausted_raises_error(self, bot_with_retry):
         """Исчерпание попыток бросает MaxApiError."""
-        error = _make_response(
-            502, json_data={"error": "Bad Gateway"}
-        )
+        error = _make_response(502, json_data={"error": "Bad Gateway"})
 
-        bot_with_retry.session.request = AsyncMock(
-            return_value=error
-        )
+        bot_with_retry.session.request = AsyncMock(return_value=error)
 
         base = BaseConnection()
         base.bot = bot_with_retry
@@ -161,13 +157,9 @@ class TestRetryOnServerErrors:
     @pytest.mark.asyncio
     async def test_no_retry_on_400(self, bot_with_retry):
         """400 не вызывает retry."""
-        error = _make_response(
-            400, json_data={"error": "Bad Request"}
-        )
+        error = _make_response(400, json_data={"error": "Bad Request"})
 
-        bot_with_retry.session.request = AsyncMock(
-            return_value=error
-        )
+        bot_with_retry.session.request = AsyncMock(return_value=error)
 
         base = BaseConnection()
         base.bot = bot_with_retry
@@ -187,9 +179,7 @@ class TestRetryOnServerErrors:
         """401 не вызывает retry, бросает InvalidToken."""
         error = _make_response(401)
 
-        bot_with_retry.session.request = AsyncMock(
-            return_value=error
-        )
+        bot_with_retry.session.request = AsyncMock(return_value=error)
 
         base = BaseConnection()
         base.bot = bot_with_retry
@@ -215,9 +205,7 @@ class TestRetryOnServerErrors:
             default_connection=conn,
         )
 
-        error = _make_response(
-            502, json_data={"error": "Bad Gateway"}
-        )
+        error = _make_response(502, json_data={"error": "Bad Gateway"})
 
         session = AsyncMock()
         session.request = AsyncMock(return_value=error)
@@ -318,9 +306,7 @@ class TestRetryBackoff:
             default_connection=conn,
         )
 
-        error = _make_response(
-            502, json_data={"error": "Bad Gateway"}
-        )
+        error = _make_response(502, json_data={"error": "Bad Gateway"})
 
         session = AsyncMock()
         session.request = AsyncMock(return_value=error)
@@ -362,9 +348,7 @@ class TestRetryBackoff:
             default_connection=conn,
         )
 
-        error = _make_response(
-            503, json_data={"error": "Service Unavailable"}
-        )
+        error = _make_response(503, json_data={"error": "Service Unavailable"})
 
         session = AsyncMock()
         session.request = AsyncMock(return_value=error)
@@ -415,9 +399,7 @@ class TestRetryWithCustomStatuses:
         success = _make_response(200, json_data={"ok": True})
 
         session = AsyncMock()
-        session.request = AsyncMock(
-            side_effect=[error, success]
-        )
+        session.request = AsyncMock(side_effect=[error, success])
         bot.session = session
 
         base = BaseConnection()
@@ -446,9 +428,7 @@ class TestRetryWithCustomStatuses:
             default_connection=conn,
         )
 
-        error = _make_response(
-            502, json_data={"error": "Bad Gateway"}
-        )
+        error = _make_response(502, json_data={"error": "Bad Gateway"})
 
         session = AsyncMock()
         session.request = AsyncMock(return_value=error)
@@ -472,9 +452,7 @@ class TestRetryResponseBodyConsumed:
     """Тесты корректного освобождения ресурсов при retry."""
 
     @pytest.mark.asyncio
-    async def test_response_body_consumed_on_retry(
-        self, mock_bot_token
-    ):
+    async def test_response_body_consumed_on_retry(self, mock_bot_token):
         """Тело ответа читается перед retry для освобождения
         соединения."""
         conn = DefaultConnectionProperties(
@@ -490,9 +468,7 @@ class TestRetryResponseBodyConsumed:
         success = _make_response(200, json_data={"ok": True})
 
         session = AsyncMock()
-        session.request = AsyncMock(
-            side_effect=[error, success]
-        )
+        session.request = AsyncMock(side_effect=[error, success])
         bot.session = session
 
         base = BaseConnection()

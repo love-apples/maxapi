@@ -131,9 +131,7 @@ class BaseConnection(BotMixin):
                     )
                     await asyncio.sleep(delay)
                     continue
-                raise MaxConnection(
-                    f"Ошибка при отправке запроса: {e}"
-                ) from e
+                raise MaxConnection(f"Ошибка при отправке запроса: {e}") from e
 
             if r.status == 401:
                 await bot.session.close()
