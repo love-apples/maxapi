@@ -176,8 +176,6 @@ class EditMessage(BaseConnection):
             break
 
         if response is None:
-            raise RuntimeError(
-                "Не удалось отредактировать сообщение"
-            )
+            raise RuntimeError("Не удалось отредактировать сообщение")
 
         return cast(EditedMessage | None, response)

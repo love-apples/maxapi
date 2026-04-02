@@ -151,14 +151,10 @@ class Bot(BaseConnection):
         )
         self.after_input_media_delay = after_input_media_delay or 2.0
         self.after_upload_attempts = (
-            after_upload_attempts
-            if after_upload_attempts is not None
-            else 5
+            after_upload_attempts if after_upload_attempts is not None else 5
         )
         if self.after_upload_attempts < 1:
-            raise ValueError(
-                "after_upload_attempts должно быть >= 1"
-            )
+            raise ValueError("after_upload_attempts должно быть >= 1")
         self.after_upload_retry_delay = (
             after_upload_retry_delay
             if after_upload_retry_delay is not None
@@ -166,17 +162,14 @@ class Bot(BaseConnection):
         )
         if self.after_upload_retry_delay < 0:
             raise ValueError(
-                "after_upload_retry_delay не может быть"
-                " отрицательным"
+                "after_upload_retry_delay не может быть отрицательным"
             )
         self.after_upload_give_up_timeout = after_upload_give_up_timeout
         if (
             self.after_upload_give_up_timeout is not None
             and self.after_upload_give_up_timeout <= 0
         ):
-            raise ValueError(
-                "after_upload_give_up_timeout должно быть > 0"
-            )
+            raise ValueError("after_upload_give_up_timeout должно быть > 0")
         self.auto_check_subscriptions = auto_check_subscriptions
         self.commands: list[CommandsInfo] = []
 
