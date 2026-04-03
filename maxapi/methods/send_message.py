@@ -1,4 +1,5 @@
 import asyncio
+import time
 import warnings
 from typing import TYPE_CHECKING, Any, cast
 
@@ -146,8 +147,13 @@ class SendMessage(BaseConnection):
         if has_input_media and self.sleep_after_input_media:
             await asyncio.sleep(bot.after_input_media_delay)
 
+        attempts = bot.after_upload_attempts
+        retry_delay = bot.after_upload_retry_delay
+        give_up_timeout = bot.after_upload_give_up_timeout
+
         response = None
-        for attempt in range(self.ATTEMPTS_COUNT):
+        start_time = time.monotonic()
+        for attempt in range(attempts):
             try:
                 response = await super().request(
                     method=HTTPMethod.POST,
@@ -161,11 +167,23 @@ class SendMessage(BaseConnection):
                     isinstance(e.raw, dict)
                     and e.raw.get("code") == "attachment.not.ready"
                 ):
+                    elapsed = time.monotonic() - start_time
+                    if (
+                        give_up_timeout is not None
+                        and elapsed + retry_delay > give_up_timeout
+                    ):
+                        raise RuntimeError(
+                            f"Превышено максимальное время ожидания"
+                            f" готовности медиа"
+                            f" ({give_up_timeout}с),"
+                            f" прошло {elapsed:.1f}с"
+                        ) from e
                     logger_bot.info(
-                        f"Ошибка при отправке загруженного медиа, попытка "
-                        f"{attempt + 1}, жду {self.RETRY_DELAY} секунды"
+                        f"Ошибка при отправке загруженного медиа,"
+                        f" попытка {attempt + 1},"
+                        f" жду {retry_delay} секунды"
                     )
-                    await asyncio.sleep(self.RETRY_DELAY)
+                    await asyncio.sleep(retry_delay)
                     continue
                 else:
                     raise e
