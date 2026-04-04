@@ -61,7 +61,7 @@ class MarkupLink(MarkupElement):
         url (Optional[str]): URL ссылки. Может быть None.
     """
 
-    type: Literal[TextStyle.LINK] = TextStyle.LINK
+    type: Literal[TextStyle.LINK.value] = TextStyle.LINK
     url: str | None = None
 
 
@@ -74,7 +74,7 @@ class MarkupUserMention(MarkupElement):
         user_link (Optional[str]): Ссылка на пользователя. Может быть None.
     """
 
-    type: Literal[TextStyle.USER_MENTION] = TextStyle.USER_MENTION
+    type: Literal[TextStyle.USER_MENTION.value] = TextStyle.USER_MENTION
     user_id: int | None = None
     user_link: str | None = None
 
