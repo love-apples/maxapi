@@ -1,7 +1,10 @@
-from enum import Enum
+from enum import unique
+
+from ._compat import StrEnum
 
 
-class HTTPMethod(str, Enum):
+@unique
+class HTTPMethod(StrEnum):
     """
     HTTP-методы, поддерживаемые клиентом API.
 

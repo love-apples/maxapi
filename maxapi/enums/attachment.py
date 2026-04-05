@@ -1,7 +1,10 @@
-from enum import Enum
+from enum import auto, unique
+
+from ._compat import StrEnum
 
 
-class AttachmentType(str, Enum):
+@unique
+class AttachmentType(StrEnum):
     """
     Типы вложений, поддерживаемые в сообщениях.
 
@@ -9,12 +12,12 @@ class AttachmentType(str, Enum):
     обработке вложений.
     """
 
-    IMAGE = "image"
-    VIDEO = "video"
-    AUDIO = "audio"
-    FILE = "file"
-    STICKER = "sticker"
-    CONTACT = "contact"
-    INLINE_KEYBOARD = "inline_keyboard"
-    LOCATION = "location"
-    SHARE = "share"
+    IMAGE = auto()
+    VIDEO = auto()
+    AUDIO = auto()
+    FILE = auto()
+    STICKER = auto()
+    CONTACT = auto()
+    INLINE_KEYBOARD = auto()
+    LOCATION = auto()
+    SHARE = auto()

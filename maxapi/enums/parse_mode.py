@@ -1,7 +1,10 @@
-from enum import Enum
+from enum import auto, unique
+
+from ._compat import StrEnum
 
 
-class ParseMode(str, Enum):
+@unique
+class ParseMode(StrEnum):
     """
     Формат разметки текста сообщений.
 
@@ -9,8 +12,8 @@ class ParseMode(str, Enum):
     (жирный, курсив, ссылки и т.д.).
     """
 
-    MARKDOWN = "markdown"
-    HTML = "html"
+    MARKDOWN = auto()
+    HTML = auto()
 
 
 TextFormat = ParseMode

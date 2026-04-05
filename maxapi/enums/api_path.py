@@ -1,7 +1,10 @@
-from enum import Enum
+from enum import unique
+
+from ._compat import StrEnum
 
 
-class ApiPath(str, Enum):
+@unique
+class ApiPath(StrEnum):
     """
     Перечисление всех доступных API-эндпоинтов.
 

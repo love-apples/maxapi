@@ -1,14 +1,17 @@
-from enum import Enum
+from enum import auto, unique
+
+from ._compat import StrEnum
 
 
-class UploadType(str, Enum):
+@unique
+class UploadType(StrEnum):
     """
     Типы загружаемых файлов.
 
     Используются для указания категории контента при загрузке на сервер.
     """
 
-    IMAGE = "image"
-    VIDEO = "video"
-    AUDIO = "audio"
-    FILE = "file"
+    IMAGE = auto()
+    VIDEO = auto()
+    AUDIO = auto()
+    FILE = auto()

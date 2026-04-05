@@ -1,17 +1,20 @@
-from enum import Enum
+from enum import auto, unique
+
+from ._compat import StrEnum
 
 
-class ButtonType(str, Enum):
+@unique
+class ButtonType(StrEnum):
     """
     Типы кнопок, доступных в интерфейсе бота.
 
     Определяют поведение при нажатии на кнопку в сообщении.
     """
 
-    REQUEST_CONTACT = "request_contact"
-    CALLBACK = "callback"
-    LINK = "link"
-    REQUEST_GEO_LOCATION = "request_geo_location"
-    CHAT = "chat"
-    MESSAGE = "message"
-    OPEN_APP = "open_app"
+    REQUEST_CONTACT = auto()
+    CALLBACK = auto()
+    LINK = auto()
+    REQUEST_GEO_LOCATION = auto()
+    CHAT = auto()
+    MESSAGE = auto()
+    OPEN_APP = auto()

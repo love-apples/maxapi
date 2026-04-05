@@ -1,7 +1,10 @@
-from enum import Enum
+from enum import auto, unique
+
+from ._compat import StrEnum
 
 
-class Intent(str, Enum):
+@unique
+class Intent(StrEnum):
     """
     Тип интента (намерения) кнопки.
 
@@ -9,6 +12,6 @@ class Intent(str, Enum):
     пользовательских действий.
     """
 
-    DEFAULT = "default"
-    POSITIVE = "positive"
-    NEGATIVE = "negative"
+    DEFAULT = auto()
+    POSITIVE = auto()
+    NEGATIVE = auto()

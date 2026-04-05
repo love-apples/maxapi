@@ -1,13 +1,16 @@
-from enum import Enum
+from enum import auto, unique
+
+from ._compat import StrEnum
 
 
-class ChatType(str, Enum):
+@unique
+class ChatType(StrEnum):
     """
     Тип чата.
 
     Используется для различения личных и групповых чатов.
     """
 
-    DIALOG = "dialog"
-    CHAT = "chat"
-    CHANNEL = "channel"
+    DIALOG = auto()
+    CHAT = auto()
+    CHANNEL = auto()
