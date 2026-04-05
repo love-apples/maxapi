@@ -265,7 +265,7 @@ class Bot(BaseConnection):
 
         return notify if notify is not None else self.notify
 
-    def _resolve_format(
+    def resolve_format(
         self,
         format: TextFormat | None,
         parse_mode: ParseMode | None = None,
@@ -298,11 +298,11 @@ class Bot(BaseConnection):
 
     def _resolve_parse_mode(self, mode: ParseMode | None) -> ParseMode | None:
         warnings.warn(
-            "Метод _resolve_parse_mode устарел, используйте _resolve_format.",
+            "Метод _resolve_parse_mode устарел, используйте resolve_format.",
             DeprecationWarning,
             stacklevel=3,
         )
-        return self._resolve_format(None, mode)
+        return self.resolve_format(format=None, parse_mode=mode)
 
     async def close_session(self) -> None:
         """
@@ -368,7 +368,7 @@ class Bot(BaseConnection):
             attachments=attachments,
             link=link,
             notify=self._resolve_notify(notify=notify),
-            format=self._resolve_format(format, parse_mode),
+            format=self.resolve_format(format, parse_mode),
             parse_mode=parse_mode,
             disable_link_preview=self._resolve_disable_link_preview(
                 disable_link_preview=disable_link_preview,
@@ -445,7 +445,7 @@ class Bot(BaseConnection):
             attachments=attachments,
             link=link,
             notify=self._resolve_notify(notify=notify),
-            format=self._resolve_format(format, parse_mode),
+            format=self.resolve_format(format, parse_mode),
             parse_mode=parse_mode,
             sleep_after_input_media=sleep_after_input_media,
         ).fetch()

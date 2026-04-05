@@ -106,13 +106,13 @@ class TestBotResolveMethods:
         assert bot._resolve_notify(notify=True) is True
 
     def test_resolve_format(self, bot):
-        """Тест _resolve_format."""
+        """Тест resolve_format."""
         bot.parse_mode = ParseMode.MARKDOWN
-        assert bot._resolve_format(None) == ParseMode.MARKDOWN
-        assert bot._resolve_format(TextFormat.HTML) == ParseMode.HTML
+        assert bot.resolve_format(None) == ParseMode.MARKDOWN
+        assert bot.resolve_format(TextFormat.HTML) == ParseMode.HTML
 
         with pytest.deprecated_call():
-            assert bot._resolve_format(None, ParseMode.HTML) == ParseMode.HTML
+            assert bot.resolve_format(None, ParseMode.HTML) == ParseMode.HTML
 
     def test_resolve_disable_link_preview(self, bot):
         """Тест _resolve_disable_link_preview."""
