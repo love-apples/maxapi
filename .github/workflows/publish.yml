@@ -36,10 +36,10 @@ jobs:
         id: changed
         run: |
           CURRENT_VERSION=$(cat /tmp/current_version.txt)
-          
+
           # Получаем версию из предыдущего коммита
           PREVIOUS_VERSION=$(git show HEAD~1:pyproject.toml 2>/dev/null | python -c "import sys, tomllib; data = tomllib.load(sys.stdin.buffer); print(data['project']['version'])" 2>/dev/null || echo "")
-          
+
           if [ -z "$PREVIOUS_VERSION" ]; then
             # Если нет предыдущей версии, проверяем изменения в файле
             if git diff --quiet HEAD~1 HEAD -- pyproject.toml 2>/dev/null; then
@@ -62,7 +62,7 @@ jobs:
     if: needs.check-version.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write  # Для создания GitHub Release
       id-token: write  # Для Trusted Publishing на PyPI
 
     steps:
@@ -92,3 +92,25 @@ jobs:
         with:
           packages-dir: dist/
           print-hash: true
+
+      - name: Create and push git tag
+        run: |
+          TAG="v${{ needs.check-version.outputs.version }}"
+
+          if git ls-remote --tags origin "refs/tags/$TAG" | grep -q "refs/tags/$TAG$"; then
+            echo "Tag $TAG already exists on origin, skipping tag creation and push."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$TAG"
+          git push origin "$TAG"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: v${{ needs.check-version.outputs.version }}
+          generate_release_notes: true
+          files: dist/*
