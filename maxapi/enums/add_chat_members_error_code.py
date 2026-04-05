@@ -1,7 +1,10 @@
-from enum import Enum
+from enum import unique
+
+from ._compat import StrEnum
 
 
-class AddChatMembersErrorCode(str, Enum):
+@unique
+class AddChatMembersErrorCode(StrEnum):
     """
     Коды ошибок при добавлении участников в чат.
     """

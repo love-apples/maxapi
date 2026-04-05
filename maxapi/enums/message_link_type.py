@@ -1,12 +1,15 @@
-from enum import Enum
+from enum import auto, unique
+
+from ._compat import StrEnum
 
 
-class MessageLinkType(str, Enum):
+@unique
+class MessageLinkType(StrEnum):
     """
     Тип связи между сообщениями.
 
     Используется для указания типа привязки: пересылка или ответ.
     """
 
-    FORWARD = "forward"
-    REPLY = "reply"
+    FORWARD = auto()
+    REPLY = auto()

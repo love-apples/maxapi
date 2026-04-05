@@ -1,7 +1,10 @@
-from enum import Enum
+from enum import auto, unique
+
+from ._compat import StrEnum
 
 
-class SenderAction(str, Enum):
+@unique
+class SenderAction(StrEnum):
     """
     Действия отправителя, отображаемые получателю в интерфейсе.
 
@@ -9,9 +12,9 @@ class SenderAction(str, Enum):
     перед отправкой сообщения или медиа.
     """
 
-    TYPING_ON = "typing_on"
-    SENDING_PHOTO = "sending_photo"
-    SENDING_VIDEO = "sending_video"
-    SENDING_AUDIO = "sending_audio"
-    SENDING_FILE = "sending_file"
-    MARK_SEEN = "mark_seen"
+    TYPING_ON = auto()
+    SENDING_PHOTO = auto()
+    SENDING_VIDEO = auto()
+    SENDING_AUDIO = auto()
+    SENDING_FILE = auto()
+    MARK_SEEN = auto()

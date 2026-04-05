@@ -1,19 +1,22 @@
-from enum import Enum
+from enum import auto, unique
+
+from ._compat import StrEnum
 
 
-class TextStyle(Enum):
+@unique
+class TextStyle(StrEnum):
     """
     Стили текста, применяемые в сообщениях.
 
     Используются для форматирования и выделения частей текста в сообщении.
     """
 
-    UNDERLINE = "underline"
-    STRONG = "strong"
-    EMPHASIZED = "emphasized"
-    MONOSPACED = "monospaced"
-    LINK = "link"
-    STRIKETHROUGH = "strikethrough"
-    USER_MENTION = "user_mention"
-    HEADING = "heading"
-    HIGHLIGHTED = "highlighted"
+    UNDERLINE = auto()
+    STRONG = auto()
+    EMPHASIZED = auto()
+    MONOSPACED = auto()
+    LINK = auto()
+    STRIKETHROUGH = auto()
+    USER_MENTION = auto()
+    HEADING = auto()
+    HIGHLIGHTED = auto()
