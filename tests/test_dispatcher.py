@@ -344,7 +344,6 @@ class TestDispatcherMiddlewareChain:
         assert callable(chain)
 
 
-@pytest.mark.asyncio
 class TestDispatcherAsync:
     """Асинхронные тесты Dispatcher."""
 
@@ -526,7 +525,6 @@ def _setup_for_handle(dispatcher: Dispatcher, bot: Bot) -> None:
 # ===========================================================================
 
 
-@pytest.mark.asyncio
 class TestHandlePipeline:
     """Тесты полного пайплайна dispatch."""
 
@@ -709,7 +707,6 @@ class TestDispatcherHelpers:
 # ===========================================================================
 
 
-@pytest.mark.asyncio
 class TestExecuteHandler:
     async def test_execute_handler_wraps_exception_in_handler_exception(
         self, dispatcher, fixture_message_created
@@ -747,7 +744,6 @@ class TestExecuteHandler:
 # ===========================================================================
 
 
-@pytest.mark.asyncio
 class TestStopPolling:
     async def test_stop_polling_sets_polling_false(self, dispatcher):
         dispatcher.polling = True
@@ -782,7 +778,6 @@ class TestStopPolling:
 # ===========================================================================
 
 
-@pytest.mark.asyncio
 class TestHandleRawResponse:
     async def test_handle_raw_response_catches_handler_exception(
         self, dispatcher, bot
@@ -854,7 +849,6 @@ class TestHandlerBaseFilterArg:
 # ===========================================================================
 
 
-@pytest.mark.asyncio
 class TestFetchUpdatesOnce:
     """Тесты всех веток _fetch_updates_once."""
 
@@ -908,7 +902,6 @@ class TestFetchUpdatesOnce:
 # ===========================================================================
 
 
-@pytest.mark.asyncio
 class TestDispatchFetchedEvents:
     """Тесты _dispatch_fetched_events."""
 
@@ -997,13 +990,12 @@ class TestDispatchFetchedEvents:
 
 
 # ===========================================================================
-# call_handler — **data передаётся хендлеру (line 362)
+# call_handler — **data передаётся хендлеру
 # ===========================================================================
 
 
-@pytest.mark.asyncio
 class TestCallHandlerWithKwargs:
-    """Покрывает line 362: await handler.func_event(event_object, **data)"""
+    """Хендлер получает kwargs, возвращённые BaseFilter."""
 
     async def test_handler_receives_kwargs_from_base_filter(
         self, dispatcher, bot, fixture_message_created
@@ -1028,13 +1020,12 @@ class TestCallHandlerWithKwargs:
 
 
 # ===========================================================================
-# _iter_routers — вложенные роутеры (lines 463-473) и цикл (line 439)
+# _iter_routers — вложенные роутеры и защита от циклов
 # ===========================================================================
 
 
-@pytest.mark.asyncio
 class TestIterRoutersNested:
-    """Покрывает lines 463-473: рекурсивный обход sub-роутеров."""
+    """Рекурсивный обход sub-роутеров доходит до вложенных обработчиков."""
 
     async def test_nested_sub_router_handler_is_dispatched(
         self, dispatcher, bot, fixture_message_created
@@ -1059,10 +1050,7 @@ class TestIterRoutersNested:
 
 
 class TestIterRoutersCycle:
-    """
-    Покрывает line 439: цикл в графе роутеров
-    обрабатывается без зависания.
-    """
+    """Цикл в графе роутеров обрабатывается без зависания."""
 
     def test_cycle_detection_does_not_hang(self, dispatcher):
         r_a = Router(router_id="cycle_a")
@@ -1079,12 +1067,12 @@ class TestIterRoutersCycle:
 
 
 # ===========================================================================
-# _iter_unique_routers — предупреждение о дублях (lines 521-530, 535)
+# _iter_unique_routers — предупреждение о дублях
 # ===========================================================================
 
 
 class TestDuplicateRouterWarning:
-    """Покрывает lines 521-530, 535."""
+    """Повторное включение одного и того же роутера логирует предупреждение."""
 
     def test_warns_on_duplicate_inclusion(self, dispatcher, caplog):
         router = Router(router_id="dup_router")
@@ -1102,16 +1090,15 @@ class TestDuplicateRouterWarning:
 
 
 # ===========================================================================
-# Фильтры на уровне роутера (lines 560, 563, 851)
+# Фильтры на уровне роутера
 # ===========================================================================
 
 
-@pytest.mark.asyncio
 class TestRouterLevelFilters:
     async def test_failing_magic_filter_skips_router(
         self, dispatcher, bot, fixture_message_created
     ):
-        """Покрывает lines 560, 851: failing MagicFilter → continue."""
+        """Неподходящий MagicFilter на роутере пропускает весь роутер."""
         handled = []
 
         router = Router(router_id="filtered_router")
@@ -1131,10 +1118,7 @@ class TestRouterLevelFilters:
     async def test_router_base_filter_calls_process_base_filters(
         self, dispatcher, bot, fixture_message_created
     ):
-        """
-        Покрывает line 563: process_base_filters
-        вызывается для router.base_filters.
-        """
+        """BaseFilter на роутере вызывается и передаёт данные в обработчик."""
         from maxapi.filters.filter import BaseFilter
 
         enriched: dict = {}
@@ -1159,13 +1143,12 @@ class TestRouterLevelFilters:
 
 
 # ===========================================================================
-# Middleware на уровне роутера (lines 806-809)
+# Middleware на уровне роутера
 # ===========================================================================
 
 
-@pytest.mark.asyncio
 class TestRouterMiddlewareChain:
-    """Покрывает lines 806-809."""
+    """Middleware, добавленный на роутер, оборачивает его обработчики."""
 
     async def test_router_middleware_wraps_dispatch(
         self, dispatcher, bot, fixture_message_created
@@ -1196,13 +1179,12 @@ class TestRouterMiddlewareChain:
 
 
 # ===========================================================================
-# ClientConnectorError в _dispatch_fetched_events (lines 1052-1058)
+# ClientConnectorError в _dispatch_fetched_events
 # ===========================================================================
 
 
-@pytest.mark.asyncio
 class TestDispatchFetchedEventsConnectorError:
-    """Покрывает lines 1052-1058."""
+    """_dispatch_fetched_events перехватывает сетевые и прочие исключения."""
 
     async def test_client_connector_error_caught_and_logged(
         self, dispatcher, bot
@@ -1230,10 +1212,7 @@ class TestDispatchFetchedEventsConnectorError:
             )  # не должно всплывать
 
     async def test_generic_exception_caught_and_logged(self, dispatcher, bot):
-        """
-        Покрывает lines 1057-1058: generic Exception
-        в _dispatch_fetched_events.
-        """
+        """Произвольное исключение в _dispatch_fetched_events не всплывает."""
         dispatcher.bot = bot
         _setup_for_handle(dispatcher, bot)
 
@@ -1251,14 +1230,13 @@ class TestDispatchFetchedEventsConnectorError:
 
 
 # ===========================================================================
-# start_polling — полный HTTP-цикл через aresponses (lines 1072-1082)
+# start_polling — полный HTTP-цикл через aresponses
 # ===========================================================================
 
 
-@pytest.mark.asyncio
 class TestStartPollingWithAresponses:
     """
-    Покрывает lines 1072-1082 через реальную сетевую эмуляцию (aresponses).
+    Интеграционный тест start_polling через сетевую эмуляцию (aresponses).
 
     aresponses перехватывает TCP-соединения на уровне резолвера и
     перенаправляет их на локальный mock-сервер — никакого реального
@@ -1270,9 +1248,9 @@ class TestStartPollingWithAresponses:
     ):
         """
         Проверяет, что start_polling:
-          1. обращается к /me (check_me)            ← lines 1072-1074
-          2. первый /updates возвращает 500 → returns None      ← line 1081
-          3. второй /updates возвращает {} → _dispatch вызван   ← line 1082
+          1. обращается к /me (check_me)
+          2. первый /updates возвращает 500 → _fetch_updates_once → None
+          3. второй /updates возвращает {} → _dispatch_fetched_events вызван
         """
         from aiohttp import web
         from maxapi.bot import Bot
@@ -1337,13 +1315,12 @@ class TestStartPollingWithAresponses:
 
 
 # ===========================================================================
-# startup (line 1119)
+# startup
 # ===========================================================================
 
 
-@pytest.mark.asyncio
 class TestStartup:
-    """Покрывает line 1119."""
+    """startup() привязывает бота и подготавливает обработчики."""
 
     async def test_startup_calls_ready(self, dispatcher, bot):
         dispatcher.check_me = AsyncMock()
@@ -1358,13 +1335,12 @@ class TestStartup:
 
 
 # ===========================================================================
-# handle_webhook (lines 1154-1155)
+# handle_webhook
 # ===========================================================================
 
 
-@pytest.mark.asyncio
 class TestHandleWebhook:
-    """Покрывает lines 1154-1155."""
+    """handle_webhook() создаёт экземпляр webhook-класса и запускает его."""
 
     async def test_handle_webhook_creates_and_runs_instance(
         self, dispatcher, bot
@@ -1390,12 +1366,12 @@ class TestHandleWebhook:
 
 
 # ===========================================================================
-# Устаревшее событие — DeprecationWarning (line 1240)
+# Устаревшее событие — DeprecationWarning
 # ===========================================================================
 
 
 class TestDeprecatedEvent:
-    """Покрывает line 1240."""
+    """Регистрация на устаревшее событие вызывает DeprecationWarning."""
 
     def test_deprecated_event_emits_deprecation_warning(self):
         import warnings
@@ -1409,3 +1385,27 @@ class TestDeprecatedEvent:
                 pass
 
         assert any(issubclass(x.category, DeprecationWarning) for x in w)
+
+
+# ===========================================================================
+# _on_background_task_done — ветка с исключением в задаче
+# ===========================================================================
+
+
+class TestOnBackgroundTaskDone:
+    """_on_background_task_done логирует исключение упавшей задачи."""
+
+    async def test_logs_exception_when_task_has_exception(self, dispatcher):
+        """Callback логирует исключение, если задача завершилась с ошибкой."""
+
+        async def _failing():
+            raise RuntimeError("test error from background task")
+
+        task = asyncio.create_task(_failing())
+        dispatcher._background_tasks.add(task)
+        # Ждём завершения, подавляя исключение
+        await asyncio.gather(task, return_exceptions=True)
+
+        with patch("maxapi.dispatcher.logger_dp") as mock_logger:
+            dispatcher._on_background_task_done(task)
+            mock_logger.exception.assert_called_once()
