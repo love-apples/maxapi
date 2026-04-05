@@ -95,10 +95,17 @@ jobs:
 
       - name: Create and push git tag
         run: |
+          TAG="v${{ needs.check-version.outputs.version }}"
+
+          if git ls-remote --tags origin "refs/tags/$TAG" | grep -q "refs/tags/$TAG$"; then
+            echo "Tag $TAG already exists on origin, skipping tag creation and push."
+            exit 0
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag v${{ needs.check-version.outputs.version }}
-          git push origin v${{ needs.check-version.outputs.version }}
+          git tag "$TAG"
+          git push origin "$TAG"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
