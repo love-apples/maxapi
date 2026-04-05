@@ -165,7 +165,10 @@ class Dispatcher(BotMixin):
         bot.me = me
 
         logger_dp.info(
-            f"Бот: @{me.username} first_name={me.first_name} id={me.user_id}"
+            "Бот: @%s first_name=%s id=%s",
+            me.username,
+            me.first_name,
+            me.user_id,
         )
 
     @staticmethod
@@ -287,7 +290,7 @@ class Dispatcher(BotMixin):
         )
 
         logger_dp.info(
-            f"Зарегистрировано {handlers_count} обработчиков событий"
+            "Зарегистрировано %d обработчиков событий", handlers_count
         )
 
     @staticmethod
@@ -692,7 +695,7 @@ class Dispatcher(BotMixin):
                     )
                 except Exception as e:  # noqa: PERF203
                     logger_dp.exception(
-                        f"Ошибка в обработчике RAW_API_RESPONSE: {e}"
+                        "Ошибка в обработчике RAW_API_RESPONSE: %r", e
                     )
 
     async def _run_router_handlers(
@@ -731,7 +734,7 @@ class Dispatcher(BotMixin):
                 process_info=process_info,
             )
             logger_dp.info(
-                f"Обработано: router_id: {router_id} | {process_info}"
+                "Обработано: router_id: %s | %s", router_id, process_info
             )
             return True
         return False
@@ -866,6 +869,22 @@ class Dispatcher(BotMixin):
 
         return router_id, False
 
+    def _on_background_task_done(self, task: asyncio.Task) -> None:
+        """Callback завершения фоновой задачи (use_create_task=True).
+
+        Удаляет задачу из пула и логирует необработанное исключение, если оно
+        есть. Без явного вызова ``task.exception()`` Python при сборке мусора
+        выдаст предупреждение *"Task exception was never retrieved"*.
+        """
+        self._background_tasks.discard(task)
+        if not task.cancelled():
+            exc = task.exception()
+            if exc is not None:
+                logger_dp.exception(
+                    "Необработанное исключение в фоновой задаче handle(): %r",
+                    exc,
+                )
+
     @staticmethod
     def _get_middleware_title(chain: Any) -> str:
         """Определяет имя middleware для диагностики."""
@@ -957,13 +976,17 @@ class Dispatcher(BotMixin):
 
             if not is_handled:
                 logger_dp.info(
-                    f"Проигнорировано: router_id: {router_id} | {process_info}"
+                    "Проигнорировано: router_id: %s | %s",
+                    router_id,
+                    process_info,
                 )
 
         except Exception as e:
             logger_dp.exception(
-                f"Ошибка при обработке события: router_id: "
-                f"{router_id} | {process_info} | {e} "
+                "Ошибка при обработке события: router_id: %s | %s | %r",
+                router_id,
+                process_info,
+                e,
             )
 
     async def _fetch_updates_once(self, bot: Bot) -> dict | None:
@@ -982,8 +1005,10 @@ class Dispatcher(BotMixin):
             return None
         except (MaxConnection, ClientConnectorError) as e:
             logger_dp.warning(
-                f"Ошибка подключения при получении обновлений: {e}, "
-                f"жду {CONNECTION_RETRY_DELAY} секунд"
+                "Ошибка подключения при получении обновлений: %r, "
+                "жду %s секунд",
+                e,
+                CONNECTION_RETRY_DELAY,
             )
             await asyncio.sleep(CONNECTION_RETRY_DELAY)
             return None
@@ -993,15 +1018,16 @@ class Dispatcher(BotMixin):
             raise
         except MaxApiError as e:
             logger_dp.info(
-                f"Ошибка при получении обновлений: {e}, "
-                f"жду {GET_UPDATES_RETRY_DELAY} секунд"
+                "Ошибка при получении обновлений: %r, жду %s секунд",
+                e,
+                GET_UPDATES_RETRY_DELAY,
             )
             await asyncio.sleep(GET_UPDATES_RETRY_DELAY)
             return None
         except Exception as e:
             logger_dp.error(
-                f"Неожиданная ошибка при получении обновлений: "
-                f"{e.__class__.__name__}: {e}"
+                "Неожиданная ошибка при получении обновлений: %r",
+                e,
             )
             await asyncio.sleep(GET_UPDATES_RETRY_DELAY)
             return None
@@ -1025,26 +1051,28 @@ class Dispatcher(BotMixin):
             for event in processed_events:
                 if skip_updates and event.timestamp < current_timestamp:
                     logger_dp.info(
-                        f"Пропуск события от {from_ms(event.timestamp)}: "
-                        f"{event.update_type}"
+                        "Пропуск события от %s: %s",
+                        from_ms(event.timestamp),
+                        event.update_type,
                     )
                     continue
 
                 if self.use_create_task:
                     task = asyncio.create_task(self.handle(event))
                     self._background_tasks.add(task)
-                    task.add_done_callback(self._background_tasks.discard)
+                    task.add_done_callback(self._on_background_task_done)
                 else:
                     await self.handle(event)
 
         except ClientConnectorError:
             logger_dp.error(
-                f"Ошибка подключения, жду {CONNECTION_RETRY_DELAY} секунд"
+                "Ошибка подключения, жду %s секунд", CONNECTION_RETRY_DELAY
             )
             await asyncio.sleep(CONNECTION_RETRY_DELAY)
         except Exception as e:
             logger_dp.error(
-                f"Общая ошибка при обработке событий: {e.__class__} - {e}"
+                "Общая ошибка при обработке событий: %r",
+                e,
             )
 
     async def start_polling(
@@ -1084,8 +1112,8 @@ class Dispatcher(BotMixin):
 
         if self._background_tasks:
             logger_dp.info(
-                f"Ожидаю завершения {len(self._background_tasks)} "
-                f"фоновых задач..."
+                "Ожидаю завершения %d фоновых задач...",
+                len(self._background_tasks),
             )
             await asyncio.gather(
                 *self._background_tasks, return_exceptions=True
