@@ -2,6 +2,7 @@
 
 from enum import auto, unique
 
+import pytest
 from maxapi.enums._compat import StrEnum
 
 
@@ -29,8 +30,6 @@ def test_value_equals_str():
 
 def test_unique_decorator_rejects_duplicates():
     """@unique должен работать с compat StrEnum."""
-    import pytest
-
     with pytest.raises(ValueError, match="duplicate"):
 
         @unique
@@ -47,3 +46,11 @@ def test_explicit_value_preserved():
 
     assert _Explicit.HELLO == "world"
     assert _Explicit.HELLO.value == "world"
+
+
+def test_non_string_value_raises_type_error():
+    """Нестроковое значение должно вызывать TypeError."""
+    with pytest.raises(TypeError, match="is not a string"):
+
+        class _Bad(StrEnum):
+            X = 1
