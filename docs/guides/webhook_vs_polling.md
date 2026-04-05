@@ -26,7 +26,9 @@ async def main():
 
 ```python
 async def main():
-    await dp.handle_webhook(bot, host='0.0.0.0', port=8080)
+    webhook_url = 'https://ваш-домен.рф/webhook'  # <-- укажите свой
+    await bot.subscribe_webhook(url=webhook_url)
+    await dp.handle_webhook(bot, host='0.0.0.0', port=8080, path='/webhook')
 ```
 
 **Параметры:**
