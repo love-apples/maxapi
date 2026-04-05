@@ -923,6 +923,9 @@ async def handle_message(event: MessageCreated):
 
 
 async def main():
+    webhook_url = 'https://ваш-домен.рф/webhook'  # <-- укажите свой
+    await bot.subscribe_webhook(url=webhook_url)
+
     await dp.handle_webhook(
         bot=bot,
         host='0.0.0.0',
@@ -979,6 +982,10 @@ async def main():
 
     # Подключаем MAX webhook-обработчик к нашему приложению
     webhook.setup(app, path='/webhook')
+
+    # Подписываемся на webhook
+    webhook_url = 'https://ваш-домен.рф/webhook'  # <-- укажите свой
+    await bot.subscribe_webhook(url=webhook_url)
 
     # Запускаем сервер uvicorn
     config = uvicorn.Config(app=app, host='0.0.0.0', port=8080)
