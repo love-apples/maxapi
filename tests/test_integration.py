@@ -163,6 +163,5 @@ class TestDispatcherIntegration:
 
         await dp.check_me()
 
-        # check_me() устанавливает _me
-        assert integration_bot.me is not None
+        # check_me() устанавливает bot.me
         assert integration_bot.me is not None
