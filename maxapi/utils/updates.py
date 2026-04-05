@@ -38,11 +38,8 @@ async def enrich_event(event_object: Any, bot: Bot) -> Any:
     if not bot.auto_requests:
         return event_object
 
-    # Определяем заранее: чат недоступен (удалён или бот убран из канала)
-    is_chat_unavailable = isinstance(event_object, DialogRemoved) or (
-        isinstance(event_object, BotRemoved)
-        and getattr(event_object, "is_channel", False)
-    )
+    # Определяем заранее: чат недоступен (удалён) или бот убран из чата/канала
+    is_chat_unavailable = isinstance(event_object, (DialogRemoved, BotRemoved))
 
     if hasattr(event_object, "chat_id"):
         # Если чат недоступен — не пытаемся его получить

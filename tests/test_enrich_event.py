@@ -1,7 +1,7 @@
 """Тесты для maxapi/utils/updates.py — функция enrich_event.
 
 Покрываются все ветки логики: auto_requests=False, каждый тип события,
-is_chat_unavailable для DialogRemoved и BotRemoved-из-канала.
+is_chat_unavailable для DialogRemoved и BotRemoved (канал и группа).
 """
 
 from unittest.mock import AsyncMock, MagicMock
@@ -69,21 +69,21 @@ async def test_enrich_event_bot_removed_from_channel_chat_is_none(
 
 
 # ---------------------------------------------------------------------------
-# BotRemoved НЕ из канала — get_chat_by_id вызывается
+# BotRemoved из группы — chat=None, get_chat_by_id тоже НЕ вызывается
+# (бот уже убран, запрос упадёт)
 # ---------------------------------------------------------------------------
 
 
-async def test_enrich_event_bot_removed_not_channel_fetches_chat(
+async def test_enrich_event_bot_removed_not_channel_chat_is_none(
     bot, fixture_bot_removed
 ):
     fixture_bot_removed.is_channel = False
-    fake_chat = _make_chat()
-    bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
+    bot.get_chat_by_id = AsyncMock()
 
     result = await enrich_event(fixture_bot_removed, bot)
 
-    bot.get_chat_by_id.assert_awaited_once_with(fixture_bot_removed.chat_id)
-    assert result.chat is fake_chat
+    bot.get_chat_by_id.assert_not_called()
+    assert result.chat is None
     assert result.from_user is fixture_bot_removed.user
 
 
