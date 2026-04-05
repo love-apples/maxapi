@@ -126,6 +126,8 @@ class MessageCallback(BaseUpdate):
 
         # Если исходное сообщение есть —
         # собираем MessageForCallback на его основе
+        bot = self._ensure_bot()
+
         message_for_callback = MessageForCallback()
         message_for_callback.text = new_text
 
@@ -134,9 +136,9 @@ class MessageCallback(BaseUpdate):
         message_for_callback.attachments = attachments
         message_for_callback.link = link
         message_for_callback.notify = notify
-        message_for_callback.format = format
+        message_for_callback.format = bot.resolve_format(format)
 
-        return await self._ensure_bot().send_callback(
+        return await bot.send_callback(
             callback_id=self.callback.callback_id,
             message=message_for_callback,
             notification=notification,
