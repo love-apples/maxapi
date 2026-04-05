@@ -71,6 +71,7 @@ dev = [
     "fastapi>=0.103.0,<1",
     "uvicorn>=0.15.0,<1",
     "litestar>=2.0.0,<3",
+    "aresponses>=3.0.0,<4",
 ]
 
 [tool.uv]
@@ -122,7 +123,6 @@ target-version = "py310"
 select = ["ALL"]
 ignore = [
     "BLE", # TODO: требует рефакторинга
-    "G004", # TODO: требует рефакторинга
     "ERA", # TODO: требует рефакторинга
     "N", # TODO: требует рефакторинга
     "PGH", # TODO: требует рефакторинга
@@ -161,13 +161,6 @@ flake8-type-checking.runtime-evaluated-base-classes = [
     "PL",
     "S",
     "SLF",
-]
-"dispatcher.py" = [
-    "B023", # TODO: требует рефакторинга dispatcher
-    "C90", # TODO: требует рефакторинга dispatcher
-]
-"maxapi/utils/updates.py" = [
-    "C90", # TODO: требует рефакторинга
 ]
 "maxapi/methods/send_message.py" = [
     "C90", # TODO: требует рефакторинга
