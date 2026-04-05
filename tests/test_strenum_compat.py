@@ -54,3 +54,23 @@ def test_non_string_value_raises_type_error():
 
         class _Bad(StrEnum):
             X = 1
+
+
+def test_str_returns_value():
+    """str(member) должен возвращать значение, а не 'ClassName.MEMBER'.
+
+    В stdlib 3.11+ это обеспечивает ReprEnum → str.__str__.
+    """
+    assert str(_SampleEnum.FOO_BAR) == "foo_bar"
+    assert str(_SampleEnum.BAZ) == "baz"
+
+
+def test_repr_is_standard_enum_repr():
+    """repr(member) должен быть стандартным Enum repr."""
+    assert repr(_SampleEnum.FOO_BAR) == "<_SampleEnum.FOO_BAR: 'foo_bar'>"
+
+
+def test_format_returns_value():
+    """format(member) и f-строки должны возвращать значение."""
+    assert format(_SampleEnum.FOO_BAR) == "foo_bar"
+    assert f"{_SampleEnum.BAZ}" == "baz"

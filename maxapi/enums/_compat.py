@@ -20,7 +20,15 @@ else:
     from enum import Enum
 
     class StrEnum(str, Enum):  # type: ignore[no-redef]
-        """Backport StrEnum для Python 3.10."""
+        """Backport ``enum.StrEnum`` для Python 3.10.
+
+        Воспроизводит поведение stdlib 3.11+:
+        * ``_generate_next_value_`` → ``name.lower()``
+        * ``__new__`` отклоняет нестроковые значения (``TypeError``)
+        * ``__str__`` возвращает значение, а не ``ClassName.MEMBER``
+          (в 3.11+ это обеспечивает ``ReprEnum``; здесь — явный override)
+        * ``__repr__`` — стандартный ``Enum.__repr__``
+        """
 
         @staticmethod
         def _generate_next_value_(
@@ -38,6 +46,15 @@ else:
             member = str.__new__(cls, value)
             member._value_ = value
             return member
+
+        def __str__(self) -> str:
+            """Возвращает значение, как ``str.__str__``.
+
+            В Python 3.10 ``Enum.__str__`` возвращает ``'ClassName.MEMBER'``.
+            Stdlib ``StrEnum`` (3.11+) наследует ``ReprEnum``, который
+            делегирует ``__str__`` миксину (``str``), возвращая значение.
+            """
+            return self.value
 
 
 __all__ = ["StrEnum"]
