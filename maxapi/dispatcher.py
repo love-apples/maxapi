@@ -4,8 +4,9 @@ import asyncio
 import functools
 import warnings
 from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
+from collections import OrderedDict
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 from warnings import warn
 
 from aiohttp import ClientConnectorError
@@ -36,6 +37,7 @@ if TYPE_CHECKING:
 
 CONNECTION_RETRY_DELAY = 30
 GET_UPDATES_RETRY_DELAY = 5
+CONTEXTS_MAX_SIZE = 10_000
 
 
 class Dispatcher(BotMixin):
@@ -72,7 +74,10 @@ class Dispatcher(BotMixin):
         self.storage_kwargs = storage_kwargs
 
         self.event_handlers: list[Handler] = []
-        self.contexts: dict[tuple[int | None, int | None], BaseContext] = {}
+        self.handlers_by_type: dict[UpdateType, list[Handler]] | None = None
+        self.contexts: OrderedDict[
+            tuple[int | None, int | None], BaseContext
+        ] = OrderedDict()
         self.routers: list[Router | Dispatcher] = []
         self.filters: list[MagicFilter] = []
         self.base_filters: list[BaseFilter] = []
@@ -82,6 +87,21 @@ class Dispatcher(BotMixin):
         self.on_started_func: Callable | None = None
         self.polling = False
         self.use_create_task = use_create_task
+        self._cached_router_entries: (
+            list[
+                tuple[
+                    Router | Dispatcher,
+                    list[BaseMiddleware],
+                    list[MagicFilter],
+                    list[BaseFilter],
+                ]
+            ]
+            | None
+        ) = None
+        self._global_mw_chain: (
+            Callable[[Any, dict[str, Any]], Awaitable[Any]] | None
+        ) = None
+        self._background_tasks: set[asyncio.Task] = set()
 
         self.message_created = Event(
             update_type=UpdateType.MESSAGE_CREATED, router=self
@@ -139,16 +159,20 @@ class Dispatcher(BotMixin):
         Проверяет и логирует информацию о боте.
         """
 
-        me = await self._ensure_bot().get_me()
+        bot = self._ensure_bot()
+        me = await bot.get_me()
 
-        self._ensure_bot()._me = me  # noqa: SLF001
+        bot.me = me
 
         logger_dp.info(
-            f"Бот: @{me.username} first_name={me.first_name} id={me.user_id}"
+            "Бот: @%s first_name=%s id=%s",
+            me.username,
+            me.first_name,
+            me.user_id,
         )
 
+    @staticmethod
     def build_middleware_chain(
-        self,
         middlewares: list[BaseMiddleware],
         handler: Callable[[Any, dict[str, Any]], Awaitable[Any]],
     ) -> Callable[[Any, dict[str, Any]], Awaitable[Any]]:
@@ -228,11 +252,15 @@ class Dispatcher(BotMixin):
         self.routers += [self]
         self._prepare_handlers(bot)
 
+        self._global_mw_chain = self.build_middleware_chain(
+            self.middlewares, self._process_event
+        )
+
         if self.on_started_func:
             await self.on_started_func()
 
     def _prepare_handlers(self, bot: Bot) -> None:
-        """Подготовить обработчики событий."""
+        """Подготовить обработчики событий и построить кеши."""
 
         handlers_count = 0
 
@@ -240,13 +268,29 @@ class Dispatcher(BotMixin):
             self.routers, warn_duplicates=True
         ):
             router.bot = bot
+            router.handlers_by_type = {}
 
             for handler in router.event_handlers:
                 handlers_count += 1
                 extract_commands(handler, bot)
 
+                handler.func_args = frozenset(
+                    handler.func_event.__annotations__,
+                )
+                handler.mw_chain = self.build_middleware_chain(
+                    handler.middlewares,
+                    functools.partial(self.call_handler, handler),
+                )
+                router.handlers_by_type.setdefault(
+                    handler.update_type, []
+                ).append(handler)
+
+        self._cached_router_entries = list(
+            self._iter_unique_routers(self.routers)
+        )
+
         logger_dp.info(
-            f"Зарегистрировано {handlers_count} обработчиков событий"
+            "Зарегистрировано %d обработчиков событий", handlers_count
         )
 
     @staticmethod
@@ -280,15 +324,22 @@ class Dispatcher(BotMixin):
         """
 
         key = (chat_id, user_id)
-        if key in self.contexts:
-            return self.contexts[key]
+        ctx = self.contexts.get(key)
+        if ctx is not None:
+            # Перемещаем в конец, чтобы LRU-вытеснение удаляло
+            # самые давно неиспользованные контексты
+            self.contexts.move_to_end(key)
+            return ctx
+
+        if len(self.contexts) >= CONTEXTS_MAX_SIZE:
+            self.contexts.popitem(last=False)
 
         new_ctx = self.storage(chat_id, user_id, **self.storage_kwargs)
         self.contexts[key] = new_ctx
         return new_ctx
 
+    @staticmethod
     async def call_handler(
-        self,
         handler: Handler,
         event_object: UpdateType | dict[str, Any],
         data: dict[str, Any],
@@ -299,23 +350,21 @@ class Dispatcher(BotMixin):
         Args:
             handler: Handler.
             event_object: Объект события.
-            data: Данные для хендлера.
+            data: Уже отфильтрованные данные для хендлера.
 
         Returns:
             None
         """
 
-        func_args = handler.func_event.__annotations__.keys()
-        kwargs_filtered = {k: v for k, v in data.items() if k in func_args}
-
-        if kwargs_filtered:
-            await handler.func_event(event_object, **kwargs_filtered)
+        if data:
+            await handler.func_event(event_object, **data)
         else:
             await handler.func_event(event_object)
 
+    @staticmethod
     async def process_base_filters(
-        self, event: UpdateUnion, filters: list[BaseFilter]
-    ) -> dict[str, Any] | None | Literal[False]:
+        event: UpdateUnion, filters: list[BaseFilter]
+    ) -> dict[str, Any] | None:
         """
         Асинхронно применяет фильтры к событию.
 
@@ -324,11 +373,11 @@ class Dispatcher(BotMixin):
             filters (List[BaseFilter]): Список фильтров.
 
         Returns:
-            Optional[Dict[str, Any]] | Literal[False]: Словарь с
-                результатом или False.
+            dict[str, Any] | None: Словарь с результатом или None,
+                если фильтр не прошёл.
         """
 
-        data = {}
+        data: dict[str, Any] = {}
 
         for _filter in filters:
             result = await _filter(event)
@@ -337,7 +386,7 @@ class Dispatcher(BotMixin):
                 data.update(result)
 
             elif not result:
-                return result
+                return None
 
         return data
 
@@ -375,27 +424,26 @@ class Dispatcher(BotMixin):
             Кортеж (роутер, middleware, MagicFilter, BaseFilter) с накопленными
             значениями от всех родителей.
         """
-        parent_middlewares = parent_middlewares or []
-        parent_filters = parent_filters or []
-        parent_base_filters = parent_base_filters or []
-        path = path if path is not None else set()
+        middlewares = parent_middlewares or []
+        filters = parent_filters or []
+        base_filters = parent_base_filters or []
+
+        if path is None:
+            path = set()
 
         for router in routers:
             router_key = id(router)
             if router_key in path:
                 continue
 
+            accumulated_middlewares: list[BaseMiddleware]
             if router is self:
-                accumulated_middlewares = parent_middlewares
+                accumulated_middlewares = middlewares
             else:
-                accumulated_middlewares = (
-                    parent_middlewares + router.middlewares
-                )
+                accumulated_middlewares = middlewares + router.middlewares
 
-            accumulated_filters = parent_filters + router.filters
-            accumulated_base_filters = (
-                parent_base_filters + router.base_filters
-            )
+            accumulated_filters = filters + router.filters
+            accumulated_base_filters = base_filters + router.base_filters
 
             yield (
                 router,
@@ -493,7 +541,7 @@ class Dispatcher(BotMixin):
         event: UpdateUnion,
         filters: list[MagicFilter],
         base_filters: list[BaseFilter],
-    ) -> dict[str, Any] | Literal[False]:
+    ) -> dict[str, Any] | None:
         """
         Проверяет накопленные фильтры роутера для события.
 
@@ -503,25 +551,22 @@ class Dispatcher(BotMixin):
             base_filters: Накопленные BaseFilter.
 
         Returns:
-            Dict[str, Any] | Literal[False]: Словарь с данными или False,
+            dict[str, Any] | None: Словарь с данными или None,
                 если фильтры не прошли.
         """
         if filters and not filter_attrs(event, *filters):
-            return False
+            return None
 
         if base_filters:
-            result = await self.process_base_filters(
+            return await self.process_base_filters(
                 event=event, filters=base_filters
             )
-            if isinstance(result, dict):
-                return result
-            if not result:
-                return False
 
         return {}
 
+    @staticmethod
     def _find_matching_handlers(
-        self, router: Router | Dispatcher, event_type: UpdateType
+        router: Router | Dispatcher, event_type: UpdateType
     ) -> list[Handler]:
         """
         Находит обработчики, соответствующие типу события в роутере.
@@ -533,6 +578,10 @@ class Dispatcher(BotMixin):
         Returns:
             List[Handler]: Список подходящих обработчиков.
         """
+        index = router.handlers_by_type
+        if index is not None:
+            return index.get(event_type, [])
+
         return [
             handler
             for handler in router.event_handlers
@@ -544,7 +593,7 @@ class Dispatcher(BotMixin):
         handler: Handler,
         event: UpdateUnion,
         current_state: Any | None,
-    ) -> dict[str, Any] | None | Literal[False]:
+    ) -> dict[str, Any] | None:
         """
         Проверяет, подходит ли обработчик для события (фильтры, состояние).
 
@@ -554,25 +603,17 @@ class Dispatcher(BotMixin):
             current_state (Optional[Any]): Текущее состояние.
 
         Returns:
-            Optional[Dict[str, Any]] | Literal[False]: Словарь с данными
-                или False, если не подходит.
+            dict[str, Any] | None: Словарь с данными или None,
+                если не подходит.
         """
-        if handler.filters and not filter_attrs(event, *handler.filters):
-            return False
-
         if handler.states and current_state not in handler.states:
-            return False
+            return None
 
-        if handler.base_filters:
-            result = await self.process_base_filters(
-                event=event, filters=handler.base_filters
-            )
-            if isinstance(result, dict):
-                return result
-            if not result:
-                return False
-
-        return {}
+        return await self._check_router_filters(
+            event=event,
+            filters=handler.filters,
+            base_filters=handler.base_filters,
+        )
 
     async def _execute_handler(
         self,
@@ -603,13 +644,13 @@ class Dispatcher(BotMixin):
         Raises:
             HandlerException: При ошибке выполнения обработчика.
         """
-        func_args = handler.func_event.__annotations__.keys()
+        func_args = (
+            handler.func_args
+            or getattr(handler.func_event, "__annotations__", {}).keys()
+        )
         kwargs_filtered = {k: v for k, v in data.items() if k in func_args}
 
-        if "context" not in kwargs_filtered and "context" in data:
-            kwargs_filtered["context"] = data["context"]
-
-        handler_chain = self.build_middleware_chain(
+        handler_chain = handler.mw_chain or self.build_middleware_chain(
             handler_middlewares,
             functools.partial(self.call_handler, handler),
         )
@@ -635,17 +676,249 @@ class Dispatcher(BotMixin):
         """
         Специальный метод для обработки сырых ответов API.
         """
-        for router, *_ in self._iter_unique_routers(self.routers):
+        entries = (
+            self._cached_router_entries
+            if self._cached_router_entries is not None
+            else self._iter_unique_routers(self.routers)
+        )
+        for router, *_ in entries:
             matching_handlers = self._find_matching_handlers(
-                router, event_type
+                router=router,
+                event_type=event_type,
             )
             for handler in matching_handlers:
                 try:
-                    await self.call_handler(handler, raw_data, {})
+                    await self.call_handler(
+                        handler=handler,
+                        event_object=raw_data,
+                        data={},
+                    )
                 except Exception as e:  # noqa: PERF203
                     logger_dp.exception(
-                        f"Ошибка в обработчике RAW_API_RESPONSE: {e}"
+                        "Ошибка в обработчике RAW_API_RESPONSE: %r", e
                     )
+
+    async def _run_router_handlers(
+        self,
+        event: UpdateUnion,
+        data: dict[str, Any],
+        matching_handlers: list[Handler],
+        memory_context: BaseContext,
+        current_state: Any | None,
+        router_id: Any,
+        process_info: str,
+    ) -> bool:
+        """
+        Перебирает обработчики роутера и выполняет первый подходящий.
+
+        Returns:
+            bool: True если обработчик был выполнен.
+        """
+        for handler in matching_handlers:
+            handler_match_result = await self._check_handler_match(
+                handler=handler,
+                event=event,
+                current_state=current_state,
+            )
+            if handler_match_result is None:
+                continue
+            data.update(handler_match_result)
+            await self._execute_handler(
+                handler=handler,
+                event=event,
+                data=data,
+                handler_middlewares=handler.middlewares,
+                memory_context=memory_context,
+                current_state=current_state,
+                router_id=router_id,
+                process_info=process_info,
+            )
+            logger_dp.info(
+                "Обработано: router_id: %s | %s", router_id, process_info
+            )
+            return True
+        return False
+
+    async def _invoke_router_handlers(
+        self,
+        event: UpdateUnion,
+        handler_data: dict[str, Any],
+        *,
+        matching_handlers: list[Handler],
+        memory_context: BaseContext,
+        current_state: Any | None,
+        router_id: Any,
+        process_info: str,
+    ) -> None:
+        """
+        Endpoint middleware-цепочки роутера: вызывает подходящий обработчик.
+
+        Args:
+            event (UpdateUnion): Событие.
+            handler_data (dict): Данные для обработчика.
+            matching_handlers: Обработчики роутера для данного типа события.
+            memory_context: Контекст памяти.
+            current_state: Текущее состояние.
+            router_id: Идентификатор роутера для логов.
+            process_info: Информация о процессе для логов.
+        """
+        if await self._run_router_handlers(
+            event=event,
+            data=handler_data,
+            matching_handlers=matching_handlers,
+            memory_context=memory_context,
+            current_state=current_state,
+            router_id=router_id,
+            process_info=process_info,
+        ):
+            handler_data["_handled"] = True
+
+    async def _dispatch_to_router(
+        self,
+        event_object: UpdateUnion,
+        data: dict[str, Any],
+        matching_handlers: list[Handler],
+        router_middlewares: list[BaseMiddleware],
+        memory_context: BaseContext,
+        current_state: Any | None,
+        router_id: Any,
+        process_info: str,
+    ) -> bool:
+        """
+        Диспатчит событие через middleware одного роутера.
+
+        Returns:
+            bool: True если событие было обработано.
+        """
+        data["_handled"] = False
+
+        process_fn = functools.partial(
+            self._invoke_router_handlers,
+            matching_handlers=matching_handlers,
+            memory_context=memory_context,
+            current_state=current_state,
+            router_id=router_id,
+            process_info=process_info,
+        )
+
+        if router_middlewares:
+            chain = self.build_middleware_chain(router_middlewares, process_fn)
+            await chain(event_object, data)
+        else:
+            await process_fn(event_object, data)
+
+        return data.pop("_handled", False)
+
+    async def _iter_and_dispatch_routers(
+        self,
+        event_object: UpdateUnion,
+        data: dict[str, Any],
+        memory_context: BaseContext,
+        current_state: Any | None,
+        process_info: str,
+    ) -> tuple[Any, bool]:
+        """
+        Перебирает все роутеры и диспетчеризует событие.
+
+        Returns:
+            tuple[Any, bool]: (router_id, is_handled)
+        """
+        router_id = None
+
+        entries = (
+            self._cached_router_entries
+            if self._cached_router_entries is not None
+            else self._iter_unique_routers(self.routers)
+        )
+
+        for (
+            router,
+            router_middlewares,
+            router_filters,
+            router_base_filters,
+        ) in entries:
+            router_id = router.router_id or id(router)
+
+            router_filter_result = await self._check_router_filters(
+                event=event_object,
+                filters=router_filters,
+                base_filters=router_base_filters,
+            )
+            if router_filter_result is None:
+                continue
+            data.update(router_filter_result)
+
+            matching_handlers = self._find_matching_handlers(
+                router=router,
+                event_type=event_object.update_type,
+            )
+            if not matching_handlers:
+                continue
+
+            if await self._dispatch_to_router(
+                event_object=event_object,
+                data=data,
+                matching_handlers=matching_handlers,
+                router_middlewares=router_middlewares,
+                memory_context=memory_context,
+                current_state=current_state,
+                router_id=router_id,
+                process_info=process_info,
+            ):
+                return router_id, True
+
+        return router_id, False
+
+    def _on_background_task_done(self, task: asyncio.Task) -> None:
+        """Callback завершения фоновой задачи (use_create_task=True).
+
+        Удаляет задачу из пула и логирует необработанное исключение, если оно
+        есть. Без явного вызова ``task.exception()`` Python при сборке мусора
+        выдаст предупреждение *"Task exception was never retrieved"*.
+        """
+        self._background_tasks.discard(task)
+        if not task.cancelled():
+            exc = task.exception()
+            if exc is not None:
+                logger_dp.exception(
+                    "Необработанное исключение в фоновой задаче handle(): %r",
+                    exc,
+                )
+
+    @staticmethod
+    def _get_middleware_title(chain: Any) -> str:
+        """Определяет имя middleware для диагностики."""
+        if hasattr(chain, "func"):
+            return str(chain.func.__class__.__name__)
+        return str(getattr(chain, "__name__", chain.__class__.__name__))
+
+    async def _process_event(
+        self,
+        event_object: UpdateUnion,
+        data: dict[str, Any],
+    ) -> None:
+        """
+        Endpoint глобальной middleware-цепочки: диспатчит событие
+        по роутерам.
+
+        Args:
+            event_object (UpdateUnion): Событие.
+            data (dict): Данные от middleware-цепочки,
+                содержащие ``_memory_context``, ``_current_state``
+                и ``_process_info``.
+        """
+        memory_context = data["_memory_context"]
+        data["context"] = memory_context
+
+        router_id, is_handled = await self._iter_and_dispatch_routers(
+            event_object=event_object,
+            data=data,
+            memory_context=memory_context,
+            current_state=data["_current_state"],
+            process_info=data["_process_info"],
+        )
+        data["_router_id"] = router_id
+        data["_is_handled"] = is_handled
 
     async def handle(self, event_object: UpdateUnion) -> None:
         """
@@ -662,97 +935,24 @@ class Dispatcher(BotMixin):
             ids = event_object.get_ids()
             memory_context = self.__get_context(*ids)
             current_state = await memory_context.get_state()
-            kwargs = {"context": memory_context}
 
             process_info = (
                 f"{event_object.update_type} | "
                 f"chat_id: {ids[0]}, user_id: {ids[1]}"
             )
 
-            is_handled = False
+            kwargs: dict[str, Any] = {
+                "context": memory_context,
+                "_memory_context": memory_context,
+                "_current_state": current_state,
+                "_process_info": process_info,
+            }
 
-            async def _process_event(
-                _: UpdateUnion, data: dict[str, Any]
-            ) -> None:
-                nonlocal router_id, is_handled, memory_context, current_state
-
-                data["context"] = memory_context
-
-                for index, (
-                    router,
-                    router_middlewares,
-                    router_filters,
-                    router_base_filters,
-                ) in enumerate(self._iter_unique_routers(self.routers)):
-                    if is_handled:
-                        break
-
-                    router_id = router.router_id or index
-
-                    router_filter_result = await self._check_router_filters(
-                        event_object, router_filters, router_base_filters
-                    )
-
-                    if router_filter_result is False:
-                        continue
-
-                    if isinstance(router_filter_result, dict):
-                        data.update(router_filter_result)
-
-                    matching_handlers = self._find_matching_handlers(
-                        router, event_object.update_type
-                    )
-
-                    if not matching_handlers:
-                        continue
-
-                    async def _process_handlers(
-                        event: UpdateUnion, handler_data: dict[str, Any]
-                    ) -> None:
-                        nonlocal is_handled
-
-                        for handler in matching_handlers:
-                            handler_match_result = (
-                                await self._check_handler_match(
-                                    handler, event, current_state
-                                )
-                            )
-
-                            if handler_match_result is False:
-                                continue
-
-                            if isinstance(handler_match_result, dict):
-                                handler_data.update(handler_match_result)
-
-                            await self._execute_handler(
-                                handler=handler,
-                                event=event,
-                                data=handler_data,
-                                handler_middlewares=handler.middlewares,
-                                memory_context=memory_context,
-                                current_state=current_state,
-                                router_id=router_id,
-                                process_info=process_info,
-                            )
-
-                            logger_dp.info(
-                                f"Обработано: "
-                                f"router_id: {router_id} | {process_info}"
-                            )
-
-                            is_handled = True
-                            break
-
-                    if router_middlewares:
-                        router_chain = self.build_middleware_chain(
-                            router_middlewares, _process_handlers
-                        )
-                        await router_chain(event_object, data)
-                    else:
-                        await _process_handlers(event_object, data)
-
-            global_chain = self.build_middleware_chain(
-                self.middlewares, _process_event
+            global_chain = (
+                self._global_mw_chain
+                or self.build_middleware_chain(
+                    self.middlewares, self._process_event
+                )
             )
 
             try:
@@ -760,18 +960,9 @@ class Dispatcher(BotMixin):
             except Exception as e:
                 mem_data = await memory_context.get_data()
 
-                if hasattr(global_chain, "func"):
-                    middleware_title = global_chain.func.__class__.__name__
-                else:
-                    middleware_title = getattr(
-                        global_chain,
-                        "__name__",
-                        global_chain.__class__.__name__,
-                    )
-
                 raise MiddlewareException(
-                    middleware_title=middleware_title,
-                    router_id=router_id,
+                    middleware_title=self._get_middleware_title(global_chain),
+                    router_id=kwargs.get("_router_id", router_id),
                     process_info=process_info,
                     memory_context={
                         "data": mem_data,
@@ -780,15 +971,108 @@ class Dispatcher(BotMixin):
                     cause=e,
                 ) from e
 
+            router_id = kwargs.get("_router_id")
+            is_handled = kwargs.get("_is_handled", False)
+
             if not is_handled:
                 logger_dp.info(
-                    f"Проигнорировано: router_id: {router_id} | {process_info}"
+                    "Проигнорировано: router_id: %s | %s",
+                    router_id,
+                    process_info,
                 )
 
         except Exception as e:
             logger_dp.exception(
-                f"Ошибка при обработке события: router_id: "
-                f"{router_id} | {process_info} | {e} "
+                "Ошибка при обработке события: router_id: %s | %s | %r",
+                router_id,
+                process_info,
+                e,
+            )
+
+    async def _fetch_updates_once(self, bot: Bot) -> dict | None:
+        """
+        Делает один запрос get_updates.
+
+        Returns:
+            dict | None: словарь событий или None при recoverable-ошибке.
+
+        Raises:
+            InvalidToken: при неверном токене бота.
+        """
+        try:
+            return await bot.get_updates(marker=bot.marker_updates)
+        except AsyncioTimeoutError:
+            return None
+        except (MaxConnection, ClientConnectorError) as e:
+            logger_dp.warning(
+                "Ошибка подключения при получении обновлений: %r, "
+                "жду %s секунд",
+                e,
+                CONNECTION_RETRY_DELAY,
+            )
+            await asyncio.sleep(CONNECTION_RETRY_DELAY)
+            return None
+        except InvalidToken:
+            logger_dp.error("Неверный токен! Останавливаю polling")
+            self.polling = False
+            raise
+        except MaxApiError as e:
+            logger_dp.info(
+                "Ошибка при получении обновлений: %r, жду %s секунд",
+                e,
+                GET_UPDATES_RETRY_DELAY,
+            )
+            await asyncio.sleep(GET_UPDATES_RETRY_DELAY)
+            return None
+        except Exception as e:
+            logger_dp.error(
+                "Неожиданная ошибка при получении обновлений: %r",
+                e,
+            )
+            await asyncio.sleep(GET_UPDATES_RETRY_DELAY)
+            return None
+
+    async def _dispatch_fetched_events(
+        self,
+        events: dict,
+        current_timestamp: int,
+        *,
+        skip_updates: bool,
+    ) -> None:
+        """Обрабатывает полученные от API события."""
+        try:
+            bot = self._ensure_bot()
+            bot.marker_updates = events.get("marker")
+
+            processed_events = await process_update_request(
+                events=events, bot=bot
+            )
+
+            for event in processed_events:
+                if skip_updates and event.timestamp < current_timestamp:
+                    logger_dp.info(
+                        "Пропуск события от %s: %s",
+                        from_ms(event.timestamp),
+                        event.update_type,
+                    )
+                    continue
+
+                if self.use_create_task:
+                    task = asyncio.create_task(self.handle(event))
+                    self._background_tasks.add(task)
+                    task.add_done_callback(self._on_background_task_done)
+                else:
+                    await self.handle(event)
+
+        except ClientConnectorError:
+            logger_dp.error(
+                "Ошибка подключения, жду %s секунд", CONNECTION_RETRY_DELAY
+            )
+            await asyncio.sleep(CONNECTION_RETRY_DELAY)
+        except Exception as e:
+            logger_dp.error(
+                "Общая ошибка при обработке событий: %r",
+                e,
             )
 
     async def start_polling(
@@ -801,7 +1085,6 @@ class Dispatcher(BotMixin):
             bot (Bot): Экземпляр бота.
             skip_updates (bool): Флаг, отвечающий за обработку старых событий.
         """
-
         self.polling = True
 
         await self.__ready(bot)
@@ -809,79 +1092,33 @@ class Dispatcher(BotMixin):
         current_timestamp = to_ms(datetime.now())
 
         while self.polling:
-            try:
-                events: dict = await self._ensure_bot().get_updates(
-                    marker=self._ensure_bot().marker_updates
-                )
-            except AsyncioTimeoutError:
+            events = await self._fetch_updates_once(bot)
+            if events is None:
                 continue
-            except (MaxConnection, ClientConnectorError) as e:
-                logger_dp.warning(
-                    f"Ошибка подключения при получении обновлений: {e}, "
-                    f"жду {CONNECTION_RETRY_DELAY} секунд"
-                )
-                await asyncio.sleep(CONNECTION_RETRY_DELAY)
-                continue
-            except InvalidToken:
-                logger_dp.error("Неверный токен! Останавливаю polling")
-                self.polling = False
-                raise
-            except MaxApiError as e:
-                logger_dp.info(
-                    f"Ошибка при получении обновлений: {e}, "
-                    f"жду {GET_UPDATES_RETRY_DELAY} секунд"
-                )
-                await asyncio.sleep(GET_UPDATES_RETRY_DELAY)
-                continue
-            except Exception as e:
-                logger_dp.error(
-                    f"Неожиданная ошибка при получении обновлений: "
-                    f"{e.__class__.__name__}: {e}"
-                )
-                await asyncio.sleep(GET_UPDATES_RETRY_DELAY)
-                continue
-
-            try:
-                self._ensure_bot().marker_updates = events.get("marker")
-
-                processed_events = await process_update_request(
-                    events=events, bot=self._ensure_bot()
-                )
-
-                for event in processed_events:
-                    if skip_updates and event.timestamp < current_timestamp:
-                        logger_dp.info(
-                            f"Пропуск события от {from_ms(event.timestamp)}: "
-                            f"{event.update_type}"
-                        )
-                        continue
-
-                    if self.use_create_task:
-                        asyncio.create_task(self.handle(event))
-
-                    else:
-                        await self.handle(event)
-
-            except ClientConnectorError:
-                logger_dp.error(
-                    f"Ошибка подключения, жду {CONNECTION_RETRY_DELAY} секунд"
-                )
-                await asyncio.sleep(CONNECTION_RETRY_DELAY)
-            except Exception as e:
-                logger_dp.error(
-                    f"Общая ошибка при обработке событий: {e.__class__} - {e}"
-                )
+            await self._dispatch_fetched_events(
+                events, current_timestamp, skip_updates=skip_updates
+            )
 
     async def stop_polling(self) -> None:
         """
         Останавливает цикл получения обновлений (long polling).
 
-        Этот метод устанавливает флаг polling в False, что приводит к
-        завершению цикла в методе start_polling.
+        Дожидается завершения всех фоновых задач (use_create_task=True),
+        запущенных до момента остановки.
         """
         if self.polling:
             self.polling = False
             logger_dp.info("Polling остановлен")
+
+        if self._background_tasks:
+            logger_dp.info(
+                "Ожидаю завершения %d фоновых задач...",
+                len(self._background_tasks),
+            )
+            await asyncio.gather(
+                *self._background_tasks, return_exceptions=True
+            )
+            logger_dp.info("Все фоновые задачи завершены")
 
     async def startup(self, bot: Bot) -> None:
         """

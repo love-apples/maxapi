@@ -233,6 +233,10 @@ class Bot(BaseConnection):
 
         return self._me
 
+    @me.setter
+    def me(self, value: User | None) -> None:
+        self._me = value
+
     def _resolve_disable_link_preview(
         self, *, disable_link_preview: bool | None
     ) -> bool | None:

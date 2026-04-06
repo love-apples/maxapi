@@ -1,14 +1,22 @@
-"""Тесты для maxapi/utils/updates.py — функция enrich_event.
+"""Тесты для maxapi/utils/updates.py.
 
-Покрываются все ветки логики: auto_requests=False, каждый тип события,
-is_chat_unavailable для DialogRemoved и BotRemoved-из-канала.
+Покрывает:
+  - _resolve_chat   : все ветки разрешения chat_id
+  - _resolve_from_user : все ветки определения отправителя
+  - _inject_bot     : внедрение ссылки на бота
+  - enrich_event    : сквозной пайплайн + auto_requests=False
 """
 
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from maxapi.enums.chat_type import ChatType
-from maxapi.utils.updates import enrich_event
+from maxapi.utils.updates import (
+    _inject_bot,
+    _resolve_chat,
+    _resolve_from_user,
+    enrich_event,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -21,272 +29,387 @@ def _make_chat(chat_type: ChatType = ChatType.CHAT):
     return chat
 
 
-# ---------------------------------------------------------------------------
-# auto_requests=False — ранний выход без каких-либо API-вызовов
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# _resolve_chat
+# ===========================================================================
 
 
-async def test_enrich_event_auto_requests_false_returns_unchanged(
-    bot, fixture_message_created
-):
-    bot.auto_requests = False
-    result = await enrich_event(fixture_message_created, bot)
-    assert result is fixture_message_created
+class TestResolveChat:
+    """Юнит-тесты для _resolve_chat."""
+
+    async def test_bot_removed_never_fetches_chat(
+        self, bot, fixture_bot_removed
+    ):
+        """
+        BotRemoved всегда пропускает загрузку чата,
+        независимо от is_channel.
+        """
+        bot.get_chat_by_id = AsyncMock()
+
+        for is_channel in (True, False):
+            fixture_bot_removed.is_channel = is_channel
+            fixture_bot_removed.chat = None
+            await _resolve_chat(fixture_bot_removed, bot)
+
+        bot.get_chat_by_id.assert_not_called()
+        assert fixture_bot_removed.chat is None
+
+    async def test_dialog_removed_never_fetches_chat(
+        self, bot, fixture_dialog_removed
+    ):
+        """DialogRemoved всегда пропускает загрузку чата."""
+        bot.get_chat_by_id = AsyncMock()
+
+        await _resolve_chat(fixture_dialog_removed, bot)
+
+        bot.get_chat_by_id.assert_not_called()
+        assert fixture_dialog_removed.chat is None
+
+    async def test_event_with_top_level_chat_id_fetches_chat(
+        self, bot, fixture_bot_started
+    ):
+        """События с chat_id на верхнем уровне загружают чат по нему."""
+        fake_chat = _make_chat()
+        bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
+
+        await _resolve_chat(fixture_bot_started, bot)
+
+        bot.get_chat_by_id.assert_awaited_once_with(
+            fixture_bot_started.chat_id
+        )
+        assert fixture_bot_started.chat is fake_chat
+
+    async def test_message_created_falls_back_to_recipient_chat_id(
+        self, bot, fixture_message_created
+    ):
+        """MessageCreated не имеет top-level chat_id — берётся из recipient."""
+        fake_chat = _make_chat()
+        bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
+
+        await _resolve_chat(fixture_message_created, bot)
+
+        expected_chat_id = fixture_message_created.message.recipient.chat_id
+        bot.get_chat_by_id.assert_awaited_once_with(expected_chat_id)
+        assert fixture_message_created.chat is fake_chat
+
+    async def test_message_created_no_chat_id_anywhere_skips_fetch(
+        self, bot, fixture_message_created
+    ):
+        """Если recipient.chat_id = None — get_chat_by_id не вызывается."""
+        fixture_message_created.message.recipient.chat_id = None
+        bot.get_chat_by_id = AsyncMock()
+
+        await _resolve_chat(fixture_message_created, bot)
+
+        bot.get_chat_by_id.assert_not_called()
+        assert fixture_message_created.chat is None
+
+    async def test_message_edited_falls_back_to_recipient_chat_id(
+        self, bot, fixture_message_edited
+    ):
+        """MessageEdited аналогично MessageCreated."""
+        fake_chat = _make_chat()
+        bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
+
+        await _resolve_chat(fixture_message_edited, bot)
+
+        expected_chat_id = fixture_message_edited.message.recipient.chat_id
+        bot.get_chat_by_id.assert_awaited_once_with(expected_chat_id)
+
+    async def test_message_callback_falls_back_to_recipient_chat_id(
+        self, bot, fixture_message_callback
+    ):
+        """MessageCallback берёт chat_id из message.recipient."""
+        fake_chat = _make_chat()
+        bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
+
+        await _resolve_chat(fixture_message_callback, bot)
+
+        expected_chat_id = fixture_message_callback.message.recipient.chat_id
+        bot.get_chat_by_id.assert_awaited_once_with(expected_chat_id)
+
+    async def test_message_callback_none_message_skips_fetch(
+        self, bot, fixture_message_callback
+    ):
+        """Если message=None — get_chat_by_id не вызывается."""
+        fixture_message_callback.message = None
+        bot.get_chat_by_id = AsyncMock()
+
+        await _resolve_chat(fixture_message_callback, bot)
+
+        bot.get_chat_by_id.assert_not_called()
 
 
-# ---------------------------------------------------------------------------
-# DialogRemoved — chat=None, from_user=user, get_chat_by_id НЕ вызывается
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# _resolve_from_user
+# ===========================================================================
 
 
-async def test_enrich_event_dialog_removed_sets_from_user(
-    bot, fixture_dialog_removed
-):
-    bot.get_chat_by_id = AsyncMock()
+class TestResolveFromUser:
+    """Юнит-тесты для _resolve_from_user."""
 
-    result = await enrich_event(fixture_dialog_removed, bot)
+    async def test_message_created_sets_sender(
+        self, bot, fixture_message_created
+    ):
+        await _resolve_from_user(fixture_message_created, bot)
+        assert (
+            fixture_message_created.from_user
+            is fixture_message_created.message.sender
+        )
 
-    bot.get_chat_by_id.assert_not_called()
-    assert result.chat is None
-    assert result.from_user is fixture_dialog_removed.user
+    async def test_message_edited_sets_sender(
+        self, bot, fixture_message_edited
+    ):
+        await _resolve_from_user(fixture_message_edited, bot)
+        assert (
+            fixture_message_edited.from_user
+            is fixture_message_edited.message.sender
+        )
 
+    async def test_message_callback_sets_callback_user(
+        self, bot, fixture_message_callback
+    ):
+        await _resolve_from_user(fixture_message_callback, bot)
+        assert (
+            fixture_message_callback.from_user
+            is fixture_message_callback.callback.user
+        )
 
-# ---------------------------------------------------------------------------
-# BotRemoved из канала — chat=None, get_chat_by_id НЕ вызывается
-# ---------------------------------------------------------------------------
+    async def test_message_removed_chat_type_fetches_member(
+        self, bot, fixture_message_removed
+    ):
+        """CHAT-тип — from_user берётся через get_chat_member(user_id)."""
+        fake_chat = _make_chat(ChatType.CHAT)
+        fake_member = MagicMock()
+        fixture_message_removed.chat = fake_chat
+        bot.get_chat_member = AsyncMock(return_value=fake_member)
 
+        await _resolve_from_user(fixture_message_removed, bot)
 
-async def test_enrich_event_bot_removed_from_channel_chat_is_none(
-    bot, fixture_bot_removed
-):
-    fixture_bot_removed.is_channel = True
-    bot.get_chat_by_id = AsyncMock()
+        bot.get_chat_member.assert_awaited_once_with(
+            chat_id=fixture_message_removed.chat_id,
+            user_id=fixture_message_removed.user_id,
+        )
+        assert fixture_message_removed.from_user is fake_member
 
-    result = await enrich_event(fixture_bot_removed, bot)
+    async def test_message_removed_dialog_type_sets_chat(
+        self, bot, fixture_message_removed
+    ):
+        """DIALOG-тип — from_user = chat."""
+        fake_chat = _make_chat(ChatType.DIALOG)
+        fixture_message_removed.chat = fake_chat
+        bot.get_chat_member = AsyncMock()
 
-    bot.get_chat_by_id.assert_not_called()
-    assert result.chat is None
+        await _resolve_from_user(fixture_message_removed, bot)
 
+        bot.get_chat_member.assert_not_called()
+        assert fixture_message_removed.from_user is fake_chat
 
-# ---------------------------------------------------------------------------
-# BotRemoved НЕ из канала — get_chat_by_id вызывается
-# ---------------------------------------------------------------------------
+    async def test_message_removed_no_chat_skips_from_user(
+        self, bot, fixture_message_removed
+    ):
+        """Если chat=None — from_user не устанавливается."""
+        fixture_message_removed.chat = None
+        bot.get_chat_member = AsyncMock()
 
+        await _resolve_from_user(fixture_message_removed, bot)
 
-async def test_enrich_event_bot_removed_not_channel_fetches_chat(
-    bot, fixture_bot_removed
-):
-    fixture_bot_removed.is_channel = False
-    fake_chat = _make_chat()
-    bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
+        bot.get_chat_member.assert_not_called()
+        assert fixture_message_removed.from_user is None
 
-    result = await enrich_event(fixture_bot_removed, bot)
+    async def test_user_removed_with_admin_id_fetches_member(
+        self, bot, fixture_user_removed
+    ):
+        fake_member = MagicMock()
+        fixture_user_removed.admin_id = 9999
+        bot.get_chat_member = AsyncMock(return_value=fake_member)
 
-    bot.get_chat_by_id.assert_awaited_once_with(fixture_bot_removed.chat_id)
-    assert result.chat is fake_chat
-    assert result.from_user is fixture_bot_removed.user
+        await _resolve_from_user(fixture_user_removed, bot)
 
+        bot.get_chat_member.assert_awaited_once_with(
+            chat_id=fixture_user_removed.chat_id,
+            user_id=fixture_user_removed.admin_id,
+        )
+        assert fixture_user_removed.from_user is fake_member
 
-# ---------------------------------------------------------------------------
-# MessageCreated — from_user=sender, get_chat_by_id вызывается
-# ---------------------------------------------------------------------------
+    async def test_user_removed_without_admin_id_skips_member(
+        self, bot, fixture_user_removed
+    ):
+        fixture_user_removed.admin_id = None
+        bot.get_chat_member = AsyncMock()
 
+        await _resolve_from_user(fixture_user_removed, bot)
 
-async def test_enrich_event_message_created_sets_from_user_and_chat(
-    bot, fixture_message_created
-):
-    fake_chat = _make_chat(ChatType.DIALOG)
-    bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
+        bot.get_chat_member.assert_not_called()
+        assert fixture_user_removed.from_user is None
 
-    result = await enrich_event(fixture_message_created, bot)
-
-    assert result.from_user is fixture_message_created.message.sender
-    assert result.bot is bot
-
-
-async def test_enrich_event_message_created_skips_get_chat_if_already_set(
-    bot, fixture_message_created
-):
-    """Если chat уже выставлен на верхнем уровне, повторный запрос
-    для recipient не делается."""
-    existing_chat = _make_chat()
-    fixture_message_created.chat = existing_chat
-    # recipient.chat_id есть, но chat уже не None — второй вызов не нужен
-    bot.get_chat_by_id = AsyncMock(return_value=existing_chat)
-
-    await enrich_event(fixture_message_created, bot)
-
-    # get_chat_by_id вызывается только один раз (верхний блок chat_id)
-    assert bot.get_chat_by_id.await_count <= 1
-
-
-# ---------------------------------------------------------------------------
-# MessageEdited
-# ---------------------------------------------------------------------------
-
-
-async def test_enrich_event_message_edited_sets_from_user(
-    bot, fixture_message_edited
-):
-    fake_chat = _make_chat()
-    bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
-
-    result = await enrich_event(fixture_message_edited, bot)
-
-    assert result.from_user is fixture_message_edited.message.sender
-    assert result.bot is bot
-
-
-# ---------------------------------------------------------------------------
-# MessageCallback
-# ---------------------------------------------------------------------------
-
-
-async def test_enrich_event_message_callback_sets_from_user(
-    bot, fixture_message_callback
-):
-    fake_chat = _make_chat()
-    bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
-
-    result = await enrich_event(fixture_message_callback, bot)
-
-    assert result.from_user is fixture_message_callback.callback.user
-    assert result.bot is bot
-
-
-async def test_enrich_event_message_callback_none_message(
-    bot, fixture_message_callback
-):
-    """Если message=None — from_user всё равно берётся из callback.user."""
-    fixture_message_callback.message = None
-    bot.get_chat_by_id = AsyncMock()
-
-    result = await enrich_event(fixture_message_callback, bot)
-
-    assert result.from_user is fixture_message_callback.callback.user
-
-
-# ---------------------------------------------------------------------------
-# MessageRemoved — CHAT type → from_user из get_chat_member
-# ---------------------------------------------------------------------------
-
-
-async def test_enrich_event_message_removed_chat_type(
-    bot, fixture_message_removed
-):
-    fake_chat = _make_chat(ChatType.CHAT)
-    fake_member = MagicMock()
-    bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
-    bot.get_chat_member = AsyncMock(return_value=fake_member)
-
-    result = await enrich_event(fixture_message_removed, bot)
-
-    bot.get_chat_member.assert_awaited_once_with(
-        chat_id=fixture_message_removed.chat_id,
-        user_id=fixture_message_removed.user_id,
+    @pytest.mark.parametrize(
+        "fixture_name",
+        [
+            "fixture_user_added",
+            "fixture_bot_added",
+            "fixture_bot_removed",
+            "fixture_bot_started",
+            "fixture_bot_stopped",
+            "fixture_chat_title_changed",
+            "fixture_dialog_cleared",
+            "fixture_dialog_muted",
+            "fixture_dialog_unmuted",
+            "fixture_dialog_removed",
+        ],
     )
-    assert result.from_user is fake_member
+    async def test_events_with_user_attr_set_from_user(
+        self, request, bot, fixture_name
+    ):
+        """Все типы из _EVENTS_WITH_USER_ATTR получают from_user = user."""
+        event = request.getfixturevalue(fixture_name)
+        await _resolve_from_user(event, bot)
+        assert event.from_user is event.user
 
 
-# ---------------------------------------------------------------------------
-# MessageRemoved — DIALOG type → from_user = chat
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# _inject_bot
+# ===========================================================================
 
 
-async def test_enrich_event_message_removed_dialog_type(
-    bot, fixture_message_removed
-):
-    fake_chat = _make_chat(ChatType.DIALOG)
-    bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
-    bot.get_chat_member = AsyncMock()
+class TestInjectBot:
+    """Юнит-тесты для _inject_bot."""
 
-    result = await enrich_event(fixture_message_removed, bot)
+    def test_sets_bot_on_message(self, bot, fixture_message_created):
+        _inject_bot(fixture_message_created, bot)
+        assert fixture_message_created.message.bot is bot
 
-    bot.get_chat_member.assert_not_called()
-    assert result.from_user is fake_chat
+    def test_sets_bot_on_event(self, bot, fixture_bot_started):
+        _inject_bot(fixture_bot_started, bot)
+        assert fixture_bot_started.bot is bot
+
+    def test_sets_bot_on_attachment_with_bot_attr(
+        self, bot, fixture_message_created
+    ):
+        att_with_bot = MagicMock(spec=["bot"])
+        att_without_bot = MagicMock(spec=[])
+        fixture_message_created.message.body.attachments = [
+            att_with_bot,
+            att_without_bot,
+        ]
+
+        _inject_bot(fixture_message_created, bot)
+
+        assert att_with_bot.bot is bot
+        # att_without_bot не получает ошибки
+
+    def test_message_body_none_no_error(self, bot, fixture_message_created):
+        """Если body=None — нет ошибки."""
+        fixture_message_created.message.body = None
+        _inject_bot(fixture_message_created, bot)  # не должно падать
+
+    def test_message_none_no_error(self, bot, fixture_message_callback):
+        """Если message=None — нет ошибки."""
+        fixture_message_callback.message = None
+        _inject_bot(fixture_message_callback, bot)  # не должно падать
 
 
-# ---------------------------------------------------------------------------
-# UserRemoved — с admin_id → from_user из get_chat_member
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# enrich_event — сквозной пайплайн
+# ===========================================================================
 
 
-async def test_enrich_event_user_removed_with_admin(bot, fixture_user_removed):
-    fixture_user_removed.admin_id = 9999
-    fake_chat = _make_chat()
-    fake_member = MagicMock()
-    bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
-    bot.get_chat_member = AsyncMock(return_value=fake_member)
+class TestEnrichEvent:
+    """Интеграционные тесты для enrich_event."""
 
-    result = await enrich_event(fixture_user_removed, bot)
+    async def test_auto_requests_false_returns_unchanged(
+        self, bot, fixture_message_created
+    ):
+        """auto_requests=False — ранний выход, объект не изменяется."""
+        bot.auto_requests = False
+        result = await enrich_event(fixture_message_created, bot)
+        assert result is fixture_message_created
 
-    bot.get_chat_member.assert_awaited_once_with(
-        chat_id=fixture_user_removed.chat_id,
-        user_id=fixture_user_removed.admin_id,
+    async def test_full_pipeline_message_created(
+        self, bot, fixture_message_created
+    ):
+        """Пайплайн: chat, from_user и bot выставляются для MessageCreated."""
+        fake_chat = _make_chat(ChatType.DIALOG)
+        bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
+
+        result = await enrich_event(fixture_message_created, bot)
+
+        assert result.chat is fake_chat
+        assert result.from_user is fixture_message_created.message.sender
+        assert result.bot is bot
+        assert result.message.bot is bot
+
+    async def test_full_pipeline_bot_removed(self, bot, fixture_bot_removed):
+        """BotRemoved: chat=None, from_user=user, bot проставлен."""
+        bot.get_chat_by_id = AsyncMock()
+
+        result = await enrich_event(fixture_bot_removed, bot)
+
+        bot.get_chat_by_id.assert_not_called()
+        assert result.chat is None
+        assert result.from_user is fixture_bot_removed.user
+        assert result.bot is bot
+
+    async def test_full_pipeline_dialog_removed(
+        self, bot, fixture_dialog_removed
+    ):
+        """DialogRemoved: chat=None, from_user=user."""
+        bot.get_chat_by_id = AsyncMock()
+
+        result = await enrich_event(fixture_dialog_removed, bot)
+
+        bot.get_chat_by_id.assert_not_called()
+        assert result.chat is None
+        assert result.from_user is fixture_dialog_removed.user
+
+    async def test_full_pipeline_message_removed_chat_type(
+        self, bot, fixture_message_removed
+    ):
+        fake_chat = _make_chat(ChatType.CHAT)
+        fake_member = MagicMock()
+        bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
+        bot.get_chat_member = AsyncMock(return_value=fake_member)
+
+        result = await enrich_event(fixture_message_removed, bot)
+
+        assert result.from_user is fake_member
+
+    async def test_full_pipeline_message_removed_dialog_type(
+        self, bot, fixture_message_removed
+    ):
+        fake_chat = _make_chat(ChatType.DIALOG)
+        bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
+        bot.get_chat_member = AsyncMock()
+
+        result = await enrich_event(fixture_message_removed, bot)
+
+        bot.get_chat_member.assert_not_called()
+        assert result.from_user is fake_chat
+
+    @pytest.mark.parametrize(
+        "fixture_name",
+        [
+            "fixture_user_added",
+            "fixture_bot_added",
+            "fixture_bot_started",
+            "fixture_bot_stopped",
+            "fixture_chat_title_changed",
+            "fixture_dialog_cleared",
+            "fixture_dialog_muted",
+            "fixture_dialog_unmuted",
+        ],
     )
-    assert result.from_user is fake_member
+    async def test_full_pipeline_common_events(
+        self, request, bot, fixture_name
+    ):
+        """Все 'обычные' события: chat загружается, from_user = user."""
+        event = request.getfixturevalue(fixture_name)
+        fake_chat = _make_chat()
+        bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
 
+        result = await enrich_event(event, bot)
 
-# ---------------------------------------------------------------------------
-# UserRemoved — без admin_id → get_chat_member не вызывается
-# ---------------------------------------------------------------------------
-
-
-async def test_enrich_event_user_removed_no_admin(bot, fixture_user_removed):
-    fixture_user_removed.admin_id = None
-    fake_chat = _make_chat()
-    bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
-    bot.get_chat_member = AsyncMock()
-
-    result = await enrich_event(fixture_user_removed, bot)
-
-    bot.get_chat_member.assert_not_called()
-    assert result.chat is fake_chat
-
-
-# ---------------------------------------------------------------------------
-# Группа: UserAdded, BotAdded, BotStarted, BotStopped,
-#          ChatTitleChanged, DialogCleared, DialogMuted, DialogUnmuted
-#          — from_user=user, get_chat_by_id вызывается
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    "fixture_name",
-    [
-        "fixture_user_added",
-        "fixture_bot_added",
-        "fixture_bot_started",
-        "fixture_bot_stopped",
-        "fixture_chat_title_changed",
-        "fixture_dialog_cleared",
-        "fixture_dialog_muted",
-        "fixture_dialog_unmuted",
-    ],
-)
-async def test_enrich_event_common_events_set_from_user(
-    request, bot, fixture_name
-):
-    event = request.getfixturevalue(fixture_name)
-    fake_chat = _make_chat()
-    bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
-
-    result = await enrich_event(event, bot)
-
-    bot.get_chat_by_id.assert_awaited_once_with(event.chat_id)
-    assert result.chat is fake_chat
-    assert result.from_user is event.user
-
-
-# ---------------------------------------------------------------------------
-# bot ссылка проставляется на event_object
-# ---------------------------------------------------------------------------
-
-
-async def test_enrich_event_sets_bot_on_event(bot, fixture_bot_started):
-    fake_chat = _make_chat()
-    bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
-
-    result = await enrich_event(fixture_bot_started, bot)
-
-    assert result.bot is bot
+        bot.get_chat_by_id.assert_awaited_once_with(event.chat_id)
+        assert result.chat is fake_chat
+        assert result.from_user is event.user
+        assert result.bot is bot

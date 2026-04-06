@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from ..enums.chat_type import ChatType
 from ..types.updates.bot_added import BotAdded
@@ -21,107 +21,102 @@ from ..types.updates.user_removed import UserRemoved
 
 if TYPE_CHECKING:
     from ..bot import Bot
+    from ..types.updates import UpdateUnion
+
+_EVENTS_WITH_USER_ATTR = (
+    UserAdded,
+    BotAdded,
+    BotRemoved,
+    BotStarted,
+    BotStopped,
+    ChatTitleChanged,
+    DialogCleared,
+    DialogMuted,
+    DialogUnmuted,
+    DialogRemoved,
+)
 
 
-async def enrich_event(event_object: Any, bot: Bot) -> Any:
+async def _resolve_chat(event: UpdateUnion, bot: Bot) -> None:
+    """Загружает объект чата для события."""
+
+    if isinstance(event, (DialogRemoved, BotRemoved)):
+        return
+
+    chat_id = getattr(event, "chat_id", None)
+
+    if chat_id is None and isinstance(event, (MessageCreated, MessageEdited)):
+        chat_id = event.message.recipient.chat_id
+
+    elif chat_id is None and isinstance(event, MessageCallback):
+        message = event.message
+        if message is not None:
+            chat_id = message.recipient.chat_id
+
+    if chat_id is not None:
+        event.chat = await bot.get_chat_by_id(chat_id)
+
+
+async def _resolve_from_user(event: UpdateUnion, bot: Bot) -> None:
+    """Определяет отправителя события."""
+
+    if isinstance(event, (MessageCreated, MessageEdited)):
+        event.from_user = getattr(event.message, "sender", None)
+
+    elif isinstance(event, MessageCallback):
+        event.from_user = getattr(event.callback, "user", None)
+
+    elif isinstance(event, MessageRemoved):
+        if event.chat and event.chat.type == ChatType.CHAT:
+            event.from_user = await bot.get_chat_member(
+                chat_id=event.chat_id, user_id=event.user_id
+            )
+        elif event.chat and event.chat.type == ChatType.DIALOG:
+            event.from_user = event.chat
+
+    elif isinstance(event, UserRemoved):
+        if event.admin_id:
+            event.from_user = await bot.get_chat_member(
+                chat_id=event.chat_id, user_id=event.admin_id
+            )
+
+    elif isinstance(event, _EVENTS_WITH_USER_ATTR):
+        event.from_user = event.user
+
+
+def _inject_bot(event: UpdateUnion, bot: Bot) -> None:
+    """Внедряет ссылку на бота в событие, сообщение и вложения."""
+
+    if isinstance(event, (MessageCreated, MessageEdited, MessageCallback)):
+        message = event.message
+        if message is not None:
+            message.bot = bot
+            if message.body is not None:
+                for att in message.body.attachments or []:
+                    if hasattr(att, "bot"):
+                        att.bot = bot
+
+    if hasattr(event, "bot"):
+        event.bot = bot
+
+
+async def enrich_event(event_object: UpdateUnion, bot: Bot) -> UpdateUnion:
     """
     Дополняет объект события данными чата, пользователя и ссылкой на бота.
 
     Args:
-        event_object (Any): Событие, которое нужно дополнить.
+        event_object (UpdateUnion): Событие, которое нужно дополнить.
         bot (Bot): Экземпляр бота.
 
     Returns:
-        Any: Обновлённый объект события.
+        UpdateUnion: Обновлённый объект события.
     """
 
     if not bot.auto_requests:
         return event_object
 
-    # Определяем заранее: чат недоступен (удалён или бот убран из канала)
-    is_chat_unavailable = isinstance(event_object, DialogRemoved) or (
-        isinstance(event_object, BotRemoved)
-        and getattr(event_object, "is_channel", False)
-    )
-
-    if hasattr(event_object, "chat_id"):
-        # Если чат недоступен — не пытаемся его получить
-        if not is_chat_unavailable:
-            event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
-        else:
-            event_object.chat = None
-
-    if isinstance(event_object, (MessageCreated, MessageEdited)):
-        recipient = event_object.message.recipient
-        if recipient.chat_id is not None and event_object.chat is None:
-            event_object.chat = await bot.get_chat_by_id(recipient.chat_id)
-
-        event_object.from_user = getattr(event_object.message, "sender", None)
-
-    elif isinstance(event_object, MessageCallback):
-        message = event_object.message
-        if message is not None and message.recipient.chat_id is not None:
-            chat_id = message.recipient.chat_id
-            if event_object.chat is None:
-                event_object.chat = await bot.get_chat_by_id(chat_id)
-
-        event_object.from_user = getattr(event_object.callback, "user", None)
-
-    elif isinstance(event_object, MessageRemoved):
-        if event_object.chat is None:
-            event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
-
-        if event_object.chat and event_object.chat.type == ChatType.CHAT:
-            event_object.from_user = await bot.get_chat_member(
-                chat_id=event_object.chat_id, user_id=event_object.user_id
-            )
-
-        elif event_object.chat and event_object.chat.type == ChatType.DIALOG:
-            event_object.from_user = event_object.chat
-
-    elif isinstance(event_object, UserRemoved):
-        if event_object.chat is None:
-            event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
-        if event_object.admin_id:
-            event_object.from_user = await bot.get_chat_member(
-                chat_id=event_object.chat_id, user_id=event_object.admin_id
-            )
-
-    elif isinstance(
-        event_object,
-        (
-            UserAdded,
-            BotAdded,
-            BotRemoved,
-            BotStarted,
-            ChatTitleChanged,
-            BotStopped,
-            DialogCleared,
-            DialogMuted,
-            DialogUnmuted,
-        ),
-    ):
-        if event_object.chat is None and not is_chat_unavailable:
-            event_object.chat = await bot.get_chat_by_id(event_object.chat_id)
-        event_object.from_user = event_object.user
-
-    elif isinstance(event_object, DialogRemoved):
-        # Чат уже удалён — получить его невозможно
-        event_object.from_user = event_object.user
-
-    if isinstance(
-        event_object, (MessageCreated, MessageEdited, MessageCallback)
-    ):
-        object_message = event_object.message
-
-        if object_message is not None:
-            object_message.bot = bot
-            if object_message.body is not None:
-                for att in object_message.body.attachments or []:
-                    if hasattr(att, "bot"):
-                        att.bot = bot
-
-    if hasattr(event_object, "bot"):
-        event_object.bot = bot
+    await _resolve_chat(event_object, bot)
+    await _resolve_from_user(event_object, bot)
+    _inject_bot(event_object, bot)
 
     return event_object

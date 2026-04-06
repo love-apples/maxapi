@@ -37,17 +37,20 @@ class Handler:
 
         self.func_event: Callable = func_event
         self.update_type: UpdateType = update_type
-        self.filters: list[MagicFilter] | None = []
-        self.base_filters: list[BaseFilter] | None = []
+        self.filters: list[MagicFilter] = []
+        self.base_filters: list[BaseFilter] = []
 
         states_kwargs = kwargs.pop("states", [])
-        self.states: list[State | None] | None
+        self.states: list[State | None]
         if isinstance(states_kwargs, (list, tuple, set)):
             self.states = list(states_kwargs)
         else:
             self.states = [states_kwargs]
 
         self.middlewares: list[BaseMiddleware] = []
+
+        self.func_args: frozenset[str] | None = None
+        self.mw_chain: Callable | None = None
 
         for arg in args:
             if isinstance(arg, MagicFilter):

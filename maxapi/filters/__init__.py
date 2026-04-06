@@ -12,6 +12,7 @@ __all__ = [
     "Contact",
     "ContactFilter",
     "F",
+    "filter_attrs",
 ]
 
 
