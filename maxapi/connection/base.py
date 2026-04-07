@@ -4,6 +4,8 @@ import asyncio
 import mimetypes
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from urllib.parse import unquote
+from uuid import uuid4
 
 import aiofiles
 import puremagic
@@ -271,3 +273,45 @@ class BaseConnection(BotMixin):
             async with ClientSession() as temp_session:
                 response = await temp_session.post(url=url, data=form)
                 return await response.text()
+
+    async def download_file(
+        self, url: str, destination: Path | str, chunk_size: int | None = 65536
+    ) -> Path | None:
+        """
+        Скачивает файл с сервера MAX.
+        Подходит для: аудио, документов, видео
+
+        Args:
+            url (str): Ссылка на файл (из payload.url).
+            destination (Path | str): место назначения для скачанного файла.
+            chunk_size (bytes): Размер чанков файла, по умолчанию 64.
+        Returns:
+            Path: Ссылка на файл в файловой системе
+        """
+        bot = self._ensure_bot()
+
+        if not bot.session:
+            bot.session = ClientSession(
+                base_url=bot.api_url,
+                timeout=bot.default_connection.timeout,
+                headers=bot.headers,
+                **bot.default_connection.kwargs,
+            )
+
+        response = await bot.session.get(url=url)
+
+        cd = response.content_disposition
+        if cd and cd.filename:
+            filename = cd.filename
+            filename = unquote(cd.filename)
+        else:
+            ext = mimetypes.guess_extension(response.content_type) or ""
+            filename = str(uuid4()) + ext
+
+        path = Path(destination) / filename
+
+        async with aiofiles.open(path, "wb") as f:
+            async for chunk in response.content.iter_chunked(chunk_size):
+                await f.write(chunk)
+
+        return path
