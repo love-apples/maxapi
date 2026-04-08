@@ -20,3 +20,4 @@ class TextStyle(StrEnum):
     USER_MENTION = auto()
     HEADING = auto()
     HIGHLIGHTED = auto()
+    BLOCKQUOTE = auto()
