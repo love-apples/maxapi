@@ -102,6 +102,7 @@ class Dispatcher(BotMixin):
             Callable[[Any, dict[str, Any]], Awaitable[Any]] | None
         ) = None
         self._background_tasks: set[asyncio.Task] = set()
+        self._ready: bool = False
 
         self.message_created = Event(
             update_type=UpdateType.MESSAGE_CREATED, router=self
@@ -240,6 +241,10 @@ class Dispatcher(BotMixin):
         Args:
             bot (Bot): Экземпляр бота.
         """
+
+        if self._ready:
+            return
+        self._ready = True
 
         self.bot = bot
         self.bot.dispatcher = self
@@ -1108,6 +1113,7 @@ class Dispatcher(BotMixin):
         """
         if self.polling:
             self.polling = False
+            self._ready = False
             logger_dp.info("Polling остановлен")
 
         if self._background_tasks:

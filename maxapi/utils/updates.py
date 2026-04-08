@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING
 
 from ..enums.chat_type import ChatType
@@ -68,17 +69,19 @@ async def _resolve_from_user(event: UpdateUnion, bot: Bot) -> None:
 
     elif isinstance(event, MessageRemoved):
         if event.chat and event.chat.type == ChatType.CHAT:
-            event.from_user = await bot.get_chat_member(
-                chat_id=event.chat_id, user_id=event.user_id
-            )
+            with contextlib.suppress(Exception):
+                event.from_user = await bot.get_chat_member(
+                    chat_id=event.chat_id, user_id=event.user_id
+                )
         elif event.chat and event.chat.type == ChatType.DIALOG:
             event.from_user = event.chat
 
     elif isinstance(event, UserRemoved):
         if event.admin_id:
-            event.from_user = await bot.get_chat_member(
-                chat_id=event.chat_id, user_id=event.admin_id
-            )
+            with contextlib.suppress(Exception):
+                event.from_user = await bot.get_chat_member(
+                    chat_id=event.chat_id, user_id=event.admin_id
+                )
 
     elif isinstance(event, _EVENTS_WITH_USER_ATTR):
         event.from_user = event.user
