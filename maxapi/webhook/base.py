@@ -47,6 +47,12 @@ class BaseMaxWebhook(ABC):
         self.dp = dp
         self.bot = bot
         self.secret = secret
+        if self.secret is None:
+            logger_dp.warning(
+                "Webhook запущен без secret. "
+                "Рекомендуется установить secret для защиты "
+                "от поддельных обновлений."
+            )
 
     async def _startup(self) -> None:
         """Инициализировать диспетчер."""
