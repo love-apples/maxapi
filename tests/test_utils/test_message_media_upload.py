@@ -99,9 +99,6 @@ class TestProcessInputMedia:
                 token=None,
             )
         )
-        bot.session = Mock()
-        bot.session.close = AsyncMock()
-
         media = InputMediaBuffer(
             buffer=b"video-bytes",
             filename="video.mp4",
@@ -118,4 +115,3 @@ class TestProcessInputMedia:
                 att=media,
             )
 
-        bot.session.close.assert_awaited_once()

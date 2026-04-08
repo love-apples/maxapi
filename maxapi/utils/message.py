@@ -94,9 +94,6 @@ async def _resolve_attachment_token(
 ) -> str:
     if upload_type in (UploadType.VIDEO, UploadType.AUDIO):
         if upload_token is None:
-            if bot.session is not None:
-                await bot.session.close()
-
             raise MaxUploadFileFailed(
                 "По неизвестной причине token не был получен"
             )
