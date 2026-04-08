@@ -28,7 +28,7 @@ class MemoryContext(BaseContext):
         """
 
         async with self._lock:
-            return self._context
+            return self._context.copy()
 
     async def set_data(self, data: dict[str, Any]) -> None:
         """

@@ -332,6 +332,12 @@ class Dispatcher(BotMixin):
             return ctx
 
         if len(self.contexts) >= CONTEXTS_MAX_SIZE:
+            evicted_key = next(iter(self.contexts))
+            logger_dp.debug(
+                "Вытеснен контекст %s (лимит %d)",
+                evicted_key,
+                CONTEXTS_MAX_SIZE,
+            )
             self.contexts.popitem(last=False)
 
         new_ctx = self.storage(chat_id, user_id, **self.storage_kwargs)
