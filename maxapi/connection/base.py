@@ -11,6 +11,7 @@ from aiohttp import ClientConnectionError, ClientSession, FormData
 
 from ..enums.api_path import ApiPath
 from ..enums.update import UpdateType
+from ..exceptions.download_file import DownloadFileError
 from ..exceptions.max import InvalidToken, MaxApiError, MaxConnection
 from ..loggers import logger_bot
 from ..types.bot_mixin import BotMixin
@@ -21,6 +22,9 @@ if TYPE_CHECKING:
     from ..bot import Bot
     from ..enums.http_method import HTTPMethod
     from ..enums.upload_type import UploadType
+
+
+DOWNLOAD_CHUNK_SIZE = 65536
 
 
 class BaseConnection(BotMixin):
@@ -271,3 +275,92 @@ class BaseConnection(BotMixin):
             async with ClientSession() as temp_session:
                 response = await temp_session.post(url=url, data=form)
                 return await response.text()
+
+    async def download_file(
+        self,
+        url: str,
+        destination: Path | str,
+        *,
+        chunk_size: int = DOWNLOAD_CHUNK_SIZE,
+    ) -> Path:
+        """
+        Скачивает файл по URL и сохраняет на диск.
+
+        Метод работает не через общий ``request()``, поскольку
+        ответом является бинарный поток, а не JSON.
+
+        Args:
+            url: URL файла для скачивания (из payload.url вложения).
+            destination: Путь к директории для сохранения файла.
+            chunk_size: Размер чанка при потоковом чтении
+                (по умолчанию 64 КБ).
+
+        Returns:
+            Path: Полный путь к скачанному файлу.
+
+        Raises:
+            DownloadFileError: При ошибке скачивания.
+        """
+        bot = self._ensure_bot()
+        session = await bot.ensure_session()
+
+        conn = bot.default_connection
+        max_retries = conn.max_retries
+        backoff_factor = conn.retry_backoff_factor
+        retry_statuses = conn.retry_on_statuses
+
+        for attempt in range(max_retries + 1):
+            try:
+                response = await session.get(url)
+            except ClientConnectionError as e:
+                if attempt < max_retries:
+                    delay = backoff_factor * (2**attempt)
+                    logger_bot.warning(
+                        "Ошибка соединения при скачивании (%s), "
+                        "попытка %d/%d, жду %.1fс",
+                        e,
+                        attempt + 1,
+                        max_retries + 1,
+                        delay,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                raise DownloadFileError(
+                    f"Ошибка при скачивании файла: {e}"
+                ) from e
+
+            if response.status in retry_statuses and attempt < max_retries:
+                await response.read()
+                delay = backoff_factor * (2**attempt)
+                logger_bot.warning(
+                    "Ошибка сервера %d при скачивании, "
+                    "попытка %d/%d, жду %.1fс",
+                    response.status,
+                    attempt + 1,
+                    max_retries + 1,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+                continue
+
+            if not response.ok:
+                raise DownloadFileError(
+                    f"Ошибка при скачивании файла: HTTP {response.status}"
+                )
+
+            break
+
+        cd = response.content_disposition
+        if cd and cd.filename:
+            filename = Path(cd.filename).name
+        else:
+            ext = mimetypes.guess_extension(response.content_type or "") or ""
+            filename = f"file{ext}"
+
+        path = Path(destination) / filename
+
+        async with aiofiles.open(path, "wb") as f:
+            async for chunk in response.content.iter_chunked(chunk_size):
+                await f.write(chunk)
+
+        return path
