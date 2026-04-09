@@ -99,6 +99,7 @@ nav:
     - Http_method: enums/http_method.md
     - Intent: enums/intent.md
     - Message_link_type: enums/message_link_type.md
+    - Format: enums/format.md
     - Overview: enums/index.md
     - Parse_mode: enums/parse_mode.md
     - Sender_action: enums/sender_action.md

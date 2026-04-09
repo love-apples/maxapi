@@ -3,10 +3,15 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from maxapi.connection.base import BaseConnection
 from maxapi.enums.chat_type import ChatType
+from maxapi.enums.format import Format
 from maxapi.enums.parse_mode import TextFormat
 from maxapi.methods.edit_message import EditMessage
 from maxapi.methods.send_message import SendMessage
 from maxapi.types.message import Message
+
+
+def test_format_alias_import():
+    assert Format is TextFormat
 
 
 @pytest.mark.asyncio
