@@ -25,13 +25,18 @@
 
 import asyncio
 import base64
+import logging
 import os
 
+from dotenv import load_dotenv
 from maxapi import Bot, Dispatcher, F
 from maxapi.enums.sender_action import SenderAction
 from maxapi.filters.command import Command, CommandStart
 from maxapi.types.input_media import InputMedia, InputMediaBuffer
 from maxapi.types.updates.message_created import MessageCreated
+
+load_dotenv()
+logging.basicConfig(level=logging.INFO)
 
 bot = Bot()
 dp = Dispatcher()
