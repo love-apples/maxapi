@@ -350,6 +350,17 @@ class TestEnrichEvent:
             fixture_message_created.message.recipient.chat_id
         )
 
+    async def test_auto_requests_false_message_created_without_chat_id(
+        self, bot, fixture_message_created
+    ):
+        """Без chat_id lazy chat ref не создаётся."""
+        fixture_message_created.message.recipient.chat_id = None
+        bot.auto_requests = False
+
+        result = await enrich_event(fixture_message_created, bot)
+
+        assert result.chat is None
+
     async def test_auto_requests_false_message_created_from_user_fetch_is_noop(
         self, bot, fixture_message_created
     ):
@@ -428,6 +439,80 @@ class TestEnrichEvent:
             chat_id=fixture_user_removed.chat_id,
             user_id=fixture_user_removed.admin_id,
         )
+
+    async def test_auto_requests_false_message_removed_dialog_fetch(
+        self,
+        bot,
+        fixture_message_removed,
+    ):
+        """Lazy fetch должен вернуть chat для DIALOG без get_chat_member."""
+        fake_chat = _make_chat(ChatType.DIALOG)
+        bot.auto_requests = False
+        bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
+        bot.get_chat_member = AsyncMock()
+
+        result = await enrich_event(fixture_message_removed, bot)
+        fetched_from_user = await result.from_user.fetch()
+
+        assert fetched_from_user is fake_chat
+        assert result.from_user is fake_chat
+        bot.get_chat_member.assert_not_called()
+
+    async def test_auto_requests_false_message_removed_without_chat(
+        self,
+        bot,
+        fixture_message_removed,
+    ):
+        """Если chat не найден, lazy fetch from_user тоже возвращает None."""
+        bot.auto_requests = False
+        bot.get_chat_by_id = AsyncMock(return_value=None)
+        bot.get_chat_member = AsyncMock()
+
+        result = await enrich_event(fixture_message_removed, bot)
+        fetched_from_user = await result.from_user.fetch()
+
+        assert fetched_from_user is None
+        assert result.from_user is None
+        bot.get_chat_member.assert_not_called()
+
+    async def test_auto_requests_false_message_removed_unknown_chat_type(
+        self, bot, fixture_message_removed
+    ):
+        """Неизвестный тип чата даёт None вместо from_user."""
+        fake_chat = _make_chat()
+        fake_chat.type = object()
+        bot.auto_requests = False
+        bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
+        bot.get_chat_member = AsyncMock()
+
+        result = await enrich_event(fixture_message_removed, bot)
+        fetched_from_user = await result.from_user.fetch()
+
+        assert fetched_from_user is None
+        assert result.from_user is None
+        bot.get_chat_member.assert_not_called()
+
+    async def test_auto_requests_false_user_removed_without_admin_keeps_none(
+        self, bot, fixture_user_removed
+    ):
+        """Без admin_id from_user не синтезируется даже как lazy ref."""
+        fixture_user_removed.admin_id = None
+        bot.auto_requests = False
+
+        result = await enrich_event(fixture_user_removed, bot)
+
+        assert result.from_user is None
+
+    async def test_auto_requests_false_bot_removed_keeps_chat_none(
+        self, bot, fixture_bot_removed
+    ):
+        """BotRemoved не должен получать lazy chat ref."""
+        bot.auto_requests = False
+
+        result = await enrich_event(fixture_bot_removed, bot)
+
+        assert result.chat is None
+        assert result.from_user is fixture_bot_removed.user
 
     async def test_full_pipeline_message_created(
         self, bot, fixture_message_created
