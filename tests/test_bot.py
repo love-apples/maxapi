@@ -95,6 +95,13 @@ class TestBotProperties:
         # (это проверяется в интеграционных тестах)
 
 
+    def test_repr_does_not_leak_token(self, mock_bot_token):
+        """Тест __repr__: токен не должен попасть в строку представления."""
+        bot = Bot(token=mock_bot_token)
+        result = repr(bot)
+        assert mock_bot_token not in result
+        assert result == "Bot(token='***')"
+
 class TestBotResolveMethods:
     """Тесты методов разрешения параметров."""
 
