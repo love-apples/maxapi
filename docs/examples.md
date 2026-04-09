@@ -409,7 +409,7 @@ if __name__ == '__main__':
 Пример HTML:
 
 ```python
-from maxapi.enums.parse_mode import Format
+from maxapi.enums.format import Format
 from maxapi.utils.formatting import (
     Blockquote,
     Bold,
@@ -437,7 +437,7 @@ await event.message.answer(text, format=Format.HTML)
 Пример Markdown:
 
 ```python
-from maxapi.enums.parse_mode import Format
+from maxapi.enums.format import Format
 from maxapi.utils.formatting import Blockquote, Bold, Heading, as_markdown
 
 text = as_markdown(
@@ -465,7 +465,7 @@ import asyncio
 import logging
 
 from maxapi import Bot, Dispatcher, F
-from maxapi.enums.parse_mode import Format
+from maxapi.enums.format import Format
 from maxapi.types import MessageCreated
 
 logging.basicConfig(level=logging.INFO)
