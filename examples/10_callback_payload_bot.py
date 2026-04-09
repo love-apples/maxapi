@@ -18,7 +18,9 @@
 """
 
 import asyncio
+import logging
 
+from dotenv import load_dotenv
 from maxapi import Bot, Dispatcher, F
 from maxapi.enums.sender_action import SenderAction
 from maxapi.filters.callback_payload import CallbackPayload
@@ -28,6 +30,9 @@ from maxapi.types.updates.bot_started import BotStarted
 from maxapi.types.updates.message_callback import MessageCallback
 from maxapi.types.updates.message_created import MessageCreated
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
+
+load_dotenv()
+logging.basicConfig(level=logging.INFO)
 
 bot = Bot()
 dp = Dispatcher()

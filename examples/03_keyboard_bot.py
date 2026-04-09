@@ -21,7 +21,9 @@
 """
 
 import asyncio
+import logging
 
+from dotenv import load_dotenv
 from maxapi import Bot, Dispatcher
 from maxapi.filters.command import CommandStart
 from maxapi.types.attachments.buttons.callback_button import CallbackButton
@@ -35,6 +37,9 @@ from maxapi.types.attachments.buttons.request_geo_location_button import (
 from maxapi.types.updates.message_callback import MessageCallback
 from maxapi.types.updates.message_created import MessageCreated
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
+
+load_dotenv()
+logging.basicConfig(level=logging.INFO)
 
 bot = Bot()
 dp = Dispatcher()

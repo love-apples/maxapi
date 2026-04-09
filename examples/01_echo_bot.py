@@ -19,12 +19,17 @@
 """
 
 import asyncio
+import logging
 
+from dotenv import load_dotenv
 from maxapi import Bot, Dispatcher, F
 from maxapi.enums.sender_action import SenderAction
 from maxapi.filters.command import CommandStart
 from maxapi.types.updates.bot_started import BotStarted
 from maxapi.types.updates.message_created import MessageCreated
+
+load_dotenv()
+logging.basicConfig(level=logging.INFO)
 
 # Токен читается автоматически из переменной окружения MAX_BOT_TOKEN
 bot = Bot()

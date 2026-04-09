@@ -23,7 +23,9 @@
 """
 
 import asyncio
+import logging
 
+from dotenv import load_dotenv
 from maxapi import Bot, Dispatcher
 from maxapi.enums.parse_mode import TextFormat
 from maxapi.filters.command import Command, CommandStart
@@ -41,6 +43,9 @@ from maxapi.utils.formatting import (
     Underline,
     UserMention,
 )
+
+load_dotenv()
+logging.basicConfig(level=logging.INFO)
 
 bot = Bot()
 dp = Dispatcher()

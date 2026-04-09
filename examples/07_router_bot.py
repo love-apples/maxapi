@@ -20,6 +20,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from dotenv import load_dotenv
 from maxapi import Bot, Dispatcher, F
 from maxapi.dispatcher import Router
 from maxapi.enums.chat_type import ChatType
@@ -31,6 +32,7 @@ from maxapi.types.updates import UpdateUnion
 from maxapi.types.updates.bot_started import BotStarted
 from maxapi.types.updates.message_created import MessageCreated
 
+load_dotenv()
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s"
 )
