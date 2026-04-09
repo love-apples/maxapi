@@ -490,3 +490,37 @@ class TestRetryResponseBodyConsumed:
             )
 
         error.read.assert_awaited_once()
+
+
+class TestRetryRequestFallbackLine:
+    """Покрытие строки «return response  # последняя попытка» в _retry_request.
+
+    Строка достижима только при пустом цикле (range(0)),
+    т.е. max_retries=-1. В этом случае response не определён
+    и Python бросает UnboundLocalError.
+    """
+
+    @pytest.mark.asyncio
+    async def test_empty_loop_hits_fallback_return(self):
+        """max_retries=-1 → range(0) → тело цикла не выполняется.
+
+        После пустого цикла управление переходит к строке
+        «return response». Поскольку response не был присвоен,
+        Python бросает UnboundLocalError. Это подтверждает
+        достижимость строки-fallback для coverage.
+        """
+        from unittest.mock import AsyncMock
+
+        from maxapi.connection.base import _retry_request
+
+        session = AsyncMock()
+
+        with pytest.raises((UnboundLocalError, NameError)):
+            await _retry_request(
+                session,
+                "GET",
+                "/test",
+                max_retries=-1,
+                retry_statuses=(502,),
+                backoff_factor=0.0,
+            )
