@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import aiofiles
+import aiofiles.os
 import puremagic
 from aiohttp import ClientConnectionError, ClientSession, FormData
 
@@ -359,7 +360,7 @@ class BaseConnection(BotMixin):
             filename = f"file{ext}"
 
         dest = Path(destination)
-        dest.mkdir(parents=True, exist_ok=True)
+        await aiofiles.os.makedirs(destination, exist_ok=True)
         path = dest / filename
 
         try:
