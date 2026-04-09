@@ -80,6 +80,46 @@ async def test_edit_message_fetch_uses_format_in_json(bot):
 
 
 @pytest.mark.asyncio
+async def test_send_message_format_as_string(bot):
+    """Регрессия: format принимает строку, а не только TextFormat enum."""
+    # Проверяем что строка "html" не вызывает AttributeError
+    # (ранее код делал self.format.value, что падало на строке)
+    method = SendMessage(
+        bot=bot,
+        chat_id=1,
+        text="hello",
+        format="html",
+    )
+
+    with patch.object(
+        BaseConnection, "request", new=AsyncMock(return_value=Mock())
+    ) as mocked_request:
+        await method.fetch()
+
+    request_kwargs = mocked_request.call_args.kwargs
+    assert request_kwargs["json"]["format"] == "html"
+
+
+@pytest.mark.asyncio
+async def test_edit_message_format_as_string(bot):
+    """Регрессия: edit_message тоже принимает строку для format."""
+    method = EditMessage(
+        bot=bot,
+        message_id="msg_1",
+        text="hello",
+        format="markdown",
+    )
+
+    with patch.object(
+        BaseConnection, "request", new=AsyncMock(return_value=Mock())
+    ) as mocked_request:
+        await method.fetch()
+
+    request_kwargs = mocked_request.call_args.kwargs
+    assert request_kwargs["json"]["format"] == "markdown"
+
+
+@pytest.mark.asyncio
 async def test_message_helpers_pass_format_to_bot():
     bot = Mock()
     bot.send_message = AsyncMock(return_value=Mock())

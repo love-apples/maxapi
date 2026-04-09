@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from ..enums.chat_type import ChatType
@@ -22,6 +23,8 @@ from ..types.updates.user_removed import UserRemoved
 if TYPE_CHECKING:
     from ..bot import Bot
     from ..types.updates import UpdateUnion
+
+logger = logging.getLogger(__name__)
 
 _EVENTS_WITH_USER_ATTR = (
     UserAdded,
