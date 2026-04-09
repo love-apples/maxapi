@@ -191,9 +191,12 @@ if __name__ == '__main__':
 chat = await event.fetch_chat()
 from_user = await event.fetch_from_user()
 
-# или через сами ref-объекты
-chat = await event.chat.fetch() if event.chat else None
-from_user = await event.from_user.fetch() if event.from_user else None
+# или через сами ref-объекты (проверяйте через is not None,
+# т.к. pending lazy ref является falsy)
+chat = await event.chat.fetch() if event.chat is not None else None
+from_user = (
+    await event.from_user.fetch() if event.from_user is not None else None
+)
 ```
 
 ## MagicFilter
