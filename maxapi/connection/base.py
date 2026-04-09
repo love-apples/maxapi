@@ -153,14 +153,7 @@ class BaseConnection(BotMixin):
         """
 
         bot = self._ensure_bot()
-
-        if not bot.session:
-            bot.session = ClientSession(
-                base_url=bot.api_url,
-                timeout=bot.default_connection.timeout,
-                headers=bot.headers,
-                **bot.default_connection.kwargs,
-            )
+        await bot.ensure_session()
 
         conn = bot.default_connection
         max_retries = conn.max_retries
@@ -365,10 +358,15 @@ class BaseConnection(BotMixin):
             ext = mimetypes.guess_extension(response.content_type or "") or ""
             filename = f"file{ext}"
 
-        path = Path(destination) / filename
+        dest = Path(destination)
+        dest.mkdir(parents=True, exist_ok=True)
+        path = dest / filename
 
-        async with aiofiles.open(path, "wb") as f:
-            async for chunk in response.content.iter_chunked(chunk_size):
-                await f.write(chunk)
+        try:
+            async with aiofiles.open(path, "wb") as f:
+                async for chunk in response.content.iter_chunked(chunk_size):
+                    await f.write(chunk)
+        finally:
+            await response.release()
 
         return path

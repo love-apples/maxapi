@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 from aiohttp import ClientSession
 
 from .client.default import DefaultConnectionProperties
-from .connection.base import BaseConnection
+from .connection.base import DOWNLOAD_CHUNK_SIZE, BaseConnection
 from .enums.sender_action import SenderAction
 from .exceptions.max import InvalidToken
 from .loggers import logger_bot
@@ -1084,7 +1084,7 @@ class Bot(BaseConnection):
         url: str,
         destination: str | Path,
         *,
-        chunk_size: int = 65536,
+        chunk_size: int = DOWNLOAD_CHUNK_SIZE,
     ) -> Path:
         """
         Скачивает файл по URL и сохраняет на диск.

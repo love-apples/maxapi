@@ -81,6 +81,7 @@ class TestRetryOnServerErrors:
             default_connection=conn,
         )
         session = AsyncMock()
+        session.closed = False
         bot.session = session
         return bot
 
@@ -209,6 +210,7 @@ class TestRetryOnServerErrors:
 
         session = AsyncMock()
         session.request = AsyncMock(return_value=error)
+        session.closed = False
         bot.session = session
 
         base = BaseConnection()
@@ -239,6 +241,7 @@ class TestRetryOnConnectionErrors:
             default_connection=conn,
         )
         session = AsyncMock()
+        session.closed = False
         bot.session = session
         return bot
 
@@ -310,6 +313,7 @@ class TestRetryBackoff:
 
         session = AsyncMock()
         session.request = AsyncMock(return_value=error)
+        session.closed = False
         bot.session = session
 
         base = BaseConnection()
@@ -352,6 +356,7 @@ class TestRetryBackoff:
 
         session = AsyncMock()
         session.request = AsyncMock(return_value=error)
+        session.closed = False
         bot.session = session
 
         base = BaseConnection()
@@ -400,6 +405,7 @@ class TestRetryWithCustomStatuses:
 
         session = AsyncMock()
         session.request = AsyncMock(side_effect=[error, success])
+        session.closed = False
         bot.session = session
 
         base = BaseConnection()
@@ -432,6 +438,7 @@ class TestRetryWithCustomStatuses:
 
         session = AsyncMock()
         session.request = AsyncMock(return_value=error)
+        session.closed = False
         bot.session = session
 
         base = BaseConnection()
@@ -469,6 +476,7 @@ class TestRetryResponseBodyConsumed:
 
         session = AsyncMock()
         session.request = AsyncMock(side_effect=[error, success])
+        session.closed = False
         bot.session = session
 
         base = BaseConnection()
