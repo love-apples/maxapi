@@ -20,7 +20,11 @@
 import asyncio
 import logging
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 from maxapi import Bot, Dispatcher, F
 from maxapi.enums.sender_action import SenderAction
 from maxapi.filters.callback_payload import CallbackPayload
@@ -31,7 +35,6 @@ from maxapi.types.updates.message_callback import MessageCallback
 from maxapi.types.updates.message_created import MessageCreated
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
-load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot()
@@ -84,8 +87,8 @@ class ItemPayload(CallbackPayload, prefix="item"):
     item_id: str
 
 
-class DetailPayload(CallbackPayload, prefix="detail"):
-    """Payload для страницы деталей товара (кнопка «Подробнее»)."""
+class BuyPayload(CallbackPayload, prefix="buy"):
+    """Payload для кнопки «Купить» на карточке товара."""
 
     item_id: str
     category_id: str  # сохраняем для кнопки «Назад»
@@ -133,7 +136,7 @@ def build_detail_keyboard(category_id: str, item_id: str) -> list:
     builder = InlineKeyboardBuilder()
 
     # Кнопка «Купить» (для демонстрации — просто уведомление)
-    buy_payload = DetailPayload(
+    buy_payload = BuyPayload(
         item_id=item_id, category_id=category_id
     ).pack()
     builder.row(CallbackButton(text="Купить", payload=buy_payload))
@@ -230,8 +233,8 @@ async def on_item(event: MessageCallback, payload: ItemPayload) -> None:
 # ---------------------------------------------------------------------------
 
 
-@dp.message_callback(DetailPayload.filter())
-async def on_detail(event: MessageCallback, payload: DetailPayload) -> None:
+@dp.message_callback(BuyPayload.filter())
+async def on_detail(event: MessageCallback, payload: BuyPayload) -> None:
     """Обработка нажатия «Купить»."""
     items_all = ITEMS.get(payload.category_id, {})
     item_name = items_all.get(payload.item_id, "товар")

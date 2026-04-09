@@ -20,7 +20,11 @@ FSM-бот — пошаговая форма регистрации на maxapi.
 import asyncio
 import logging
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 from maxapi import Bot, Dispatcher, F
 from maxapi.context.base import BaseContext
 from maxapi.context.state_machine import State, StatesGroup
@@ -30,7 +34,6 @@ from maxapi.types.updates.message_callback import MessageCallback
 from maxapi.types.updates.message_created import MessageCreated
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
-load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot()
@@ -168,6 +171,10 @@ async def step_city(event: MessageCreated, context: BaseContext) -> None:
 async def step_confirm(event: MessageCallback, context: BaseContext) -> None:
     """Финальный шаг: подтверждение или перезапуск."""
     payload = event.callback.payload if event.callback else None
+
+    if event.message is None:
+        await event.answer()
+        return
 
     if payload == "confirm_yes":
         data = await context.get_data()

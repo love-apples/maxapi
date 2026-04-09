@@ -25,7 +25,11 @@
 import asyncio
 import logging
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 from maxapi import Bot, Dispatcher
 from maxapi.enums.parse_mode import TextFormat
 from maxapi.filters.command import Command, CommandStart
@@ -44,7 +48,6 @@ from maxapi.utils.formatting import (
     UserMention,
 )
 
-load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot()

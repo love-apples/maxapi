@@ -23,7 +23,11 @@
 import asyncio
 import logging
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 from maxapi import Bot, Dispatcher
 from maxapi.filters.command import CommandStart
 from maxapi.types.attachments.buttons.callback_button import CallbackButton
@@ -38,7 +42,6 @@ from maxapi.types.updates.message_callback import MessageCallback
 from maxapi.types.updates.message_created import MessageCreated
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
-load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot()
@@ -110,6 +113,10 @@ async def on_callback(event: MessageCallback) -> None:
     # Достаём payload; защита от None
     payload = event.callback.payload if event.callback else None
     if payload is None:
+        await event.answer()
+        return
+
+    if event.message is None:
         await event.answer()
         return
 

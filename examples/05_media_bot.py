@@ -28,14 +28,17 @@ import base64
 import logging
 import os
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 from maxapi import Bot, Dispatcher, F
 from maxapi.enums.sender_action import SenderAction
 from maxapi.filters.command import Command, CommandStart
 from maxapi.types.input_media import InputMedia, InputMediaBuffer
 from maxapi.types.updates.message_created import MessageCreated
 
-load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot()
@@ -63,6 +66,8 @@ async def on_start(event: MessageCreated) -> None:
 async def cmd_photo(event: MessageCreated) -> None:
     """Отправка изображения из локального файла."""
     chat_id = event.message.recipient.chat_id
+    if chat_id is None:
+        return
 
     # Показываем индикатор «отправляет фото...»
     await bot.send_action(chat_id=chat_id, action=SenderAction.SENDING_PHOTO)
