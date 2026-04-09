@@ -126,7 +126,7 @@ class EditMessage(BaseConnection):
         if self.notify is not None:
             json["notify"] = self.notify
         if self.format is not None:
-            json["format"] = self.format
+            json["format"] = str(self.format)
 
         if has_input_media and self.sleep_after_input_media:
             await asyncio.sleep(bot.after_input_media_delay)
