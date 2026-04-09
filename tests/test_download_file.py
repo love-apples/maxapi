@@ -80,7 +80,7 @@ class TestDownloadFile:
             cd_filename="document.pdf",
             chunks=chunks,
         )
-        mock_session.get = AsyncMock(return_value=mock_response)
+        mock_session.request = AsyncMock(return_value=mock_response)
 
         result = await bot.download_file(
             url="https://example.com/file.pdf",
@@ -98,7 +98,7 @@ class TestDownloadFile:
             content_type="image/jpeg",
             chunks=[b"imagedata"],
         )
-        mock_session.get = AsyncMock(return_value=mock_response)
+        mock_session.request = AsyncMock(return_value=mock_response)
 
         result = await bot.download_file(
             url="https://example.com/img",
@@ -117,7 +117,7 @@ class TestDownloadFile:
             cd_filename="../../etc/passwd",
             chunks=[b"data"],
         )
-        mock_session.get = AsyncMock(return_value=mock_response)
+        mock_session.request = AsyncMock(return_value=mock_response)
 
         result = await bot.download_file(
             url="https://example.com/file",
@@ -131,7 +131,7 @@ class TestDownloadFile:
     async def test_download_file_http_error(self, bot, tmp_dir, mock_session):
         """DownloadFileError при HTTP 404."""
         mock_response = _make_mock_response(ok=False, status=404)
-        mock_session.get = AsyncMock(return_value=mock_response)
+        mock_session.request = AsyncMock(return_value=mock_response)
 
         with pytest.raises(DownloadFileError, match="HTTP 404"):
             await bot.download_file(
@@ -145,7 +145,7 @@ class TestDownloadFile:
         """DownloadFileError при исчерпании попыток соединения."""
         from aiohttp import ClientConnectionError
 
-        mock_session.get = AsyncMock(
+        mock_session.request = AsyncMock(
             side_effect=ClientConnectionError("connection refused")
         )
         bot.default_connection.max_retries = 0
@@ -169,7 +169,7 @@ class TestDownloadFile:
             chunks=[b"ok"],
         )
 
-        mock_session.get = AsyncMock(
+        mock_session.request = AsyncMock(
             side_effect=[retry_response, success_response]
         )
         bot.default_connection.max_retries = 1

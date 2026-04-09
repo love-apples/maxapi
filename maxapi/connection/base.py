@@ -27,6 +27,57 @@ if TYPE_CHECKING:
 DOWNLOAD_CHUNK_SIZE = 65536
 
 
+async def _retry_request(
+    session: ClientSession,
+    method: str,
+    url: str,
+    *,
+    max_retries: int,
+    retry_statuses: tuple[int, ...],
+    backoff_factor: float,
+    **kwargs: Any,
+) -> Any:
+    """
+    Выполняет HTTP-запрос с retry и экспоненциальным backoff.
+
+    Повторяет запрос при ошибках соединения и серверных
+    ошибках из retry_statuses.
+    """
+    for attempt in range(max_retries + 1):
+        try:
+            response = await session.request(method, url, **kwargs)
+        except ClientConnectionError as e:
+            if attempt < max_retries:
+                delay = backoff_factor * (2**attempt)
+                logger_bot.warning(
+                    "Ошибка соединения (%s), попытка %d/%d, жду %.1fс",
+                    e,
+                    attempt + 1,
+                    max_retries + 1,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+                continue
+            raise
+
+        if response.status in retry_statuses and attempt < max_retries:
+            await response.read()
+            delay = backoff_factor * (2**attempt)
+            logger_bot.warning(
+                "Серверная ошибка %d, попытка %d/%d, жду %.1fс",
+                response.status,
+                attempt + 1,
+                max_retries + 1,
+                delay,
+            )
+            await asyncio.sleep(delay)
+            continue
+
+        return response
+
+    return response  # последняя попытка
+
+
 class BaseConnection(BotMixin):
     """
     Базовый класс для всех методов API.
@@ -118,51 +169,32 @@ class BaseConnection(BotMixin):
 
         url = path.value if isinstance(path, ApiPath) else path
 
-        for attempt in range(max_retries + 1):
-            try:
-                r = await bot.session.request(
-                    method=method.value,
-                    url=url,
-                    **kwargs,
-                )
-            except ClientConnectionError as e:
-                if attempt < max_retries:
-                    delay = backoff_factor * (2**attempt)
-                    logger_bot.warning(
-                        f"Ошибка соединения ({e}), "
-                        f"попытка {attempt + 1}/{max_retries + 1}, "
-                        f"жду {delay:.1f}с"
+        try:
+            r = await _retry_request(
+                bot.session,
+                method.value,
+                url,
+                max_retries=max_retries,
+                retry_statuses=retry_statuses,
+                backoff_factor=backoff_factor,
+                **kwargs,
+            )
+        except ClientConnectionError as e:
+            raise MaxConnection(f"Ошибка при отправке запроса: {e}") from e
+
+        if r.status == 401:
+            await bot.session.close()
+            raise InvalidToken("Неверный токен!")
+
+        if not r.ok:
+            raw = await r.json()
+            if bot.dispatcher:
+                asyncio.create_task(
+                    bot.dispatcher.handle_raw_response(
+                        UpdateType.RAW_API_RESPONSE, raw
                     )
-                    await asyncio.sleep(delay)
-                    continue
-                raise MaxConnection(f"Ошибка при отправке запроса: {e}") from e
-
-            if r.status == 401:
-                await bot.session.close()
-                raise InvalidToken("Неверный токен!")
-
-            if r.status in retry_statuses and attempt < max_retries:
-                await r.read()
-                delay = backoff_factor * (2**attempt)
-                logger_bot.warning(
-                    f"Серверная ошибка {r.status}, "
-                    f"попытка {attempt + 1}/{max_retries + 1}, "
-                    f"жду {delay:.1f}с"
                 )
-                await asyncio.sleep(delay)
-                continue
-
-            if not r.ok:
-                raw = await r.json()
-                if bot.dispatcher:
-                    asyncio.create_task(
-                        bot.dispatcher.handle_raw_response(
-                            UpdateType.RAW_API_RESPONSE, raw
-                        )
-                    )
-                raise MaxApiError(code=r.status, raw=raw)
-
-            break
+            raise MaxApiError(code=r.status, raw=raw)
 
         raw = await r.json()
 
@@ -309,46 +341,22 @@ class BaseConnection(BotMixin):
         backoff_factor = conn.retry_backoff_factor
         retry_statuses = conn.retry_on_statuses
 
-        for attempt in range(max_retries + 1):
-            try:
-                response = await session.get(url)
-            except ClientConnectionError as e:
-                if attempt < max_retries:
-                    delay = backoff_factor * (2**attempt)
-                    logger_bot.warning(
-                        "Ошибка соединения при скачивании (%s), "
-                        "попытка %d/%d, жду %.1fс",
-                        e,
-                        attempt + 1,
-                        max_retries + 1,
-                        delay,
-                    )
-                    await asyncio.sleep(delay)
-                    continue
-                raise DownloadFileError(
-                    f"Ошибка при скачивании файла: {e}"
-                ) from e
+        try:
+            response = await _retry_request(
+                session,
+                "GET",
+                url,
+                max_retries=max_retries,
+                retry_statuses=retry_statuses,
+                backoff_factor=backoff_factor,
+            )
+        except ClientConnectionError as e:
+            raise DownloadFileError(f"Ошибка при скачивании файла: {e}") from e
 
-            if response.status in retry_statuses and attempt < max_retries:
-                await response.read()
-                delay = backoff_factor * (2**attempt)
-                logger_bot.warning(
-                    "Ошибка сервера %d при скачивании, "
-                    "попытка %d/%d, жду %.1fс",
-                    response.status,
-                    attempt + 1,
-                    max_retries + 1,
-                    delay,
-                )
-                await asyncio.sleep(delay)
-                continue
-
-            if not response.ok:
-                raise DownloadFileError(
-                    f"Ошибка при скачивании файла: HTTP {response.status}"
-                )
-
-            break
+        if not response.ok:
+            raise DownloadFileError(
+                f"Ошибка при скачивании файла: HTTP {response.status}"
+            )
 
         cd = response.content_disposition
         if cd and cd.filename:
