@@ -25,7 +25,11 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 from maxapi import Bot, Dispatcher, F
 from maxapi.filters.command import Command, CommandStart
 from maxapi.filters.middleware import BaseMiddleware
@@ -33,7 +37,6 @@ from maxapi.types.updates.bot_started import BotStarted
 from maxapi.types.updates.message_callback import MessageCallback
 from maxapi.types.updates.message_created import MessageCreated
 
-load_dotenv()
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -153,6 +156,12 @@ class AuthMiddleware(BaseMiddleware):
             sender = getattr(msg, "sender", None)
             if sender is not None:
                 user_id = sender.user_id
+        # Also extract user_id from callback events
+        callback = getattr(event_object, "callback", None)
+        if callback is not None and user_id is None:
+            cb_user = getattr(callback, "user", None)
+            if cb_user is not None:
+                user_id = cb_user.user_id
 
         if user_id is None or user_id not in WHITELIST:
             log.warning("[AUTH] Доступ запрещён для user=%s", user_id)

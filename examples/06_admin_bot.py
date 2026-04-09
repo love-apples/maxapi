@@ -19,7 +19,11 @@
 import asyncio
 import logging
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 from maxapi import Bot, Dispatcher
 from maxapi.enums.sender_action import SenderAction
 from maxapi.filters.command import Command, CommandStart
@@ -29,7 +33,6 @@ from maxapi.types.updates.message_created import MessageCreated
 from maxapi.types.updates.user_added import UserAdded
 from maxapi.types.updates.user_removed import UserRemoved
 
-load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
