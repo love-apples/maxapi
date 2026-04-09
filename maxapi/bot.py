@@ -125,6 +125,8 @@ class Bot(BaseConnection):
                 будет генерировать превью для ссылок в тексте сообщений.
             auto_requests (bool): Автоматическое заполнение
                 chat/from_user через API (по умолчанию True).
+                При False в event.chat/event.from_user остаются lazy ref
+                c ручным await .fetch().
             default_connection (Optional[DefaultConnectionProperties]):
                 Настройки соединения.
             after_input_media_delay (Optional[float]): Задержка после

@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from maxapi.enums.chat_type import ChatType
+from maxapi.types.fetchable import ChatRef, FromUserRef
 from maxapi.utils.updates import (
     _inject_bot,
     _resolve_chat,
@@ -317,13 +318,117 @@ class TestInjectBot:
 class TestEnrichEvent:
     """Интеграционные тесты для enrich_event."""
 
-    async def test_auto_requests_false_returns_unchanged(
+    async def test_auto_requests_false_keeps_object_and_injects_bot(
         self, bot, fixture_message_created
     ):
-        """auto_requests=False — ранний выход, объект не изменяется."""
+        """auto_requests=False не делает API-запросов, но bot остаётся."""
         bot.auto_requests = False
         result = await enrich_event(fixture_message_created, bot)
+
         assert result is fixture_message_created
+        assert result.bot is bot
+        assert result.message.bot is bot
+
+    async def test_auto_requests_false_message_created_uses_lazy_chat_ref(
+        self, bot, fixture_message_created
+    ):
+        """Chat загружается только по явному вызову fetch()."""
+        fake_chat = _make_chat(ChatType.DIALOG)
+        bot.auto_requests = False
+        bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
+
+        result = await enrich_event(fixture_message_created, bot)
+
+        assert isinstance(result.chat, ChatRef)
+        assert result.from_user is fixture_message_created.message.sender
+        bot.get_chat_by_id.assert_not_called()
+
+        fetched_chat = await result.chat.fetch()
+
+        assert fetched_chat is fake_chat
+        assert result.chat is fake_chat
+        bot.get_chat_by_id.assert_awaited_once_with(
+            fixture_message_created.message.recipient.chat_id
+        )
+
+    async def test_auto_requests_false_message_created_from_user_fetch_is_noop(
+        self, bot, fixture_message_created
+    ):
+        """from_user из payload тоже поддерживает единый fetch API."""
+        bot.auto_requests = False
+
+        result = await enrich_event(fixture_message_created, bot)
+        fetched_user = await result.from_user.fetch()
+
+        assert fetched_user is fixture_message_created.message.sender
+
+    async def test_auto_requests_false_message_answer_still_works(
+        self, bot, fixture_message_created
+    ):
+        """message.answer не должен ломаться при отключённых auto_requests."""
+        bot.auto_requests = False
+        bot.send_message = AsyncMock()
+
+        result = await enrich_event(fixture_message_created, bot)
+        await result.message.answer(text="hello")
+
+        bot.send_message.assert_awaited_once()
+
+    async def test_auto_requests_false_message_removed_fetches_lazily(
+        self,
+        bot,
+        fixture_message_removed,
+    ):
+        """MessageRemoved вручную догружает chat и затем участника."""
+        fake_chat = _make_chat(ChatType.CHAT)
+        fake_member = MagicMock()
+        bot.auto_requests = False
+        bot.get_chat_by_id = AsyncMock(return_value=fake_chat)
+        bot.get_chat_member = AsyncMock(return_value=fake_member)
+
+        result = await enrich_event(fixture_message_removed, bot)
+
+        assert isinstance(result.chat, ChatRef)
+        assert isinstance(result.from_user, FromUserRef)
+        bot.get_chat_by_id.assert_not_called()
+        bot.get_chat_member.assert_not_called()
+
+        fetched_from_user = await result.from_user.fetch()
+
+        assert fetched_from_user is fake_member
+        assert result.chat is fake_chat
+        assert result.from_user is fake_member
+        bot.get_chat_by_id.assert_awaited_once_with(
+            fixture_message_removed.chat_id
+        )
+        bot.get_chat_member.assert_awaited_once_with(
+            chat_id=fixture_message_removed.chat_id,
+            user_id=fixture_message_removed.user_id,
+        )
+
+    async def test_auto_requests_false_user_removed_from_user_fetches_lazily(
+        self, bot, fixture_user_removed
+    ):
+        """UserRemoved с admin_id догружает инициатора только вручную."""
+        fake_admin = MagicMock()
+        fixture_user_removed.admin_id = 9999
+        bot.auto_requests = False
+        bot.get_chat_member = AsyncMock(return_value=fake_admin)
+
+        result = await enrich_event(fixture_user_removed, bot)
+
+        assert result.chat is not None
+        assert isinstance(result.from_user, FromUserRef)
+        bot.get_chat_member.assert_not_called()
+
+        fetched_from_user = await result.from_user.fetch()
+
+        assert fetched_from_user is fake_admin
+        assert result.from_user is fake_admin
+        bot.get_chat_member.assert_awaited_once_with(
+            chat_id=fixture_user_removed.chat_id,
+            user_id=fixture_user_removed.admin_id,
+        )
 
     async def test_full_pipeline_message_created(
         self, bot, fixture_message_created

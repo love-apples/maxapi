@@ -18,6 +18,7 @@ from ..types.attachments.buttons.request_geo_location_button import (
 )
 from ..types.attachments.image import PhotoAttachmentRequestPayload
 from ..types.command import BotCommand
+from ..types.fetchable import ChatRef, FromUserRef
 from ..types.message import Message, NewMessageLink
 from ..types.updates import UpdateUnion
 from ..types.updates.bot_added import BotAdded
@@ -48,6 +49,7 @@ __all__ = [
     "ButtonsPayload",
     "CallbackButton",
     "ChatButton",
+    "ChatRef",
     "ChatTitleChanged",
     "Command",
     "CommandStart",
@@ -56,6 +58,7 @@ __all__ = [
     "DialogMuted",
     "DialogRemoved",
     "DialogUnmuted",
+    "FromUserRef",
     "InputMedia",
     "InputMediaBuffer",
     "LinkButton",
