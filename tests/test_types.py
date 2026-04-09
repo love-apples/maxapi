@@ -167,10 +167,11 @@ class TestDialogMuted:
         assert isinstance(result, datetime)
         assert result == datetime.fromtimestamp(ts_ms / 1000)
 
+
 class TestUserAddedGetIds:
     """Тесты для UserAdded.get_ids()."""
 
-    _USER = {
+    _USER: ClassVar[dict[str, Any]] = {
         "user_id": 42,
         "first_name": "Alice",
         "is_bot": False,
@@ -197,7 +198,7 @@ class TestUserAddedGetIds:
 class TestUserRemovedGetIds:
     """Тесты для UserRemoved.get_ids()."""
 
-    _USER = {
+    _USER: ClassVar[dict[str, Any]] = {
         "user_id": 99,
         "first_name": "Bob",
         "is_bot": False,

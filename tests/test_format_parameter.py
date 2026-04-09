@@ -116,6 +116,26 @@ async def test_edit_message_format_as_string(bot):
 
 
 @pytest.mark.asyncio
+async def test_send_message_init_converts_string_to_enum(bot):
+    """Проверка обратной совместимости: format может быть строкой."""
+    msg = SendMessage(bot=bot, chat_id=1, text="привет", format="html")
+    assert msg.format == TextFormat.HTML
+    assert msg.format is not None
+    assert msg.format.value == "html"
+
+
+@pytest.mark.asyncio
+async def test_edit_message_init_converts_string_to_enum(bot):
+    """Проверка обратной совместимости: format может быть строкой."""
+    msg = EditMessage(
+        bot=bot, message_id="m1", text="привет", format="markdown"
+    )
+    assert msg.format == TextFormat.MARKDOWN
+    assert msg.format is not None
+    assert msg.format.value == "markdown"
+
+
+@pytest.mark.asyncio
 async def test_send_message_text_none_absent_from_json(bot):
     method = SendMessage(
         bot=bot,
