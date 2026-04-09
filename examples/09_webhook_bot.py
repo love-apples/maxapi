@@ -31,8 +31,14 @@ import asyncio
 import logging
 import os
 
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
+
 import uvicorn
-from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from maxapi import Bot, Dispatcher, F
@@ -53,7 +59,8 @@ log = logging.getLogger("webhook_bot")
 # ---------------------------------------------------------------------------
 # Конфигурация из окружения
 # ---------------------------------------------------------------------------
-WEBHOOK_URL: str = os.environ["WEBHOOK_URL"]  # Обязательная переменная окружения
+# Обязательная переменная окружения
+WEBHOOK_URL: str = os.environ["WEBHOOK_URL"]
 WEBHOOK_SECRET: str | None = os.getenv("WEBHOOK_SECRET") or None
 WEBHOOK_HOST: str = os.getenv(
     "WEBHOOK_HOST", "0.0.0.0"

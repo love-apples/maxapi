@@ -22,6 +22,7 @@ import logging
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     pass
@@ -136,9 +137,7 @@ def build_detail_keyboard(category_id: str, item_id: str) -> list:
     builder = InlineKeyboardBuilder()
 
     # Кнопка «Купить» (для демонстрации — просто уведомление)
-    buy_payload = BuyPayload(
-        item_id=item_id, category_id=category_id
-    ).pack()
+    buy_payload = BuyPayload(item_id=item_id, category_id=category_id).pack()
     builder.row(CallbackButton(text="Купить", payload=buy_payload))
 
     # Кнопка «Назад» возвращает в список товаров категории
