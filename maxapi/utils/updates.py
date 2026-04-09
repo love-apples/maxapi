@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import contextlib
+import logging
 from typing import TYPE_CHECKING
 
 from ..enums.chat_type import ChatType
+from ..exceptions.max import MaxApiError, MaxConnection
 from ..types.updates.bot_added import BotAdded
 from ..types.updates.bot_removed import BotRemoved
 from ..types.updates.bot_started import BotStarted
@@ -23,6 +24,8 @@ from ..types.updates.user_removed import UserRemoved
 if TYPE_CHECKING:
     from ..bot import Bot
     from ..types.updates import UpdateUnion
+
+logger = logging.getLogger(__name__)
 
 _EVENTS_WITH_USER_ATTR = (
     UserAdded,
@@ -69,19 +72,23 @@ async def _resolve_from_user(event: UpdateUnion, bot: Bot) -> None:
 
     elif isinstance(event, MessageRemoved):
         if event.chat and event.chat.type == ChatType.CHAT:
-            with contextlib.suppress(Exception):
+            try:
                 event.from_user = await bot.get_chat_member(
                     chat_id=event.chat_id, user_id=event.user_id
                 )
+            except (MaxApiError, MaxConnection) as exc:
+                logger.warning("Не удалось получить участника чата: %s", exc)
         elif event.chat and event.chat.type == ChatType.DIALOG:
             event.from_user = event.chat
 
     elif isinstance(event, UserRemoved):
         if event.admin_id:
-            with contextlib.suppress(Exception):
+            try:
                 event.from_user = await bot.get_chat_member(
                     chat_id=event.chat_id, user_id=event.admin_id
                 )
+            except (MaxApiError, MaxConnection) as exc:
+                logger.warning("Не удалось получить участника чата: %s", exc)
 
     elif isinstance(event, _EVENTS_WITH_USER_ATTR):
         event.from_user = event.user
