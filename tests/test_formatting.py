@@ -156,6 +156,12 @@ def test_blockquote_markdown_multiline():
     assert q.as_html() == "<blockquote>first\nsecond\n\nthird</blockquote>"
 
 
+def test_blockquote_markdown_empty():
+    q = Blockquote("")
+    assert q.as_markdown() == ""
+    assert q.as_html() == "<blockquote></blockquote>"
+
+
 def test_all_styles_in_body():
     styles = [
         (TextStyle.STRONG, "**", "b"),
