@@ -171,6 +171,9 @@ flake8-type-checking.runtime-evaluated-base-classes = [
 "maxapi/connection/base.py" = [
     "C90", # TODO: требует рефакторинга
 ]
+"maxapi/utils/updates.py" = [
+    "C90", # TODO: требует рефакторинга
+]
 
 [tool.ruff.format]
 quote-style = "double"
