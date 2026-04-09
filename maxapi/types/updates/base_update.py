@@ -37,3 +37,29 @@ class BaseUpdate(BaseModel, BotMixin):
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
     )
+
+    async def fetch_chat(self) -> Any | None:
+        """Явно получить chat для события, если доступен lazy fetch."""
+
+        chat = self.chat
+        if chat is None:
+            return None
+
+        fetch = getattr(chat, "fetch", None)
+        if callable(fetch):
+            return await fetch()
+
+        return chat
+
+    async def fetch_from_user(self) -> Any | None:
+        """Явно получить from_user для события, если доступен lazy fetch."""
+
+        from_user = self.from_user
+        if from_user is None:
+            return None
+
+        fetch = getattr(from_user, "fetch", None)
+        if callable(fetch):
+            return await fetch()
+
+        return from_user

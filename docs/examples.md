@@ -183,6 +183,19 @@ if __name__ == '__main__':
     asyncio.run(main())
 ```
 
+Если бот создан с `auto_requests=False`, то `event.chat` и
+`event.from_user` могут быть lazy ref. В этом режиме запрашивайте их
+явно:
+
+```python
+chat = await event.fetch_chat()
+from_user = await event.fetch_from_user()
+
+# или через сами ref-объекты
+chat = await event.chat.fetch() if event.chat else None
+from_user = await event.from_user.fetch() if event.from_user else None
+```
+
 ## MagicFilter
 
 Использование MagicFilter для гибкой фильтрации сообщений:
