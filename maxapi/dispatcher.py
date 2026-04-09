@@ -244,7 +244,6 @@ class Dispatcher(BotMixin):
 
         if self._ready:
             return
-        self._ready = True
 
         self.bot = bot
         self.bot.dispatcher = self
@@ -254,7 +253,8 @@ class Dispatcher(BotMixin):
 
         await self.check_me()
 
-        self.routers += [self]
+        if self not in self.routers:
+            self.routers.append(self)
         self._prepare_handlers(bot)
 
         self._global_mw_chain = self.build_middleware_chain(
@@ -263,6 +263,8 @@ class Dispatcher(BotMixin):
 
         if self.on_started_func:
             await self.on_started_func()
+
+        self._ready = True
 
     def _prepare_handlers(self, bot: Bot) -> None:
         """Подготовить обработчики событий и построить кеши."""

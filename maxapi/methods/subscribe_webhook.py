@@ -45,7 +45,7 @@ class SubscribeWebhook(BaseConnection):
                 "secret не должен быть меньше 5 или больше 256 символов"
             )
 
-        if not url.startswith("https://"):
+        if url.startswith("http://"):
             warnings.warn(
                 "URL вебхука не использует HTTPS. "
                 "Обновления будут передаваться по незашифрованному каналу.",

@@ -47,7 +47,7 @@ class BaseMaxWebhook(ABC):
         self.dp = dp
         self.bot = bot
         self.secret = secret
-        if self.secret is None:
+        if not self.secret:
             logger_dp.warning(
                 "Webhook запущен без secret. "
                 "Рекомендуется установить secret для защиты "
