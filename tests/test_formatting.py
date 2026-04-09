@@ -210,6 +210,36 @@ def test_blockquote_in_body():
     assert body.html_text == "<blockquote>Quote</blockquote>"
 
 
+def test_blockquote_wraps_heading_in_body():
+    data = {
+        "mid": "t",
+        "seq": 1,
+        "text": "Title",
+        "markup": [
+            {"from": 0, "length": 5, "type": TextStyle.BLOCKQUOTE},
+            {"from": 0, "length": 5, "type": TextStyle.HEADING},
+        ],
+    }
+    body = MessageBody(**data)
+    assert body.md_text == "> # Title"
+    assert body.html_text == "<blockquote><h1>Title</h1></blockquote>"
+
+
+def test_blockquote_wraps_strong_in_body():
+    data = {
+        "mid": "t",
+        "seq": 1,
+        "text": "Quote",
+        "markup": [
+            {"from": 0, "length": 5, "type": TextStyle.BLOCKQUOTE},
+            {"from": 0, "length": 5, "type": TextStyle.STRONG},
+        ],
+    }
+    body = MessageBody(**data)
+    assert body.md_text == "> **Quote**"
+    assert body.html_text == "<blockquote><b>Quote</b></blockquote>"
+
+
 def test_link_in_body():
     data = {
         "mid": "t",

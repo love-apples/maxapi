@@ -185,13 +185,13 @@ class MessageBody(BaseModel):
             return len(text)
 
         order = {
+            TextStyle.BLOCKQUOTE: 0,
             TextStyle.STRONG: 1,
             TextStyle.EMPHASIZED: 2,
             TextStyle.UNDERLINE: 3,
             TextStyle.STRIKETHROUGH: 4,
             TextStyle.MONOSPACED: 5,
             TextStyle.HEADING: 6,
-            TextStyle.BLOCKQUOTE: 7,
             TextStyle.LINK: 8,
             TextStyle.USER_MENTION: 9,
         }
