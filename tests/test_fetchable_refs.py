@@ -61,6 +61,23 @@ async def test_base_update_fetch_chat_returns_existing_value():
     assert await event.fetch_chat() is chat
 
 
+async def test_base_update_fetch_chat_ignores_non_lazy_fetch_method():
+    class ChatLike:
+        def __init__(self) -> None:
+            self.fetch_called = False
+
+        async def fetch(self):
+            self.fetch_called = True
+            return "unexpected"
+
+    event = DummyUpdate(timestamp=1)
+    chat = ChatLike()
+    event.chat = chat
+
+    assert await event.fetch_chat() is chat
+    assert not chat.fetch_called
+
+
 async def test_base_update_fetch_chat_awaits_fetch_method(bot):
     resolved = object()
     event = DummyUpdate(timestamp=1)
@@ -85,6 +102,23 @@ async def test_base_update_fetch_from_user_returns_existing_value():
     event.from_user = from_user
 
     assert await event.fetch_from_user() is from_user
+
+
+async def test_base_update_fetch_from_user_ignores_non_lazy_fetch_method():
+    class UserLike:
+        def __init__(self) -> None:
+            self.fetch_called = False
+
+        async def fetch(self):
+            self.fetch_called = True
+            return "unexpected"
+
+    event = DummyUpdate(timestamp=1)
+    from_user = UserLike()
+    event.from_user = from_user
+
+    assert await event.fetch_from_user() is from_user
+    assert not from_user.fetch_called
 
 
 async def test_base_update_fetch_from_user_awaits_fetch_method(bot):

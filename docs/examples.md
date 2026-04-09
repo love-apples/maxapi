@@ -99,7 +99,7 @@ async def hello(event: MessageCreated):
 
 @dp.bot_added()
 async def bot_added(event: BotAdded):
-    if not event.chat:
+    if event.chat is None:
         logging.info('Не удалось получить chat, возможно отключен auto_requests!')
         return
     
@@ -149,7 +149,7 @@ async def message_edited(event: MessageEdited):
 
 @dp.user_removed()
 async def user_removed(event: UserRemoved):
-    if not event.from_user:
+    if event.from_user is None:
         return await bot.send_message(
             chat_id=event.chat_id,
             text=f'Неизвестный кикнул {event.user.first_name} 😢'
@@ -163,7 +163,7 @@ async def user_removed(event: UserRemoved):
 
 @dp.user_added()
 async def user_added(event: UserAdded):
-    if not event.chat:
+    if event.chat is None:
         return await bot.send_message(
             chat_id=event.chat_id,
             text=f'Чат приветствует вас, {event.user.first_name}!'
@@ -478,7 +478,7 @@ class FilterChat(BaseFilter):
     
     async def __call__(self, event: UpdateUnion):
         
-        if not event.chat:
+        if event.chat is None:
             return False
         
         return event.chat == 'Test'

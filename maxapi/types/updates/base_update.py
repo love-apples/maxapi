@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ...enums.update import UpdateType
 from ...types.bot_mixin import BotMixin
+from ...types.fetchable import LazyRef
 
 if TYPE_CHECKING:
     from ...bot import Bot
@@ -45,9 +46,8 @@ class BaseUpdate(BaseModel, BotMixin):
         if chat is None:
             return None
 
-        fetch = getattr(chat, "fetch", None)
-        if callable(fetch):
-            return await fetch()
+        if isinstance(chat, LazyRef):
+            return await chat.fetch()
 
         return chat
 
@@ -58,8 +58,7 @@ class BaseUpdate(BaseModel, BotMixin):
         if from_user is None:
             return None
 
-        fetch = getattr(from_user, "fetch", None)
-        if callable(fetch):
-            return await fetch()
+        if isinstance(from_user, LazyRef):
+            return await from_user.fetch()
 
         return from_user
