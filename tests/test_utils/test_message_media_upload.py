@@ -114,4 +114,3 @@ class TestProcessInputMedia:
                 bot=bot,
                 att=media,
             )
-

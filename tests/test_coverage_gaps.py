@@ -16,13 +16,10 @@ import warnings
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-
-from maxapi import Bot, Dispatcher
 from maxapi.enums.chat_type import ChatType
 from maxapi.exceptions.max import MaxApiError, MaxConnection
 from maxapi.filters.command import Command
 from maxapi.utils.updates import _resolve_from_user
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -76,8 +73,6 @@ class TestResolveFromUserErrorHandling:
 
         error = MaxApiError(code=404, raw={"message": "not found"})
         bot.get_chat_member = AsyncMock(side_effect=error)
-
-        import logging
 
         with patch("maxapi.utils.updates.logger") as mock_logger:
             await _resolve_from_user(fixture_message_removed, bot)
@@ -162,9 +157,7 @@ class TestDispatcherReadyIdempotency:
         await dispatcher.startup(bot)
         assert dispatcher._ready is True
 
-    async def test_ready_direct_call_skips_second_entry(
-        self, dispatcher, bot
-    ):
+    async def test_ready_direct_call_skips_second_entry(self, dispatcher, bot):
         """Direct __ready call when _ready=True returns immediately."""
         dispatcher.check_me = AsyncMock()
         dispatcher._prepare_handlers = Mock()
@@ -385,12 +378,16 @@ class TestGetMembersChatMarkerIsNotNone:
 
 
 class TestBaseConnectionUploadFallback:
-    """upload_file / upload_file_buffer use temp ClientSession when no session."""
+    """upload_file / upload_file_buffer используют временный ClientSession,
+    когда сессия отсутствует.
+    """
 
     async def test_upload_file_uses_temp_session_when_session_is_none(
         self, bot, tmp_path
     ):
-        """upload_file falls back to a fresh ClientSession when bot.session=None."""
+        """upload_file откатывается к новому ClientSession,
+        когда bot.session=None.
+        """
         from maxapi.connection.base import BaseConnection
         from maxapi.enums.upload_type import UploadType
 
@@ -428,7 +425,9 @@ class TestBaseConnectionUploadFallback:
     async def test_upload_file_buffer_mimetypes_guess_extension(
         self, bot, tmp_path
     ):
-        """upload_file_buffer calls mimetypes.guess_extension for known MIME."""
+        """upload_file_buffer вызывает mimetypes.guess_extension
+        для известного MIME-типа.
+        """
         from maxapi.connection.base import BaseConnection
         from maxapi.enums.upload_type import UploadType
 
@@ -443,14 +442,20 @@ class TestBaseConnectionUploadFallback:
         bot.session.closed = False
         bot.session.post = AsyncMock(return_value=mock_response)
 
-        # Patch puremagic to return a recognisable MIME match, and
-        # patch mimetypes.guess_extension to return a real extension string.
+        # Подменяем puremagic, чтобы вернуть распознаваемый MIME-матч,
+        # и mimetypes.guess_extension — чтобы вернуть реальное расширение.
         fake_match = MagicMock()
-        fake_match.__getitem__ = lambda self_m, idx: "image/png" if idx == 1 else "mocked"
+
+        def _fake_getitem(self_m, idx):
+            return "image/png" if idx == 1 else "mocked"
+
+        fake_match.__getitem__ = _fake_getitem
 
         with (
             patch("maxapi.connection.base.puremagic.magic_string") as mock_pm,
-            patch("maxapi.connection.base.mimetypes.guess_extension") as mock_ge,
+            patch(
+                "maxapi.connection.base.mimetypes.guess_extension"
+            ) as mock_ge,
         ):
             mock_pm.return_value = [fake_match]
             mock_ge.return_value = ".png"
