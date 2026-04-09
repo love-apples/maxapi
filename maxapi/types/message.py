@@ -10,6 +10,7 @@ from ..enums.text_style import TextStyle
 from ..types.attachments import Attachments
 from ..types.bot_mixin import BotMixin
 from ..utils.formatting import (
+    Blockquote,
     Bold,
     Code,
     Heading,
@@ -190,8 +191,9 @@ class MessageBody(BaseModel):
             TextStyle.STRIKETHROUGH: 4,
             TextStyle.MONOSPACED: 5,
             TextStyle.HEADING: 6,
-            TextStyle.LINK: 7,
-            TextStyle.USER_MENTION: 8,
+            TextStyle.BLOCKQUOTE: 7,
+            TextStyle.LINK: 8,
+            TextStyle.USER_MENTION: 9,
         }
 
         char_styles: list[
@@ -232,6 +234,7 @@ class MessageBody(BaseModel):
             TextStyle.STRIKETHROUGH: Strikethrough,
             TextStyle.MONOSPACED: Code,
             TextStyle.HEADING: Heading,
+            TextStyle.BLOCKQUOTE: Blockquote,
         }
 
         def wrap_chunk(
