@@ -78,7 +78,7 @@ async def test_base_update_fetch_chat_ignores_non_lazy_fetch_method():
     assert not chat.fetch_called
 
 
-async def test_base_update_fetch_chat_awaits_fetch_method(bot):
+async def test_base_update_fetch_chat_awaits_lazy_ref(bot):
     resolved = object()
     event = DummyUpdate(timestamp=1)
     event.chat = LazyRef(
@@ -121,7 +121,7 @@ async def test_base_update_fetch_from_user_ignores_non_lazy_fetch_method():
     assert not from_user.fetch_called
 
 
-async def test_base_update_fetch_from_user_awaits_fetch_method(bot):
+async def test_base_update_fetch_from_user_awaits_lazy_ref(bot):
     resolved = object()
     event = DummyUpdate(timestamp=1)
     event.from_user = LazyRef(
@@ -132,3 +132,10 @@ async def test_base_update_fetch_from_user_awaits_fetch_method(bot):
     )
 
     assert await event.fetch_from_user() is resolved
+
+
+async def test_base_update_fetch_field_unknown_field_raises_clear_error():
+    event = DummyUpdate(timestamp=1)
+
+    with pytest.raises(AttributeError, match=r"has no field 'missing'"):
+        await event._fetch_field("missing")
