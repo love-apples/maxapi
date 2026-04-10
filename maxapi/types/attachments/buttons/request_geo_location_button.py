@@ -1,3 +1,5 @@
+from typing import Literal
+
 from ....enums.button_type import ButtonType
 from .button import Button
 
@@ -11,5 +13,7 @@ class RequestGeoLocationButton(Button):
                подтверждения пользователя (по умолчанию False)
     """
 
-    type: ButtonType = ButtonType.REQUEST_GEO_LOCATION
+    type: Literal[ButtonType.REQUEST_GEO_LOCATION] = (
+        ButtonType.REQUEST_GEO_LOCATION
+    )
     quick: bool = False

@@ -9,6 +9,7 @@ from ..types.attachments.attachment import (
 )
 from ..types.attachments.buttons.callback_button import CallbackButton
 from ..types.attachments.buttons.chat_button import ChatButton
+from ..types.attachments.buttons.clipboard_button import ClipboardButton
 from ..types.attachments.buttons.link_button import LinkButton
 from ..types.attachments.buttons.message_button import MessageButton
 from ..types.attachments.buttons.open_app_button import OpenAppButton
@@ -49,6 +50,7 @@ __all__ = [
     "CallbackButton",
     "ChatButton",
     "ChatTitleChanged",
+    "ClipboardButton",
     "Command",
     "CommandStart",
     "ContactAttachmentPayload",

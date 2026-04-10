@@ -1,3 +1,5 @@
+from typing import Literal
+
 from ....enums.button_type import ButtonType
 from .button import Button
 
@@ -10,5 +12,5 @@ class RequestContactButton(Button):
         text (str): Текст кнопки
     """
 
-    type: ButtonType = ButtonType.REQUEST_CONTACT
+    type: Literal[ButtonType.REQUEST_CONTACT] = ButtonType.REQUEST_CONTACT
     text: str
