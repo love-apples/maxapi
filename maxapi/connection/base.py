@@ -202,14 +202,13 @@ class BaseConnection(BotMixin):
 
         path_object = Path(path)
         basename = path_object.name
-        ext = path_object.suffix
 
         form = FormData(quote_fields=False)
         form.add_field(
             name="data",
             value=file_data,
             filename=basename,
-            content_type=f"{type.value}/{ext.lstrip('.')}",
+            content_type=mimetypes.guess_type(path)[0] or f"{type.value}/*",
         )
 
         bot = self._ensure_bot()
@@ -219,7 +218,9 @@ class BaseConnection(BotMixin):
             response = await session.post(url=url, data=form)
             return await response.text()
         else:
-            async with ClientSession() as temp_session:
+            async with ClientSession(
+                timeout=bot.default_connection.timeout
+            ) as temp_session:
                 response = await temp_session.post(url=url, data=form)
                 return await response.text()
 
@@ -268,6 +269,8 @@ class BaseConnection(BotMixin):
             response = await session.post(url=url, data=form)
             return await response.text()
         else:
-            async with ClientSession() as temp_session:
+            async with ClientSession(
+                timeout=bot.default_connection.timeout
+            ) as temp_session:
                 response = await temp_session.post(url=url, data=form)
                 return await response.text()

@@ -66,7 +66,7 @@ class GetMembersChat(BaseConnection):
                 [str(user_id) for user_id in self.user_ids]
             )
 
-        if self.marker:
+        if self.marker is not None:
             params["marker"] = self.marker
         if self.count:
             params["count"] = self.count
