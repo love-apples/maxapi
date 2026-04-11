@@ -76,8 +76,17 @@ async def _resolve_from_user(event: UpdateUnion, bot: Bot) -> None:
                 event.from_user = await bot.get_chat_member(
                     chat_id=event.chat_id, user_id=event.user_id
                 )
-            except (MaxApiError, MaxConnection) as exc:
-                logger.warning("Не удалось получить участника чата: %s", exc)
+            except MaxApiError as exc:
+                logger.warning(
+                    "Не удалось получить участника чата: code=%s chat_id=%s",
+                    exc.code,
+                    event.chat_id,
+                )
+            except MaxConnection:
+                logger.warning(
+                    "get_chat_member: connection error chat_id=%s",
+                    event.chat_id,
+                )
         elif event.chat and event.chat.type == ChatType.DIALOG:
             event.from_user = event.chat
 
@@ -87,8 +96,17 @@ async def _resolve_from_user(event: UpdateUnion, bot: Bot) -> None:
                 event.from_user = await bot.get_chat_member(
                     chat_id=event.chat_id, user_id=event.admin_id
                 )
-            except (MaxApiError, MaxConnection) as exc:
-                logger.warning("Не удалось получить участника чата: %s", exc)
+            except MaxApiError as exc:
+                logger.warning(
+                    "Не удалось получить участника чата: code=%s chat_id=%s",
+                    exc.code,
+                    event.chat_id,
+                )
+            except MaxConnection:
+                logger.warning(
+                    "get_chat_member: connection error chat_id=%s",
+                    event.chat_id,
+                )
 
     elif isinstance(event, _EVENTS_WITH_USER_ATTR):
         event.from_user = event.user

@@ -390,6 +390,72 @@ if __name__ == '__main__':
     asyncio.run(main())
 ```
 
+## Форматирование текста
+
+Для сборки текста в HTML и Markdown можно использовать helper-ы из
+`maxapi.utils.formatting`.
+
+| Элемент | HTML | Markdown |
+| --- | --- | --- |
+| Заголовок | `<h1>Заголовок</h1>` | `# Заголовок` |
+| Жирный | `<b>текст</b>` | `**текст**` |
+| Курсив | `<i>текст</i>` | `*текст*` |
+| Подчёркнутый | `<ins>текст</ins>` | `++текст++` |
+| Зачёркнутый | `<s>текст</s>` | `~~текст~~` |
+| Моноширинный | `<code>текст</code>` | `` `текст` `` |
+| Цитата | `<blockquote>текст</blockquote>` | `> текст` |
+| Ссылка | `<a href="https://example.com">текст</a>` | `[текст](https://example.com)` |
+
+Пример HTML:
+
+```python
+from maxapi.enums.format import Format
+from maxapi.utils.formatting import (
+    Blockquote,
+    Bold,
+    Heading,
+    Italic,
+    Link,
+    as_html,
+)
+
+text = as_html(
+    Heading("Проверка форматирования"),
+    "\n",
+    Bold("Жирный текст"),
+    "\n",
+    Italic("Курсивная строка"),
+    "\n",
+    Blockquote("Цитата"),
+    "\n",
+    Link("Документация", url="https://love-apples.github.io/maxapi/"),
+)
+
+await event.message.answer(text, format=Format.HTML)
+```
+
+Пример Markdown:
+
+```python
+from maxapi.enums.format import Format
+from maxapi.utils.formatting import Blockquote, Bold, Heading, as_markdown
+
+text = as_markdown(
+    Heading("Проверка форматирования"),
+    "\n",
+    Bold("Жирный текст"),
+    "\n",
+    Blockquote("Цитата"),
+)
+
+await event.message.answer(text, format=Format.MARKDOWN)
+```
+
+Если вы читаете входящее сообщение из API, можно получить каноническое
+представление текста через `message.body.html_text` и `message.body.md_text`.
+Это нормализованный вывод из `markup`, поэтому он может не совпадать с исходной
+строкой символ в символ.
+
 ## Получение ID
 
 Пример получения различных ID из событий:
@@ -399,7 +465,7 @@ import asyncio
 import logging
 
 from maxapi import Bot, Dispatcher, F
-from maxapi.enums.parse_mode import ParseMode
+from maxapi.enums.format import Format
 from maxapi.types import MessageCreated
 
 logging.basicConfig(level=logging.INFO)
@@ -425,7 +491,7 @@ async def get_ids(event: MessageCreated):
         f'Ваш ID: <b>{event.from_user.user_id}</b>\n'
         f'ID этого чата: <b>{event.chat.chat_id}</b>'
     )
-    await event.message.answer(text, parse_mode=ParseMode.HTML)
+    await event.message.answer(text, format=Format.HTML)
 
 
 async def main():

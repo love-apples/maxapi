@@ -1,6 +1,7 @@
 from maxapi.enums.text_style import TextStyle
 from maxapi.types.message import MessageBody
 from maxapi.utils.formatting import (
+    Blockquote,
     Bold,
     Code,
     Heading,
@@ -31,8 +32,11 @@ def test_basic_formatting():
     assert Code("text").as_html() == "<code>text</code>"
     assert Code("text").as_markdown() == "`text`"
 
-    assert Heading("text").as_html() == "<b>text</b>"
-    assert Heading("text").as_markdown() == "### text"
+    assert Heading("text").as_html() == "<h1>text</h1>"
+    assert Heading("text").as_markdown() == "# text"
+
+    assert Blockquote("text").as_html() == "<blockquote>text</blockquote>"
+    assert Blockquote("text").as_markdown() == "> text"
 
 
 def test_link_and_mention():
@@ -142,8 +146,20 @@ def test_magic_methods():
 
 def test_heading_markdown():
     h = Heading("Title")
-    assert h.as_markdown() == "### Title"
-    assert h.as_html() == "<b>Title</b>"
+    assert h.as_markdown() == "# Title"
+    assert h.as_html() == "<h1>Title</h1>"
+
+
+def test_blockquote_markdown_multiline():
+    q = Blockquote("first\nsecond\n\nthird")
+    assert q.as_markdown() == "> first\n> second\n>\n> third"
+    assert q.as_html() == "<blockquote>first\nsecond\n\nthird</blockquote>"
+
+
+def test_blockquote_markdown_empty():
+    q = Blockquote("")
+    assert q.as_markdown() == ""
+    assert q.as_html() == "<blockquote></blockquote>"
 
 
 def test_all_styles_in_body():
@@ -153,6 +169,7 @@ def test_all_styles_in_body():
         (TextStyle.UNDERLINE, "++", "ins"),
         (TextStyle.STRIKETHROUGH, "~~", "s"),
         (TextStyle.MONOSPACED, "`", "code"),
+        (TextStyle.BLOCKQUOTE, "> ", "blockquote"),
     ]
     for style, md, html in styles:
         data = {
@@ -162,8 +179,11 @@ def test_all_styles_in_body():
             "markup": [{"from": 0, "length": 3, "type": style}],
         }
         body = MessageBody(**data)
-        assert body.md_text == f"{md}txt{md}"
+        expected_md = (
+            f"{md}txt{md}" if style != TextStyle.BLOCKQUOTE else "> txt"
+        )
         assert body.html_text == f"<{html}>txt</{html}>"
+        assert body.md_text == expected_md
 
 
 def test_heading_in_body():
@@ -174,8 +194,50 @@ def test_heading_in_body():
         "markup": [{"from": 0, "length": 5, "type": TextStyle.HEADING}],
     }
     body = MessageBody(**data)
-    assert body.md_text == "### Title"
-    assert body.html_text == "<b>Title</b>"
+    assert body.md_text == "# Title"
+    assert body.html_text == "<h1>Title</h1>"
+
+
+def test_blockquote_in_body():
+    data = {
+        "mid": "t",
+        "seq": 1,
+        "text": "Quote",
+        "markup": [{"from": 0, "length": 5, "type": TextStyle.BLOCKQUOTE}],
+    }
+    body = MessageBody(**data)
+    assert body.md_text == "> Quote"
+    assert body.html_text == "<blockquote>Quote</blockquote>"
+
+
+def test_blockquote_wraps_heading_in_body():
+    data = {
+        "mid": "t",
+        "seq": 1,
+        "text": "Title",
+        "markup": [
+            {"from": 0, "length": 5, "type": TextStyle.BLOCKQUOTE},
+            {"from": 0, "length": 5, "type": TextStyle.HEADING},
+        ],
+    }
+    body = MessageBody(**data)
+    assert body.md_text == "> # Title"
+    assert body.html_text == "<blockquote><h1>Title</h1></blockquote>"
+
+
+def test_blockquote_wraps_strong_in_body():
+    data = {
+        "mid": "t",
+        "seq": 1,
+        "text": "Quote",
+        "markup": [
+            {"from": 0, "length": 5, "type": TextStyle.BLOCKQUOTE},
+            {"from": 0, "length": 5, "type": TextStyle.STRONG},
+        ],
+    }
+    body = MessageBody(**data)
+    assert body.md_text == "> **Quote**"
+    assert body.html_text == "<blockquote><b>Quote</b></blockquote>"
 
 
 def test_link_in_body():
