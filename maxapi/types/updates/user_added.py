@@ -33,4 +33,4 @@ class UserAdded(BaseUpdate):
                 пользователя.
         """
 
-        return self.chat_id, self.inviter_id
+        return self.chat_id, self.user.user_id
