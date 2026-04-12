@@ -96,6 +96,8 @@ async def cmd_buffer(event: MessageCreated) -> None:
     Полезно, когда файл генерируется на лету (например, captcha, график).
     """
     chat_id = event.message.recipient.chat_id
+    if chat_id is None:
+        return
     await bot.send_action(chat_id=chat_id, action=SenderAction.SENDING_PHOTO)
 
     # Минимальный PNG 1×1 пиксель (красный) для демонстрации
@@ -122,6 +124,8 @@ async def cmd_upload(event: MessageCreated) -> None:
     загружаем один раз — отправляем по token'у.
     """
     chat_id = event.message.recipient.chat_id
+    if chat_id is None:
+        return
     await bot.send_action(chat_id=chat_id, action=SenderAction.SENDING_PHOTO)
 
     if not os.path.exists(SAMPLE_IMAGE_PATH):
@@ -173,6 +177,8 @@ async def on_attachment(event: MessageCreated) -> None:
     )
 
     chat_id = event.message.recipient.chat_id
+    if chat_id is None:
+        return
     await bot.send_action(chat_id=chat_id, action=action)
 
     # Информируем пользователя о полученном вложении
