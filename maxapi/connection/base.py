@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import aiofiles
 import aiofiles.os
+import backoff
 import puremagic
 from aiohttp import ClientConnectionError, ClientSession, FormData
 
@@ -28,55 +29,33 @@ if TYPE_CHECKING:
 DOWNLOAD_CHUNK_SIZE = 65536
 
 
-async def _retry_request(
-    session: ClientSession,
-    method: str,
-    url: str,
-    *,
-    max_retries: int,
-    retry_statuses: tuple[int, ...],
-    backoff_factor: float,
-    **kwargs: Any,
-) -> Any:
-    """
-    Выполняет HTTP-запрос с retry и экспоненциальным backoff.
+class _RetryableServerError(Exception):
+    """Внутреннее исключение для retry при серверных ошибках."""
 
-    Повторяет запрос при ошибках соединения и серверных
-    ошибках из retry_statuses.
-    """
-    for attempt in range(max_retries + 1):
-        try:
-            response = await session.request(method, url, **kwargs)
-        except ClientConnectionError as e:
-            if attempt < max_retries:
-                delay = backoff_factor * (2**attempt)
-                logger_bot.warning(
-                    "Ошибка соединения (%s), попытка %d/%d, жду %.1fс",
-                    e,
-                    attempt + 1,
-                    max_retries + 1,
-                    delay,
-                )
-                await asyncio.sleep(delay)
-                continue
-            raise
+    def __init__(self, status: int) -> None:
+        self.status = status
+        super().__init__(f"Server error {status}")
 
-        if response.status in retry_statuses and attempt < max_retries:
-            await response.read()
-            delay = backoff_factor * (2**attempt)
-            logger_bot.warning(
-                "Серверная ошибка %d, попытка %d/%d, жду %.1fс",
-                response.status,
-                attempt + 1,
-                max_retries + 1,
-                delay,
-            )
-            await asyncio.sleep(delay)
-            continue
 
-        return response
-
-    return response  # последняя попытка
+def _on_backoff(details: dict[str, Any]) -> None:
+    """Логирование при retry."""
+    wait = details["wait"]
+    tries = details["tries"]
+    exc = details.get("exception")
+    if isinstance(exc, _RetryableServerError):
+        logger_bot.warning(
+            "Серверная ошибка %d, попытка %d, жду %.1fс",
+            exc.status,
+            tries,
+            wait,
+        )
+    elif isinstance(exc, ClientConnectionError):
+        logger_bot.warning(
+            "Ошибка соединения (%s), попытка %d, жду %.1fс",
+            exc,
+            tries,
+            wait,
+        )
 
 
 class BaseConnection(BotMixin):
@@ -157,28 +136,40 @@ class BaseConnection(BotMixin):
         await bot.ensure_session()
 
         conn = bot.default_connection
-        max_retries = conn.max_retries
         retry_statuses = conn.retry_on_statuses
-        backoff_factor = conn.retry_backoff_factor
 
         url = path.value if isinstance(path, ApiPath) else path
 
-        try:
-            r = await _retry_request(
-                bot.session,
-                method.value,
-                url,
-                max_retries=max_retries,
-                retry_statuses=retry_statuses,
-                backoff_factor=backoff_factor,
+        @backoff.on_exception(
+            backoff.expo,
+            (ClientConnectionError, _RetryableServerError),
+            max_tries=conn.max_retries + 1,
+            factor=conn.retry_backoff_factor,
+            on_backoff=_on_backoff,
+        )
+        async def _do_request() -> Any:
+            r = await bot.session.request(
+                method=method.value,
+                url=url,
                 **kwargs,
             )
+
+            if r.status == 401:
+                await bot.session.close()
+                raise InvalidToken("Неверный токен!")
+
+            if r.status in retry_statuses:
+                await r.read()
+                raise _RetryableServerError(r.status)
+
+            return r
+
+        try:
+            r = await _do_request()
         except ClientConnectionError as e:
             raise MaxConnection(f"Ошибка при отправке запроса: {e}") from e
-
-        if r.status == 401:
-            await bot.session.close()
-            raise InvalidToken("Неверный токен!")
+        except _RetryableServerError as e:
+            raise MaxApiError(code=e.status, raw={"error": str(e)}) from e
 
         if not r.ok:
             raw = await r.json()
@@ -334,21 +325,29 @@ class BaseConnection(BotMixin):
         session = await bot.ensure_session()
 
         conn = bot.default_connection
-        max_retries = conn.max_retries
-        backoff_factor = conn.retry_backoff_factor
-        retry_statuses = conn.retry_on_statuses
+
+        @backoff.on_exception(
+            backoff.expo,
+            (ClientConnectionError, _RetryableServerError),
+            max_tries=conn.max_retries + 1,
+            factor=conn.retry_backoff_factor,
+            on_backoff=_on_backoff,
+        )
+        async def _do_download() -> Any:
+            resp = await session.request("GET", url)
+            if resp.status in conn.retry_on_statuses:
+                await resp.read()
+                raise _RetryableServerError(resp.status)
+            return resp
 
         try:
-            response = await _retry_request(
-                session,
-                "GET",
-                url,
-                max_retries=max_retries,
-                retry_statuses=retry_statuses,
-                backoff_factor=backoff_factor,
-            )
+            response = await _do_download()
         except ClientConnectionError as e:
             raise DownloadFileError(f"Ошибка при скачивании файла: {e}") from e
+        except _RetryableServerError as e:
+            raise DownloadFileError(
+                f"Ошибка при скачивании файла: HTTP {e.status}"
+            ) from e
 
         if not response.ok:
             raise DownloadFileError(

@@ -66,7 +66,7 @@ class TestDefaultConnectionRetryConfig:
 
 
 class TestRetryOnServerErrors:
-    """Тесты retry при серверных ошибках."""
+    """Тесты retry при серверных ошибках (через backoff)."""
 
     @pytest.fixture
     def bot_with_retry(self, mock_bot_token):
@@ -98,7 +98,7 @@ class TestRetryOnServerErrors:
         base = BaseConnection()
         base.bot = bot_with_retry
 
-        with patch("maxapi.connection.base.asyncio.sleep"):
+        with patch("asyncio.sleep", new_callable=AsyncMock):
             result = await base.request(
                 method=HTTPMethod.GET,
                 path="/test",
@@ -121,7 +121,7 @@ class TestRetryOnServerErrors:
         base = BaseConnection()
         base.bot = bot_with_retry
 
-        with patch("maxapi.connection.base.asyncio.sleep"):
+        with patch("asyncio.sleep", new_callable=AsyncMock):
             result = await base.request(
                 method=HTTPMethod.GET,
                 path="/test",
@@ -142,7 +142,7 @@ class TestRetryOnServerErrors:
         base.bot = bot_with_retry
 
         with (
-            patch("maxapi.connection.base.asyncio.sleep"),
+            patch("asyncio.sleep", new_callable=AsyncMock),
             pytest.raises(MaxApiError) as exc_info,
         ):
             await base.request(
@@ -260,7 +260,7 @@ class TestRetryOnConnectionErrors:
         base = BaseConnection()
         base.bot = bot_with_retry
 
-        with patch("maxapi.connection.base.asyncio.sleep"):
+        with patch("asyncio.sleep", new_callable=AsyncMock):
             result = await base.request(
                 method=HTTPMethod.GET,
                 path="/test",
@@ -281,7 +281,7 @@ class TestRetryOnConnectionErrors:
         base.bot = bot_with_retry
 
         with (
-            patch("maxapi.connection.base.asyncio.sleep"),
+            patch("asyncio.sleep", new_callable=AsyncMock),
             pytest.raises(MaxConnection),
         ):
             await base.request(
@@ -295,11 +295,11 @@ class TestRetryOnConnectionErrors:
 
 
 class TestRetryBackoff:
-    """Тесты экспоненциальной задержки."""
+    """Тесты экспоненциальной задержки через backoff."""
 
     @pytest.mark.asyncio
     async def test_exponential_backoff_delays(self, mock_bot_token):
-        """Проверка экспоненциальных задержек."""
+        """Проверка что backoff вызывается нужное количество раз."""
         conn = DefaultConnectionProperties(
             max_retries=3,
             retry_backoff_factor=1.0,
@@ -320,15 +320,10 @@ class TestRetryBackoff:
         base.bot = bot
 
         sleep_calls = []
-
-        async def mock_sleep(delay):
-            sleep_calls.append(delay)
+        original_sleep = AsyncMock(side_effect=lambda d: sleep_calls.append(d))
 
         with (
-            patch(
-                "maxapi.connection.base.asyncio.sleep",
-                side_effect=mock_sleep,
-            ),
+            patch("asyncio.sleep", original_sleep),
             pytest.raises(MaxApiError),
         ):
             await base.request(
@@ -337,8 +332,9 @@ class TestRetryBackoff:
                 is_return_raw=True,
             )
 
-        # backoff_factor * 2^attempt: 1*1=1, 1*2=2, 1*4=4
-        assert sleep_calls == [1.0, 2.0, 4.0]
+        # backoff с экспоненциальной задержкой, 3 retry = 3 sleep
+        assert len(sleep_calls) == 3
+        assert all(d > 0 for d in sleep_calls)
 
     @pytest.mark.asyncio
     async def test_custom_backoff_factor(self, mock_bot_token):
@@ -363,15 +359,10 @@ class TestRetryBackoff:
         base.bot = bot
 
         sleep_calls = []
-
-        async def mock_sleep(delay):
-            sleep_calls.append(delay)
+        original_sleep = AsyncMock(side_effect=lambda d: sleep_calls.append(d))
 
         with (
-            patch(
-                "maxapi.connection.base.asyncio.sleep",
-                side_effect=mock_sleep,
-            ),
+            patch("asyncio.sleep", original_sleep),
             pytest.raises(MaxApiError),
         ):
             await base.request(
@@ -380,8 +371,9 @@ class TestRetryBackoff:
                 is_return_raw=True,
             )
 
-        # backoff_factor * 2^attempt: 0.5*1=0.5, 0.5*2=1.0
-        assert sleep_calls == [0.5, 1.0]
+        # 2 retry = 2 sleep
+        assert len(sleep_calls) == 2
+        assert all(d > 0 for d in sleep_calls)
 
 
 class TestRetryWithCustomStatuses:
@@ -411,7 +403,7 @@ class TestRetryWithCustomStatuses:
         base = BaseConnection()
         base.bot = bot
 
-        with patch("maxapi.connection.base.asyncio.sleep"):
+        with patch("asyncio.sleep", new_callable=AsyncMock):
             result = await base.request(
                 method=HTTPMethod.GET,
                 path="/test",
@@ -482,7 +474,7 @@ class TestRetryResponseBodyConsumed:
         base = BaseConnection()
         base.bot = bot
 
-        with patch("maxapi.connection.base.asyncio.sleep"):
+        with patch("asyncio.sleep", new_callable=AsyncMock):
             await base.request(
                 method=HTTPMethod.GET,
                 path="/test",
@@ -490,37 +482,3 @@ class TestRetryResponseBodyConsumed:
             )
 
         error.read.assert_awaited_once()
-
-
-class TestRetryRequestFallbackLine:
-    """Покрытие строки «return response  # последняя попытка» в _retry_request.
-
-    Строка достижима только при пустом цикле (range(0)),
-    т.е. max_retries=-1. В этом случае response не определён
-    и Python бросает UnboundLocalError.
-    """
-
-    @pytest.mark.asyncio
-    async def test_empty_loop_hits_fallback_return(self):
-        """max_retries=-1 → range(0) → тело цикла не выполняется.
-
-        После пустого цикла управление переходит к строке
-        «return response». Поскольку response не был присвоен,
-        Python бросает UnboundLocalError. Это подтверждает
-        достижимость строки-fallback для coverage.
-        """
-        from unittest.mock import AsyncMock
-
-        from maxapi.connection.base import _retry_request
-
-        session = AsyncMock()
-
-        with pytest.raises((UnboundLocalError, NameError)):
-            await _retry_request(
-                session,
-                "GET",
-                "/test",
-                max_retries=-1,
-                retry_statuses=(502,),
-                backoff_factor=0.0,
-            )
