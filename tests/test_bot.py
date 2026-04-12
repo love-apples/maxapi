@@ -201,6 +201,18 @@ class TestBotMethods:
             # Это нормально, так как мы мокируем весь fetch
 
 
+class TestBotRepr:
+    """Тесты __repr__ для Bot."""
+
+    def test_repr_returns_masked_token(self, bot):
+        """repr(bot) должен возвращать Bot(token='***')."""
+        assert repr(bot) == "Bot(token='***')"
+
+    def test_repr_hides_real_token(self, mock_bot_token, bot):
+        """repr(bot) не должен содержать настоящий токен."""
+        assert mock_bot_token not in repr(bot)
+
+
 class TestBotIntegration:
     """Интеграционные тесты Bot (требуют реальный токен)."""
 
