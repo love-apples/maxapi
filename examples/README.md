@@ -23,6 +23,8 @@ source .venv/bin/activate   # Linux/macOS
 pip install maxapi
 ```
 
+Если вы хотите использовать `.env` файлы, установите `pip install python-dotenv` (опционально).
+
 Для примера с webhook (09):
 ```bash
 pip install maxapi[fastapi]
@@ -326,7 +328,7 @@ logging.basicConfig(level=logging.DEBUG)
 Логгеры библиотеки: `bot`, `dispatcher`, `connection`.
 
 **Как перейти с polling на webhook?**
-Смотрите пример [`09_webhook_bot.py`](09_webhook_bot.py). Не забудьте удалить подписки webhook через `await bot.delete_webhook()` перед `start_polling()`, если они были.
+Смотрите пример [`09_webhook_bot.py`](09_webhook_bot.py). Если ранее был настроен webhook, удалите его через `await bot.delete_webhook()` перед переходом на polling.
 
 **Как хранить состояние между перезагрузками?**
 Используйте `RedisContext` вместо `MemoryContext`:
