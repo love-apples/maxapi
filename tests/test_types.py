@@ -166,3 +166,79 @@ class TestDialogMuted:
         assert result is not None
         assert isinstance(result, datetime)
         assert result == datetime.fromtimestamp(ts_ms / 1000)
+
+
+class TestUserAddedGetIds:
+    """Тесты для UserAdded.get_ids()."""
+
+    _USER: ClassVar[dict[str, Any]] = {
+        "user_id": 42,
+        "first_name": "Alice",
+        "is_bot": False,
+        "last_activity_time": 0,
+    }
+
+    def test_get_ids_returns_chat_and_user_id(self):
+        """get_ids() возвращает (chat_id, user.user_id)."""
+        from maxapi.types.updates.user_added import UserAdded
+
+        event = UserAdded(
+            timestamp=0,
+            chat_id=100,
+            user=self._USER,
+            is_channel=False,
+        )
+        assert event.get_ids() == (100, 42)
+
+    def test_get_ids_ignores_inviter_id(self):
+        """get_ids() возвращает user.user_id, а не inviter_id."""
+        from maxapi.types.updates.user_added import UserAdded
+
+        event = UserAdded(
+            timestamp=0,
+            chat_id=100,
+            inviter_id=999,
+            user=self._USER,
+            is_channel=False,
+        )
+        _chat_id, user_id = event.get_ids()
+        assert user_id == 42
+        assert user_id != 999
+
+
+class TestUserRemovedGetIds:
+    """Тесты для UserRemoved.get_ids()."""
+
+    _USER: ClassVar[dict[str, Any]] = {
+        "user_id": 55,
+        "first_name": "Bob",
+        "is_bot": False,
+        "last_activity_time": 0,
+    }
+
+    def test_get_ids_returns_chat_and_user_id(self):
+        """get_ids() возвращает (chat_id, user.user_id)."""
+        from maxapi.types.updates.user_removed import UserRemoved
+
+        event = UserRemoved(
+            timestamp=0,
+            chat_id=200,
+            user=self._USER,
+            is_channel=False,
+        )
+        assert event.get_ids() == (200, 55)
+
+    def test_get_ids_ignores_admin_id(self):
+        """get_ids() возвращает user.user_id, а не admin_id."""
+        from maxapi.types.updates.user_removed import UserRemoved
+
+        event = UserRemoved(
+            timestamp=0,
+            chat_id=200,
+            admin_id=888,
+            user=self._USER,
+            is_channel=False,
+        )
+        _chat_id, user_id = event.get_ids()
+        assert user_id == 55
+        assert user_id != 888
