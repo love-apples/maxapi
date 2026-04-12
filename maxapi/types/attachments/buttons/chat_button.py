@@ -1,4 +1,5 @@
 import warnings
+from typing import Literal
 
 from ....enums.button_type import ButtonType
 from .button import Button
@@ -17,7 +18,7 @@ class ChatButton(Button):
         uuid: Уникальный идентификатор чата
     """
 
-    type: ButtonType = ButtonType.CHAT
+    type: Literal[ButtonType.CHAT] = ButtonType.CHAT
     chat_title: str
     chat_description: str | None = None
     start_payload: str | None = None

@@ -203,6 +203,7 @@ nav:
         - Button: types/attachments/buttons/button.md
         - Callback_button: types/attachments/buttons/callback_button.md
         - Chat_button: types/attachments/buttons/chat_button.md
+        - Clipboard_button: types/attachments/buttons/clipboard_button.md
         - Link_button: types/attachments/buttons/link_button.md
         - Message_button: types/attachments/buttons/message_button.md
         - Open_app_button: types/attachments/buttons/open_app_button.md

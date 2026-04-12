@@ -1,3 +1,5 @@
+from typing import Literal
+
 from ....enums.button_type import ButtonType
 from .button import Button
 
@@ -16,7 +18,7 @@ class OpenAppButton(Button):
             мини-приложения
     """
 
-    type: ButtonType = ButtonType.OPEN_APP
+    type: Literal[ButtonType.OPEN_APP] = ButtonType.OPEN_APP
     text: str
     web_app: str | None = None
     contact_id: int | None = None
