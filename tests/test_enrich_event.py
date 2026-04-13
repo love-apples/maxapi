@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from maxapi.enums.chat_type import ChatType
+from maxapi.exceptions.max import MaxApiError, MaxConnection
 from maxapi.types.fetchable import ChatRef, FromUserRef
 from maxapi.utils.updates import (
     _inject_bot,
@@ -243,6 +244,34 @@ class TestResolveFromUser:
 
         bot.get_chat_member.assert_not_called()
         assert fixture_user_removed.from_user is None
+
+    async def test_user_removed_api_error_logs_and_keeps_from_user_none(
+        self, bot, fixture_user_removed, caplog
+    ):
+        fixture_user_removed.admin_id = 9999
+        bot.get_chat_member = AsyncMock(
+            side_effect=MaxApiError(403, "forbidden")
+        )
+
+        with caplog.at_level("WARNING", logger="maxapi.utils.updates"):
+            await _resolve_from_user(fixture_user_removed, bot)
+
+        assert fixture_user_removed.from_user is None
+        assert "Не удалось получить участника чата" in caplog.text
+
+    async def test_user_removed_connection_error_logs_and_keeps_from_user_none(
+        self, bot, fixture_user_removed, caplog
+    ):
+        fixture_user_removed.admin_id = 9999
+        bot.get_chat_member = AsyncMock(
+            side_effect=MaxConnection("conn error")
+        )
+
+        with caplog.at_level("WARNING", logger="maxapi.utils.updates"):
+            await _resolve_from_user(fixture_user_removed, bot)
+
+        assert fixture_user_removed.from_user is None
+        assert "get_chat_member: connection error" in caplog.text
 
     @pytest.mark.parametrize(
         "fixture_name",

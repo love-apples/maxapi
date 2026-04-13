@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 from ..enums.chat_type import ChatType
+from ..exceptions.max import MaxApiError, MaxConnection
 from ..types.fetchable import ChatRef, FromUserRef
 from ..types.updates.bot_added import BotAdded
 from ..types.updates.bot_removed import BotRemoved
@@ -23,6 +25,8 @@ from ..types.updates.user_removed import UserRemoved
 if TYPE_CHECKING:
     from ..bot import Bot
     from ..types.updates import UpdateUnion
+
+logger = logging.getLogger(__name__)
 
 _EVENTS_WITH_USER_ATTR = (
     UserAdded,
@@ -103,9 +107,22 @@ async def _resolve_from_user(event: UpdateUnion, bot: Bot) -> None:
             event.from_user = event.chat
 
     elif isinstance(event, UserRemoved) and event.admin_id:
-        event.from_user = await bot.get_chat_member(
-            chat_id=event.chat_id, user_id=event.admin_id
-        )
+        try:
+            event.from_user = await bot.get_chat_member(
+                chat_id=event.chat_id,
+                user_id=event.admin_id,
+            )
+        except MaxApiError as exc:
+            logger.warning(
+                "Не удалось получить участника чата: code=%s chat_id=%s",
+                exc.code,
+                event.chat_id,
+            )
+        except MaxConnection:
+            logger.warning(
+                "get_chat_member: connection error chat_id=%s",
+                event.chat_id,
+            )
 
 
 def _inject_bot(event: UpdateUnion, bot: Bot) -> None:
