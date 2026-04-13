@@ -99,13 +99,14 @@ async def hello(event: MessageCreated):
 
 @dp.bot_added()
 async def bot_added(event: BotAdded):
-    if event.chat is None:
+    chat = await event.fetch_chat()
+    if chat is None:
         logging.info('Не удалось получить chat, возможно отключен auto_requests!')
         return
     
     await bot.send_message(
         chat_id=event.chat_id,
-        text=f'Привет чат {event.chat.title}!'
+        text=f'Привет чат {chat.title}!'
     )
 
 
@@ -149,7 +150,8 @@ async def message_edited(event: MessageEdited):
 
 @dp.user_removed()
 async def user_removed(event: UserRemoved):
-    if event.from_user is None:
+    from_user = await event.fetch_from_user()
+    if from_user is None:
         return await bot.send_message(
             chat_id=event.chat_id,
             text=f'Неизвестный кикнул {event.user.first_name} 😢'
@@ -157,13 +159,14 @@ async def user_removed(event: UserRemoved):
         
     await bot.send_message(
         chat_id=event.chat_id,
-        text=f'{event.from_user.first_name} кикнул {event.user.first_name} 😢'
+        text=f'{from_user.first_name} кикнул {event.user.first_name} 😢'
     )
 
 
 @dp.user_added()
 async def user_added(event: UserAdded):
-    if event.chat is None:
+    chat = await event.fetch_chat()
+    if chat is None:
         return await bot.send_message(
             chat_id=event.chat_id,
             text=f'Чат приветствует вас, {event.user.first_name}!'
@@ -171,7 +174,7 @@ async def user_added(event: UserAdded):
         
     await bot.send_message(
         chat_id=event.chat_id,
-        text=f'Чат "{event.chat.title}" приветствует вас, {event.user.first_name}!'
+        text=f'Чат "{chat.title}" приветствует вас, {event.user.first_name}!'
     )
 
 
@@ -184,19 +187,22 @@ if __name__ == '__main__':
 ```
 
 Если бот создан с `auto_requests=False`, то `event.chat` и
-`event.from_user` могут быть lazy ref. В этом режиме запрашивайте их
-явно:
+`event.from_user` могут быть не загружены автоматически. Чтобы безопасно
+получить их независимо от режима, используйте явный fetch:
 
 ```python
 chat = await event.fetch_chat()
 from_user = await event.fetch_from_user()
+```
 
-# или через сами ref-объекты (проверяйте через is not None,
-# т.к. pending lazy ref является falsy)
-chat = await event.chat.fetch() if event.chat is not None else None
-from_user = (
-    await event.from_user.fetch() if event.from_user is not None else None
-)
+После этого работайте уже с локальными переменными:
+
+```python
+if chat is not None:
+    print(chat.title)
+
+if from_user is not None:
+    print(from_user.first_name)
 ```
 
 ## MagicFilter
@@ -503,9 +509,15 @@ async def get_ids_from_forward(event: MessageCreated):
 
 @dp.message_created()
 async def get_ids(event: MessageCreated):
+    from_user = await event.fetch_from_user()
+    chat = await event.fetch_chat()
+
+    if from_user is None or chat is None:
+        return
+
     text = (
-        f'Ваш ID: <b>{event.from_user.user_id}</b>\n'
-        f'ID этого чата: <b>{event.chat.chat_id}</b>'
+        f'Ваш ID: <b>{from_user.user_id}</b>\n'
+        f'ID этого чата: <b>{chat.chat_id}</b>'
     )
     await event.message.answer(text, format=Format.HTML)
 
@@ -543,11 +555,12 @@ class FilterChat(BaseFilter):
     """
     
     async def __call__(self, event: UpdateUnion):
-        
-        if event.chat is None:
+
+        chat = await event.fetch_chat()
+        if chat is None:
             return False
-        
-        return event.chat == 'Test'
+
+        return chat.title == 'Test'
 
 
 @dp.message_created(CommandStart(), FilterChat())
