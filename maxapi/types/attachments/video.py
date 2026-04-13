@@ -67,4 +67,4 @@ class Video(Attachment):
     bot: Any | None = Field(default=None, exclude=True)  # pyright: ignore[reportRedeclaration]
 
     if TYPE_CHECKING:
-        bot: "Bot" | None  # type: ignore
+        bot: Bot | None  # type: ignore

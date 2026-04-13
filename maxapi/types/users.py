@@ -2,10 +2,11 @@ from pydantic import BaseModel
 
 from ..enums.chat_permission import ChatPermission
 from ..types.command import BotCommand
+from ..types.fetchable import FetchableMixin
 from ..utils.formatting import UserMention
 
 
-class User(BaseModel):
+class User(FetchableMixin, BaseModel):
     """
     Модель пользователя.
 

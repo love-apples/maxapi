@@ -11,6 +11,7 @@ from pydantic import (
 from ..enums.chat_permission import ChatPermission
 from ..enums.chat_status import ChatStatus
 from ..enums.chat_type import ChatType
+from ..types.fetchable import FetchableMixin
 from ..types.message import Message
 from ..types.users import User
 from ..utils.time import from_ms, to_ms
@@ -27,7 +28,7 @@ class Icon(BaseModel):
     url: str
 
 
-class Chat(BaseModel):
+class Chat(FetchableMixin, BaseModel):
     """
     Модель чата.
 
