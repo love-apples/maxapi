@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 from .bot_mixin import BotMixin
@@ -43,14 +44,17 @@ class LazyRef(BotMixin, Generic[ResolvedValue]):
         self._setter = setter
         self._description = description
         self._resolved: ResolvedValue | None | object = _UNSET
+        self._fetch_lock = asyncio.Lock()
 
     async def fetch(self) -> ResolvedValue | None:
         """Загрузить значение и закешировать результат."""
 
         if self._resolved is _UNSET:
-            value = await self._fetcher()
-            self._resolved = value
-            self._setter(value)
+            async with self._fetch_lock:
+                if self._resolved is _UNSET:
+                    value = await self._fetcher()
+                    self._resolved = value
+                    self._setter(value)
 
         return cast(ResolvedValue | None, self._resolved)
 

@@ -1,3 +1,4 @@
+import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -45,6 +46,40 @@ async def test_lazy_ref_fetch_caches_and_exposes_attributes(bot):
     assert ref
     assert "resolved" in repr(ref)
     fetcher.assert_awaited_once()
+    setter.assert_called_once_with(resolved)
+
+
+async def test_lazy_ref_fetch_is_concurrency_safe(bot):
+    resolved = type("Resolved", (), {"title": "chat-title"})()
+    setter = MagicMock()
+    started = asyncio.Event()
+    release = asyncio.Event()
+    calls = 0
+
+    async def fetcher():
+        nonlocal calls
+        calls += 1
+        started.set()
+        await release.wait()
+        return resolved
+
+    ref = LazyRef(
+        bot=bot,
+        fetcher=fetcher,
+        setter=setter,
+        description="chat_id=123",
+    )
+
+    first_task = asyncio.create_task(ref.fetch())
+    await started.wait()
+    second_task = asyncio.create_task(ref.fetch())
+    release.set()
+
+    first, second = await asyncio.gather(first_task, second_task)
+
+    assert first is resolved
+    assert second is resolved
+    assert calls == 1
     setter.assert_called_once_with(resolved)
 
 
