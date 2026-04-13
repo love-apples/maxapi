@@ -191,12 +191,30 @@ class Code(_Styled):
 
 
 class Heading(_Styled):
-    """Заголовок: ``<b>`` / ``### ...``."""
+    """Заголовок: ``<h1>`` / ``# ...``."""
 
-    _html_open = "<b>"
-    _html_close = "</b>"
-    _md_open = "### "
+    _html_open = "<h1>"
+    _html_close = "</h1>"
+    _md_open = "# "
     _md_close = ""
+
+
+class Blockquote(_Styled):
+    """Цитата: ``<blockquote>`` / ``> ...``."""
+
+    _html_open = "<blockquote>"
+    _html_close = "</blockquote>"
+
+    def as_markdown(self) -> str:
+        inner = self._inner.as_markdown()
+        if not inner:
+            return ""
+
+        lines = inner.splitlines(keepends=True)
+        return "".join(
+            f"> {line}" if line.strip(" \t\n\r") else f">{line}"
+            for line in lines
+        )
 
 
 class Link(_Node):

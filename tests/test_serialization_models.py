@@ -3,8 +3,10 @@ import json
 from maxapi.enums.attachment import AttachmentType
 from maxapi.enums.chat_type import ChatType
 from maxapi.enums.text_style import TextStyle
+from maxapi.types import CallbackButton, ClipboardButton, LinkButton
 from maxapi.types.attachments.attachment import (
     Attachment,
+    ButtonsPayload,
     PhotoAttachmentPayload,
 )
 from maxapi.types.message import (
@@ -77,6 +79,38 @@ def test_attachment_serialize_deserialize(faker):
     assert att2.type == att.type
     assert isinstance(att2.payload, PhotoAttachmentPayload)
     assert att2.payload.photo_id == payload.photo_id
+
+
+def test_buttons_payload_deserialize_uses_button_type_discriminator():
+    payload = ButtonsPayload.model_validate(
+        {
+            "buttons": [
+                [
+                    {
+                        "type": "clipboard",
+                        "text": "Copy",
+                        "payload": "copied text",
+                    }
+                ],
+                [
+                    {
+                        "type": "callback",
+                        "text": "Callback",
+                        "payload": "callback_payload",
+                    },
+                    {
+                        "type": "link",
+                        "text": "Docs",
+                        "url": "https://example.com",
+                    },
+                ],
+            ]
+        }
+    )
+
+    assert isinstance(payload.buttons[0][0], ClipboardButton)
+    assert isinstance(payload.buttons[1][0], CallbackButton)
+    assert isinstance(payload.buttons[1][1], LinkButton)
 
 
 def test_markup_element_alias_and_serialization(faker):

@@ -13,6 +13,7 @@ class ButtonType(StrEnum):
 
     REQUEST_CONTACT = auto()
     CALLBACK = auto()
+    CLIPBOARD = auto()
     LINK = auto()
     REQUEST_GEO_LOCATION = auto()
     CHAT = auto()

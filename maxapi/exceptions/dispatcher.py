@@ -25,6 +25,8 @@ class HandlerException(Exception):
             )
         return "HandlerException(" + ", ".join(parts) + ")"
 
+    __repr__ = __str__
+
 
 @dataclass(slots=True)
 class MiddlewareException(Exception):
@@ -46,3 +48,5 @@ class MiddlewareException(Exception):
                 f"cause={self.cause.__class__.__name__}: {self.cause}"
             )
         return "MiddlewareException(" + ", ".join(parts) + ")"
+
+    __repr__ = __str__

@@ -102,6 +102,7 @@ class Dispatcher(BotMixin):
             Callable[[Any, dict[str, Any]], Awaitable[Any]] | None
         ) = None
         self._background_tasks: set[asyncio.Task] = set()
+        self._ready: bool = False
 
         self.message_created = Event(
             update_type=UpdateType.MESSAGE_CREATED, router=self
@@ -241,6 +242,9 @@ class Dispatcher(BotMixin):
             bot (Bot): Экземпляр бота.
         """
 
+        if self._ready:
+            return
+
         self.bot = bot
         self.bot.dispatcher = self
 
@@ -249,7 +253,8 @@ class Dispatcher(BotMixin):
 
         await self.check_me()
 
-        self.routers += [self]
+        if self not in self.routers:
+            self.routers.append(self)
         self._prepare_handlers(bot)
 
         self._global_mw_chain = self.build_middleware_chain(
@@ -258,6 +263,8 @@ class Dispatcher(BotMixin):
 
         if self.on_started_func:
             await self.on_started_func()
+
+        self._ready = True
 
     def _prepare_handlers(self, bot: Bot) -> None:
         """Подготовить обработчики событий и построить кеши."""
@@ -332,6 +339,12 @@ class Dispatcher(BotMixin):
             return ctx
 
         if len(self.contexts) >= CONTEXTS_MAX_SIZE:
+            evicted_key = next(iter(self.contexts))
+            logger_dp.debug(
+                "Вытеснен контекст %s (лимит %d)",
+                evicted_key,
+                CONTEXTS_MAX_SIZE,
+            )
             self.contexts.popitem(last=False)
 
         new_ctx = self.storage(chat_id, user_id, **self.storage_kwargs)
@@ -1108,6 +1121,7 @@ class Dispatcher(BotMixin):
         """
         if self.polling:
             self.polling = False
+            self._ready = False
             logger_dp.info("Polling остановлен")
 
         if self._background_tasks:

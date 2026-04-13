@@ -11,6 +11,7 @@ from maxapi.types import (
     BotCommand,
     CallbackButton,
     ChatButton,
+    ClipboardButton,
     LinkButton,
     RequestContactButton,
     RequestGeoLocationButton,
@@ -35,6 +36,13 @@ class TestButtons:
         assert button.text == "Link"
         assert button.url == "https://example.com"
         assert button.type == "link"
+
+    def test_clipboard_button(self):
+        """Тест ClipboardButton."""
+        button = ClipboardButton(text="Copy", payload="secret")
+        assert button.text == "Copy"
+        assert button.payload == "secret"
+        assert button.type == "clipboard"
 
     def test_chat_button(self):
         """Тест ChatButton."""
@@ -166,3 +174,57 @@ class TestDialogMuted:
         assert result is not None
         assert isinstance(result, datetime)
         assert result == datetime.fromtimestamp(ts_ms / 1000)
+
+
+class TestUserAddedGetIds:
+    """Тесты для UserAdded.get_ids()."""
+
+    _USER: ClassVar[dict[str, Any]] = {
+        "user_id": 42,
+        "first_name": "Alice",
+        "is_bot": False,
+        "last_activity_time": 0,
+    }
+
+    def test_get_ids_returns_chat_and_user_id(self):
+        """get_ids() возвращает (chat_id, user.user_id)."""
+        from maxapi.enums.update import UpdateType
+        from maxapi.types.updates.user_added import UserAdded
+
+        event = UserAdded(
+            update_type=UpdateType.USER_ADDED,
+            timestamp=0,
+            chat_id=100,
+            user=self._USER,
+            is_channel=False,
+        )
+        chat_id, user_id = event.get_ids()
+        assert chat_id == 100
+        assert user_id == 42
+
+
+class TestUserRemovedGetIds:
+    """Тесты для UserRemoved.get_ids()."""
+
+    _USER: ClassVar[dict[str, Any]] = {
+        "user_id": 99,
+        "first_name": "Bob",
+        "is_bot": False,
+        "last_activity_time": 0,
+    }
+
+    def test_get_ids_returns_chat_and_user_id(self):
+        """get_ids() возвращает (chat_id, user.user_id)."""
+        from maxapi.enums.update import UpdateType
+        from maxapi.types.updates.user_removed import UserRemoved
+
+        event = UserRemoved(
+            update_type=UpdateType.USER_REMOVED,
+            timestamp=0,
+            chat_id=200,
+            user=self._USER,
+            is_channel=False,
+        )
+        chat_id, user_id = event.get_ids()
+        assert chat_id == 200
+        assert user_id == 99

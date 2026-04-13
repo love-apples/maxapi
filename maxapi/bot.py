@@ -205,6 +205,9 @@ class Bot(BaseConnection):
         self.dispatcher: Dispatcher | None = None
         self._me: User | None = None
 
+    def __repr__(self) -> str:
+        return "Bot(token='***')"
+
     def set_marker_updates(self, marker_updates: int) -> None:
         """
         Устанавливает маркер для получения обновлений.
@@ -378,7 +381,7 @@ class Bot(BaseConnection):
             link=link,
             notify=self._resolve_notify(notify=notify),
             format=self.resolve_format(format, parse_mode),
-            parse_mode=parse_mode,
+            parse_mode=None,
             disable_link_preview=self._resolve_disable_link_preview(
                 disable_link_preview=disable_link_preview,
             ),
@@ -455,7 +458,7 @@ class Bot(BaseConnection):
             link=link,
             notify=self._resolve_notify(notify=notify),
             format=self.resolve_format(format, parse_mode),
-            parse_mode=parse_mode,
+            parse_mode=None,
             sleep_after_input_media=sleep_after_input_media,
         ).fetch()
 

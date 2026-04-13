@@ -34,4 +34,4 @@ class UserRemoved(BaseUpdate):
                 пользователя.
         """
 
-        return self.chat_id, self.admin_id
+        return self.chat_id, self.user.user_id
