@@ -11,6 +11,7 @@ from maxapi.types import (
     BotCommand,
     CallbackButton,
     ChatButton,
+    ClipboardButton,
     LinkButton,
     RequestContactButton,
     RequestGeoLocationButton,
@@ -35,6 +36,13 @@ class TestButtons:
         assert button.text == "Link"
         assert button.url == "https://example.com"
         assert button.type == "link"
+
+    def test_clipboard_button(self):
+        """Тест ClipboardButton."""
+        button = ClipboardButton(text="Copy", payload="secret")
+        assert button.text == "Copy"
+        assert button.payload == "secret"
+        assert button.type == "clipboard"
 
     def test_chat_button(self):
         """Тест ChatButton."""

@@ -1,3 +1,5 @@
+from typing import Literal
+
 from ....enums.button_type import ButtonType
 from ....enums.intent import Intent
 from .button import Button
@@ -15,6 +17,6 @@ class CallbackButton(Button):
         intent: Намерение кнопки (визуальный стиль и поведение)
     """
 
-    type: ButtonType = ButtonType.CALLBACK
+    type: Literal[ButtonType.CALLBACK] = ButtonType.CALLBACK
     payload: str | None = None
     intent: Intent = Intent.DEFAULT

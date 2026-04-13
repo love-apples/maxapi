@@ -4,6 +4,7 @@ from maxapi.enums.attachment import AttachmentType
 from maxapi.types import (
     CallbackButton,
     ChatButton,
+    ClipboardButton,
     LinkButton,
     RequestContactButton,
     RequestGeoLocationButton,
@@ -125,6 +126,7 @@ def test_all_button_types():
     builder = InlineKeyboardBuilder()
 
     builder.add(CallbackButton(text="Callback", payload="payload"))
+    builder.add(ClipboardButton(text="Copy", payload="copied"))
     builder.row(LinkButton(text="Link", url="https://example.com"))
     builder.add(ChatButton(text="Chat", chat_title="Test"))
     builder.add(RequestContactButton(text="Contact"))

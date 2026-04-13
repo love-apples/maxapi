@@ -1,3 +1,5 @@
+from typing import Literal
+
 from ....enums.button_type import ButtonType
 from .button import Button
 
@@ -11,5 +13,5 @@ class MessageButton(Button):
         text: Отправляемый текст
     """
 
-    type: ButtonType = ButtonType.MESSAGE
+    type: Literal[ButtonType.MESSAGE] = ButtonType.MESSAGE
     text: str

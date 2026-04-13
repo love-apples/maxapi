@@ -6,13 +6,18 @@
 
 ```python
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
-from maxapi.types.attachments.buttons import LinkButton, CallbackButton
+from maxapi.types.attachments.buttons import (
+    ClipboardButton,
+    LinkButton,
+    CallbackButton,
+)
 
 builder = InlineKeyboardBuilder()
 builder.row(
     LinkButton(text="Сайт", url="https://example.com"),
     CallbackButton(text="Нажми", payload="data"),
 )
+builder.row(ClipboardButton(text="Скопировать код", payload="ABC-123"))
 builder.row(CallbackButton(text="Ещё кнопка", payload="more"))
 
 await event.message.answer(
@@ -27,10 +32,15 @@ await event.message.answer(
 
 ```python
 from maxapi.types.attachments.attachment import ButtonsPayload
-from maxapi.types.attachments.buttons import LinkButton, CallbackButton
+from maxapi.types.attachments.buttons import (
+    ClipboardButton,
+    LinkButton,
+    CallbackButton,
+)
 
 buttons = [
     [LinkButton(text="Сайт", url="https://example.com")],
+    [ClipboardButton(text="Скопировать код", payload="ABC-123")],
     [CallbackButton(text="Callback", payload="data")]
 ]
 payload = ButtonsPayload(buttons=buttons).pack()
@@ -44,6 +54,7 @@ await event.message.answer(
 ## Типы кнопок
 
 - `CallbackButton` — кнопка с payload
+- `ClipboardButton` — копирование текста в буфер обмена
 - `LinkButton` — ссылка
 - `ChatButton` — переход в чат (устарело)
 - `MessageButton` — отправка сообщения

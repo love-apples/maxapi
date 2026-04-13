@@ -9,6 +9,7 @@ from ..types.attachments.attachment import (
 )
 from ..types.attachments.buttons.callback_button import CallbackButton
 from ..types.attachments.buttons.chat_button import ChatButton
+from ..types.attachments.buttons.clipboard_button import ClipboardButton
 from ..types.attachments.buttons.link_button import LinkButton
 from ..types.attachments.buttons.message_button import MessageButton
 from ..types.attachments.buttons.open_app_button import OpenAppButton
@@ -18,6 +19,7 @@ from ..types.attachments.buttons.request_geo_location_button import (
 )
 from ..types.attachments.image import PhotoAttachmentRequestPayload
 from ..types.command import BotCommand
+from ..types.fetchable import ChatRef, FromUserRef
 from ..types.message import Message, NewMessageLink
 from ..types.updates import UpdateUnion
 from ..types.updates.bot_added import BotAdded
@@ -48,7 +50,9 @@ __all__ = [
     "ButtonsPayload",
     "CallbackButton",
     "ChatButton",
+    "ChatRef",
     "ChatTitleChanged",
+    "ClipboardButton",
     "Command",
     "CommandStart",
     "ContactAttachmentPayload",
@@ -56,6 +60,7 @@ __all__ = [
     "DialogMuted",
     "DialogRemoved",
     "DialogUnmuted",
+    "FromUserRef",
     "InputMedia",
     "InputMediaBuffer",
     "LinkButton",
