@@ -16,7 +16,7 @@ def _make_connection_with_bot(*, session=None):
     bot.default_connection = DefaultConnectionProperties()
     bot.session = session
     conn.bot = bot
-    return conn, bot
+    return conn, bot 
 
 
 class TestUploadFileMimetypesFallback:
