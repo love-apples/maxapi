@@ -110,9 +110,10 @@ async def _resolve_from_user(event: UpdateUnion, bot: Bot) -> None:
                     exc.code,
                     event.chat_id,
                 )
-            except MaxConnection:
+            except MaxConnection as exc:
                 logger.warning(
-                    "get_chat_member: connection error chat_id=%s",
+                    "get_chat_member: %s chat_id=%s",
+                    exc,
                     event.chat_id,
                 )
         elif event.chat and event.chat.type == ChatType.DIALOG:
@@ -130,9 +131,10 @@ async def _resolve_from_user(event: UpdateUnion, bot: Bot) -> None:
                 exc.code,
                 event.chat_id,
             )
-        except MaxConnection:
+        except MaxConnection as exc:
             logger.warning(
-                "get_chat_member: connection error chat_id=%s",
+                "get_chat_member: %s chat_id=%s",
+                exc,
                 event.chat_id,
             )
 
