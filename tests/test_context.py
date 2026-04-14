@@ -1,9 +1,11 @@
 """Тесты для Context и State Machine."""
 
 import asyncio
+import json
+from unittest.mock import AsyncMock
 
 import pytest
-from maxapi.context import MemoryContext
+from maxapi.context import MemoryContext, RedisContext
 from maxapi.context.state_machine import State, StatesGroup
 from maxapi.context.ttl import TTLTracker
 
@@ -195,6 +197,152 @@ class TestMemoryContext:
 
         assert await context.get_state() is None
         assert await context.get_data() == {"new": 2}
+
+
+class TestRedisContext:
+    """Тесты RedisContext."""
+
+    def test_redis_context_init(self):
+        """Контекст корректно собирает redis-ключи."""
+        redis = AsyncMock()
+        context = RedisContext(
+            chat_id=12345,
+            user_id=67890,
+            redis_client=redis,
+            key_prefix="test_bot",
+        )
+
+        assert context.redis is redis
+        assert context.prefix == "test_bot:12345:67890"
+        assert context.data_key == "test_bot:12345:67890:data"
+        assert context.state_key == "test_bot:12345:67890:state"
+
+    @pytest.mark.asyncio
+    async def test_redis_get_data_empty_without_ttl(self):
+        """Пустые данные из Redis возвращаются как пустой словарь."""
+        redis = AsyncMock()
+        redis.get.return_value = None
+        context = RedisContext(chat_id=1, user_id=2, redis_client=redis)
+
+        data = await context.get_data()
+
+        assert data == {}
+        redis.get.assert_awaited_once_with(context.data_key)
+        redis.pexpire.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_redis_get_data_refreshes_ttl(self):
+        """При чтении данные декодируются и TTL продлевается."""
+        redis = AsyncMock()
+        redis.get.return_value = json.dumps({"food": "mint"})
+        context = RedisContext(
+            chat_id=1,
+            user_id=2,
+            redis_client=redis,
+            ttl=0.5,
+        )
+
+        data = await context.get_data()
+
+        assert data == {"food": "mint"}
+        redis.pexpire.assert_any_await(context.data_key, 500)
+        redis.pexpire.assert_any_await(context.state_key, 500)
+
+    @pytest.mark.asyncio
+    async def test_redis_set_data(self):
+        """set_data сериализует словарь в JSON."""
+        redis = AsyncMock()
+        context = RedisContext(chat_id=1, user_id=2, redis_client=redis)
+
+        await context.set_data({"food": "cucumber"})
+
+        redis.set.assert_awaited_once_with(
+            context.data_key, json.dumps({"food": "cucumber"})
+        )
+
+    @pytest.mark.asyncio
+    async def test_redis_update_data(self):
+        """update_data вызывает Lua-обновление и продлевает TTL."""
+        redis = AsyncMock()
+        context = RedisContext(
+            chat_id=1,
+            user_id=2,
+            redis_client=redis,
+            ttl=1.25,
+        )
+
+        await context.update_data(food="mint", city="Samara")
+
+        redis.eval.assert_awaited_once()
+        _, keys_count, key, payload = redis.eval.await_args.args
+        assert keys_count == 1
+        assert key == context.data_key
+        assert json.loads(payload) == {"food": "mint", "city": "Samara"}
+        redis.pexpire.assert_any_await(context.data_key, 1250)
+        redis.pexpire.assert_any_await(context.state_key, 1250)
+
+    @pytest.mark.asyncio
+    async def test_redis_set_state_none(self):
+        """set_state(None) удаляет ключ состояния."""
+        redis = AsyncMock()
+        context = RedisContext(chat_id=1, user_id=2, redis_client=redis)
+
+        await context.set_state(None)
+
+        redis.delete.assert_awaited_once_with(context.state_key)
+
+    @pytest.mark.asyncio
+    async def test_redis_set_state_object(self):
+        """State-объект сохраняется по его имени."""
+
+        class Form(StatesGroup):
+            waiting = State()
+
+        redis = AsyncMock()
+        context = RedisContext(chat_id=1, user_id=2, redis_client=redis)
+
+        await context.set_state(Form.waiting)
+
+        redis.set.assert_awaited_once_with(
+            context.state_key, "Form:waiting"
+        )
+
+    @pytest.mark.asyncio
+    async def test_redis_get_state_decodes_bytes(self):
+        """Байты из Redis декодируются в строку."""
+        redis = AsyncMock()
+        redis.get.return_value = b"waiting"
+        context = RedisContext(chat_id=1, user_id=2, redis_client=redis)
+
+        state = await context.get_state()
+
+        assert state == "waiting"
+
+    @pytest.mark.asyncio
+    async def test_redis_get_state_returns_plain_value(self):
+        """Строковое состояние возвращается без декодирования."""
+        redis = AsyncMock()
+        redis.get.return_value = "processing"
+        context = RedisContext(chat_id=1, user_id=2, redis_client=redis)
+
+        state = await context.get_state()
+
+        assert state == "processing"
+
+    @pytest.mark.asyncio
+    async def test_redis_context_manager_and_clear(self):
+        """Контекстный менеджер и clear работают без побочных эффектов."""
+        redis = AsyncMock()
+        context = RedisContext(chat_id=1, user_id=2, redis_client=redis)
+
+        entered = await context.__aenter__()
+        await context.__aexit__(None, None, None)
+        await context.clear()
+
+        assert entered is context
+        redis.delete.assert_awaited_once_with(
+            context.data_key, context.state_key
+        )
 
 
 class TestStateMachine:
