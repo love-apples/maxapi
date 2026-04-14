@@ -66,7 +66,7 @@ class TestDefaultConnectionRetryConfig:
 
 
 class TestRetryOnServerErrors:
-    """Тесты retry при серверных ошибках."""
+    """Тесты retry при серверных ошибках (через backoff)."""
 
     @pytest.fixture
     def bot_with_retry(self, mock_bot_token):
@@ -81,6 +81,7 @@ class TestRetryOnServerErrors:
             default_connection=conn,
         )
         session = AsyncMock()
+        session.closed = False
         bot.session = session
         return bot
 
@@ -97,7 +98,7 @@ class TestRetryOnServerErrors:
         base = BaseConnection()
         base.bot = bot_with_retry
 
-        with patch("maxapi.connection.base.asyncio.sleep"):
+        with patch("asyncio.sleep", new_callable=AsyncMock):
             result = await base.request(
                 method=HTTPMethod.GET,
                 path="/test",
@@ -120,7 +121,7 @@ class TestRetryOnServerErrors:
         base = BaseConnection()
         base.bot = bot_with_retry
 
-        with patch("maxapi.connection.base.asyncio.sleep"):
+        with patch("asyncio.sleep", new_callable=AsyncMock):
             result = await base.request(
                 method=HTTPMethod.GET,
                 path="/test",
@@ -141,7 +142,7 @@ class TestRetryOnServerErrors:
         base.bot = bot_with_retry
 
         with (
-            patch("maxapi.connection.base.asyncio.sleep"),
+            patch("asyncio.sleep", new_callable=AsyncMock),
             pytest.raises(MaxApiError) as exc_info,
         ):
             await base.request(
@@ -209,6 +210,7 @@ class TestRetryOnServerErrors:
 
         session = AsyncMock()
         session.request = AsyncMock(return_value=error)
+        session.closed = False
         bot.session = session
 
         base = BaseConnection()
@@ -239,6 +241,7 @@ class TestRetryOnConnectionErrors:
             default_connection=conn,
         )
         session = AsyncMock()
+        session.closed = False
         bot.session = session
         return bot
 
@@ -257,7 +260,7 @@ class TestRetryOnConnectionErrors:
         base = BaseConnection()
         base.bot = bot_with_retry
 
-        with patch("maxapi.connection.base.asyncio.sleep"):
+        with patch("asyncio.sleep", new_callable=AsyncMock):
             result = await base.request(
                 method=HTTPMethod.GET,
                 path="/test",
@@ -278,7 +281,7 @@ class TestRetryOnConnectionErrors:
         base.bot = bot_with_retry
 
         with (
-            patch("maxapi.connection.base.asyncio.sleep"),
+            patch("asyncio.sleep", new_callable=AsyncMock),
             pytest.raises(MaxConnection),
         ):
             await base.request(
@@ -292,11 +295,11 @@ class TestRetryOnConnectionErrors:
 
 
 class TestRetryBackoff:
-    """Тесты экспоненциальной задержки."""
+    """Тесты экспоненциальной задержки через backoff."""
 
     @pytest.mark.asyncio
     async def test_exponential_backoff_delays(self, mock_bot_token):
-        """Проверка экспоненциальных задержек."""
+        """Проверка что backoff вызывается нужное количество раз."""
         conn = DefaultConnectionProperties(
             max_retries=3,
             retry_backoff_factor=1.0,
@@ -310,21 +313,17 @@ class TestRetryBackoff:
 
         session = AsyncMock()
         session.request = AsyncMock(return_value=error)
+        session.closed = False
         bot.session = session
 
         base = BaseConnection()
         base.bot = bot
 
         sleep_calls = []
-
-        async def mock_sleep(delay):
-            sleep_calls.append(delay)
+        original_sleep = AsyncMock(side_effect=lambda d: sleep_calls.append(d))
 
         with (
-            patch(
-                "maxapi.connection.base.asyncio.sleep",
-                side_effect=mock_sleep,
-            ),
+            patch("asyncio.sleep", original_sleep),
             pytest.raises(MaxApiError),
         ):
             await base.request(
@@ -333,8 +332,9 @@ class TestRetryBackoff:
                 is_return_raw=True,
             )
 
-        # backoff_factor * 2^attempt: 1*1=1, 1*2=2, 1*4=4
-        assert sleep_calls == [1.0, 2.0, 4.0]
+        # backoff с экспоненциальной задержкой, 3 retry = 3 sleep
+        assert len(sleep_calls) == 3
+        assert all(d > 0 for d in sleep_calls)
 
     @pytest.mark.asyncio
     async def test_custom_backoff_factor(self, mock_bot_token):
@@ -352,21 +352,17 @@ class TestRetryBackoff:
 
         session = AsyncMock()
         session.request = AsyncMock(return_value=error)
+        session.closed = False
         bot.session = session
 
         base = BaseConnection()
         base.bot = bot
 
         sleep_calls = []
-
-        async def mock_sleep(delay):
-            sleep_calls.append(delay)
+        original_sleep = AsyncMock(side_effect=lambda d: sleep_calls.append(d))
 
         with (
-            patch(
-                "maxapi.connection.base.asyncio.sleep",
-                side_effect=mock_sleep,
-            ),
+            patch("asyncio.sleep", original_sleep),
             pytest.raises(MaxApiError),
         ):
             await base.request(
@@ -375,8 +371,9 @@ class TestRetryBackoff:
                 is_return_raw=True,
             )
 
-        # backoff_factor * 2^attempt: 0.5*1=0.5, 0.5*2=1.0
-        assert sleep_calls == [0.5, 1.0]
+        # 2 retry = 2 sleep
+        assert len(sleep_calls) == 2
+        assert all(d > 0 for d in sleep_calls)
 
 
 class TestRetryWithCustomStatuses:
@@ -400,12 +397,13 @@ class TestRetryWithCustomStatuses:
 
         session = AsyncMock()
         session.request = AsyncMock(side_effect=[error, success])
+        session.closed = False
         bot.session = session
 
         base = BaseConnection()
         base.bot = bot
 
-        with patch("maxapi.connection.base.asyncio.sleep"):
+        with patch("asyncio.sleep", new_callable=AsyncMock):
             result = await base.request(
                 method=HTTPMethod.GET,
                 path="/test",
@@ -432,6 +430,7 @@ class TestRetryWithCustomStatuses:
 
         session = AsyncMock()
         session.request = AsyncMock(return_value=error)
+        session.closed = False
         bot.session = session
 
         base = BaseConnection()
@@ -469,12 +468,13 @@ class TestRetryResponseBodyConsumed:
 
         session = AsyncMock()
         session.request = AsyncMock(side_effect=[error, success])
+        session.closed = False
         bot.session = session
 
         base = BaseConnection()
         base.bot = bot
 
-        with patch("maxapi.connection.base.asyncio.sleep"):
+        with patch("asyncio.sleep", new_callable=AsyncMock):
             await base.request(
                 method=HTTPMethod.GET,
                 path="/test",

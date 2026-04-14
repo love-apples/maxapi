@@ -219,6 +219,40 @@ class TestResolveFromUser:
         bot.get_chat_member.assert_not_called()
         assert fixture_message_removed.from_user is None
 
+    async def test_message_removed_get_chat_member_max_api_error_swallowed(
+        self, bot, fixture_message_removed
+    ):
+        """MaxApiError из get_chat_member логируется, событие не падает."""
+        from maxapi.exceptions.max import MaxApiError
+
+        fake_chat = _make_chat(ChatType.CHAT)
+        fixture_message_removed.chat = fake_chat
+        bot.get_chat_member = AsyncMock(
+            side_effect=MaxApiError(code=403, raw={"error": "Forbidden"})
+        )
+
+        await _resolve_from_user(fixture_message_removed, bot)
+
+        bot.get_chat_member.assert_awaited_once()
+        assert fixture_message_removed.from_user is None
+
+    async def test_message_removed_get_chat_member_max_connection_swallowed(
+        self, bot, fixture_message_removed
+    ):
+        """MaxConnection из get_chat_member логируется, событие не падает."""
+        from maxapi.exceptions.max import MaxConnection
+
+        fake_chat = _make_chat(ChatType.CHAT)
+        fixture_message_removed.chat = fake_chat
+        bot.get_chat_member = AsyncMock(
+            side_effect=MaxConnection("connection refused")
+        )
+
+        await _resolve_from_user(fixture_message_removed, bot)
+
+        bot.get_chat_member.assert_awaited_once()
+        assert fixture_message_removed.from_user is None
+
     async def test_user_removed_with_admin_id_fetches_member(
         self, bot, fixture_user_removed
     ):
@@ -271,7 +305,7 @@ class TestResolveFromUser:
             await _resolve_from_user(fixture_user_removed, bot)
 
         assert fixture_user_removed.from_user is None
-        assert "get_chat_member: connection error" in caplog.text
+        assert "get_chat_member: conn error" in caplog.text
 
     @pytest.mark.parametrize(
         "fixture_name",
