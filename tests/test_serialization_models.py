@@ -7,8 +7,12 @@ from maxapi.types import CallbackButton, ClipboardButton, LinkButton
 from maxapi.types.attachments.attachment import (
     Attachment,
     ButtonsPayload,
+    OtherAttachmentPayload,
     PhotoAttachmentPayload,
+    ShareAttachmentPayload,
 )
+from maxapi.types.attachments.file import File
+from maxapi.types.attachments.share import Share
 from maxapi.types.message import (
     MarkupElement,
     Message,
@@ -79,6 +83,72 @@ def test_attachment_serialize_deserialize(faker):
     assert att2.type == att.type
     assert isinstance(att2.payload, PhotoAttachmentPayload)
     assert att2.payload.photo_id == payload.photo_id
+
+
+def test_share_attachment_payload_deserialize():
+    """
+    Регрессия для #108: входящий attachment с type="share" должен
+    десериализоваться как Share с payload типа ShareAttachmentPayload,
+    чтобы пользователь мог pattern-match на ShareAttachmentPayload,
+    а не получать OtherAttachmentPayload (который "для файлов").
+    """
+    body = MessageBody.model_validate(
+        {
+            "mid": "mid.test",
+            "seq": 1,
+            "attachments": [
+                {
+                    "type": "share",
+                    "payload": {
+                        "url": "https://max.ru/c/x/AZ2I.bkQ",
+                        "token": "f9LHodD0cOL",
+                    },
+                    "title": "Title",
+                    "description": "Desc",
+                    "image_url": "https://i.oneme.ru/i?r=abc",
+                }
+            ],
+        }
+    )
+
+    att = body.attachments[0]
+    assert isinstance(att, Share)
+    assert att.title == "Title"
+    assert att.description == "Desc"
+    assert att.image_url == "https://i.oneme.ru/i?r=abc"
+    assert isinstance(att.payload, ShareAttachmentPayload)
+    assert att.payload.url == "https://max.ru/c/x/AZ2I.bkQ"
+    assert att.payload.token == "f9LHodD0cOL"
+
+
+def test_file_attachment_payload_unchanged_by_share_fix():
+    """
+    Страховка: после добавления ShareAttachmentPayload файл-вложение
+    продолжает десериализовываться как File c OtherAttachmentPayload
+    (не перехватывается ShareAttachmentPayload-классом).
+    """
+    body = MessageBody.model_validate(
+        {
+            "mid": "mid.test",
+            "seq": 1,
+            "attachments": [
+                {
+                    "type": "file",
+                    "payload": {
+                        "url": "https://fd.oneme.ru/some/file",
+                        "token": "filetok",
+                    },
+                    "filename": "doc.pdf",
+                    "size": 1024,
+                }
+            ],
+        }
+    )
+
+    att = body.attachments[0]
+    assert isinstance(att, File)
+    assert isinstance(att.payload, OtherAttachmentPayload)
+    assert att.payload.url == "https://fd.oneme.ru/some/file"
 
 
 def test_buttons_payload_deserialize_uses_button_type_discriminator():

@@ -5,6 +5,7 @@ from ..types.attachments.attachment import (
     ContactAttachmentPayload,
     OtherAttachmentPayload,
     PhotoAttachmentPayload,
+    ShareAttachmentPayload,
     StickerAttachmentPayload,
 )
 from ..types.attachments.buttons.callback_button import CallbackButton
@@ -78,6 +79,7 @@ __all__ = [
     "PhotoAttachmentRequestPayload",
     "RequestContactButton",
     "RequestGeoLocationButton",
+    "ShareAttachmentPayload",
     "StickerAttachmentPayload",
     "UpdateUnion",
     "UserAdded",

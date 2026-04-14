@@ -53,6 +53,19 @@ class OtherAttachmentPayload(BaseModel):
     token: str | None = None
 
 
+class ShareAttachmentPayload(BaseModel):
+    """
+    Данные для вложения типа "share".
+
+    Attributes:
+        url (str): URL расшаренного ресурса.
+        token (str): Токен доступа.
+    """
+
+    url: str
+    token: str
+
+
 class ContactAttachmentPayload(BaseModel):
     """
     Данные для контакта.
@@ -105,6 +118,7 @@ class Attachment(BaseModel):
         AttachmentUpload
         | PhotoAttachmentPayload
         | OtherAttachmentPayload
+        | ShareAttachmentPayload
         | ButtonsPayload
         | ContactAttachmentPayload
         | StickerAttachmentPayload
