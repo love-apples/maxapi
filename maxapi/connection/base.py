@@ -6,11 +6,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import aiofiles
+import aiofiles.os
+import backoff
 import puremagic
 from aiohttp import ClientConnectionError, ClientSession, FormData
 
 from ..enums.api_path import ApiPath
 from ..enums.update import UpdateType
+from ..exceptions.download_file import DownloadFileError
 from ..exceptions.max import InvalidToken, MaxApiError, MaxConnection
 from ..loggers import logger_bot
 from ..types.bot_mixin import BotMixin
@@ -21,6 +24,38 @@ if TYPE_CHECKING:
     from ..bot import Bot
     from ..enums.http_method import HTTPMethod
     from ..enums.upload_type import UploadType
+
+
+DOWNLOAD_CHUNK_SIZE = 65536
+
+
+class _RetryableServerError(Exception):
+    """Внутреннее исключение для retry при серверных ошибках."""
+
+    def __init__(self, status: int) -> None:
+        self.status = status
+        super().__init__(f"Server error {status}")
+
+
+def _on_backoff(details: dict[str, Any]) -> None:
+    """Логирование при retry."""
+    wait = details["wait"]
+    tries = details["tries"]
+    exc = details.get("exception")
+    if isinstance(exc, _RetryableServerError):
+        logger_bot.warning(
+            "Серверная ошибка %d, попытка %d, жду %.1fс",
+            exc.status,
+            tries,
+            wait,
+        )
+    elif isinstance(exc, ClientConnectionError):
+        logger_bot.warning(
+            "Ошибка соединения (%s), попытка %d, жду %.1fс",
+            exc,
+            tries,
+            wait,
+        )
 
 
 class BaseConnection(BotMixin):
@@ -98,67 +133,53 @@ class BaseConnection(BotMixin):
         """
 
         bot = self._ensure_bot()
-
-        if not bot.session:
-            bot.session = ClientSession(
-                base_url=bot.api_url,
-                timeout=bot.default_connection.timeout,
-                headers=bot.headers,
-                **bot.default_connection.kwargs,
-            )
+        await bot.ensure_session()
 
         conn = bot.default_connection
-        max_retries = conn.max_retries
         retry_statuses = conn.retry_on_statuses
-        backoff_factor = conn.retry_backoff_factor
 
         url = path.value if isinstance(path, ApiPath) else path
 
-        for attempt in range(max_retries + 1):
-            try:
-                r = await bot.session.request(
-                    method=method.value,
-                    url=url,
-                    **kwargs,
-                )
-            except ClientConnectionError as e:
-                if attempt < max_retries:
-                    delay = backoff_factor * (2**attempt)
-                    logger_bot.warning(
-                        f"Ошибка соединения ({e}), "
-                        f"попытка {attempt + 1}/{max_retries + 1}, "
-                        f"жду {delay:.1f}с"
-                    )
-                    await asyncio.sleep(delay)
-                    continue
-                raise MaxConnection(f"Ошибка при отправке запроса: {e}") from e
+        @backoff.on_exception(
+            backoff.expo,
+            (ClientConnectionError, _RetryableServerError),
+            max_tries=conn.max_retries + 1,
+            factor=conn.retry_backoff_factor,
+            on_backoff=_on_backoff,
+        )
+        async def _do_request() -> Any:
+            r = await bot.session.request(
+                method=method.value,
+                url=url,
+                **kwargs,
+            )
 
             if r.status == 401:
                 await bot.session.close()
                 raise InvalidToken("Неверный токен!")
 
-            if r.status in retry_statuses and attempt < max_retries:
+            if r.status in retry_statuses:
                 await r.read()
-                delay = backoff_factor * (2**attempt)
-                logger_bot.warning(
-                    f"Серверная ошибка {r.status}, "
-                    f"попытка {attempt + 1}/{max_retries + 1}, "
-                    f"жду {delay:.1f}с"
-                )
-                await asyncio.sleep(delay)
-                continue
+                raise _RetryableServerError(r.status)
 
-            if not r.ok:
-                raw = await r.json()
-                if bot.dispatcher:
-                    asyncio.create_task(
-                        bot.dispatcher.handle_raw_response(
-                            UpdateType.RAW_API_RESPONSE, raw
-                        )
+            return r
+
+        try:
+            r = await _do_request()
+        except ClientConnectionError as e:
+            raise MaxConnection(f"Ошибка при отправке запроса: {e}") from e
+        except _RetryableServerError as e:
+            raise MaxApiError(code=e.status, raw={"error": str(e)}) from e
+
+        if not r.ok:
+            raw = await r.json()
+            if bot.dispatcher:
+                asyncio.create_task(
+                    bot.dispatcher.handle_raw_response(
+                        UpdateType.RAW_API_RESPONSE, raw
                     )
-                raise MaxApiError(code=r.status, raw=raw)
-
-            break
+                )
+            raise MaxApiError(code=r.status, raw=raw)
 
         raw = await r.json()
 
@@ -274,3 +295,81 @@ class BaseConnection(BotMixin):
             ) as temp_session:
                 response = await temp_session.post(url=url, data=form)
                 return await response.text()
+
+    async def download_file(
+        self,
+        url: str,
+        destination: Path | str,
+        *,
+        chunk_size: int = DOWNLOAD_CHUNK_SIZE,
+    ) -> Path:
+        """
+        Скачивает файл по URL и сохраняет на диск.
+
+        Метод работает не через общий ``request()``, поскольку
+        ответом является бинарный поток, а не JSON.
+
+        Args:
+            url: URL файла для скачивания (из payload.url вложения).
+            destination: Путь к директории для сохранения файла.
+            chunk_size: Размер чанка при потоковом чтении
+                (по умолчанию 64 КБ).
+
+        Returns:
+            Path: Полный путь к скачанному файлу.
+
+        Raises:
+            DownloadFileError: При ошибке скачивания.
+        """
+        bot = self._ensure_bot()
+        session = await bot.ensure_session()
+
+        conn = bot.default_connection
+
+        @backoff.on_exception(
+            backoff.expo,
+            (ClientConnectionError, _RetryableServerError),
+            max_tries=conn.max_retries + 1,
+            factor=conn.retry_backoff_factor,
+            on_backoff=_on_backoff,
+        )
+        async def _do_download() -> Any:
+            resp = await session.request("GET", url)
+            if resp.status in conn.retry_on_statuses:
+                await resp.read()
+                raise _RetryableServerError(resp.status)
+            return resp
+
+        try:
+            response = await _do_download()
+        except ClientConnectionError as e:
+            raise DownloadFileError(f"Ошибка при скачивании файла: {e}") from e
+        except _RetryableServerError as e:
+            raise DownloadFileError(
+                f"Ошибка при скачивании файла: HTTP {e.status}"
+            ) from e
+
+        if not response.ok:
+            raise DownloadFileError(
+                f"Ошибка при скачивании файла: HTTP {response.status}"
+            )
+
+        cd = response.content_disposition
+        if cd and cd.filename:
+            filename = Path(cd.filename).name
+        else:
+            ext = mimetypes.guess_extension(response.content_type or "") or ""
+            filename = f"file{ext}"
+
+        dest = Path(destination)
+        await aiofiles.os.makedirs(destination, exist_ok=True)
+        path = dest / filename
+
+        try:
+            async with aiofiles.open(path, "wb") as f:
+                async for chunk in response.content.iter_chunked(chunk_size):
+                    await f.write(chunk)
+        finally:
+            await response.release()
+
+        return path

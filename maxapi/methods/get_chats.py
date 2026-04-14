@@ -51,7 +51,7 @@ class GetChats(BaseConnection):
         if self.count:
             params["count"] = self.count
 
-        if self.marker:
+        if self.marker is not None:
             params["marker"] = self.marker
 
         response = await super().request(

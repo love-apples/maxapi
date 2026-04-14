@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import os
 import warnings
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from aiohttp import ClientSession
+
 from .client.default import DefaultConnectionProperties
-from .connection.base import BaseConnection
+from .connection.base import DOWNLOAD_CHUNK_SIZE, BaseConnection
 from .enums.sender_action import SenderAction
 from .exceptions.max import InvalidToken
 from .loggers import logger_bot
@@ -125,6 +128,11 @@ class Bot(BaseConnection):
                 будет генерировать превью для ссылок в тексте сообщений.
             auto_requests (bool): Автоматическое заполнение
                 chat/from_user через API (по умолчанию True).
+                При False дополнительные запросы для их заполнения не
+                выполняются: в event.chat/event.from_user могут
+                оставаться lazy ref с ручным await .fetch(), либо эти
+                поля уже могут быть заполнены данными из payload
+                события.
             default_connection (Optional[DefaultConnectionProperties]):
                 Настройки соединения.
             after_input_media_delay (Optional[float]): Задержка после
@@ -321,6 +329,22 @@ class Bot(BaseConnection):
 
         if self.session is not None:
             await self.session.close()
+
+    async def ensure_session(self) -> ClientSession:
+        """
+        Возвращает активную HTTP-сессию, создавая новую при необходимости.
+
+        Returns:
+            ClientSession: Активная aiohttp-сессия.
+        """
+        if not self.session or self.session.closed:
+            self.session = ClientSession(
+                base_url=self.api_url,
+                timeout=self.default_connection.timeout,
+                headers=self.headers,
+                **self.default_connection.kwargs,
+            )
+        return self.session
 
     async def send_message(
         self,
@@ -1061,6 +1085,36 @@ class Bot(BaseConnection):
             base_connection=self,
             bot=self,
             att=media,
+        )
+
+    async def download_file(
+        self,
+        url: str,
+        destination: str | Path,
+        *,
+        chunk_size: int = DOWNLOAD_CHUNK_SIZE,
+    ) -> Path:
+        """
+        Скачивает файл по URL и сохраняет на диск.
+
+        URL можно получить из payload вложения:
+        - Изображение: ``attachment.payload.url``
+        - Видео: ``attachment.urls.mp4_720`` (или другое разрешение)
+        - Аудио/Файл: ``attachment.payload.url``
+        - Стикер: ``attachment.payload.url``
+
+        Args:
+            url: URL файла для скачивания.
+            destination: Путь к директории для сохранения.
+            chunk_size: Размер чанка (по умолчанию 64 КБ).
+
+        Returns:
+            Path: Полный путь к скачанному файлу.
+        """
+        return await super().download_file(
+            url=url,
+            destination=Path(destination),
+            chunk_size=chunk_size,
         )
 
     async def set_my_commands(self, *commands: BotCommand) -> User:

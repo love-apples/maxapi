@@ -84,7 +84,19 @@ class SendMessage(BaseConnection):
                 DeprecationWarning,
                 stacklevel=4,
             )
-        self.format = format if format is not None else parse_mode
+        # Поддержка передачи строки вместо enum для обратной
+        # совместимости: пользователь может передать "html" или
+        # TextFormat.HTML — внутри всегда храним enum, чтобы .value
+        # работал без ошибок.
+        if isinstance(format, str) and not isinstance(format, TextFormat):
+            format = TextFormat(format)
+        if isinstance(parse_mode, str) and not isinstance(
+            parse_mode, ParseMode
+        ):
+            parse_mode = ParseMode(parse_mode)
+        self.format: TextFormat | None = (
+            format if format is not None else parse_mode
+        )
         self.disable_link_preview = disable_link_preview
         self.sleep_after_input_media = sleep_after_input_media
 

@@ -1,3 +1,4 @@
+import warnings
 from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
@@ -42,6 +43,13 @@ class SubscribeWebhook(BaseConnection):
         if secret is not None and not (5 <= len(secret) <= 256):
             raise ValueError(
                 "secret не должен быть меньше 5 или больше 256 символов"
+            )
+
+        if url.startswith("http://"):
+            warnings.warn(
+                "URL вебхука не использует HTTPS. "
+                "Обновления будут передаваться по незашифрованному каналу.",
+                stacklevel=2,
             )
 
         super().__init__()

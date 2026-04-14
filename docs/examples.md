@@ -99,13 +99,14 @@ async def hello(event: MessageCreated):
 
 @dp.bot_added()
 async def bot_added(event: BotAdded):
-    if not event.chat:
+    chat = await event.fetch_chat()
+    if chat is None:
         logging.info('Не удалось получить chat, возможно отключен auto_requests!')
         return
     
     await bot.send_message(
         chat_id=event.chat_id,
-        text=f'Привет чат {event.chat.title}!'
+        text=f'Привет чат {chat.title}!'
     )
 
 
@@ -149,7 +150,8 @@ async def message_edited(event: MessageEdited):
 
 @dp.user_removed()
 async def user_removed(event: UserRemoved):
-    if not event.from_user:
+    from_user = await event.fetch_from_user()
+    if from_user is None:
         return await bot.send_message(
             chat_id=event.chat_id,
             text=f'Неизвестный кикнул {event.user.first_name} 😢'
@@ -157,13 +159,14 @@ async def user_removed(event: UserRemoved):
         
     await bot.send_message(
         chat_id=event.chat_id,
-        text=f'{event.from_user.first_name} кикнул {event.user.first_name} 😢'
+        text=f'{from_user.first_name} кикнул {event.user.first_name} 😢'
     )
 
 
 @dp.user_added()
 async def user_added(event: UserAdded):
-    if not event.chat:
+    chat = await event.fetch_chat()
+    if chat is None:
         return await bot.send_message(
             chat_id=event.chat_id,
             text=f'Чат приветствует вас, {event.user.first_name}!'
@@ -171,7 +174,7 @@ async def user_added(event: UserAdded):
         
     await bot.send_message(
         chat_id=event.chat_id,
-        text=f'Чат "{event.chat.title}" приветствует вас, {event.user.first_name}!'
+        text=f'Чат "{chat.title}" приветствует вас, {event.user.first_name}!'
     )
 
 
@@ -181,6 +184,25 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
+```
+
+Если бот создан с `auto_requests=False`, то `event.chat` и
+`event.from_user` могут быть не загружены автоматически. Чтобы безопасно
+получить их независимо от режима, используйте явный fetch:
+
+```python
+chat = await event.fetch_chat()
+from_user = await event.fetch_from_user()
+```
+
+После этого работайте уже с локальными переменными:
+
+```python
+if chat is not None:
+    print(chat.title)
+
+if from_user is not None:
+    print(from_user.first_name)
 ```
 
 ## MagicFilter
@@ -390,6 +412,72 @@ if __name__ == '__main__':
     asyncio.run(main())
 ```
 
+## Форматирование текста
+
+Для сборки текста в HTML и Markdown можно использовать helper-ы из
+`maxapi.utils.formatting`.
+
+| Элемент | HTML | Markdown |
+| --- | --- | --- |
+| Заголовок | `<h1>Заголовок</h1>` | `# Заголовок` |
+| Жирный | `<b>текст</b>` | `**текст**` |
+| Курсив | `<i>текст</i>` | `*текст*` |
+| Подчёркнутый | `<ins>текст</ins>` | `++текст++` |
+| Зачёркнутый | `<s>текст</s>` | `~~текст~~` |
+| Моноширинный | `<code>текст</code>` | `` `текст` `` |
+| Цитата | `<blockquote>текст</blockquote>` | `> текст` |
+| Ссылка | `<a href="https://example.com">текст</a>` | `[текст](https://example.com)` |
+
+Пример HTML:
+
+```python
+from maxapi.enums.format import Format
+from maxapi.utils.formatting import (
+    Blockquote,
+    Bold,
+    Heading,
+    Italic,
+    Link,
+    as_html,
+)
+
+text = as_html(
+    Heading("Проверка форматирования"),
+    "\n",
+    Bold("Жирный текст"),
+    "\n",
+    Italic("Курсивная строка"),
+    "\n",
+    Blockquote("Цитата"),
+    "\n",
+    Link("Документация", url="https://love-apples.github.io/maxapi/"),
+)
+
+await event.message.answer(text, format=Format.HTML)
+```
+
+Пример Markdown:
+
+```python
+from maxapi.enums.format import Format
+from maxapi.utils.formatting import Blockquote, Bold, Heading, as_markdown
+
+text = as_markdown(
+    Heading("Проверка форматирования"),
+    "\n",
+    Bold("Жирный текст"),
+    "\n",
+    Blockquote("Цитата"),
+)
+
+await event.message.answer(text, format=Format.MARKDOWN)
+```
+
+Если вы читаете входящее сообщение из API, можно получить каноническое
+представление текста через `message.body.html_text` и `message.body.md_text`.
+Это нормализованный вывод из `markup`, поэтому он может не совпадать с исходной
+строкой символ в символ.
+
 ## Получение ID
 
 Пример получения различных ID из событий:
@@ -399,7 +487,7 @@ import asyncio
 import logging
 
 from maxapi import Bot, Dispatcher, F
-from maxapi.enums.parse_mode import ParseMode
+from maxapi.enums.format import Format
 from maxapi.types import MessageCreated
 
 logging.basicConfig(level=logging.INFO)
@@ -421,11 +509,17 @@ async def get_ids_from_forward(event: MessageCreated):
 
 @dp.message_created()
 async def get_ids(event: MessageCreated):
+    from_user = await event.fetch_from_user()
+    chat = await event.fetch_chat()
+
+    if from_user is None or chat is None:
+        return
+
     text = (
-        f'Ваш ID: <b>{event.from_user.user_id}</b>\n'
-        f'ID этого чата: <b>{event.chat.chat_id}</b>'
+        f'Ваш ID: <b>{from_user.user_id}</b>\n'
+        f'ID этого чата: <b>{chat.chat_id}</b>'
     )
-    await event.message.answer(text, parse_mode=ParseMode.HTML)
+    await event.message.answer(text, format=Format.HTML)
 
 
 async def main():
@@ -461,11 +555,12 @@ class FilterChat(BaseFilter):
     """
     
     async def __call__(self, event: UpdateUnion):
-        
-        if not event.chat:
+
+        chat = await event.fetch_chat()
+        if chat is None:
             return False
-        
-        return event.chat == 'Test'
+
+        return chat.title == 'Test'
 
 
 @dp.message_created(CommandStart(), FilterChat())

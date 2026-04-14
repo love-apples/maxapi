@@ -15,6 +15,7 @@ classifiers = [
 ]
 dependencies = [
     "aiohttp>=3.13,<4",
+    "backoff>=2.0,<3",
     "magic_filter>=1.0.0,<2",
     "pydantic>=2,<3",
     "aiofiles>=24.1,<26",
@@ -169,6 +170,9 @@ flake8-type-checking.runtime-evaluated-base-classes = [
     "C90", # TODO: требует рефакторинга
 ]
 "maxapi/connection/base.py" = [
+    "C90", # TODO: требует рефакторинга
+]
+"maxapi/utils/updates.py" = [
     "C90", # TODO: требует рефакторинга
 ]
 

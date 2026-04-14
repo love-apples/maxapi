@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, cast
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
 from ..enums.http_method import HTTPMethod
+from ..enums.parse_mode import ParseMode, TextFormat
 from ..exceptions.max import MaxApiError
 from ..loggers import logger_bot
 from ..types.attachments.attachment import Attachment
@@ -18,7 +19,6 @@ from .types.edited_message import EditedMessage
 
 if TYPE_CHECKING:
     from ..bot import Bot
-    from ..enums.parse_mode import ParseMode, TextFormat
     from ..types.attachments import Attachments
     from ..types.message import NewMessageLink
 
@@ -78,7 +78,19 @@ class EditMessage(BaseConnection):
                 DeprecationWarning,
                 stacklevel=4,
             )
-        self.format = format if format is not None else parse_mode
+        # Поддержка передачи строки вместо enum для обратной
+        # совместимости: пользователь может передать "html" или
+        # TextFormat.HTML — внутри всегда храним enum, чтобы .value
+        # работал без ошибок.
+        if isinstance(format, str) and not isinstance(format, TextFormat):
+            format = TextFormat(format)
+        if isinstance(parse_mode, str) and not isinstance(
+            parse_mode, ParseMode
+        ):
+            parse_mode = ParseMode(parse_mode)
+        self.format: TextFormat | None = (
+            format if format is not None else parse_mode
+        )
         self.sleep_after_input_media = sleep_after_input_media
 
     async def fetch(self) -> EditedMessage | None:
