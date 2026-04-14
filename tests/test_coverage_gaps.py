@@ -197,6 +197,60 @@ class TestSubscribeWebhookHttpWarning:
 
 
 # ===========================================================================
+# webhook/base.py — missing-secret warning (BaseMaxWebhook.__init__)
+# ===========================================================================
+
+
+class _DummyBot:
+    """Stand-in for Bot in webhook init tests (no network calls)."""
+
+
+class TestBaseMaxWebhookSecretWarning:
+    """BaseMaxWebhook logs a warning when secret is empty/None.
+
+    The check uses `if not self.secret:` so it must fire for both
+    ``None`` and empty string ``""`` and stay silent for any
+    non-empty secret.
+    """
+
+    _WARN_FRAGMENT = "без secret"
+
+    def _make_webhook(self, secret):
+        from maxapi import Dispatcher
+        from maxapi.webhook.aiohttp import AiohttpMaxWebhook
+
+        return AiohttpMaxWebhook(
+            dp=Dispatcher(), bot=_DummyBot(), secret=secret
+        )
+
+    def test_secret_none_logs_warning(self, caplog):
+        """secret=None should produce the missing-secret warning."""
+        import logging
+
+        with caplog.at_level(logging.WARNING):
+            self._make_webhook(secret=None)
+        assert any(self._WARN_FRAGMENT in r.message for r in caplog.records)
+
+    def test_secret_empty_string_logs_warning(self, caplog):
+        """secret='' is also unsafe and must trigger the warning."""
+        import logging
+
+        with caplog.at_level(logging.WARNING):
+            self._make_webhook(secret="")
+        assert any(self._WARN_FRAGMENT in r.message for r in caplog.records)
+
+    def test_secret_non_empty_no_warning(self, caplog):
+        """A real secret must keep the log clean."""
+        import logging
+
+        with caplog.at_level(logging.WARNING):
+            self._make_webhook(secret="my-secret")
+        assert not any(
+            self._WARN_FRAGMENT in r.message for r in caplog.records
+        )
+
+
+# ===========================================================================
 # filters/command.py — case-insensitive match path (1 line)
 # ===========================================================================
 
