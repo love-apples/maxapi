@@ -202,6 +202,23 @@ class TestUserAddedGetIds:
         assert chat_id == 100
         assert user_id == 42
 
+    def test_get_ids_ignores_inviter_id(self):
+        """get_ids() возвращает user.user_id, а не inviter_id."""
+        from maxapi.enums.update import UpdateType
+        from maxapi.types.updates.user_added import UserAdded
+
+        event = UserAdded(
+            update_type=UpdateType.USER_ADDED,
+            timestamp=0,
+            chat_id=100,
+            inviter_id=999,
+            user=self._USER,
+            is_channel=False,
+        )
+        _chat_id, user_id = event.get_ids()
+        assert user_id == 42
+        assert user_id != 999
+
 
 class TestUserRemovedGetIds:
     """Тесты для UserRemoved.get_ids()."""
@@ -228,3 +245,20 @@ class TestUserRemovedGetIds:
         chat_id, user_id = event.get_ids()
         assert chat_id == 200
         assert user_id == 99
+
+    def test_get_ids_ignores_admin_id(self):
+        """get_ids() возвращает user.user_id, а не admin_id."""
+        from maxapi.enums.update import UpdateType
+        from maxapi.types.updates.user_removed import UserRemoved
+
+        event = UserRemoved(
+            update_type=UpdateType.USER_REMOVED,
+            timestamp=0,
+            chat_id=200,
+            admin_id=888,
+            user=self._USER,
+            is_channel=False,
+        )
+        _chat_id, user_id = event.get_ids()
+        assert user_id == 99
+        assert user_id != 888
