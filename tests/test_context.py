@@ -303,9 +303,7 @@ class TestRedisContext:
 
         await context.set_state(Form.waiting)
 
-        redis.set.assert_awaited_once_with(
-            context.state_key, "Form:waiting"
-        )
+        redis.set.assert_awaited_once_with(context.state_key, "Form:waiting")
 
     @pytest.mark.asyncio
     async def test_redis_get_state_decodes_bytes(self):
