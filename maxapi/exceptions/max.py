@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 
 class InvalidToken(Exception): ...
@@ -16,7 +17,7 @@ class MaxIconParamsException(Exception): ...
 @dataclass(slots=True)
 class MaxApiError(Exception):
     code: int
-    raw: str
+    raw: dict[str, Any] | str
 
     def __str__(self) -> str:
         return f"Ошибка от API: {self.code=} {self.raw=}"

@@ -3,6 +3,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
+from .ttl import TTLTracker
+
 if TYPE_CHECKING:
     from ..context.state_machine import State
 
@@ -17,6 +19,16 @@ class BaseContext(ABC):
     ) -> None:
         self.chat_id = chat_id
         self.user_id = user_id
+        self.ttl: int | float | None = kwargs.pop("ttl", None)
+        self._ttl_tracker = TTLTracker(self.ttl)
+
+    def touch_ttl(self) -> None:
+        """Продлевает TTL контекста при активности."""
+        self._ttl_tracker.touch()
+
+    def is_ttl_expired(self) -> bool:
+        """Проверяет, истёк ли TTL контекста."""
+        return self._ttl_tracker.is_expired()
 
     @abstractmethod
     async def get_data(self) -> dict[str, Any]:

@@ -1,8 +1,45 @@
 """Тесты для Context и State Machine."""
 
+import asyncio
+
 import pytest
 from maxapi.context import MemoryContext
 from maxapi.context.state_machine import State, StatesGroup
+from maxapi.context.ttl import TTLTracker
+
+
+class TestTTLTracker:
+    """Тесты TTLTracker."""
+
+    def test_ttl_tracker_init(self):
+        """TTL сохраняется в трекере."""
+        tracker = TTLTracker(60)
+        assert tracker.ttl == 60
+
+    def test_ttl_tracker_init_invalid_value(self):
+        """Некорректный TTL вызывает ошибку."""
+        with pytest.raises(ValueError, match="ttl must be greater than 0"):
+            TTLTracker(0)
+
+    def test_ttl_tracker_not_expired_without_touch(self):
+        """Без активации TTL не должен считаться истёкшим."""
+        tracker = TTLTracker(1)
+        assert tracker.is_expired() is False
+
+    def test_ttl_tracker_clear(self):
+        """Очистка сбрасывает дедлайн."""
+        tracker = TTLTracker(1)
+        tracker.touch()
+        tracker.clear()
+        assert tracker.is_expired() is False
+
+    @pytest.mark.asyncio
+    async def test_ttl_tracker_expires_after_touch(self):
+        """После touch TTL должен истечь по времени."""
+        tracker = TTLTracker(0.01)
+        tracker.touch()
+        await asyncio.sleep(0.02)
+        assert tracker.is_expired() is True
 
 
 class TestMemoryContext:
@@ -84,7 +121,6 @@ class TestMemoryContext:
     @pytest.mark.asyncio
     async def test_concurrent_access(self, sample_context):
         """Тест параллельного доступа к контексту."""
-        import asyncio
 
         async def update_data(key, value):
             await sample_context.update_data(**{key: value})
@@ -100,6 +136,65 @@ class TestMemoryContext:
         assert "key1" in data
         assert "key2" in data
         assert "key3" in data
+
+    def test_context_init_with_ttl(self):
+        """TTL сохраняется в контексте."""
+        context = MemoryContext(chat_id=12345, user_id=67890, ttl=60)
+        assert context.ttl == 60
+
+    def test_context_init_with_invalid_ttl(self):
+        """Некорректный TTL вызывает ошибку."""
+        with pytest.raises(ValueError, match="ttl must be greater than 0"):
+            MemoryContext(chat_id=12345, user_id=67890, ttl=0)
+
+    @pytest.mark.asyncio
+    async def test_context_ttl_expires_data_and_state(self):
+        """Просроченный контекст автоматически очищается."""
+        context = MemoryContext(chat_id=12345, user_id=67890, ttl=0.01)
+
+        await context.set_data({"name": "Max"})
+        await context.set_state("waiting")
+        await asyncio.sleep(0.02)
+
+        assert await context.get_data() == {}
+        assert await context.get_state() is None
+
+    @pytest.mark.asyncio
+    async def test_context_ttl_refreshes_on_activity(self):
+        """Любая активность продлевает TTL контекста."""
+        context = MemoryContext(chat_id=12345, user_id=67890, ttl=0.03)
+
+        await context.set_data({"step": 1})
+        await asyncio.sleep(0.02)
+        assert await context.get_data() == {"step": 1}
+
+        await asyncio.sleep(0.02)
+        assert await context.get_data() == {"step": 1}
+
+    @pytest.mark.asyncio
+    async def test_set_state_none_keeps_data_until_ttl_expires(self):
+        """Сброс state не должен сразу очищать data."""
+        context = MemoryContext(chat_id=12345, user_id=67890, ttl=0.01)
+
+        await context.set_data({"name": "Max"})
+        await context.set_state("waiting")
+        await context.set_state(None)
+
+        assert await context.get_state() is None
+        assert await context.get_data() == {"name": "Max"}
+
+    @pytest.mark.asyncio
+    async def test_set_data_after_ttl_expiration_clears_old_state(self):
+        """После TTL новый set_data не должен сохранять старый state."""
+        context = MemoryContext(chat_id=12345, user_id=67890, ttl=0.01)
+
+        await context.set_data({"old": 1})
+        await context.set_state("waiting")
+        await asyncio.sleep(0.02)
+        await context.set_data({"new": 2})
+
+        assert await context.get_state() is None
+        assert await context.get_data() == {"new": 2}
 
 
 class TestStateMachine:
