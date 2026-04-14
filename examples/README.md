@@ -186,7 +186,7 @@ python examples/01_echo_bot.py
 - `bot.delete_message()` — удаление сообщения
 - `bot.edit_message()` — редактирование текста и вложений
 - `bot.get_chat_by_id()` — информация о чате
-- `bot.get_members_chat()` — список участников
+- `bot.get_chat_members()` — список участников
 - Обработка событий `user_added` и `user_removed`
 - Обработка `chat_title_changed`
 

@@ -177,6 +177,9 @@ async def step_confirm(event: MessageCallback, context: BaseContext) -> None:
         await event.answer()
         return
 
+    # Важно: attachments=None в Message.edit() означает «не менять» и
+    # оставит существующую клавиатуру. Чтобы удалить кнопки на финальном
+    # экране — передаём пустой список.
     if payload == "confirm_yes":
         data = await context.get_data()
         await context.clear()
@@ -187,14 +190,14 @@ async def step_confirm(event: MessageCallback, context: BaseContext) -> None:
                 f"Возраст: {data.get('age', '—')}\n"
                 f"Город: {data.get('city', '—')}"
             ),
-            attachments=None,
+            attachments=[],
         )
 
     elif payload == "confirm_no":
         await context.clear()
         await event.message.edit(
             text="Данные сброшены. Напишите /start для новой попытки.",
-            attachments=None,
+            attachments=[],
         )
 
     await event.answer()

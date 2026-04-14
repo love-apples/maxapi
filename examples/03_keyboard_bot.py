@@ -147,10 +147,13 @@ async def on_callback(event: MessageCallback) -> None:
         )
 
     elif payload == CB_CLOSE:
-        # Убираем клавиатуру, оставляем текст
+        # Убираем клавиатуру, оставляем текст.
+        # Важно: attachments=None в Message.edit() трактуется как
+        # «не менять» и сохраняет существующие вложения. Чтобы
+        # действительно удалить клавиатуру — передаём пустой список.
         await event.message.edit(
             text="Клавиатура убрана. Напишите /start для повтора.",
-            attachments=None,
+            attachments=[],
         )
 
     # Обязательный ack — без него UI покажет ошибку

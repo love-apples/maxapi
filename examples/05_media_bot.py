@@ -27,6 +27,7 @@ import asyncio
 import base64
 import logging
 import os
+import tempfile
 
 try:
     from dotenv import load_dotenv
@@ -37,6 +38,11 @@ except ImportError:
 from maxapi import Bot, Dispatcher, F
 from maxapi.enums.sender_action import SenderAction
 from maxapi.filters.command import Command, CommandStart
+from maxapi.types.attachments.audio import Audio
+from maxapi.types.attachments.file import File
+from maxapi.types.attachments.image import Image
+from maxapi.types.attachments.sticker import Sticker
+from maxapi.types.attachments.video import Video
 from maxapi.types.input_media import InputMedia, InputMediaBuffer
 from maxapi.types.updates.message_created import MessageCreated
 
@@ -45,8 +51,30 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot()
 dp = Dispatcher()
 
-# Путь к тестовому изображению (должен существовать или замените на свой)
-SAMPLE_IMAGE_PATH = os.path.join(os.path.dirname(__file__), "sample.jpg")
+# Минимальный валидный PNG 1×1 пиксель (красный) — fallback для /photo
+# и /upload, чтобы пример запускался без ручного добавления sample.jpg.
+_PNG_1X1_B64 = (
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4"
+    "2mP8/58BAwAI/AL+hc2rNAAAAABJRU5ErkJggg=="
+)
+
+
+def get_sample_image_path() -> str:
+    """Возвращает путь к тестовому изображению.
+
+    Если рядом со скриптом есть sample.jpg — используем его, иначе
+    создаём временный PNG 1×1 (красный пиксель). Так пример работает
+    из коробки без необходимости добавлять медиа вручную.
+    """
+    local = os.path.join(os.path.dirname(__file__), "sample.jpg")
+    if os.path.exists(local):
+        return local
+
+    tmp_path = os.path.join(tempfile.gettempdir(), "maxapi_example_sample.png")
+    if not os.path.exists(tmp_path):
+        with open(tmp_path, "wb") as f:
+            f.write(base64.b64decode(_PNG_1X1_B64))
+    return tmp_path
 
 
 @dp.message_created(CommandStart())
@@ -73,15 +101,12 @@ async def cmd_photo(event: MessageCreated) -> None:
     # Показываем индикатор «отправляет фото...»
     await bot.send_action(chat_id=chat_id, action=SenderAction.SENDING_PHOTO)
 
-    if not os.path.exists(SAMPLE_IMAGE_PATH):
-        await event.message.answer(
-            f"Файл sample.jpg не найден рядом со скриптом.\n"
-            f"Ожидался путь: {SAMPLE_IMAGE_PATH}"
-        )
-        return
+    # Берём sample.jpg, если он есть рядом со скриптом, иначе — сгенерим
+    # на лету маленький PNG, чтобы пример работал «из коробки».
+    sample_path = get_sample_image_path()
 
     # InputMedia принимает путь к файлу
-    media = InputMedia(path=SAMPLE_IMAGE_PATH)
+    media = InputMedia(path=sample_path)
     await bot.send_message(
         chat_id=chat_id,
         text="Фото из файла:",
@@ -100,12 +125,8 @@ async def cmd_buffer(event: MessageCreated) -> None:
         return
     await bot.send_action(chat_id=chat_id, action=SenderAction.SENDING_PHOTO)
 
-    # Минимальный PNG 1×1 пиксель (красный) для демонстрации
+    # Используем тот же минимальный PNG 1×1 пиксель для демонстрации.
     # В реальном проекте здесь будет PIL, matplotlib, reportlab и т.д.
-    _PNG_1X1_B64 = (
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4"
-        "2mP8/58BAwAI/AL+hc2rNAAAAABJRU5ErkJggg=="
-    )
     png_1x1 = base64.b64decode(_PNG_1X1_B64)
     # InputMediaBuffer принимает bytes и имя файла
     media = InputMediaBuffer(buffer=png_1x1, filename="generated.png")
@@ -128,14 +149,10 @@ async def cmd_upload(event: MessageCreated) -> None:
         return
     await bot.send_action(chat_id=chat_id, action=SenderAction.SENDING_PHOTO)
 
-    if not os.path.exists(SAMPLE_IMAGE_PATH):
-        await event.message.answer(
-            "Файл sample.jpg не найден — предзагрузка невозможна."
-        )
-        return
+    sample_path = get_sample_image_path()
 
     # Загружаем файл на серверы Max и получаем token
-    uploaded = await bot.upload_media(InputMedia(path=SAMPLE_IMAGE_PATH))
+    uploaded = await bot.upload_media(InputMedia(path=sample_path))
 
     await event.message.answer(
         f"Медиа загружено! token: {uploaded.payload.token}\n"
@@ -161,20 +178,22 @@ async def on_attachment(event: MessageCreated) -> None:
     if not attachments:
         return
 
-    # Определяем тип первого вложения
+    # Маппинг реальных классов вложений maxapi на человекочитаемые
+    # названия и подходящий SenderAction. Используем сами классы, а не
+    # строковые имена — так мы защищены от опечаток и переименований.
     first = attachments[0]
-    attachment_type = type(first).__name__
-
-    # Маппинг типов на читаемые русские названия и SenderAction
-    type_map = {
-        "PhotoAttachment": ("фотографию", SenderAction.SENDING_PHOTO),
-        "VideoAttachment": ("видео", SenderAction.SENDING_VIDEO),
-        "AudioAttachment": ("аудио", SenderAction.SENDING_FILE),
-        "FileAttachment": ("файл", SenderAction.SENDING_FILE),
-    }
-    label, action = type_map.get(
-        attachment_type, ("вложение", SenderAction.SENDING_FILE)
-    )
+    if isinstance(first, Image):
+        label, action = "фотографию", SenderAction.SENDING_PHOTO
+    elif isinstance(first, Video):
+        label, action = "видео", SenderAction.SENDING_VIDEO
+    elif isinstance(first, Audio):
+        label, action = "аудио", SenderAction.SENDING_FILE
+    elif isinstance(first, File):
+        label, action = "файл", SenderAction.SENDING_FILE
+    elif isinstance(first, Sticker):
+        label, action = "стикер", SenderAction.SENDING_FILE
+    else:
+        label, action = "вложение", SenderAction.SENDING_FILE
 
     chat_id = event.message.recipient.chat_id
     if chat_id is None:
