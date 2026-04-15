@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..bot import Bot
@@ -6,8 +6,6 @@ if TYPE_CHECKING:
 
 class BotMixin:
     """Миксин для проверки инициализации bot."""
-
-    bot: Any
 
     def _ensure_bot(self) -> "Bot":
         """
@@ -20,7 +18,8 @@ class BotMixin:
             RuntimeError: Если bot не инициализирован.
         """
 
-        if self.bot is None:
+        bot = getattr(self, "bot", None)
+        if bot is None:
             raise RuntimeError("Bot не инициализирован")
 
-        return self.bot  # type: ignore
+        return bot  # type: ignore

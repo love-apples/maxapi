@@ -17,6 +17,7 @@ from ..exceptions.download_file import DownloadFileError
 from ..exceptions.max import InvalidToken, MaxApiError, MaxConnection
 from ..loggers import logger_bot
 from ..types.bot_mixin import BotMixin
+from ..utils.runtime import bind_bot
 
 if TYPE_CHECKING:
     from pydantic import BaseModel
@@ -195,15 +196,7 @@ class BaseConnection(BotMixin):
 
         model = model(**raw)  # type: ignore
 
-        if hasattr(model, "message"):
-            attr = model.message
-            if hasattr(attr, "bot"):
-                attr.bot = bot
-
-        if hasattr(model, "bot"):
-            model.bot = bot  # type: ignore
-
-        return model
+        return bind_bot(model, bot)
 
     async def upload_file(self, url: str, path: str, type: UploadType) -> str:
         """
