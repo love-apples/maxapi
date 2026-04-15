@@ -4,7 +4,7 @@ import asyncio
 import inspect
 import mimetypes
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AsyncIterator, Awaitable, Callable, Optional
+from typing import TYPE_CHECKING, Any, AsyncIterator, Optional
 from urllib.parse import urlparse, unquote
 from datetime import datetime
 import re
@@ -307,17 +307,17 @@ class BaseConnection(BotMixin):
         url: str,
         *,
         chunk_size: int = DOWNLOAD_CHUNK_SIZE,
-        on_response: Optional[Callable[[ClientResponse], None | Awaitable[None]]] = None,
+        response_dict: Optional[dict[str, str]] = None,
     ) -> AsyncIterator[bytes]:
         """
         Асинхронный генератор, который отдаёт чанки файла по мере скачивания.
 
         Args:
             url: URL файла.
-            on_response: Опциональный коллбек, вызываемый с объектом ответа
-                        до начала чтения тела. Позволяет извлечь заголовки.
-                        Поддерживаются как синхронные функции, так и async def.
-                        Если передана асинхронная функция, она будет автоматически awaited
+            response_dict: Опциональный словарь в который будет сохраненs заголовки до начала чтения тела
+                            и имя файла. Формат:
+                            - response_dict['response']
+                            - response_dict['filename']
 
         Yields:
             bytes: Чанки данных файла.
@@ -358,10 +358,11 @@ class BaseConnection(BotMixin):
                 f"Ошибка при скачивании файла: HTTP {response.status}"
             )
 
-        if on_response is not None:
-            result = on_response(response)
-            if inspect.iscoroutine(result):
-                await result
+        if isinstance(response_dict, dict):
+            response_dict['resp'] = response
+            response_dict['filename'] = self._capture_filename(response)
+        elif response_dict is not None:
+            raise ValueError(f"response_dict должен быть словарём, получен {type(response_dict)}")
 
         try:
             async for chunk in response.content.iter_chunked(chunk_size):
@@ -369,6 +370,83 @@ class BaseConnection(BotMixin):
         finally:
             await response.release()
 
+    @staticmethod
+    def _capture_filename(response: ClientResponse) -> str:
+        """
+        Получает имя файла из заголовков
+        Используется в _fetch_content_stream
+
+        Args:
+            response: Ответ сервера с заголовками файла
+
+        Returns:
+            str: Имя файла. В зависимости от содержиния заголовков может быть вида:
+                "filename.doc", ".doc", "filename"
+        """
+        filename = ext = None
+        try:
+            cd = response.content_disposition
+            if cd and cd.filename:
+                filename = Path(cd.filename).name
+                ext = Path(filename).suffix
+            else:
+                parsed = urlparse(response.url)
+                name = unquote(parsed.path, encoding='utf-8', errors='replace')
+                filename = Path(name).name  # Защита от path traversal
+                ext = Path(filename).suffix
+                if not ext:
+                    ext = mimetypes.guess_extension(response.content_type or "")
+                    filename = f"{filename}{ext}"
+
+            if re.search(r'%[0-9A-Fa-f]{2}', filename):
+                # Сервера Max возвращают имя файла дважды закодированное. Проверяем
+                filename = unquote(filename, encoding='utf-8', errors='replace')
+
+        except (AttributeError, TypeError, ValueError) as e:
+            logger_bot.warning("Не удалось определить имя файла из заголовков: %s", e)
+
+        return filename
+
+    @staticmethod
+    def _check_file_exists(path: Path|str) -> Path:
+        """Проверяет, если файл существует, то возвращает новый свободный путь для сохранения
+        Windows style:
+        - file_name.ext
+        - file_name(2).ext
+        - file_name(3).ext
+
+        Args:
+            path (pathlib.Path): Путь к файлу
+
+        Returns:
+            pathlib.Path: Свободное имя файла с путём для сохранения
+
+        Raises:
+            ValueError: Non-encodable path.
+        """
+        if isinstance(path, str):
+            path = Path(path)
+        dest = path.parent
+
+        if path.exists():
+            max_num = 1 # Один уже существует
+            fname, ext = path.stem, path.suffix
+            pattern = re.compile(rf"^{re.escape(fname)}\((\d+)\){re.escape(ext)}$")
+
+            # Сканируем директорию
+            for existing_path in dest.iterdir():
+                if existing_path.suffix == '.part':
+                    continue
+
+                match = pattern.match(existing_path.name)
+                if match:
+                    num = int(match.group(1))
+                    if num > max_num:
+                        max_num = num
+
+            path = dest / f"{fname}({max_num+1}){ext}"
+
+        return path
 
     async def download_file(
         self,
@@ -403,70 +481,27 @@ class BaseConnection(BotMixin):
             DownloadFileError: при ошибке скачивания.
         """
         dest = Path(destination)
-        filename: Optional[str] = None # Переменная для хранения итогового имени
-        ext: Optional[str] = None # расширение файла из заголовков
 
         await aiofiles.os.makedirs(destination, exist_ok=True)
         temp_filename = f"tmp_{uuid.uuid4().hex}.part"
         temp_path = dest / temp_filename
 
-        def check_exists(path: Path) -> Path:
-            """Проверяет, если файл существует, то возвращает новый свободный путь для сохранения"""
-
-            if path.exists():
-                max_num = 1 # Один уже существует
-                fname, ext = path.stem, path.suffix
-                pattern = re.compile(rf"^{re.escape(fname)}\((\d+)\){re.escape(ext)}$")
-
-                # Сканируем директорию
-                for existing_path in dest.iterdir():
-                    if existing_path.suffix == '.part':
-                        continue
-
-                    match = pattern.match(existing_path.name)
-                    if match:
-                        num = int(match.group(1))
-                        if num > max_num:
-                            max_num = num
-
-                path = dest / f"{fname}({max_num+1}){ext}"
-
-            return path
-
-
-        def capture_filename(response: Any) -> None:
-            """Получает имя файла из заголовков"""
-            nonlocal filename, ext
-            try:
-                cd = response.content_disposition
-                if cd and cd.filename:
-                    filename = Path(cd.filename).name
-                    ext = Path(filename).suffix
-                else:
-                    parsed = urlparse(url)
-                    name = unquote(parsed.path, encoding='utf-8', errors='replace')
-                    filename = Path(name).name  # Защита от path traversal
-                    ext = Path(filename).suffix
-                    if not ext:
-                        ext = mimetypes.guess_extension(response.content_type or "")
-                        filename = f"{filename}{ext}"
-
-                if re.search(r'%[0-9A-Fa-f]{2}', filename):
-                    # Сервера Max возвращают имя файла дважды закодированное. Проверяем
-                    filename = unquote(filename, encoding='utf-8', errors='replace')
-
-            except (AttributeError, TypeError, ValueError) as e:
-                logger_bot.warning("Не удалось определить имя файла из заголовков: %s. Используется дефолт", e)
-
-
+        response = {}
         async with aiofiles.open(temp_path, "wb") as f:
             async for chunk in self._fetch_content_stream(
                 url,
                 chunk_size=chunk_size,
-                on_response=capture_filename
+                response_dict=response
             ):
                 await f.write(chunk)
-
+        
+        filename = response.get('filename')
+        ext = None
+        if filename:
+            name_ext = filename.rsplit(".", maxsplit=1)
+            if len(name_ext) == 2:
+                ext = f".{name_ext[1]}"
+        
         # Если имя не определилось
         datetime_str = datetime.now().strftime("%y%m%d_%H%M%S")
         is_photo = url.startswith("https://i.oneme.ru/")
@@ -478,11 +513,11 @@ class BaseConnection(BotMixin):
             else:
                 if not ext:
                     ext = '.bin'
-                filename = f"{datetime_str}.bin"
+                filename = f"{datetime_str}{ext}"
         elif is_photo:
-            filename = f"image_{datetime_str}{Path(filename).suffix}"
+            filename = f"image_{datetime_str}{ext}"
 
-        final_path = check_exists(dest / filename)
+        final_path = self._check_file_exists(dest / filename)
         if final_path != temp_path:
             temp_path.replace(final_path)
 
