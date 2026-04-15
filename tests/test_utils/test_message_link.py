@@ -300,19 +300,28 @@ class TestBuildMessageLink:
         assert "=" not in seq_part  # нет паддинга
         assert all(c in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" for c in seq_part)
 
+
     def test_link_seq_decoding_consistency(self):
         """Декодирование seq из ссылки должно давать исходное значение"""
+        
+        def _seq_to_b64(seq: int) -> str:
+            """Вспомогательная функция: seq → URL-safe base64 без паддинга."""
+            return base64.urlsafe_b64encode(seq.to_bytes(8, "big")).decode().rstrip("=")
+        
         test_cases = [
-            (0, "AAAAAAAAAAA"),      # 0 -> 8 нулевых байт
-            (1, "AAAAAAAAAAE"),      # 1 -> 7 нулей + 0x01
-            (255, "AAAAAAAAAAP"),    # 255 -> 7 нулей + 0xFF
-            (116353259870705870, "AZ1erGMNWM4"),  # из реальных данных
+            0,                          # Минимум (все биты 0)
+            1,                          # Единица (проверка младших битов)
+            255,                        # Граница 1 байта (0xFF)
+            2**64 - 1,                  # Максимум unsigned int64 (все биты 1)
+            116353259870705870,         # Реальное значение из продакшена
         ]
-        for seq, expected_b64_prefix in test_cases:
+        for seq in test_cases:
+            expected_b64 = _seq_to_b64(seq)
             mid = chatid_seq_to_mid(12345, seq)
             link = build_message_link(mid)
             seq_from_link = link.split("/")[-1]
             # Проверяем, что декодирование даёт исходный seq
+            assert seq_from_link == expected_b64
             padding = (4 - len(seq_from_link) % 4) % 4
             decoded = base64.urlsafe_b64decode(seq_from_link + "=" * padding)
             assert int.from_bytes(decoded, "big") == seq

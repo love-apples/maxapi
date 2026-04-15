@@ -1,7 +1,12 @@
 import re
 import base64
 from urllib.parse import urlparse
+import binascii
 
+def _validate_chat_id(chat_id: int) -> None:
+    """Проверяет, что chat_id в диапазоне signed int64."""
+    if chat_id < -(1 << 63) or chat_id >= (1 << 63):
+        raise ValueError('chat_id выходит за пределы знакового 64-битного диапазона')
 
 def mid_to_chatid_seq(mid: str) -> tuple[int, int]:
     """
@@ -62,8 +67,7 @@ def chatid_seq_to_mid(chat_id: int, seq: int) -> str:
     if not isinstance(seq, int):
         raise TypeError('seq должен быть целым числом')
 
-    if chat_id < -(1 << 63) or chat_id >= (1 << 63):
-        raise ValueError('chat_id выходит за пределы знакового 64-битного диапазона')
+    _validate_chat_id(chat_id)
     if seq < 0 or seq >= (1 << 64):
         raise ValueError('seq выходит за пределы беззнакового 64-битного диапазона')
     
@@ -138,11 +142,10 @@ def link_to_chatid_seq(link: str) -> tuple[int, int]:
     # Извлечение и валидация chat_id
     try:
         chat_id = int(path_parts[1])
-    except ValueError:
-        raise ValueError('chat_id в ссылке должен быть целым числом')
+    except ValueError as e:
+        raise ValueError('chat_id в ссылке должен быть целым числом') from e
     
-    if chat_id < -(1 << 63) or chat_id >= (1 << 63):
-        raise ValueError('chat_id выходит за пределы знакового 64-битного диапазона')
+    _validate_chat_id(chat_id)
     
     # Извлечение seq_b64
     seq_b64 = path_parts[2]
@@ -158,8 +161,8 @@ def link_to_chatid_seq(link: str) -> tuple[int, int]:
     try:
         # Декодируем из url-safe base64
         seq_bytes = base64.urlsafe_b64decode(seq_b64_padded)
-    except Exception as e:
-        raise ValueError(f'Ошибка декодирования base64: {e}')
+    except (binascii.Error, ValueError) as e:
+        raise ValueError(f'Ошибка декодирования base64: {e}') from e
     
     # Валидация длины: seq должен быть 8 байт (64 бита)
     if len(seq_bytes) != 8:
