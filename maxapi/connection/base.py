@@ -462,7 +462,7 @@ class BaseConnection(BotMixin):
         # Если имя не определилось
         datetime_str = datetime.now().strftime("%y%m%d_%H%M%S")
         is_photo = url.startswith("https://i.oneme.ru/")
-        if not filename:
+        if not filename or filename.startswith("."):
             if is_photo:
                 if not ext:
                     ext = '.webp'

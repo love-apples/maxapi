@@ -94,8 +94,6 @@ class TestDownloadFile:
         self, bot, tmp_dir, mock_session
     ):
         """Скачивание без Content-Disposition — имя генерируется по MIME."""
-        from datetime import datetime
-
         mock_response = _make_mock_response(
             content_type="image/jpeg",
             chunks=[b"imagedata"],
@@ -106,8 +104,47 @@ class TestDownloadFile:
             url="https://example.com/img",
             destination=tmp_dir,
         )
-        expected = datetime.now().strftime("%y%m%d_%H%M") # не добавляем секунды, чтобы тест не падал
-        assert result.name.startswith(expected) 
+        assert result.name == "img.jpg"
+        assert result.parent == tmp_dir
+
+    async def test_download_file_no_content_disposition_no_path(
+        self, bot, tmp_dir, mock_session
+    ):
+        """Скачивание без Content-Disposition и без MIME и без внятного пути"""
+        from datetime import datetime
+
+        mock_response = _make_mock_response(
+            chunks=[b"imagedata"],
+        )
+        mock_session.request = AsyncMock(return_value=mock_response)
+
+        result = await bot.download_file(
+            url="https://example.com/",
+            destination=tmp_dir,
+        )
+        expected = f"{datetime.now().strftime("%y%m%d_%H%M%S")}.bin"
+        assert result.name == expected
+        assert result.parent == tmp_dir
+
+
+    async def test_download_photo(
+        self, bot, tmp_dir, mock_session
+    ):
+        """Скачивание фложения-фото по ссылке выда https://i.oneme.ru/i?r=photo_token"""
+        from datetime import datetime
+
+        mock_response = _make_mock_response(
+            content_type="image/jpeg",
+            chunks=[b"imagedata"],
+        )
+        mock_session.request = AsyncMock(return_value=mock_response)
+
+        result = await bot.download_file(
+            url="https://i.oneme.ru/i?r=photo_token",
+            destination=tmp_dir,
+        )
+        expected = f"image_{datetime.now().strftime("%y%m%d_%H%M%S")}.jpg"
+        assert result.name == expected
         assert result.parent == tmp_dir
 
     async def test_download_file_path_traversal_protection(
