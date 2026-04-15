@@ -94,6 +94,8 @@ class TestDownloadFile:
         self, bot, tmp_dir, mock_session
     ):
         """Скачивание без Content-Disposition — имя генерируется по MIME."""
+        from datetime import datetime
+
         mock_response = _make_mock_response(
             content_type="image/jpeg",
             chunks=[b"imagedata"],
@@ -104,7 +106,6 @@ class TestDownloadFile:
             url="https://example.com/img",
             destination=tmp_dir,
         )
-        
         expected = datetime.now().strftime("%y%m%d_%H%M") # не добавляем секунды, чтобы тест не падал
         assert result.name.startswith(expected) 
         assert result.parent == tmp_dir
@@ -364,9 +365,11 @@ class TestDownloadFileAsBytes:
 
     async def test_download_file_name_collision(self, bot, tmp_dir, mock_session):
         """Проверка, что при коллизии имён добавляется (2), (3) и т.д."""
-        
+        from typing import List
+        from pathlib import Path
+
         # Пытаемся скачать сразу 5 файлов
-        results = []
+        results: List[Path] = []
         for i in range(5):
             mock_response = _make_mock_response(chunks=[f"new {i+1}".encode()])
             mock_session.request = AsyncMock(return_value=mock_response)
@@ -381,10 +384,10 @@ class TestDownloadFileAsBytes:
             if i == 0: # Первый файл не проверяем
                 # Первый файл должен быть без суффикса _N
                 # Только image_date_time
-                assert '(' not in result.name.stem and ')' not in result.name.stem
+                assert '(' not in result.stem and ')' not in result.stem
             else:
                 # Ожидаем, что файлы сохранится с суффиксами
-                assert result.name.stem.endswith(f"({i+1})")
+                assert result.stem.endswith(f"({i+1})")
                 assert result.read_bytes() == f"new {i+1}".encode()
 
 
