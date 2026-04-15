@@ -1,6 +1,8 @@
+import re
+
 import pytest
 import base64
-from maxapi.utils.message import (
+from maxapi.utils.message_link import (
     mid_to_chatid_seq,
     chatid_seq_to_mid,
     build_message_link,
@@ -176,19 +178,19 @@ class TestValidationErrors:
             mid_to_chatid_seq(12345)
 
     def test_mid_missing_prefix(self):
-        with pytest.raises(ValueError, match='mid должен начинаться с "mid."'):
+        with pytest.raises(ValueError, match=re.escape('mid должен быть в формате "mid." + 32 hex-символа')):
             mid_to_chatid_seq("000000000b68571c019d5eac630d58ce")
 
     def test_mid_wrong_length_short(self):
-        with pytest.raises(ValueError, match="длина hex значения mid должна быть 32 символа"):
+        with pytest.raises(ValueError, match=re.escape('mid должен быть в формате "mid." + 32 hex-символа')):
             mid_to_chatid_seq("mid.000000000b68571c")
 
     def test_mid_wrong_length_long(self):
-        with pytest.raises(ValueError, match="длина hex значения mid должна быть 32 символа"):
+        with pytest.raises(ValueError, match=re.escape('mid должен быть в формате "mid." + 32 hex-символа')):
             mid_to_chatid_seq("mid.000000000b68571c019d5eac630d58ce00")
 
     def test_mid_invalid_hex_chars(self):
-        with pytest.raises(ValueError, match="должно быть в hex-формате"):
+        with pytest.raises(ValueError, match=re.escape('mid должен быть в формате "mid." + 32 hex-символа')):
             mid_to_chatid_seq("mid.000000000b68571g019d5eac630d58ce")  # 'g' не hex
 
     # ------------------ chatid_seq_to_mid ------------------
@@ -218,15 +220,15 @@ class TestValidationErrors:
 
     # ------------------ build_message_link ------------------
     def test_link_wrong_mid_prefix(self):
-        with pytest.raises(ValueError, match='mid должен начинаться с "mid."'):
+        with pytest.raises(ValueError, match=re.escape('mid должен быть в формате "mid." + 32 hex-символа')):
             build_message_link("invalid.000000000b68571c019d5eac630d58ce")
 
     def test_link_wrong_mid_format(self):
-        with pytest.raises(ValueError, match="должно быть в hex-формате"):
+        with pytest.raises(ValueError, match=re.escape('mid должен быть в формате "mid." + 32 hex-символа')):
             build_message_link("mid.000000000b68571g019d5eac630d58ce")
 
     def test_link_wrong_mid_length(self):
-        with pytest.raises(ValueError, match="длина hex значения mid должна быть 32 символа"):
+        with pytest.raises(ValueError, match=re.escape('mid должен быть в формате "mid." + 32 hex-символа')):
             build_message_link("mid.0000")
 
     # ------------------ link_to_chatid_seq ------------------
@@ -235,7 +237,7 @@ class TestValidationErrors:
             link_to_chatid_seq(12345)
 
     def test_link_wrong_scheme(self):
-        with pytest.raises(ValueError, match="Ссылка должна использовать http или https схему"):
+        with pytest.raises(ValueError, match="Ссылка должна использовать https схему"):
             link_to_chatid_seq("ftp://max.ru/c/123/ABC")
 
     def test_link_wrong_domain(self):
@@ -260,7 +262,7 @@ class TestValidationErrors:
 
     def test_link_base64_decode_error(self):
         # Некорректный base64 (невозможно декодировать)
-        with pytest.raises(ValueError, match="Ошибка декодирования base64"):
+        with pytest.raises(ValueError, match="seq в ссылке должен быть в url-safe base64 формате"):
             link_to_chatid_seq("https://max.ru/c/123/!!!")
 
     def test_link_seq_wrong_byte_length(self):

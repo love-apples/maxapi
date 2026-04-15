@@ -1,4 +1,4 @@
-from .message import (
+from .message_link import (
     mid_to_chatid_seq,
     chatid_seq_to_mid,
     build_message_link,
