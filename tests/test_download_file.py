@@ -246,19 +246,20 @@ class TestDownloadFile:
 # tests/test_download_file.py
 
 class TestDownloadFileAsBytes:
-    """Тесты для метода download_file_as_bytes.
-    
+    """
+    Тесты для метода download_file_as_bytes.
+
     Примеры реальных URL для ручного тестирования:
     - Файл с подписью: 
       https://fd.oneme.ru/getfile?sig=...&expires=...&clientType=3&id=...
     - Изображение: 
       https://i.oneme.ru/i?r=BTGBPUwtwgYUeoFhO7rESmr81n-DnwjHYFhx5_EAhKk...
-    
     """
 
     async def test_download_file_as_bytes_success(self, bot, mock_session):
-        """Успешное скачивание файла в память.
-        
+        """
+        Успешное скачивание файла в память.
+
         Эмулирует поведение реального эндпоинта типа:
         GET https://fd.oneme.ru/getfile?sig=...&expires=...
         """
@@ -278,8 +279,9 @@ class TestDownloadFileAsBytes:
         mock_response.release.assert_called_once()
 
     async def test_download_file_as_bytes_image_url(self, bot, mock_session):
-        """Скачивание изображения с i.oneme.ru.
-        
+        """
+        Скачивание изображения с i.oneme.ru.
+
         Пример реального URL:
         https://i.oneme.ru/i?r=BTGBPUwtwgYUeoFhO7rESmr81n-DnwjHYFhx5_EAhKk...
         """
@@ -331,7 +333,7 @@ class TestDownloadFileAsBytes:
         """Retry при 503, затем успех."""
         retry_response = _make_mock_response(ok=False, status=503)
         retry_response.read = AsyncMock()
-        
+
         success_response = _make_mock_response(
             content_type="text/plain",
             chunks=[b"success"],
@@ -369,7 +371,7 @@ class TestDownloadFileAsBytes:
         """download_file и download_file_as_bytes возвращают одинаковые данные."""
         content = b"test content for comparison"
         chunks = [content[i:i+10] for i in range(0, len(content), 10)]
-        
+
         # Для download_file
         mock_response_disk = _make_mock_response(
             cd_filename="test.txt",
@@ -416,7 +418,7 @@ class TestDownloadFileAsBytes:
                     destination=tmp_dir,
                 )
             )
-        
+
         for i, result in enumerate(results):
             if i == 0: # Первый файл не проверяем
                 # Первый файл должен быть без суффикса _N
@@ -437,11 +439,11 @@ class TestDownloadFileAsBytes:
             chunks=[b"\x89PNG\r\n\x1a\n"],
         )
         mock_session.request = AsyncMock(return_value=mock_response)
-        
+
         result = await bot.download_file(
             url="https://i.oneme.ru/i?r=test",
             destination=tmp_dir,
         )
-        
+
         assert result.suffix == ".png"  # не .webp!
         assert result.name.startswith("image_")

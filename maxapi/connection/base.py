@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import mimetypes
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Optional
+from typing import TYPE_CHECKING, Any, AsyncIterator, Awaitable, Callable, Optional
 from urllib.parse import urlparse, unquote
 from datetime import datetime
 import re
@@ -273,7 +274,7 @@ class BaseConnection(BotMixin):
             else:
                 mime_type = f"{type.value}/*"
                 ext = ""
-        except Exception:
+        except (OSError, ValueError):
             mime_type = f"{type.value}/*"
             ext = ""
 
@@ -306,19 +307,21 @@ class BaseConnection(BotMixin):
         url: str,
         *,
         chunk_size: int = DOWNLOAD_CHUNK_SIZE,
-        on_response: Optional[Callable[[ClientResponse], None]] = None,
+        on_response: Optional[Callable[[ClientResponse], None | Awaitable[None]]] = None,
     ) -> AsyncIterator[bytes]:
         """
         Асинхронный генератор, который отдаёт чанки файла по мере скачивания.
-        
+
         Args:
             url: URL файла.
             on_response: Опциональный коллбек, вызываемый с объектом ответа
                         до начала чтения тела. Позволяет извлечь заголовки.
-        
+                        Поддерживаются как синхронные функции, так и async def.
+                        Если передана асинхронная функция, она будет автоматически awaited
+
         Yields:
             bytes: Чанки данных файла.
-            
+
         Raises:
             DownloadFileError: при ошибке запроса или недопустимом статусе.
         """
@@ -356,8 +359,10 @@ class BaseConnection(BotMixin):
             )
 
         if on_response is not None:
-            on_response(response)
-        
+            result = on_response(response)
+            if inspect.iscoroutine(result):
+                await result
+
         try:
             async for chunk in response.content.iter_chunked(chunk_size):
                 yield chunk
@@ -378,6 +383,13 @@ class BaseConnection(BotMixin):
         Метод работает не через общий ``request()``, поскольку
         ответом является бинарный поток, а не JSON.
 
+        Если файл существует, то возвращает новый свободный путь для сохранения
+
+        Windows style:
+        - file_name.ext
+        - file_name(2).ext
+        - file_name(3).ext
+
         Args:
             url: URL файла для скачивания (из payload.url вложения).
             destination: Путь к директории для сохранения файла.
@@ -387,12 +399,8 @@ class BaseConnection(BotMixin):
         Returns:
             Path: Полный путь к скачанному файлу.
 
-        Если файл существует, то возвращает новый свободный путь для сохранения
-
-        Windows style:
-        - file_name.ext
-        - file_name(2).ext
-        - file_name(3).ext
+        Raises:
+            DownloadFileError: при ошибке скачивания.
         """
         dest = Path(destination)
         filename: Optional[str] = None # Переменная для хранения итогового имени
@@ -401,7 +409,7 @@ class BaseConnection(BotMixin):
         await aiofiles.os.makedirs(destination, exist_ok=True)
         temp_filename = f"tmp_{uuid.uuid4().hex}.part"
         temp_path = dest / temp_filename
-        
+
         def check_exists(path: Path) -> Path:
             """Проверяет, если файл существует, то возвращает новый свободный путь для сохранения"""
 
@@ -422,7 +430,7 @@ class BaseConnection(BotMixin):
                             max_num = num
 
                 path = dest / f"{fname}({max_num+1}){ext}"
-            
+
             return path
 
 
@@ -447,7 +455,7 @@ class BaseConnection(BotMixin):
                     # Сервера Max возвращают имя файла дважды закодированное. Проверяем
                     filename = unquote(filename, encoding='utf-8', errors='replace')
 
-            except Exception as e:
+            except (AttributeError, TypeError, ValueError) as e:
                 logger_bot.warning("Не удалось определить имя файла из заголовков: %s. Используется дефолт", e)
 
 
@@ -458,7 +466,7 @@ class BaseConnection(BotMixin):
                 on_response=capture_filename
             ):
                 await f.write(chunk)
-        
+
         # Если имя не определилось
         datetime_str = datetime.now().strftime("%y%m%d_%H%M%S")
         is_photo = url.startswith("https://i.oneme.ru/")
@@ -477,7 +485,7 @@ class BaseConnection(BotMixin):
         final_path = check_exists(dest / filename)
         if final_path != temp_path:
             temp_path.replace(final_path)
-        
+
         return final_path
 
 
@@ -507,4 +515,3 @@ class BaseConnection(BotMixin):
         async for chunk in self._fetch_content_stream(url, chunk_size=chunk_size):
             chunks.append(chunk)
         return b"".join(chunks)
-
