@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 import mimetypes
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Optional
 from urllib.parse import urlparse, unquote
 from datetime import datetime
-from glob import glob
+import re
+import uuid
 
 import aiofiles
 import aiofiles.os
@@ -385,50 +386,69 @@ class BaseConnection(BotMixin):
 
         Returns:
             Path: Полный путь к скачанному файлу.
+
+        Если файл существует, то возвращает новый свободный путь для сохранения
+
+        Windows style:
+        - file_name.ext
+        - file_name(2).ext
+        - file_name(3).ext
         """
-        datetime_str = datetime.now().strftime('%y%m%d_%H%M%S')
-        is_photo = url.startswith('https://i.oneme.ru/')
+        dest = Path(destination)
+        filename: Optional[str] = None # Переменная для хранения итогового имени
+        ext: Optional[str] = None # расширение файла из заголовков
 
-        if is_photo:
-            filename = f'image_{datetime_str}.webp'
-        else:
-            filename = f'{datetime_str}.tmp'
-
+        await aiofiles.os.makedirs(destination, exist_ok=True)
+        temp_filename = f"tmp_{uuid.uuid4().hex}.part"
+        temp_path = dest / temp_filename
+        
         def check_exists(path: Path) -> Path:
             """Проверяет, если файл существует, то возвращает новый свободный путь для сохранения"""
+
             if path.exists():
+                max_num = 1 # Один уже существует
                 fname, ext = path.stem, path.suffix
-                pattern = str(dest / f'{fname}_[0-9]*{ext}')
-                existing = glob(pattern)
-                num = len(existing) + 1
-                path = dest / f'{fname}_{num}{ext}'
+                pattern = re.compile(rf"^{re.escape(fname)}\((\d+)\){re.escape(ext)}$")
+
+                # Сканируем директорию
+                for existing_path in dest.iterdir():
+                    if existing_path.suffix == '.part':
+                        continue
+
+                    match = pattern.match(existing_path.name)
+                    if match:
+                        num = int(match.group(1))
+                        if num > max_num:
+                            max_num = num
+
+                path = dest / f"{fname}({max_num+1}){ext}"
+            
             return path
 
-        dest = Path(destination)
-        await aiofiles.os.makedirs(destination, exist_ok=True)
-        temp_path = check_exists(dest / filename)
 
         def capture_filename(response: Any) -> None:
             """Получает имя файла из заголовков"""
-            nonlocal filename
+            nonlocal filename, ext
             try:
                 cd = response.content_disposition
                 if cd and cd.filename:
                     filename = Path(cd.filename).name
+                    ext = Path(filename).suffix
                 else:
-                    ext = mimetypes.guess_extension(response.content_type or "") or ""
-                    if is_photo:
-                        filename = f'image_{datetime_str}{ext}'
-                    else:
-                        parsed = urlparse(url)
-                        name = unquote(parsed.path) or f"{datetime_str}{ext}"
-                        filename = Path(name).name  # Защита от path traversal
+                    parsed = urlparse(url)
+                    name = unquote(parsed.path, encoding='utf-8', errors='replace')
+                    filename = Path(name).name  # Защита от path traversal
+                    ext = Path(filename).suffix
+                    if not ext:
+                        ext = mimetypes.guess_extension(response.content_type or "")
+                        filename = f"{filename}{ext}"
 
-                if filename.count('%') >= 2:
+                if re.search(r'%[0-9A-Fa-f]{2}', filename):
                     # Сервера Max возвращают имя файла дважды закодированное. Проверяем
-                    filename = unquote(filename)
+                    filename = unquote(filename, encoding='utf-8', errors='replace')
+
             except Exception as e:
-                logger_bot.warning("Не удалось определить имя файла из заголовков: %s. Используется дефолт: %s", e, filename)
+                logger_bot.warning("Не удалось определить имя файла из заголовков: %s. Используется дефолт", e)
 
 
         async with aiofiles.open(temp_path, "wb") as f:
@@ -438,6 +458,21 @@ class BaseConnection(BotMixin):
                 on_response=capture_filename
             ):
                 await f.write(chunk)
+        
+        # Если имя не определилось
+        datetime_str = datetime.now().strftime("%y%m%d_%H%M%S")
+        is_photo = url.startswith("https://i.oneme.ru/")
+        if not filename:
+            if is_photo:
+                if not ext:
+                    ext = '.webp'
+                filename = f"image_{datetime_str}{ext}"
+            else:
+                if not ext:
+                    ext = '.bin'
+                filename = f"{datetime_str}.bin"
+        elif is_photo:
+            filename = f"image_{datetime_str}{Path(filename).suffix}"
 
         final_path = check_exists(dest / filename)
         if final_path != temp_path:

@@ -104,8 +104,9 @@ class TestDownloadFile:
             url="https://example.com/img",
             destination=tmp_dir,
         )
-
-        assert result.name.startswith("file")
+        
+        expected = datetime.now().strftime("%y%m%d_%H%M") # не добавляем секунды, чтобы тест не падал
+        assert result.name.startswith(expected) 
         assert result.parent == tmp_dir
 
     async def test_download_file_path_traversal_protection(
@@ -362,23 +363,29 @@ class TestDownloadFileAsBytes:
 
 
     async def test_download_file_name_collision(self, bot, tmp_dir, mock_session):
-        """Проверка, что при коллизии имён добавляется _1, _2 и т.д."""
-        # Создаём файл с именем, которое будет сгенерировано
-        existing = tmp_dir / "240414_120000.tmp"
-        existing.write_bytes(b"old")
+        """Проверка, что при коллизии имён добавляется (2), (3) и т.д."""
         
-        mock_response = _make_mock_response(chunks=[b"new"])
-        mock_session.request = AsyncMock(return_value=mock_response)
+        # Пытаемся скачать сразу 5 файлов
+        results = []
+        for i in range(5):
+            mock_response = _make_mock_response(chunks=[f"new {i+1}".encode()])
+            mock_session.request = AsyncMock(return_value=mock_response)
+            results.append(
+                await bot.download_file(
+                    url=f"https://i.oneme.ru/i?r=file{i+1}",
+                    destination=tmp_dir,
+                )
+            )
         
-        result = await bot.download_file(
-            url="https://example.com/file",
-            destination=tmp_dir,
-        )
-        
-        # Ожидаем, что файл сохранится как ..._1.tmp
-        assert result.name.endswith("_1.tmp")
-        assert result.read_bytes() == b"new"
-        assert existing.read_bytes() == b"old"  # старый файл не затёрт
+        for i, result in enumerate(results):
+            if i == 0: # Первый файл не проверяем
+                # Первый файл должен быть без суффикса _N
+                # Только image_date_time
+                assert '(' not in result.name.stem and ')' not in result.name.stem
+            else:
+                # Ожидаем, что файлы сохранится с суффиксами
+                assert result.name.stem.endswith(f"({i+1})")
+                assert result.read_bytes() == f"new {i+1}".encode()
 
 
     async def test_download_file_photo_correct_extension(
