@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -304,6 +305,17 @@ class TestDispatcherContext:
 
         assert context1 is not context2
         assert len(dispatcher.contexts) == 2
+
+    def test_get_memory_context_recreates_expired_context(self):
+        """Просроченный context не должен переиспользоваться."""
+        dispatcher = Dispatcher(ttl=0.01)
+
+        context1 = dispatcher._Dispatcher__get_context(12345, 67890)
+        time.sleep(0.02)
+        context2 = dispatcher._Dispatcher__get_context(12345, 67890)
+
+        assert context1 is not context2
+        assert len(dispatcher.contexts) == 1
 
 
 class TestDispatcherMiddlewareChain:
