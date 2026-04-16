@@ -282,9 +282,10 @@ class TestDownloadFileAsBytes:
         )
         mock_session.request = AsyncMock(return_value=mock_response)
 
-        result, filename = await bot.download_file_as_bytes(
+        bio = await bot.download_file_as_bytes(
             url="https://fd.oneme.ru/getfile?sig=test&expires=123",
         )
+        result = bio.read()
 
         assert result == b"chunk1chunk2chunk3"
         mock_response.release.assert_called_once()
@@ -305,9 +306,10 @@ class TestDownloadFileAsBytes:
         )
         mock_session.request = AsyncMock(return_value=mock_response)
 
-        result, filename = await bot.download_file_as_bytes(
+        bio = await bot.download_file_as_bytes(
             url="https://i.oneme.ru/i?r=test_token",
         )
+        result = bio.read()
 
         assert result.startswith(b"\x89PNG")
         assert len(result) > 0
@@ -359,9 +361,10 @@ class TestDownloadFileAsBytes:
         bot.default_connection.retry_backoff_factor = 0.0
 
         with patch("asyncio.sleep", new_callable=AsyncMock):
-            result, filename = await bot.download_file_as_bytes(
+            bio = await bot.download_file_as_bytes(
                 url="https://example.com/file",
             )
+            result = bio.read()
             assert result == b"success"
 
     async def test_download_file_as_bytes_empty_file(self, bot, mock_session):
@@ -373,10 +376,10 @@ class TestDownloadFileAsBytes:
         )
         mock_session.request = AsyncMock(return_value=mock_response)
 
-        result, filename = await bot.download_file_as_bytes(
+        bio = await bot.download_file_as_bytes(
             url="https://example.com/empty",
         )
-
+        result = bio.read()
         assert result == b""
 
     async def test_download_file_vs_as_bytes_same_content(
@@ -395,6 +398,7 @@ class TestDownloadFileAsBytes:
         # Для download_file_as_bytes
         mock_response_bytes = _make_mock_response(
             url="https://example.com/file",
+            cd_filename="test.txt",
             chunks=chunks.copy(),
         )
 
@@ -411,10 +415,12 @@ class TestDownloadFileAsBytes:
         disk_content = path.read_bytes()
 
         # Скачиваем в память
-        bytes_content, filename = await bot.download_file_as_bytes(
+        bio = await bot.download_file_as_bytes(
             url="https://example.com/file",
         )
+        bytes_content = bio.read()
 
+        assert path.name == bio.name
         assert disk_content == bytes_content == content
 
 
