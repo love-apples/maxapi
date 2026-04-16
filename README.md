@@ -163,3 +163,58 @@ if __name__ == '__main__':
 >
 > asyncio.run(main())
 > ```
+
+## ● Примеры ботов
+
+> **Опциональная зависимость для примеров:** примеры поддерживают загрузку переменных окружения из `.env` файла через `python-dotenv`:
+> ```bash
+> pip install python-dotenv
+> ```
+> Без этого пакета `.env` просто не загружается, но токен можно передать напрямую:
+> `MAX_BOT_TOKEN=ваш_токен python examples/01_echo_bot.py`
+
+В директории [`examples/`](examples/) находятся готовые к запуску примеры ботов, покрывающие основные сценарии использования библиотеки. Каждый пример — самодостаточный `.py` файл с подробными комментариями на русском языке.
+
+Запуск любого примера:
+```bash
+MAX_BOT_TOKEN=ваш_токен python examples/01_echo_bot.py
+```
+
+### Базовые
+
+| Пример | Описание | Что изучите |
+|--------|----------|-------------|
+| [`01_echo_bot.py`](examples/01_echo_bot.py) | Эхо-бот — простейший старт | `Bot`, `Dispatcher`, `CommandStart`, `BotStarted`, `SenderAction`, polling |
+| [`02_formatting_bot.py`](examples/02_formatting_bot.py) | Форматирование текста | `Bold`, `Italic`, `Code`, `Link`, `UserMention`, `Text`, `as_html()`, `TextFormat` |
+| [`03_keyboard_bot.py`](examples/03_keyboard_bot.py) | Inline-клавиатуры и callbacks | `InlineKeyboardBuilder`, `CallbackButton`, `LinkButton`, `RequestContactButton`, `event.answer()`, навигация «Назад» |
+
+### Средний уровень
+
+| Пример | Описание | Что изучите |
+|--------|----------|-------------|
+| [`04_fsm_bot.py`](examples/04_fsm_bot.py) | Пошаговая форма (FSM) | `StatesGroup`, `State`, `BaseContext`, `set_state()`, `update_data()`, `clear()`, валидация ввода |
+| [`05_media_bot.py`](examples/05_media_bot.py) | Работа с медиа-файлами | `InputMedia`, `InputMediaBuffer`, `upload_media()`, `forward()`, обработка вложений по типу |
+| [`06_admin_bot.py`](examples/06_admin_bot.py) | Управление чатом | `pin_message()`, `delete_message()`, `edit_message()`, `get_chat_by_id()`, `user_added`, `user_removed` |
+
+### Продвинутый уровень
+
+| Пример | Описание | Что изучите |
+|--------|----------|-------------|
+| [`07_router_bot.py`](examples/07_router_bot.py) | Модульная архитектура | `Router`, `include_routers()`, `BaseFilter`, роутер-уровневые middleware и фильтры |
+| [`08_middleware_bot.py`](examples/08_middleware_bot.py) | Middleware паттерны | `BaseMiddleware`, логирование, throttling, авторизация, обработка ошибок, `outer_middleware()` |
+| [`09_webhook_bot.py`](examples/09_webhook_bot.py) | Webhook + FastAPI | `FastAPIMaxWebhook`, `subscribe_webhook()`, `secret`, кастомные роуты, `lifespan` |
+| [`10_callback_payload_bot.py`](examples/10_callback_payload_bot.py) | Типизированные payloads | `CallbackPayload`, `prefix`, `pack()`, `filter()`, каталог с навигацией |
+
+### Миграция с Telegram
+
+Каждый пример содержит в заголовке аналог из экосистемы Telegram (aiogram / python-telegram-bot). Подробная таблица отличий — в [`examples/README.md`](examples/README.md#миграция-с-telegram-aiogram).
+
+| maxapi | aiogram |
+|--------|---------|
+| `@dp.message_created(Command("start"))` | `@dp.message(CommandStart())` |
+| `event: MessageCreated` → `event.message.body.text` | `message: Message` → `message.text` |
+| `@dp.message_callback(...)` + `event.answer()` | `@dp.callback_query(...)` + `callback.answer()` |
+| `BotStarted` (кнопка «Начать») | Нет аналога (только `/start`) |
+| `dp.start_polling(bot)` | `dp.start_polling()` |
+| `InputMedia(path="file.jpg")` | `FSInputFile("file.jpg")` |
+| `CallbackPayload(prefix="...")` | `CallbackData(prefix="...")` |
