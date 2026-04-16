@@ -1,5 +1,9 @@
 """Тесты для метода download_file."""
 
+from datetime import datetime
+from functools import wraps
+import inspect
+from typing import Callable, Union
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -75,6 +79,55 @@ def mock_session(bot):
     return session
 
 
+def freeze_datetime(
+    target_module: str,
+    fixed_dt: Union[datetime, str],
+    *,
+    attr: str = "datetime"
+) -> Callable:
+    """
+    Декоратор для заморозки datetime.now() в указанном модуле.
+    Корректно работает с синхронными и асинхронными тестами.
+    
+    Args:
+        target_module: Полный путь к модулю, где вызывается datetime.now()
+                       (например: 'myapp.services.payment', 'tests.conftest')
+        fixed_dt: Фиксированная дата/время (datetime объект или ISO-строка)
+        attr: Имя атрибута для патча. 
+              'datetime'          → если в модуле `from datetime import datetime`
+              'datetime.datetime' → если в модуле `import datetime`
+              
+    Returns:
+        Декоратор для тестовой функции.
+    """
+    if isinstance(fixed_dt, str):
+        fixed_dt = datetime.fromisoformat(fixed_dt)
+        
+    patch_target = f"{target_module}.{attr}"
+
+    def decorator(func: Callable) -> Callable:
+        # Синхронная обёртка
+        @wraps(func)
+        def _sync_wrapper(*args, **kwargs):
+            with patch(patch_target) as mock_dt:
+                mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
+                mock_dt.now.return_value = fixed_dt
+                return func(*args, **kwargs)
+
+        # Асинхронная обёртка
+        @wraps(func)
+        async def _async_wrapper(*args, **kwargs):
+            with patch(patch_target) as mock_dt:
+                mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
+                mock_dt.now.return_value = fixed_dt
+                return await func(*args, **kwargs)
+
+        # Возвращаем нужную обёртку в зависимости от типа функции
+        return _async_wrapper if inspect.iscoroutinefunction(func) else _sync_wrapper
+
+    return decorator
+
+
 class TestDownloadFile:
     async def test_download_file_success(self, bot, tmp_dir, mock_session):
         """Скачивание файла с корректным Content-Disposition."""
@@ -113,12 +166,11 @@ class TestDownloadFile:
         assert result.name == "img.jpg"
         assert result.parent == tmp_dir
 
+    @freeze_datetime("maxapi.connection.base", "2026-04-16 10:30:50")
     async def test_download_file_no_content_disposition_no_path(
         self, bot, tmp_dir, mock_session
     ):
         """Скачивание без Content-Disposition и без MIME и без внятного пути"""
-        from datetime import datetime
-
         mock_response = _make_mock_response(
             url="https://example.com/",
             chunks=[b"imagedata"],
@@ -129,17 +181,15 @@ class TestDownloadFile:
             url="https://example.com/",
             destination=tmp_dir,
         )
-        expected = f"{datetime.now().strftime("%y%m%d_%H%M%S")}.bin"
+        expected = "260416_103050.bin"
         assert result.name == expected
         assert result.parent == tmp_dir
 
-
+    @freeze_datetime("maxapi.connection.base", "2026-04-16 10:30:50")
     async def test_download_photo(
         self, bot, tmp_dir, mock_session
     ):
         """Скачивание фложения-фото по ссылке выда https://i.oneme.ru/i?r=photo_token"""
-        from datetime import datetime
-
         mock_response = _make_mock_response(
             url="https://i.oneme.ru/i?r=photo_token",
             content_type="image/jpeg",
@@ -151,7 +201,7 @@ class TestDownloadFile:
             url="https://i.oneme.ru/i?r=photo_token",
             destination=tmp_dir,
         )
-        expected = f"image_{datetime.now().strftime("%y%m%d_%H%M%S")}.jpg"
+        expected = f"image_260416_103050.jpg"
         assert result.name == expected
         assert result.parent == tmp_dir
 
@@ -422,8 +472,8 @@ class TestDownloadFileAsBytes:
 
         assert path.name == bio.name
         assert disk_content == bytes_content == content
-
-
+    
+    @freeze_datetime("maxapi.connection.base", datetime.now())
     async def test_download_file_name_collision(self, bot, tmp_dir, mock_session):
         """Проверка, что при коллизии имён добавляется (2), (3) и т.д."""
         from typing import List
