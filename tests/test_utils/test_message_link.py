@@ -1,12 +1,12 @@
+import base64
 import re
 
 import pytest
-import base64
 from maxapi.utils.message_link import (
-    mid_to_chatid_seq,
-    chatid_seq_to_mid,
     build_message_link,
+    chatid_seq_to_mid,
     link_to_chatid_seq,
+    mid_to_chatid_seq,
 )
 
 # =============================================================================
@@ -103,10 +103,10 @@ class TestRealData:
         mid = chatid_seq_to_mid(case["chat_id"], case["seq"])
         link = build_message_link(mid)
         chat_id_parsed, seq_parsed = link_to_chatid_seq(link)
-        
+
         assert chat_id_parsed == case["chat_id"]
         assert seq_parsed == case["seq"]
-        
+
         # Дополнительно: если была исходная ссылка, проверяем совпадение
         if case["link"]:
             assert link == case["link"]
@@ -152,7 +152,7 @@ class TestEdgeCases:
         seq = (1 << 64) - 1
         mid = chatid_seq_to_mid(chat_id, seq)
         assert mid == "mid.0000000000000000ffffffffffffffff"
-        chat_id_restored, seq_restored = mid_to_chatid_seq(mid)
+        _, seq_restored = mid_to_chatid_seq(mid)
         assert seq_restored == seq
 
     def test_negative_chat_id_hex_representation(self):
@@ -175,7 +175,7 @@ class TestValidationErrors:
     # ------------------ mid_to_chatid_seq ------------------
     def test_mid_wrong_type(self):
         with pytest.raises(TypeError, match="mid должен быть строкой"):
-            mid_to_chatid_seq(12345)
+            mid_to_chatid_seq(12345) # type: ignore
 
     def test_mid_missing_prefix(self):
         with pytest.raises(ValueError, match=re.escape('mid должен быть в формате "mid." + 32 hex-символа')):
@@ -196,11 +196,11 @@ class TestValidationErrors:
     # ------------------ chatid_seq_to_mid ------------------
     def test_chatid_wrong_type(self):
         with pytest.raises(TypeError, match="chat_id должен быть целым числом"):
-            chatid_seq_to_mid("123", 100)
+            chatid_seq_to_mid("123", 100) # type: ignore
 
     def test_seq_wrong_type(self):
         with pytest.raises(TypeError, match="seq должен быть целым числом"):
-            chatid_seq_to_mid(123, "100")
+            chatid_seq_to_mid(123, "100") # type: ignore
 
     def test_chat_id_out_of_range_low(self):
         with pytest.raises(ValueError, match="chat_id выходит за пределы"):
@@ -234,14 +234,14 @@ class TestValidationErrors:
     # ------------------ link_to_chatid_seq ------------------
     def test_link_wrong_type(self):
         with pytest.raises(TypeError, match="link должен быть строкой"):
-            link_to_chatid_seq(12345)
+            link_to_chatid_seq(12345) # type: ignore
 
     def test_link_wrong_scheme(self):
         with pytest.raises(ValueError, match="Ссылка должна использовать https схему"):
             link_to_chatid_seq("ftp://max.ru/c/123/ABC")
 
     def test_link_wrong_domain(self):
-        with pytest.raises(ValueError, match="Ссылка должна указывать на домен max.ru"):
+        with pytest.raises(ValueError, match=r"Ссылка должна указывать на домен max.ru"):
             link_to_chatid_seq("https://example.com/c/123/ABC")
 
     def test_link_wrong_path_format(self):
@@ -262,8 +262,8 @@ class TestValidationErrors:
 
     def test_link_base64_decode_error(self):
         # Некорректный base64 (невозможно декодировать)
-        with pytest.raises(ValueError, match="seq в ссылке должен быть в url-safe base64 формате"):
-            link_to_chatid_seq("https://max.ru/c/123/!!!")
+        with pytest.raises(ValueError, match="Ошибка декодирования base64"):
+            link_to_chatid_seq("https://max.ru/c/123/A")
 
     def test_link_seq_wrong_byte_length(self):
         # Base64, который декодируется не в 8 байт
@@ -303,11 +303,11 @@ class TestBuildMessageLink:
 
     def test_link_seq_decoding_consistency(self):
         """Декодирование seq из ссылки должно давать исходное значение"""
-        
+
         def _seq_to_b64(seq: int) -> str:
             """Вспомогательная функция: seq → URL-safe base64 без паддинга."""
             return base64.urlsafe_b64encode(seq.to_bytes(8, "big")).decode().rstrip("=")
-        
+
         test_cases = [
             0,                          # Минимум (все биты 0)
             1,                          # Единица (проверка младших битов)
@@ -330,7 +330,7 @@ class TestBuildMessageLink:
 # =============================================================================
 # Параметризованные тесты для покрытия различных сценариев
 # =============================================================================
-@pytest.mark.parametrize("chat_id,seq", [
+@pytest.mark.parametrize(("chat_id", "seq"), [
     (0, 0),
     (1, 1),
     (-1, 1),
@@ -345,7 +345,7 @@ def test_parametrized_roundtrip(chat_id: int, seq: int):
     chat_id_restored, seq_restored = mid_to_chatid_seq(mid)
     assert chat_id_restored == chat_id
     assert seq_restored == seq
-    
+
     link = build_message_link(mid)
     chat_id_from_link, seq_from_link = link_to_chatid_seq(link)
     assert chat_id_from_link == chat_id
