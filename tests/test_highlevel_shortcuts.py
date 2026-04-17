@@ -32,14 +32,10 @@ class ShortcutBot:
         self.delete_chat = AsyncMock(return_value={"kind": "delete"})
         self.get_chat_members = AsyncMock(return_value={"kind": "members"})
         self.get_chat_member = AsyncMock(return_value={"kind": "member"})
-        self.add_chat_members = AsyncMock(
-            return_value={"kind": "add_members"}
-        )
+        self.add_chat_members = AsyncMock(return_value={"kind": "add_members"})
         self.kick_chat_member = AsyncMock(return_value={"kind": "kick"})
         self.get_me_from_chat = AsyncMock(return_value={"kind": "me"})
-        self.get_list_admin_chat = AsyncMock(
-            return_value={"kind": "admins"}
-        )
+        self.get_list_admin_chat = AsyncMock(return_value={"kind": "admins"})
         self.add_list_admin_chat = AsyncMock(
             return_value={"kind": "add_admins"}
         )
