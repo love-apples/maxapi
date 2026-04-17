@@ -20,6 +20,33 @@ from maxapi.types.input_media import InputMediaBuffer
 from maxapi.types.message import NewMessageLink
 
 
+class TestUserFullName:
+    """Тесты для User.full_name."""
+
+    def _make_user(self, *, last_name: str | None):
+        from maxapi.types.users import User
+
+        return User(
+            user_id=1,
+            first_name="Alice",
+            last_name=last_name,
+            is_bot=False,
+            last_activity_time=0,
+        )
+
+    def test_full_name_with_none_last_name_returns_first_name(self):
+        user = self._make_user(last_name=None)
+        assert user.full_name == "Alice"
+
+    def test_full_name_with_empty_last_name_returns_first_name(self):
+        user = self._make_user(last_name="")
+        assert user.full_name == "Alice"
+
+    def test_full_name_with_last_name_returns_joined_name(self):
+        user = self._make_user(last_name="Cooper")
+        assert user.full_name == "Alice Cooper"
+
+
 class TestButtons:
     """Тесты для кнопок."""
 

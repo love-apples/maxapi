@@ -855,6 +855,7 @@ class Bot(BaseConnection):
     async def get_list_admin_chat(
         self,
         chat_id: int,
+        marker: int | None = None,
     ) -> GettedListAdminChat:
         """
         Получает список администраторов чата.
@@ -863,6 +864,7 @@ class Bot(BaseConnection):
 
         Args:
             chat_id (int): ID чата.
+            marker (Optional[int]): Маркер для пагинации.
 
         Returns:
             GettedListAdminChat: Список администраторов.
@@ -871,6 +873,7 @@ class Bot(BaseConnection):
         return await GetListAdminChat(
             bot=self,
             chat_id=chat_id,
+            marker=marker,
         ).fetch()
 
     async def add_list_admin_chat(

@@ -9,6 +9,7 @@ from ..enums.message_link_type import MessageLinkType
 from ..enums.text_style import TextStyle
 from ..types.attachments import Attachments
 from ..types.bot_mixin import BotMixin
+from ..types.shortcuts import ChatActionShortcutMixin, PeerShortcutMixin
 from ..utils.formatting import (
     Blockquote,
     Bold,
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
     from ..bot import Bot
     from ..enums.parse_mode import ParseMode, TextFormat
     from ..methods.types.deleted_message import DeletedMessage
+    from ..methods.types.deleted_pin_message import DeletedPinMessage
     from ..methods.types.edited_message import EditedMessage
     from ..methods.types.pinned_message import PinnedMessage
     from ..methods.types.sended_message import SendedMessage
@@ -298,7 +300,12 @@ class LinkedMessage(BaseModel):
     message: MessageBody
 
 
-class Message(BaseModel, BotMixin):
+class Message(
+    BaseModel,
+    BotMixin,
+    PeerShortcutMixin,
+    ChatActionShortcutMixin,
+):
     """
     Модель сообщения.
 
@@ -330,6 +337,17 @@ class Message(BaseModel, BotMixin):
 
     if TYPE_CHECKING:
         bot: Bot | None  # type: ignore
+
+    def _resolve_send_target(self) -> tuple[int | None, int | None]:
+        return self.recipient.chat_id, self.recipient.user_id
+
+    def _resolve_action_chat_id(self) -> int:
+        if self.recipient.chat_id is None:
+            raise ValueError(
+                "Невозможно отправить action: chat_id отсутствует"
+            )
+
+        return self.recipient.chat_id
 
     async def answer(
         self,
@@ -370,9 +388,7 @@ class Message(BaseModel, BotMixin):
                 send_message бота.
         """
 
-        return await self._ensure_bot().send_message(
-            chat_id=self.recipient.chat_id,
-            user_id=self.recipient.user_id,
+        return await self.send(
             text=text,
             attachments=attachments,
             link=link,
@@ -598,6 +614,21 @@ class Message(BaseModel, BotMixin):
             chat_id=self.recipient.chat_id,
             message_id=self.body.mid,
             notify=notify,
+        )
+
+    async def unpin(self) -> DeletedPinMessage:
+        """
+        Снимает закрепленное сообщение в чате текущего сообщения.
+
+        Returns:
+            DeletedPinMessage: Результат выполнения метода delete_pin_message.
+        """
+
+        if self.recipient.chat_id is None:
+            raise ValueError("chat_id не может быть None")
+
+        return await self._ensure_bot().delete_pin_message(
+            chat_id=self.recipient.chat_id,
         )
 
 

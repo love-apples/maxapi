@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = ["Message", "MessageCallback", "MessageForCallback"]
 
 from typing import TYPE_CHECKING, Literal
@@ -7,12 +9,20 @@ from pydantic import BaseModel, Field
 from ...enums.parse_mode import ParseMode
 from ...enums.update import UpdateType
 from ...types.attachments import Attachments
-from ...types.callback import Callback
+from ...types.callback import Callback  # noqa: TC001
 from ...types.message import Message, NewMessageLink
 from .base_update import BaseUpdate
 
 if TYPE_CHECKING:
+    from ...enums.parse_mode import TextFormat
+    from ...methods.types.deleted_message import DeletedMessage
+    from ...methods.types.deleted_pin_message import DeletedPinMessage
+    from ...methods.types.pinned_message import PinnedMessage
     from ...methods.types.sended_callback import SendedCallback
+    from ...methods.types.sended_message import SendedMessage
+    from ...types.attachments.attachment import Attachment
+    from ...types.attachments.upload import AttachmentUpload
+    from ...types.input_media import InputMedia, InputMediaBuffer
 
 
 class MessageForCallback(BaseModel):
@@ -69,6 +79,147 @@ class MessageCallback(BaseUpdate):
 
         return chat_id, self.callback.user.user_id
 
+    def _require_message(self) -> Message:
+        if self.message is None:
+            raise ValueError(
+                "Невозможно выполнить операцию: исходное сообщение отсутствует"
+            )
+
+        if self.message.bot is None and self.bot is not None:
+            self.message.bot = self.bot
+
+        return self.message
+
+    async def ack(
+        self,
+        notification: str | None = None,
+    ) -> SendedCallback:
+        """Подтвердить callback без изменения исходного сообщения."""
+
+        return await self._ensure_bot().send_callback(
+            callback_id=self.callback.callback_id,
+            message=None,
+            notification=notification,
+        )
+
+    async def defer(
+        self,
+        notification: str | None = None,
+    ) -> SendedCallback:
+        """Семантический alias для ack()."""
+
+        return await self.ack(notification=notification)
+
+    async def edit(
+        self,
+        text: str | None = None,
+        link: NewMessageLink | None = None,
+        format: ParseMode | None = None,
+        *,
+        notification: str | None = None,
+        notify: bool = True,
+        raise_if_not_exists: bool = True,
+    ) -> SendedCallback:
+        """Изменить сообщение, связанное с callback."""
+
+        message = self.message
+        original_body = None if message is None else message.body
+
+        if original_body is None:
+            if raise_if_not_exists and (
+                text is not None or link is not None or format is not None
+            ):
+                raise ValueError(
+                    "Невозможно изменить сообщение: "
+                    "исходное сообщение отсутствует"
+                )
+
+            return await self.ack(notification=notification)
+
+        bot = self._ensure_bot()
+        message_for_callback = MessageForCallback(
+            text=text,
+            attachments=original_body.attachments or [],
+            link=link,
+            notify=notify,
+            format=bot.resolve_format(format),
+        )
+
+        return await bot.send_callback(
+            callback_id=self.callback.callback_id,
+            message=message_for_callback,
+            notification=notification,
+        )
+
+    async def send(
+        self,
+        text: str | None = None,
+        attachments: list[
+            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
+        ]
+        | None = None,
+        link: NewMessageLink | None = None,
+        format: TextFormat | None = None,
+        parse_mode: ParseMode | None = None,
+        *,
+        notify: bool | None = None,
+        disable_link_preview: bool | None = None,
+        sleep_after_input_media: bool | None = True,
+    ) -> SendedMessage | None:
+        """Отправить новое сообщение в тот же peer, откуда пришел callback."""
+
+        return await self._require_message().send(
+            text=text,
+            attachments=attachments,
+            link=link,
+            format=format,
+            parse_mode=parse_mode,
+            notify=notify,
+            disable_link_preview=disable_link_preview,
+            sleep_after_input_media=sleep_after_input_media,
+        )
+
+    async def reply(
+        self,
+        text: str | None = None,
+        attachments: list[
+            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
+        ]
+        | None = None,
+        format: TextFormat | None = None,
+        parse_mode: ParseMode | None = None,
+        *,
+        notify: bool | None = None,
+        disable_link_preview: bool | None = None,
+        sleep_after_input_media: bool | None = True,
+    ) -> SendedMessage | None:
+        """Отправить reply на исходное сообщение callback."""
+
+        return await self._require_message().reply(
+            text=text,
+            attachments=attachments,
+            format=format,
+            parse_mode=parse_mode,
+            notify=notify,
+            disable_link_preview=disable_link_preview,
+            sleep_after_input_media=sleep_after_input_media,
+        )
+
+    async def delete(self) -> DeletedMessage:
+        """Удалить исходное сообщение callback."""
+
+        return await self._require_message().delete()
+
+    async def pin(self, *, notify: bool = True) -> PinnedMessage:
+        """Закрепить исходное сообщение callback."""
+
+        return await self._require_message().pin(notify=notify)
+
+    async def unpin(self) -> DeletedPinMessage:
+        """Снять закрепление сообщения callback."""
+
+        return await self._require_message().unpin()
+
     async def answer(
         self,
         notification: str | None = None,
@@ -78,7 +229,7 @@ class MessageCallback(BaseUpdate):
         *,
         notify: bool = True,
         raise_if_not_exists: bool = True,
-    ) -> "SendedCallback":
+    ) -> SendedCallback:
         """
         Отправляет ответ на callback с возможностью изменить текст,
         вложения и параметры уведомления.
@@ -95,51 +246,11 @@ class MessageCallback(BaseUpdate):
         Returns:
             SendedCallback: Результат вызова send_callback бота.
         """
-
-        # Если исходного сообщения нет (например, оно удалено),
-        # не стоит синтезировать пустой payload message.
-        # Два варианта поведения:
-        #  - если вызывающий просит изменить сообщение (new_text/link/format)
-        #    => выбросить исключение
-        #  - иначе отправить только notification с message=None,
-        #  чтобы API не получил пустой объект message
-        original_body = None
-        if self.message is not None:
-            original_body = self.message.body
-
-        if original_body is None:
-            # если пытаются изменить контент/вложение/связь
-            if raise_if_not_exists and (
-                new_text is not None or link is not None or format is not None
-            ):
-                raise ValueError(
-                    "Невозможно изменить сообщение: "
-                    "исходное сообщение отсутствует"
-                )
-
-            # отправляем только уведомление (без поля message)
-            return await self._ensure_bot().send_callback(
-                callback_id=self.callback.callback_id,
-                message=None,
-                notification=notification,
-            )
-
-        # Если исходное сообщение есть —
-        # собираем MessageForCallback на его основе
-        bot = self._ensure_bot()
-
-        message_for_callback = MessageForCallback()
-        message_for_callback.text = new_text
-
-        attachments: list[Attachments] = original_body.attachments or []
-
-        message_for_callback.attachments = attachments
-        message_for_callback.link = link
-        message_for_callback.notify = notify
-        message_for_callback.format = bot.resolve_format(format)
-
-        return await bot.send_callback(
-            callback_id=self.callback.callback_id,
-            message=message_for_callback,
+        return await self.edit(
+            text=new_text,
+            link=link,
+            format=format,
             notification=notification,
+            notify=notify,
+            raise_if_not_exists=raise_if_not_exists,
         )
