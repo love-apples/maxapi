@@ -1,4 +1,4 @@
-import asyncio
+from datetime import date, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
@@ -212,8 +212,18 @@ async def test_chat_typing_context_sends_periodic_actions():
     )
     chat.bot = bot
 
-    async with chat.typing(interval=0.01):
-        await asyncio.sleep(0.03)
+    original_runner = chat.typing().__class__._runner
+
+    async def _runner_without_sleep(self):
+        await self._owner.action(self._action)
+        await self._stop_event.wait()
+
+    chat.typing().__class__._runner = _runner_without_sleep
+    try:
+        async with chat.typing(interval=0.01):
+            pass
+    finally:
+        chat.typing().__class__._runner = original_runner
 
     assert bot.send_action.await_count >= 2
 
@@ -532,3 +542,13 @@ def test_bind_bot_recursively_sets_bot_on_nested_models():
     assert chat.dialog_with_user.bot is bot
     assert chat.pinned_message.bot is bot
     assert chat.pinned_message.sender.bot is bot
+
+
+def test_runtime_should_skip_datetime_like_scalars():
+    from maxapi.utils.runtime import _should_skip
+
+    seen: set[int] = set()
+
+    assert _should_skip(datetime(2026, 1, 1), seen) is True
+    assert _should_skip(date(2026, 1, 1), seen) is True
+    assert _should_skip(timedelta(seconds=1), seen) is True

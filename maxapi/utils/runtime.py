@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
@@ -7,7 +8,18 @@ from pydantic import BaseModel
 if TYPE_CHECKING:
     from ..bot import Bot
 
-_SCALAR_TYPES = (str, bytes, bytearray, int, float, bool, type(None))
+_SCALAR_TYPES = (
+    str,
+    bytes,
+    bytearray,
+    int,
+    float,
+    bool,
+    type(None),
+    datetime,
+    date,
+    timedelta,
+)
 
 
 def _should_skip(value: Any, seen: set[int]) -> bool:

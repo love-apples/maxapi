@@ -34,6 +34,8 @@ if TYPE_CHECKING:
     from ..methods.types.getted_list_admin_chat import GettedListAdminChat
     from ..methods.types.getted_members_chat import GettedMembersChat
     from ..methods.types.pinned_message import PinnedMessage
+    from ..methods.types.removed_admin import RemovedAdmin
+    from ..methods.types.removed_member_chat import RemovedMemberChat
     from ..types.attachments.image import PhotoAttachmentRequestPayload
     from ..types.message import Messages
     from .users import ChatAdmin
@@ -73,7 +75,7 @@ async def _walk_member_pages(
 
         if next_marker in seen_markers:
             raise RuntimeError(
-                f"Pagination marker {next_marker} repeated for chat members"
+                f"Pagination marker {next_marker} repeated during pagination"
             )
 
         seen_markers.add(next_marker)
@@ -118,7 +120,7 @@ class ChatMembersManager(BotMixin):
         user_id: int,
         *,
         block: bool = False,
-    ):
+    ) -> RemovedMemberChat:
         return await self._ensure_bot().kick_chat_member(
             chat_id=self.chat_id,
             user_id=user_id,
@@ -179,7 +181,7 @@ class ChatAdminsManager(BotMixin):
             marker=marker,
         )
 
-    async def remove(self, user_id: int):
+    async def remove(self, user_id: int) -> RemovedAdmin:
         return await self._ensure_bot().remove_admin(
             chat_id=self.chat_id,
             user_id=user_id,

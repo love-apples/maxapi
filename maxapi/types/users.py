@@ -61,7 +61,7 @@ class User(FetchableMixin, BaseModel, BotMixin, PeerShortcutMixin):
     def full_name(self) -> str:
         """Полное имя пользователя"""
 
-        if self.last_name is None:
+        if not self.last_name:
             return self.first_name
 
         return f"{self.first_name} {self.last_name}"
