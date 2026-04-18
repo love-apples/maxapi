@@ -1,14 +1,18 @@
 """Тесты для метода download_file."""
 
+import inspect
+from collections.abc import Callable
 from datetime import datetime
 from functools import wraps
-import inspect
-from typing import Callable, Union
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from maxapi.bot import Bot
 from maxapi.exceptions.download_file import DownloadFileError
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture
@@ -61,7 +65,7 @@ def _make_mock_response(
 
     if url is not None:
         mock_response.url = url
-        
+
     if chunks is not None:
         mock_response.content.iter_chunked = MagicMock(
             return_value=AsyncIterator(chunks)
@@ -81,28 +85,28 @@ def mock_session(bot):
 
 def freeze_datetime(
     target_module: str,
-    fixed_dt: Union[datetime, str],
+    fixed_dt: datetime | str,
     *,
     attr: str = "datetime"
 ) -> Callable:
     """
     Декоратор для заморозки datetime.now() в указанном модуле.
     Корректно работает с синхронными и асинхронными тестами.
-    
+
     Args:
         target_module: Полный путь к модулю, где вызывается datetime.now()
                        (например: 'myapp.services.payment', 'tests.conftest')
         fixed_dt: Фиксированная дата/время (datetime объект или ISO-строка)
-        attr: Имя атрибута для патча. 
+        attr: Имя атрибута для патча.
               'datetime'          → если в модуле `from datetime import datetime`
               'datetime.datetime' → если в модуле `import datetime`
-              
+
     Returns:
         Декоратор для тестовой функции.
     """
     if isinstance(fixed_dt, str):
         fixed_dt = datetime.fromisoformat(fixed_dt)
-        
+
     patch_target = f"{target_module}.{attr}"
 
     def decorator(func: Callable) -> Callable:
@@ -123,7 +127,10 @@ def freeze_datetime(
                 return await func(*args, **kwargs)
 
         # Возвращаем нужную обёртку в зависимости от типа функции
-        return _async_wrapper if inspect.iscoroutinefunction(func) else _sync_wrapper
+        if inspect.iscoroutinefunction(func):
+            return _async_wrapper
+        else:
+            return _sync_wrapper
 
     return decorator
 
@@ -201,7 +208,7 @@ class TestDownloadFile:
             url="https://i.oneme.ru/i?r=photo_token",
             destination=tmp_dir,
         )
-        expected = f"image_260416_103050.jpg"
+        expected = "image_260416_103050.jpg"
         assert result.name == expected
         assert result.parent == tmp_dir
 
@@ -310,9 +317,9 @@ class TestDownloadFileAsBytes:
     Тесты для метода download_file_as_bytes.
 
     Примеры реальных URL для ручного тестирования:
-    - Файл с подписью: 
+    - Файл с подписью:
       https://fd.oneme.ru/getfile?sig=...&expires=...&clientType=3&id=...
-    - Изображение: 
+    - Изображение:
       https://i.oneme.ru/i?r=BTGBPUwtwgYUeoFhO7rESmr81n-DnwjHYFhx5_EAhKk...
     """
 
@@ -435,7 +442,9 @@ class TestDownloadFileAsBytes:
     async def test_download_file_vs_as_bytes_same_content(
         self, bot, tmp_dir, mock_session
     ):
-        """download_file и download_file_as_bytes возвращают одинаковые данные."""
+        """
+        download_file и download_file_as_bytes возвращают одинаковые данные
+        """
         content = b"test content for comparison"
         chunks = [content[i:i+10] for i in range(0, len(content), 10)]
 
@@ -472,15 +481,13 @@ class TestDownloadFileAsBytes:
 
         assert path.name == bio.name
         assert disk_content == bytes_content == content
-    
+
     @freeze_datetime("maxapi.connection.base", datetime.now())
     async def test_download_file_name_collision(self, bot, tmp_dir, mock_session):
         """Проверка, что при коллизии имён добавляется (2), (3) и т.д."""
-        from typing import List
-        from pathlib import Path
 
         # Пытаемся скачать сразу 5 файлов
-        results: List[Path] = []
+        results: list[Path] = []
         for i in range(5):
             mock_response = _make_mock_response(
                 url=f"https://i.oneme.ru/i?r=file{i+1}",
@@ -498,7 +505,8 @@ class TestDownloadFileAsBytes:
             if i == 0: # Первый файл не проверяем
                 # Первый файл должен быть без суффикса _N
                 # Только image_date_time
-                assert '(' not in result.stem and ')' not in result.stem
+                assert "(" not in result.stem
+                assert ")" not in result.stem
             else:
                 # Ожидаем, что файлы сохранится с суффиксами
                 assert result.stem.endswith(f"({i+1})")
@@ -508,7 +516,9 @@ class TestDownloadFileAsBytes:
     async def test_download_file_photo_correct_extension(
         self, bot, tmp_dir, mock_session
     ):
-        """Для i.oneme.ru расширение определяется по Content-Type, а не .webp."""
+        """
+        Для i.oneme.ru расширение определяется по Content-Type, а не .webp
+        """
         mock_response = _make_mock_response(
             url="https://i.oneme.ru/i?r=test",
             content_type="image/png",
