@@ -21,6 +21,7 @@ from ..utils.formatting import (
     Underline,
     UserMention,
 )
+from ..utils.message_link import build_message_link
 from .users import User
 
 if TYPE_CHECKING:
@@ -313,17 +314,26 @@ class Message(BaseModel, BotMixin):
             Текст + вложения. Может быть null, если сообщение содержит
             только пересланное сообщение
         stat (Optional[MessageStat]): Статистика сообщения. Может быть None.
-        url (Optional[str]): URL сообщения. Может быть None.
+        url_api (Optional[str]): URL сообщения из ответа API.
+                                Публичная ссылка на пост в канале.
+                                Отсутствует для диалогов и групповых чатов
+        url (Optional[str]): Генерируемое свойсто URL сообщения.
+                            Дополняет ответ API для приватных чатов и групп
+                            Может быть None в случае отсутвия body.
         bot (Optional[Bot]): Объект бота, исключается из сериализации.
     """
-
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
     sender: User | None = None
     recipient: Recipient
     timestamp: int
     link: LinkedMessage | None = None
     body: MessageBody | None = None
     stat: MessageStat | None = None
-    url: str | None = None
+    url_api: str | None = Field(
+        # Поле для хранения сырого url из ответа API
+        alias="url",
+        default=None,
+    )
     bot: Any | None = Field(  # pyright: ignore[reportRedeclaration]
         default=None, exclude=True
     )
@@ -599,6 +609,23 @@ class Message(BaseModel, BotMixin):
             message_id=self.body.mid,
             notify=notify,
         )
+
+    @property
+    def url(self) -> str | None:
+        """
+        Прямая ссылка на сообщение в интерфейсе MAX
+
+        Returns:
+            str: Ссылка на сообщение в формате
+                - Для диалогов и групповых чатов: https://max.ru/c/{chat_id}/{seq_b64}
+                - Постов в канале: https://max.ru/{channel_name}/{seq_b64}
+            None: Если объект Message не содержит в себе body
+        """
+        if self.url_api:
+            return self.url_api
+        elif self.body:
+            return build_message_link(self.body.mid)
+        return None
 
 
 class Messages(BaseModel):
