@@ -6,6 +6,36 @@ import puremagic
 
 from ..enums.upload_type import UploadType
 
+READ_FILE_CHUNK_SIZE = 4096
+
+
+def detect_file_type(data: bytes) -> UploadType:
+    """
+    Определяет тип файла на основе его содержимого (MIME-типа).
+
+    Args:
+        data (bytes): Буфер с содержимым файла.
+    """
+    try:
+        matches = puremagic.magic_string(data)
+        if matches:
+            mime_type = matches[0].mime_type
+        else:
+            mime_type = None
+    except Exception:
+        mime_type = None
+
+    if mime_type is None:
+        return UploadType.FILE
+    if mime_type.startswith("video/"):
+        return UploadType.VIDEO
+    elif mime_type.startswith("image/"):
+        return UploadType.IMAGE
+    elif mime_type.startswith("audio/"):
+        return UploadType.AUDIO
+    else:
+        return UploadType.FILE
+
 
 class InputMedia:
     """
@@ -17,53 +47,35 @@ class InputMedia:
             (MIME-типа).
     """
 
-    def __init__(self, path: str, type: UploadType | None = None):
+    def __init__(self, path: str, type: UploadType | str | None = None):
         """
         Инициализирует объект медиафайла.
 
         Args:
             path (str): Путь к файлу.
-            type (UploadType, optional): Тип файла. Если не указан,
+            type (UploadType, str, optional): Тип файла. Если не указан,
                 определяется автоматически.
         """
 
         self.path = path
-        self.type = type or self.__detect_file_type(path)
 
-    def __detect_file_type(self, path: str) -> UploadType:
-        """
-        Определяет тип файла на основе его содержимого (MIME-типа).
-
-        Args:
-            path (str): Путь к файлу.
-
-        Returns:
-            UploadType: Тип файла (VIDEO, IMAGE, AUDIO или FILE).
-        """
-
-        with Path(path).open("rb") as f:
-            sample = f.read(4096)
-
-        try:
-            matches = puremagic.magic_string(sample)
-            if matches:
-                mime_type = matches[0].mime_type
-            else:
-                mime_type = None
-        except Exception:
-            mime_type = None
-
-        if mime_type is None:
-            return UploadType.FILE
-
-        if mime_type.startswith("video/"):
-            return UploadType.VIDEO
-        elif mime_type.startswith("image/"):
-            return UploadType.IMAGE
-        elif mime_type.startswith("audio/"):
-            return UploadType.AUDIO
+        if type is not None:
+            try:
+                self.type = UploadType(type)
+            except ValueError as e:
+                allowed = ", ".join(item.value for item in UploadType)
+                raise ValueError(
+                    f"Неверный тип загружаемого файла: {type!r}. Ожидается: {allowed}"  # noqa: E501
+                ) from e
         else:
-            return UploadType.FILE
+            self.type = detect_file_type(InputMedia._read_file_sample(path))
+
+    @staticmethod
+    def _read_file_sample(
+        path: str, size: int = READ_FILE_CHUNK_SIZE
+    ) -> bytes:
+        with Path(path).open("rb") as f:
+            return f.read(size)
 
 
 class InputMediaBuffer:
@@ -94,25 +106,14 @@ class InputMediaBuffer:
 
         self.filename = filename
         self.buffer = buffer
-        self.type = type or self.__detect_file_type(buffer)
 
-    def __detect_file_type(self, buffer: bytes) -> UploadType:
-        try:
-            matches = puremagic.magic_string(buffer)
-            if matches:
-                mime_type = matches[0].mime_type
-            else:
-                mime_type = None
-        except Exception:
-            mime_type = None
-
-        if mime_type is None:
-            return UploadType.FILE
-        if mime_type.startswith("video/"):
-            return UploadType.VIDEO
-        elif mime_type.startswith("image/"):
-            return UploadType.IMAGE
-        elif mime_type.startswith("audio/"):
-            return UploadType.AUDIO
+        if type is not None:
+            try:
+                self.type = UploadType(type)
+            except ValueError as e:
+                allowed = ", ".join(item.value for item in UploadType)
+                raise ValueError(
+                    f"Неверный тип загружаемого файла: {type!r}. Ожидается: {allowed}"  # noqa: E501
+                ) from e
         else:
-            return UploadType.FILE
+            self.type = detect_file_type(buffer)
