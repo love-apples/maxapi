@@ -618,7 +618,7 @@ class Message(BaseModel, BotMixin):
         Returns:
             str: Ссылка на сообщение в формате
                 - Для диалогов и групповых чатов: https://max.ru/c/{chat_id}/{seq_b64}
-                - Постов в канале: https://max.ru/c/{channel_name}/{seq_b64}
+                - Постов в канале: https://max.ru/{channel_name}/{seq_b64}
             None: Если объект Message не содержит в себе body
         """
         if self.url_api:
