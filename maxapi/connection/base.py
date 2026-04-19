@@ -378,7 +378,7 @@ class BaseConnection(BotMixin):
                 f"Ошибка при скачивании файла: HTTP {response.status}"
             )
 
-        if isinstance(response_dict, (dict)):
+        if isinstance(response_dict, dict):
             response_dict["resp"] = response
             response_dict["filename"] = self._capture_filename(response)
         elif response_dict is not None:
@@ -403,8 +403,8 @@ class BaseConnection(BotMixin):
             str: Имя файла из заголовков. Если не удалось определить, то возвращается default
         """
         filename = ext = ""
-        url = str(response.url)
         try:
+            url = str(response.url)
             cd = response.content_disposition
             if cd and cd.filename:
                 filename = Path(cd.filename).name
@@ -414,8 +414,7 @@ class BaseConnection(BotMixin):
                 name = unquote(parsed.path, encoding="utf-8", errors="replace")
                 filename = Path(name).name  # Защита от path traversal
                 ext = Path(filename).suffix
-                if not ext:
-                    ext = mimetypes.guess_extension(response.content_type or "")
+                if not ext and (ext:=mimetypes.guess_extension(response.content_type or "")):
                     filename = f"{filename}{ext}"
 
             if re.search(r"%[0-9A-Fa-f]{2}", filename):
@@ -427,7 +426,7 @@ class BaseConnection(BotMixin):
             is_photo = url.startswith("https://i.oneme.ru/")
             if not filename or filename.startswith("."):
                 if is_photo:
-                    if not ext:
+                    if not ext or ext == ".bin":
                         ext = ".webp"
                     filename = f"image_{datetime_str}{ext}"
                 else:
@@ -435,6 +434,8 @@ class BaseConnection(BotMixin):
                         ext = ".bin"
                     filename = f"{datetime_str}{ext}"
             elif is_photo:
+                if not ext or ext == ".bin":
+                    ext = ".webp"
                 filename = f"image_{datetime_str}{ext}"
 
         except (AttributeError, TypeError, ValueError) as e:
@@ -459,8 +460,8 @@ class BaseConnection(BotMixin):
         Raises:
             ValueError: Non-encodable path.
         """
-        if isinstance(path, str):
-            path = Path(path)
+        path = Path(path)
+
         dest = path.parent
 
         if path.exists():
