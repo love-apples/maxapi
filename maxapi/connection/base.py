@@ -2,14 +2,24 @@ from __future__ import annotations
 
 import asyncio
 import mimetypes
+import re
+import uuid
+from datetime import datetime
+from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, BinaryIO, NotRequired, TypedDict
+from urllib.parse import unquote, urlparse
 
 import aiofiles
 import aiofiles.os
 import backoff
 import puremagic
-from aiohttp import ClientConnectionError, ClientSession, FormData
+from aiohttp import (
+    ClientConnectionError,
+    ClientResponse,
+    ClientSession,
+    FormData,
+)
 
 from ..enums.api_path import ApiPath
 from ..enums.update import UpdateType
@@ -19,12 +29,17 @@ from ..loggers import logger_bot
 from ..types.bot_mixin import BotMixin
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from pydantic import BaseModel
 
     from ..bot import Bot
     from ..enums.http_method import HTTPMethod
     from ..enums.upload_type import UploadType
 
+    class ResponseDict(TypedDict):
+        resp: NotRequired[ClientResponse]
+        filename: str
 
 DOWNLOAD_CHUNK_SIZE = 65536
 
@@ -35,6 +50,16 @@ class _RetryableServerError(Exception):
     def __init__(self, status: int) -> None:
         self.status = status
         super().__init__(f"Server error {status}")
+
+
+class NamedBytesIO(BytesIO):
+    """BytesIO с поддержкой атрибута .name для единообразия с файловыми объектами."""
+    __slots__ = ("name",)
+    name: str | None
+
+    def __init__(self, buffer: bytes = b"", *, name: str | None = None) -> None:
+        super().__init__(buffer)
+        self.name = name  # Соответствует протоколу typing.BinaryIO
 
 
 def _on_backoff(details: dict[str, Any]) -> None:
@@ -269,7 +294,7 @@ class BaseConnection(BotMixin):
             else:
                 mime_type = f"{type.value}/*"
                 ext = ""
-        except Exception:
+        except (OSError, ValueError):
             mime_type = f"{type.value}/*"
             ext = ""
 
@@ -296,30 +321,29 @@ class BaseConnection(BotMixin):
                 response = await temp_session.post(url=url, data=form)
                 return await response.text()
 
-    async def download_file(
+
+    async def _fetch_content_stream(
         self,
         url: str,
-        destination: Path | str,
         *,
         chunk_size: int = DOWNLOAD_CHUNK_SIZE,
-    ) -> Path:
+        response_dict: ResponseDict | dict[str, Any] | None = None,
+    ) -> AsyncIterator[bytes]:
         """
-        Скачивает файл по URL и сохраняет на диск.
-
-        Метод работает не через общий ``request()``, поскольку
-        ответом является бинарный поток, а не JSON.
+        Асинхронный генератор, который отдаёт чанки файла по мере скачивания.
 
         Args:
-            url: URL файла для скачивания (из payload.url вложения).
-            destination: Путь к директории для сохранения файла.
-            chunk_size: Размер чанка при потоковом чтении
-                (по умолчанию 64 КБ).
+            url: URL файла.
+            response_dict: Опциональный словарь в который будет сохраненs заголовки до начала чтения тела
+                            и имя файла. Формат:
+                            - response_dict['response']
+                            - response_dict['filename']
 
-        Returns:
-            Path: Полный путь к скачанному файлу.
+        Yields:
+            bytes: Чанки данных файла.
 
         Raises:
-            DownloadFileError: При ошибке скачивания.
+            DownloadFileError: при ошибке запроса или недопустимом статусе.
         """
         bot = self._ensure_bot()
         session = await bot.ensure_session()
@@ -354,22 +378,202 @@ class BaseConnection(BotMixin):
                 f"Ошибка при скачивании файла: HTTP {response.status}"
             )
 
-        cd = response.content_disposition
-        if cd and cd.filename:
-            filename = Path(cd.filename).name
-        else:
-            ext = mimetypes.guess_extension(response.content_type or "") or ""
-            filename = f"file{ext}"
-
-        dest = Path(destination)
-        await aiofiles.os.makedirs(destination, exist_ok=True)
-        path = dest / filename
+        if isinstance(response_dict, dict):
+            response_dict["resp"] = response
+            response_dict["filename"] = self._capture_filename(response)
+        elif response_dict is not None:
+            raise ValueError(f"response_dict должен быть словарём, получен {type(response_dict)}")
 
         try:
-            async with aiofiles.open(path, "wb") as f:
-                async for chunk in response.content.iter_chunked(chunk_size):
-                    await f.write(chunk)
+            async for chunk in response.content.iter_chunked(chunk_size):
+                yield chunk
         finally:
             await response.release()
 
+    @staticmethod
+    def _capture_filename(response: ClientResponse) -> str:
+        """
+        Получает имя файла из заголовков
+        Используется в _fetch_content_stream
+
+        Args:
+            response: Ответ сервера с заголовками файла
+
+        Returns:
+            str: Имя файла из заголовков. Если не удалось определить, то возвращается default
+        """
+        filename = ext = ""
+        try:
+            url = str(response.url)
+            cd = response.content_disposition
+            if cd and cd.filename:
+                filename = Path(cd.filename).name
+                ext = Path(filename).suffix
+            else:
+                parsed = urlparse(url)
+                name = unquote(parsed.path, encoding="utf-8", errors="replace")
+                filename = Path(name).name  # Защита от path traversal
+                ext = Path(filename).suffix
+                if not ext and (ext:=mimetypes.guess_extension(response.content_type or "")):
+                    filename = f"{filename}{ext}"
+
+            if re.search(r"%[0-9A-Fa-f]{2}", filename):
+                # Сервера Max возвращают имя файла дважды закодированное. Проверяем
+                filename = unquote(filename, encoding="utf-8", errors="replace")
+
+            # Если имя не определилось
+            datetime_str = datetime.now().strftime("%y%m%d_%H%M%S")
+            is_photo = url.startswith("https://i.oneme.ru/")
+            if not filename or filename.startswith("."):
+                if is_photo:
+                    if not ext or ext == ".bin":
+                        ext = ".webp"
+                    filename = f"image_{datetime_str}{ext}"
+                else:
+                    if not ext:
+                        ext = ".bin"
+                    filename = f"{datetime_str}{ext}"
+            elif is_photo:
+                if not ext or ext == ".bin":
+                    ext = ".webp"
+                filename = f"image_{datetime_str}{ext}"
+
+        except (AttributeError, TypeError, ValueError) as e:
+            logger_bot.warning("Не удалось определить имя файла из заголовков: %s", e)
+
+        return filename
+
+    @staticmethod
+    def _check_file_exists(path: Path|str) -> Path:
+        """Проверяет, если файл существует, то возвращает новый свободный путь для сохранения
+        Windows style:
+        - file_name.ext
+        - file_name(2).ext
+        - file_name(3).ext
+
+        Args:
+            path (pathlib.Path): Путь к файлу
+
+        Returns:
+            pathlib.Path: Свободное имя файла с путём для сохранения
+
+        Raises:
+            ValueError: Non-encodable path.
+        """
+        path = Path(path)
+
+        dest = path.parent
+
+        if path.exists():
+            max_num = 1 # Один уже существует
+            fname, ext = path.stem, path.suffix
+            pattern = re.compile(rf"^{re.escape(fname)}\((\d+)\){re.escape(ext)}$")
+
+            # Сканируем директорию
+            for existing_path in dest.iterdir():
+                if existing_path.suffix == ".part":
+                    continue
+
+                match = pattern.match(existing_path.name)
+                if match:
+                    num = int(match.group(1))
+                    if num > max_num:
+                        max_num = num
+
+            path = dest / f"{fname}({max_num+1}){ext}"
+
         return path
+
+    async def download_file(
+        self,
+        url: str,
+        destination: Path | str,
+        *,
+        chunk_size: int = DOWNLOAD_CHUNK_SIZE,
+    ) -> Path:
+        """
+        Скачивает файл по URL и сохраняет на диск.
+
+        Метод работает не через общий ``request()``, поскольку
+        ответом является бинарный поток, а не JSON.
+
+        Если файл существует, то возвращает новый свободный путь для сохранения
+
+        Windows style:
+        - file_name.ext
+        - file_name(2).ext
+        - file_name(3).ext
+
+        Args:
+            url: URL файла для скачивания (из payload.url вложения).
+            destination: Путь к директории для сохранения файла.
+            chunk_size: Размер чанка при потоковом чтении
+                (по умолчанию 64 КБ).
+
+        Returns:
+            Path: Полный путь к скачанному файлу.
+
+        Raises:
+            DownloadFileError: при ошибке скачивания.
+        """
+        dest = Path(destination)
+
+        await aiofiles.os.makedirs(destination, exist_ok=True)
+        temp_filename = f"tmp_{uuid.uuid4().hex}.part"
+        temp_path = dest / temp_filename
+
+        response: ResponseDict = {"filename": ""}
+        async with aiofiles.open(temp_path, "wb") as f:
+            async for chunk in self._fetch_content_stream(
+                url,
+                chunk_size=chunk_size,
+                response_dict=response
+            ):
+                await f.write(chunk)
+
+        filename = response["filename"]
+        final_path = self._check_file_exists(dest / filename)
+        if final_path != temp_path:
+            temp_path.replace(final_path)
+
+        return final_path
+
+
+    async def download_file_as_bytes(
+        self,
+        url: str,
+        *,
+        chunk_size: int = DOWNLOAD_CHUNK_SIZE,
+    ) -> BinaryIO:
+        """
+        Скачивает файл по URL и возвращает file-like объект в памяти.
+
+        Внимание: весь файл загружается в оперативную память.
+        Не используйте для файлов >100–200 МБ без контроля.
+
+        Args:
+            url: URL файла.
+            chunk_size: Размер чанка при потоковом чтении.
+
+        Returns:
+            BinaryIO: Содержимое файла с атрибутом .name.
+            Для zero-copy передачи используйте .getbuffer(),
+            для получения bytes — .read() или .getvalue().
+
+        Raises:
+            DownloadFileError: при ошибке скачивания.
+        """
+        bio = NamedBytesIO()
+
+        response = {}
+        async for chunk in self._fetch_content_stream(
+            url,
+            chunk_size=chunk_size,
+            response_dict=response
+        ):
+            bio.write(chunk)
+
+        bio.seek(0)  # обязательно переходим в начало
+        bio.name = response.get("filename")
+
+        return bio
