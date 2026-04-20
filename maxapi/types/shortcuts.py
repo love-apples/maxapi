@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import suppress
 from typing import TYPE_CHECKING
 
 from ..enums.sender_action import SenderAction
@@ -47,20 +46,21 @@ class ChatActionLoop:
         if self._task is not None:
             await self._task
 
-    async def _runner(self) -> None:
-        while not self._stop_event.is_set():
-            wait_task = asyncio.create_task(self._stop_event.wait())
-            done, _pending = await asyncio.wait(
-                {wait_task},
+    async def _wait_until_stopped(self) -> bool:
+        try:
+            await asyncio.wait_for(
+                self._stop_event.wait(),
                 timeout=self._interval,
             )
+        except TimeoutError:
+            return False
 
-            if wait_task in done:
+        return True
+
+    async def _runner(self) -> None:
+        while not self._stop_event.is_set():
+            if await self._wait_until_stopped():
                 return
-
-            wait_task.cancel()
-            with suppress(asyncio.CancelledError):
-                await wait_task
 
             await self._owner.action(self._action)
 

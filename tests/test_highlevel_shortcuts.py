@@ -1,3 +1,4 @@
+import asyncio
 from datetime import date, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
@@ -6,6 +7,7 @@ import pytest
 from maxapi.enums.chat_status import ChatStatus
 from maxapi.enums.chat_type import ChatType
 from maxapi.enums.message_link_type import MessageLinkType
+from maxapi.enums.sender_action import SenderAction
 from maxapi.enums.update import UpdateType
 from maxapi.methods.types.getted_list_admin_chat import GettedListAdminChat
 from maxapi.methods.types.getted_members_chat import GettedMembersChat
@@ -222,6 +224,45 @@ async def test_chat_typing_context_sends_periodic_actions():
         chat.typing().__class__._runner = original_runner
 
     assert bot.send_action.await_count >= 2
+
+
+async def test_chat_typing_runner_retries_on_timeout_and_stops_on_event(
+    monkeypatch,
+):
+    bot = ShortcutBot()
+    chat = Chat(
+        chat_id=100,
+        type=ChatType.CHAT,
+        status=ChatStatus.ACTIVE,
+        last_event_time=1,
+        participants_count=1,
+        is_public=False,
+    )
+    chat.bot = bot
+    loop = chat.typing(interval=0.01)
+    wait_calls = 0
+
+    async def fake_wait_for(awaitable, timeout):
+        nonlocal wait_calls
+        wait_calls += 1
+        awaitable.close()
+        assert timeout == 0.01
+
+        if wait_calls == 1:
+            raise TimeoutError
+
+        loop._stop_event.set()
+        return None
+
+    monkeypatch.setattr(asyncio, "wait_for", fake_wait_for)
+
+    await loop._runner()
+
+    assert wait_calls == 2
+    bot.send_action.assert_awaited_once_with(
+        chat_id=100,
+        action=SenderAction.TYPING_ON,
+    )
 
 
 async def test_base_update_shortcuts_use_get_ids():
