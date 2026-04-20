@@ -18,12 +18,19 @@ class GetListAdminChat(BaseConnection):
     Attributes:
         bot (Bot): Экземпляр бота.
         chat_id (int): Идентификатор чата.
+        marker (Optional[int]): Маркер для пагинации. По умолчанию None.
     """
 
-    def __init__(self, bot: "Bot", chat_id: int):
+    def __init__(
+        self,
+        bot: "Bot",
+        chat_id: int,
+        marker: int | None = None,
+    ):
         super().__init__()
         self.bot = bot
         self.chat_id = chat_id
+        self.marker = marker
 
     async def fetch(self) -> GettedListAdminChat:
         """
@@ -36,6 +43,10 @@ class GetListAdminChat(BaseConnection):
         """
 
         bot = self._ensure_bot()
+        params = bot.params.copy()
+
+        if self.marker is not None:
+            params["marker"] = self.marker
 
         response = await super().request(
             method=HTTPMethod.GET,
@@ -45,7 +56,7 @@ class GetListAdminChat(BaseConnection):
             + ApiPath.MEMBERS
             + ApiPath.ADMINS,
             model=GettedListAdminChat,
-            params=bot.params,
+            params=params,
         )
 
         return cast(GettedListAdminChat, response)

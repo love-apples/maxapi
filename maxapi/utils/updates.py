@@ -21,6 +21,7 @@ from ..types.updates.message_edited import MessageEdited
 from ..types.updates.message_removed import MessageRemoved
 from ..types.updates.user_added import UserAdded
 from ..types.updates.user_removed import UserRemoved
+from ..utils.runtime import bind_bot
 
 if TYPE_CHECKING:
     from ..bot import Bot
@@ -142,17 +143,7 @@ async def _resolve_from_user(event: UpdateUnion, bot: Bot) -> None:
 def _inject_bot(event: UpdateUnion, bot: Bot) -> None:
     """Внедряет ссылку на бота в событие, сообщение и вложения."""
 
-    if isinstance(event, (MessageCreated, MessageEdited, MessageCallback)):
-        message = event.message
-        if message is not None:
-            message.bot = bot
-            if message.body is not None:
-                for att in message.body.attachments or []:
-                    if hasattr(att, "bot"):
-                        att.bot = bot
-
-    if hasattr(event, "bot"):
-        event.bot = bot
+    bind_bot(event, bot)
 
 
 async def _fetch_from_user_for_message_removed(
