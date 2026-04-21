@@ -1019,12 +1019,20 @@ async def handle_message(event: MessageCreated):
 
 async def main():
     webhook_url = 'https://ваш-домен.рф/webhook'  # <-- укажите свой
-    await bot.subscribe_webhook(url=webhook_url)
+    webhook_secret = 'my-secret-token'             # <-- укажите свой (5–256 символов)
 
+    # Регистрируем вебхук на стороне MAX — платформа будет отправлять
+    # заголовок X-Max-Bot-Api-Secret с каждым запросом.
+    await bot.subscribe_webhook(url=webhook_url, secret=webhook_secret)
+
+    # Фреймворк автоматически проверяет X-Max-Bot-Api-Secret в каждом
+    # входящем запросе и возвращает 403, если заголовок отсутствует
+    # или не совпадает (защита от посторонних запросов).
     await dp.handle_webhook(
         bot=bot,
         host='0.0.0.0',
         port=8080,
+        secret=webhook_secret,
     )
 
 
@@ -1065,7 +1073,13 @@ async def handle_message(event: MessageCreated):
 
 
 async def main():
-    webhook = FastAPIMaxWebhook(dp=dp, bot=bot)
+    webhook_url = 'https://ваш-домен.рф/webhook'  # <-- укажите свой
+    webhook_secret = 'my-secret-token'             # <-- укажите свой (5–256 символов)
+
+    # Передаём secret в конструктор — он сохраняется в webhook.secret.
+    # Фреймворк будет автоматически проверять заголовок X-Max-Bot-Api-Secret
+    # в каждом входящем POST-запросе и возвращать 403 при несоответствии.
+    webhook = FastAPIMaxWebhook(dp=dp, bot=bot, secret=webhook_secret)
 
     # Создаём FastAPI-приложение с lifespan-инициализацией диспетчера
     app = FastAPI(lifespan=webhook.lifespan)
@@ -1078,9 +1092,9 @@ async def main():
     # Подключаем MAX webhook-обработчик к нашему приложению
     webhook.setup(app, path='/webhook')
 
-    # Подписываемся на webhook
-    webhook_url = 'https://ваш-домен.рф/webhook'  # <-- укажите свой
-    await bot.subscribe_webhook(url=webhook_url)
+    # Подписываемся на webhook — передаём тот же secret,
+    # чтобы платформа MAX добавляла X-Max-Bot-Api-Secret в каждый запрос.
+    await bot.subscribe_webhook(url=webhook_url, secret=webhook_secret)
 
     # Запускаем сервер uvicorn
     config = uvicorn.Config(app=app, host='0.0.0.0', port=8080)

@@ -23,6 +23,7 @@ from ..utils.time import from_ms, to_ms
 from .users import User
 
 if TYPE_CHECKING:
+    import builtins
     from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 
     from ..bot import Bot
@@ -146,7 +147,7 @@ class ChatMembersManager(BotMixin):
         self,
         *,
         count: int = 100,
-    ) -> list[ChatMember]:
+    ) -> builtins.list[ChatMember]:
         """Получить всех участников чата списком."""
 
         return [member async for member in self.iter_all(count=count)]
@@ -195,7 +196,7 @@ class ChatAdminsManager(BotMixin):
         ):
             yield member
 
-    async def list_all(self) -> list[ChatMember]:
+    async def list_all(self) -> builtins.list[ChatMember]:
         """Получить всех администраторов чата списком."""
 
         return [member async for member in self.iter_all()]

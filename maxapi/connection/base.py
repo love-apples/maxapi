@@ -38,7 +38,7 @@ class _RetryableServerError(Exception):
         super().__init__(f"Server error {status}")
 
 
-def _on_backoff(details: dict[str, Any]) -> None:
+def _on_backoff(details: Any) -> None:
     """Логирование при retry."""
     wait = details["wait"]
     tries = details["tries"]
@@ -134,7 +134,7 @@ class BaseConnection(BotMixin):
         """
 
         bot = self._ensure_bot()
-        await bot.ensure_session()
+        session = await bot.ensure_session()
 
         conn = bot.default_connection
         retry_statuses = conn.retry_on_statuses
@@ -149,14 +149,14 @@ class BaseConnection(BotMixin):
             on_backoff=_on_backoff,
         )
         async def _do_request() -> Any:
-            r = await bot.session.request(
+            r = await session.request(
                 method=method.value,
                 url=url,
                 **kwargs,
             )
 
             if r.status == 401:
-                await bot.session.close()
+                await session.close()
                 raise InvalidToken("Неверный токен!")
 
             if r.status in retry_statuses:
