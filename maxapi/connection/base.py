@@ -20,6 +20,7 @@ from ..types.bot_mixin import BotMixin
 from ..utils.runtime import bind_bot
 
 if TYPE_CHECKING:
+    from backoff.types import Details
     from pydantic import BaseModel
 
     from ..bot import Bot
@@ -38,11 +39,16 @@ class _RetryableServerError(Exception):
         super().__init__(f"Server error {status}")
 
 
-def _on_backoff(details: Any) -> None:
-    """Логирование при retry."""
+def _on_backoff(details: Details) -> None:
+    """Логирование при retry.
+
+    ``exception`` отсутствует в ``backoff.types.Details``, но реально
+    присутствует в рантайме для ``on_exception``-хендлеров — это
+    недоработка в типах самой библиотеки backoff.
+    """
     wait = details["wait"]
     tries = details["tries"]
-    exc = details.get("exception")
+    exc = details["exception"]  # type: ignore[typeddict-item,assignment]
     if isinstance(exc, _RetryableServerError):
         logger_bot.warning(
             "Серверная ошибка %d, попытка %d, жду %.1fс",
