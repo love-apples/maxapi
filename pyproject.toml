@@ -28,6 +28,9 @@ Homepage = "https://github.com/love-apples/maxapi"
 [tool.setuptools]
 license-files = []
 
+[tool.setuptools.package-data]
+maxapi = ["py.typed"]
+
 [build-system]
 requires = [
     "setuptools>=82.0.0",

@@ -1,2 +1,3 @@
 include LICENSE.md
 include README.md
+recursive-include maxapi *.pyi py.typed
