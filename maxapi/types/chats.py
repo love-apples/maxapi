@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# нужен в рантайме: get_type_hints() не найдёт `builtins`,
+# если импорт только под TYPE_CHECKING
+import builtins  # noqa: TC003
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -23,7 +26,6 @@ from ..utils.time import from_ms, to_ms
 from .users import User
 
 if TYPE_CHECKING:
-    import builtins
     from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 
     from ..bot import Bot
