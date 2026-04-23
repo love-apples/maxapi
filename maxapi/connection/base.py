@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+from io import BytesIO
 import mimetypes
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AsyncIterator, Optional
@@ -520,9 +521,9 @@ class BaseConnection(BotMixin):
         url: str,
         *,
         chunk_size: int = DOWNLOAD_CHUNK_SIZE,
-    ) -> tuple[bytes, str]:
+    ) -> BytesIO:
         """
-        Скачивает файл по URL и возвращает его содержимое как bytes.
+        Скачивает файл и возвращает file-like объект в памяти.
 
         Внимание: весь файл загружается в оперативную память.
         Не используйте для файлов >100–200 МБ без контроля.
@@ -532,15 +533,19 @@ class BaseConnection(BotMixin):
             chunk_size: Размер чанка при потоковом чтении.
 
         Returns:
-            bytes: Содержимое файла.
-            str: Имя файла из заголовков или default
+            BytesIO: Содержимое файла. Атрибут .name содержит имя файла
 
         Raises:
             DownloadFileError: при ошибке скачивания.
         """
-        chunks: list[bytes] = []
+        bio = BytesIO()
+        
         response = {}
         async for chunk in self._fetch_content_stream(url, chunk_size=chunk_size, response_dict=response):
-            chunks.append(chunk)
-        filename = response.get('filename')
-        return b"".join(chunks), filename
+            bio.write(chunk)
+        bio.seek(0)  # обязательно переходим в начало
+        
+        if filename := response.get('filename'):
+            bio.name = filename
+        
+        return bio
