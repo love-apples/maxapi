@@ -40,6 +40,7 @@ def _make_mock_response(
     content_type="application/octet-stream",
     cd_filename=None,
     chunks=None,
+    url=None,
 ):
     """Создаёт мок aiohttp-ответа для скачивания."""
     mock_response = AsyncMock()
@@ -54,6 +55,9 @@ def _make_mock_response(
     else:
         mock_response.content_disposition = None
 
+    if url is not None:
+        mock_response.url = url
+        
     if chunks is not None:
         mock_response.content.iter_chunked = MagicMock(
             return_value=AsyncIterator(chunks)
@@ -76,6 +80,7 @@ class TestDownloadFile:
         """Скачивание файла с корректным Content-Disposition."""
         chunks = [b"chunk1", b"chunk2", b"chunk3"]
         mock_response = _make_mock_response(
+            url="https://example.com/file.pdf",
             content_type="application/pdf",
             cd_filename="document.pdf",
             chunks=chunks,
@@ -95,6 +100,7 @@ class TestDownloadFile:
     ):
         """Скачивание без Content-Disposition — имя генерируется по MIME."""
         mock_response = _make_mock_response(
+            url="https://example.com/img",
             content_type="image/jpeg",
             chunks=[b"imagedata"],
         )
@@ -114,6 +120,7 @@ class TestDownloadFile:
         from datetime import datetime
 
         mock_response = _make_mock_response(
+            url="https://example.com/",
             chunks=[b"imagedata"],
         )
         mock_session.request = AsyncMock(return_value=mock_response)
@@ -134,6 +141,7 @@ class TestDownloadFile:
         from datetime import datetime
 
         mock_response = _make_mock_response(
+            url="https://i.oneme.ru/i?r=photo_token",
             content_type="image/jpeg",
             chunks=[b"imagedata"],
         )
@@ -152,6 +160,7 @@ class TestDownloadFile:
     ):
         """Защита от path traversal в filename."""
         mock_response = _make_mock_response(
+            url="https://example.com/file",
             content_type="text/plain",
             cd_filename="../../etc/passwd",
             chunks=[b"data"],
@@ -203,6 +212,7 @@ class TestDownloadFile:
         retry_response.read = AsyncMock()
 
         success_response = _make_mock_response(
+            url="https://example.com/file",
             content_type="text/plain",
             cd_filename="result.txt",
             chunks=[b"ok"],
@@ -265,6 +275,7 @@ class TestDownloadFileAsBytes:
         """
         chunks = [b"chunk1", b"chunk2", b"chunk3"]
         mock_response = _make_mock_response(
+            url="https://fd.oneme.ru/getfile?sig=test&expires=123",
             content_type="application/octet-stream",
             cd_filename="document.pdf",
             chunks=chunks,
@@ -288,6 +299,7 @@ class TestDownloadFileAsBytes:
         # Эмулируем PNG-изображение (минимальный валидный заголовок)
         png_header = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
         mock_response = _make_mock_response(
+            url="https://i.oneme.ru/i?r=test_token",
             content_type="image/png",
             chunks=[png_header],
         )
@@ -335,6 +347,7 @@ class TestDownloadFileAsBytes:
         retry_response.read = AsyncMock()
 
         success_response = _make_mock_response(
+            url="https://example.com/file",
             content_type="text/plain",
             chunks=[b"success"],
         )
@@ -354,6 +367,7 @@ class TestDownloadFileAsBytes:
     async def test_download_file_as_bytes_empty_file(self, bot, mock_session):
         """Скачивание пустого файла."""
         mock_response = _make_mock_response(
+            url="https://example.com/empty",
             content_type="application/octet-stream",
             chunks=[],  # Пустой итератор
         )
@@ -374,11 +388,13 @@ class TestDownloadFileAsBytes:
 
         # Для download_file
         mock_response_disk = _make_mock_response(
+            url="https://example.com/file",
             cd_filename="test.txt",
             chunks=chunks.copy(),
         )
         # Для download_file_as_bytes
         mock_response_bytes = _make_mock_response(
+            url="https://example.com/file",
             chunks=chunks.copy(),
         )
 
@@ -410,7 +426,10 @@ class TestDownloadFileAsBytes:
         # Пытаемся скачать сразу 5 файлов
         results: List[Path] = []
         for i in range(5):
-            mock_response = _make_mock_response(chunks=[f"new {i+1}".encode()])
+            mock_response = _make_mock_response(
+                url=f"https://i.oneme.ru/i?r=file{i+1}",
+                chunks=[f"new {i+1}".encode()]
+            )
             mock_session.request = AsyncMock(return_value=mock_response)
             results.append(
                 await bot.download_file(
@@ -435,6 +454,7 @@ class TestDownloadFileAsBytes:
     ):
         """Для i.oneme.ru расширение определяется по Content-Type, а не .webp."""
         mock_response = _make_mock_response(
+            url="https://i.oneme.ru/i?r=test",
             content_type="image/png",
             chunks=[b"\x89PNG\r\n\x1a\n"],
         )
