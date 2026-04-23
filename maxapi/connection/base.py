@@ -1,20 +1,25 @@
 from __future__ import annotations
 
 import asyncio
-from io import BytesIO
 import mimetypes
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, AsyncIterator, Optional, BinaryIO
-from urllib.parse import urlparse, unquote
-from datetime import datetime
 import re
 import uuid
+from datetime import datetime
+from io import BytesIO
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, BinaryIO
+from urllib.parse import unquote, urlparse
 
 import aiofiles
 import aiofiles.os
 import backoff
 import puremagic
-from aiohttp import ClientConnectionError, ClientSession, FormData, ClientResponse
+from aiohttp import (
+    ClientConnectionError,
+    ClientResponse,
+    ClientSession,
+    FormData,
+)
 
 from ..enums.api_path import ApiPath
 from ..enums.update import UpdateType
@@ -25,6 +30,8 @@ from ..types.bot_mixin import BotMixin
 from ..utils.runtime import bind_bot
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from backoff.types import Details
     from pydantic import BaseModel
 
@@ -47,9 +54,9 @@ class _RetryableServerError(Exception):
 class NamedBytesIO(BytesIO):
     """BytesIO с поддержкой атрибута .name для единообразия с файловыми объектами."""
     __slots__ = ("name",)
-    name: Optional[str]
+    name: str | None
 
-    def __init__(self, buffer: bytes = b"", *, name: Optional[str] = None) -> None:
+    def __init__(self, buffer: bytes = b"", *, name: str | None = None) -> None:
         super().__init__(buffer)
         self.name = name  # Соответствует протоколу typing.BinaryIO
 
@@ -319,7 +326,7 @@ class BaseConnection(BotMixin):
         url: str,
         *,
         chunk_size: int = DOWNLOAD_CHUNK_SIZE,
-        response_dict: Optional[dict[str, str]] = None,
+        response_dict: dict[str, str] | None = None,
     ) -> AsyncIterator[bytes]:
         """
         Асинхронный генератор, который отдаёт чанки файла по мере скачивания.
@@ -370,8 +377,8 @@ class BaseConnection(BotMixin):
             )
 
         if isinstance(response_dict, dict):
-            response_dict['resp'] = response
-            response_dict['filename'] = self._capture_filename(response)
+            response_dict["resp"] = response
+            response_dict["filename"] = self._capture_filename(response)
         elif response_dict is not None:
             raise ValueError(f"response_dict должен быть словарём, получен {type(response_dict)}")
 
@@ -402,16 +409,16 @@ class BaseConnection(BotMixin):
                 ext = Path(filename).suffix
             else:
                 parsed = urlparse(url)
-                name = unquote(parsed.path, encoding='utf-8', errors='replace')
+                name = unquote(parsed.path, encoding="utf-8", errors="replace")
                 filename = Path(name).name  # Защита от path traversal
                 ext = Path(filename).suffix
                 if not ext:
                     ext = mimetypes.guess_extension(response.content_type or "")
                     filename = f"{filename}{ext}"
 
-            if re.search(r'%[0-9A-Fa-f]{2}', filename):
+            if re.search(r"%[0-9A-Fa-f]{2}", filename):
                 # Сервера Max возвращают имя файла дважды закодированное. Проверяем
-                filename = unquote(filename, encoding='utf-8', errors='replace')
+                filename = unquote(filename, encoding="utf-8", errors="replace")
 
             # Если имя не определилось
             datetime_str = datetime.now().strftime("%y%m%d_%H%M%S")
@@ -419,11 +426,11 @@ class BaseConnection(BotMixin):
             if not filename or filename.startswith("."):
                 if is_photo:
                     if not ext:
-                        ext = '.webp'
+                        ext = ".webp"
                     filename = f"image_{datetime_str}{ext}"
                 else:
                     if not ext:
-                        ext = '.bin'
+                        ext = ".bin"
                     filename = f"{datetime_str}{ext}"
             elif is_photo:
                 filename = f"image_{datetime_str}{ext}"
@@ -461,7 +468,7 @@ class BaseConnection(BotMixin):
 
             # Сканируем директорию
             for existing_path in dest.iterdir():
-                if existing_path.suffix == '.part':
+                if existing_path.suffix == ".part":
                     continue
 
                 match = pattern.match(existing_path.name)
@@ -521,7 +528,7 @@ class BaseConnection(BotMixin):
             ):
                 await f.write(chunk)
 
-        filename = response.get('filename')
+        filename = response.get("filename")
         final_path = self._check_file_exists(dest / filename)
         if final_path != temp_path:
             temp_path.replace(final_path)
@@ -547,7 +554,7 @@ class BaseConnection(BotMixin):
 
         Returns:
             BinaryIO: Содержимое файла с атрибутом .name.
-            Для zero-copy передачи используйте .getbuffer(), 
+            Для zero-copy передачи используйте .getbuffer(),
             для получения bytes — .read() или .getvalue().
 
         Raises:
@@ -564,6 +571,6 @@ class BaseConnection(BotMixin):
             bio.write(chunk)
 
         bio.seek(0)  # обязательно переходим в начало
-        bio.name = response.get('filename')
+        bio.name = response.get("filename")
 
         return bio
