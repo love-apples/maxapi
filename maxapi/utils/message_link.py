@@ -1,12 +1,30 @@
 import re
 import base64
 from urllib.parse import urlparse
+import binascii
 
+def _validate_chat_id(chat_id: int) -> None:
+    """Проверяет, что chat_id в диапазоне signed int64."""
+    if chat_id < -(1 << 63) or chat_id >= (1 << 63):
+        raise ValueError('chat_id выходит за пределы знакового 64-битного диапазона')
 
 def mid_to_chatid_seq(mid: str) -> tuple[int, int]:
     """
-    Декодирует строку mid в chat_id и seq.
-    Формат mid: 'mid.' + 16 hex-символов (chat_id) + 16 hex-символов (seq)
+    Декодирует строку mid в пару (chat_id, seq).
+
+    Формат mid: 'mid.' + 32 hex-символа, где:
+        - первые 16 символов: chat_id (signed int64, stored as unsigned hex)
+        - последние 16 символов: seq (unsigned int64)
+
+    Args:
+        mid (str): Строка формата "mid.{32 hex символа}"
+
+    Returns:
+        tuple[int, int]: Кортеж (chat_id, seq), где chat_id — signed, seq — unsigned
+
+    Raises:
+        TypeError: Если mid не является строкой
+        ValueError: Если mid не соответствует ожидаемому формату
     """
     if not isinstance(mid, str):
         raise TypeError('mid должен быть строкой')
@@ -30,14 +48,26 @@ def mid_to_chatid_seq(mid: str) -> tuple[int, int]:
 def chatid_seq_to_mid(chat_id: int, seq: int) -> str:
     """
     Создаёт валидную строку mid из chat_id и seq.
+
+    Формат результата: 'mid.' + 32 hex-символа (16 для chat_id + 16 для seq)
+
+    Args:
+        chat_id (int): ID чата (signed int64, диапазон: -(2**63) .. 2**63-1)
+        seq (int): Порядковый номер сообщения (unsigned int64, диапазон: 0 .. 2**64-1)
+
+    Returns:
+        str: Строка mid формата "mid.{32 hex символа}"
+
+    Raises:
+        TypeError: Если chat_id или seq не являются int
+        ValueError: Если chat_id или seq выходят за допустимые диапазоны
     """
     if not isinstance(chat_id, int):
         raise TypeError('chat_id должен быть целым числом')
     if not isinstance(seq, int):
         raise TypeError('seq должен быть целым числом')
 
-    if chat_id < -(1 << 63) or chat_id >= (1 << 63):
-        raise ValueError('chat_id выходит за пределы знакового 64-битного диапазона')
+    _validate_chat_id(chat_id)
     if seq < 0 or seq >= (1 << 64):
         raise ValueError('seq выходит за пределы беззнакового 64-битного диапазона')
     
@@ -52,7 +82,17 @@ def chatid_seq_to_mid(chat_id: int, seq: int) -> str:
 def build_message_link(mid: str) -> str:
     """
     Генерирует прямую ссылку на сообщение в интерфейсе MAX.
-    Формат: https://max.ru/c/{chat_id}/{urlsafe_base64(seq_без_padding)}
+
+    Args:
+        mid (str): Значение из message.body.mid
+    
+    Returns:
+        str: URL ссылка на сообщение в интерфейсе пользовательского приложения MAX.
+        Формат: https://max.ru/c/{chat_id}/{urlsafe_base64(seq_без_padding)}
+    
+    Raises:
+        TypeError: Если mid не строка
+        ValueError: Если mid не соответствует формату "mid." + 32 hex-символа
     """
 
     chat_id, seq = mid_to_chatid_seq(mid) # Валидация происходит здесь
@@ -68,13 +108,19 @@ def build_message_link(mid: str) -> str:
 def link_to_chatid_seq(link: str) -> tuple[int, int]:
     """
     Парсит ссылку на сообщение в интерфейсе MAX и извлекает chat_id и seq.
-    Формат ссылки: https://max.ru/c/{chat_id}/{urlsafe_base64(seq_без_padding)}
 
-    Не обрабатываются ссылки на публичные каналы вида https://max.ru/{channe_name}/{urlsafe_base64}
-    Только приватные чаты и группы
-
+    Не обрабатываются ссылки на публичные каналы вида https://max.ru/{channel_name}/{urlsafe_base64}
+    Только приватные чаты и группы.
+    
+    Args:
+        link (str): Ссылка формата https://max.ru/c/{chat_id}/{seq_b64}
+    
     Returns:
         tuple[int, int]: (chat_id, seq)
+    
+    Raises:
+        TypeError: Если link не строка
+        ValueError: Если ссылка невалидна или ссылка на канал (chat_id не число)
     """
     # Валидация типа
     if not isinstance(link, str):
@@ -96,11 +142,10 @@ def link_to_chatid_seq(link: str) -> tuple[int, int]:
     # Извлечение и валидация chat_id
     try:
         chat_id = int(path_parts[1])
-    except ValueError:
-        raise ValueError('chat_id в ссылке должен быть целым числом')
+    except ValueError as e:
+        raise ValueError('chat_id в ссылке должен быть целым числом') from e
     
-    if chat_id < -(1 << 63) or chat_id >= (1 << 63):
-        raise ValueError('chat_id выходит за пределы знакового 64-битного диапазона')
+    _validate_chat_id(chat_id)
     
     # Извлечение seq_b64
     seq_b64 = path_parts[2]
@@ -116,8 +161,8 @@ def link_to_chatid_seq(link: str) -> tuple[int, int]:
     try:
         # Декодируем из url-safe base64
         seq_bytes = base64.urlsafe_b64decode(seq_b64_padded)
-    except Exception as e:
-        raise ValueError(f'Ошибка декодирования base64: {e}')
+    except (binascii.Error, ValueError) as e:
+        raise ValueError(f'Ошибка декодирования base64: {e}') from e
     
     # Валидация длины: seq должен быть 8 байт (64 бита)
     if len(seq_bytes) != 8:

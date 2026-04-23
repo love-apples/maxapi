@@ -23,6 +23,7 @@ from ..utils.formatting import (
     UserMention,
 )
 from .users import User
+from ..utils.message_link import build_message_link
 
 if TYPE_CHECKING:
     from ..bot import Bot
@@ -631,6 +632,12 @@ class Message(
             chat_id=self.recipient.chat_id,
         )
 
+    @property
+    def url_link(self):
+        """
+        Прямая ссылка на сообщение в интерфейсе MAX
+        """
+        return build_message_link(self.mid)
 
 class Messages(BaseModel):
     """
