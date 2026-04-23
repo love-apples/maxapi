@@ -45,6 +45,13 @@ class FastAPIMaxWebhook(BaseMaxWebhook):
     Обеспечивает регистрацию POST-маршрута для приёма обновлений,
     парсинг JSON и инициализацию диспетчера через lifespan.
 
+    При передаче ``secret`` фреймворк **автоматически** проверяет
+    заголовок ``X-Max-Bot-Api-Secret`` в каждом входящем запросе
+    (зависимость FastAPI возвращает ``403 Forbidden`` при несоответствии).
+    Тот же ``secret`` нужно передать в
+    :meth:`~maxapi.Bot.subscribe_webhook`, чтобы платформа MAX
+    добавляла этот заголовок к каждому запросу.
+
     Пример использования::
 
         from fastapi import FastAPI
@@ -53,7 +60,7 @@ class FastAPIMaxWebhook(BaseMaxWebhook):
 
         dp = Dispatcher()
         bot = Bot(token="...")
-        webhook = FastAPIMaxWebhook(dp=dp, bot=bot)
+        webhook = FastAPIMaxWebhook(dp=dp, bot=bot, secret="my-secret")
 
         # Вариант 1 — создать готовое приложение:
         app = webhook.create_app(path="/webhook")

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# нужен в рантайме: get_type_hints() не найдёт `builtins`,
+# если импорт только под TYPE_CHECKING
+import builtins  # noqa: TC003
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -146,7 +149,7 @@ class ChatMembersManager(BotMixin):
         self,
         *,
         count: int = 100,
-    ) -> list[ChatMember]:
+    ) -> builtins.list[ChatMember]:
         """Получить всех участников чата списком."""
 
         return [member async for member in self.iter_all(count=count)]
@@ -195,7 +198,7 @@ class ChatAdminsManager(BotMixin):
         ):
             yield member
 
-    async def list_all(self) -> list[ChatMember]:
+    async def list_all(self) -> builtins.list[ChatMember]:
         """Получить всех администраторов чата списком."""
 
         return [member async for member in self.iter_all()]

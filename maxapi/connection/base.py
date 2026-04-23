@@ -20,6 +20,7 @@ from ..types.bot_mixin import BotMixin
 from ..utils.runtime import bind_bot
 
 if TYPE_CHECKING:
+    from backoff.types import Details
     from pydantic import BaseModel
 
     from ..bot import Bot
@@ -38,11 +39,16 @@ class _RetryableServerError(Exception):
         super().__init__(f"Server error {status}")
 
 
-def _on_backoff(details: dict[str, Any]) -> None:
-    """Логирование при retry."""
+def _on_backoff(details: Details) -> None:
+    """Логирование при retry.
+
+    ``exception`` отсутствует в ``backoff.types.Details``, но реально
+    присутствует в рантайме для ``on_exception``-хендлеров — это
+    недоработка в типах самой библиотеки backoff.
+    """
     wait = details["wait"]
     tries = details["tries"]
-    exc = details.get("exception")
+    exc = details["exception"]  # type: ignore[typeddict-item,assignment]
     if isinstance(exc, _RetryableServerError):
         logger_bot.warning(
             "Серверная ошибка %d, попытка %d, жду %.1fс",
@@ -134,8 +140,6 @@ class BaseConnection(BotMixin):
         """
 
         bot = self._ensure_bot()
-        await bot.ensure_session()
-
         conn = bot.default_connection
         retry_statuses = conn.retry_on_statuses
 
@@ -149,40 +153,41 @@ class BaseConnection(BotMixin):
             on_backoff=_on_backoff,
         )
         async def _do_request() -> Any:
-            r = await bot.session.request(
+            session = await bot.ensure_session()
+            resp = await session.request(
                 method=method.value,
                 url=url,
                 **kwargs,
             )
 
-            if r.status == 401:
-                await bot.session.close()
+            if resp.status == 401:
+                await session.close()
                 raise InvalidToken("Неверный токен!")
 
-            if r.status in retry_statuses:
-                await r.read()
-                raise _RetryableServerError(r.status)
+            if resp.status in retry_statuses:
+                await resp.read()
+                raise _RetryableServerError(resp.status)
 
-            return r
+            return resp
 
         try:
-            r = await _do_request()
+            response = await _do_request()
         except ClientConnectionError as e:
             raise MaxConnection(f"Ошибка при отправке запроса: {e}") from e
         except _RetryableServerError as e:
             raise MaxApiError(code=e.status, raw={"error": str(e)}) from e
 
-        if not r.ok:
-            raw = await r.json()
+        if not response.ok:
+            raw = await response.json()
             if bot.dispatcher:
                 asyncio.create_task(
                     bot.dispatcher.handle_raw_response(
                         UpdateType.RAW_API_RESPONSE, raw
                     )
                 )
-            raise MaxApiError(code=r.status, raw=raw)
+            raise MaxApiError(code=response.status, raw=raw)
 
-        raw = await r.json()
+        raw = await response.json()
 
         if bot.dispatcher:
             asyncio.create_task(
@@ -315,8 +320,6 @@ class BaseConnection(BotMixin):
             DownloadFileError: При ошибке скачивания.
         """
         bot = self._ensure_bot()
-        session = await bot.ensure_session()
-
         conn = bot.default_connection
 
         @backoff.on_exception(
@@ -327,6 +330,7 @@ class BaseConnection(BotMixin):
             on_backoff=_on_backoff,
         )
         async def _do_download() -> Any:
+            session = await bot.ensure_session()
             resp = await session.request("GET", url)
             if resp.status in conn.retry_on_statuses:
                 await resp.read()
