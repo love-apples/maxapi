@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import asyncio
-import inspect
 from io import BytesIO
 import mimetypes
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AsyncIterator, Optional
+from typing import TYPE_CHECKING, Any, AsyncIterator, Optional, BinaryIO
 from urllib.parse import urlparse, unquote
 from datetime import datetime
 import re
@@ -43,6 +42,16 @@ class _RetryableServerError(Exception):
     def __init__(self, status: int) -> None:
         self.status = status
         super().__init__(f"Server error {status}")
+
+
+class NamedBytesIO(BytesIO):
+    """BytesIO с поддержкой атрибута .name для единообразия с файловыми объектами."""
+    __slots__ = ("name",)
+    name: Optional[str]
+
+    def __init__(self, buffer: bytes = b"", *, name: Optional[str] = None) -> None:
+        super().__init__(buffer)
+        self.name = name  # Соответствует протоколу typing.BinaryIO
 
 
 def _on_backoff(details: Details) -> None:
@@ -507,7 +516,7 @@ class BaseConnection(BotMixin):
                 response_dict=response
             ):
                 await f.write(chunk)
-        
+
         filename = response.get('filename')
         final_path = self._check_file_exists(dest / filename)
         if final_path != temp_path:
@@ -521,9 +530,9 @@ class BaseConnection(BotMixin):
         url: str,
         *,
         chunk_size: int = DOWNLOAD_CHUNK_SIZE,
-    ) -> BytesIO:
+    ) -> BinaryIO:
         """
-        Скачивает файл и возвращает file-like объект в памяти.
+        Скачивает файл по URL и возвращает file-like объект в памяти.
 
         Внимание: весь файл загружается в оперативную память.
         Не используйте для файлов >100–200 МБ без контроля.
@@ -533,19 +542,24 @@ class BaseConnection(BotMixin):
             chunk_size: Размер чанка при потоковом чтении.
 
         Returns:
-            BytesIO: Содержимое файла. Атрибут .name содержит имя файла
+            BinaryIO: Содержимое файла с атрибутом .name.
+            Для zero-copy передачи используйте .getbuffer(), 
+            для получения bytes — .read() или .getvalue().
 
         Raises:
             DownloadFileError: при ошибке скачивания.
         """
-        bio = BytesIO()
-        
+        bio = NamedBytesIO()
+
         response = {}
-        async for chunk in self._fetch_content_stream(url, chunk_size=chunk_size, response_dict=response):
+        async for chunk in self._fetch_content_stream(
+            url,
+            chunk_size=chunk_size,
+            response_dict=response
+        ):
             bio.write(chunk)
+
         bio.seek(0)  # обязательно переходим в начало
-        
-        if filename := response.get('filename'):
-            bio.name = filename
-        
+        bio.name = response.get('filename')
+
         return bio
