@@ -282,7 +282,7 @@ class TestDownloadFileAsBytes:
         )
         mock_session.request = AsyncMock(return_value=mock_response)
 
-        result = await bot.download_file_as_bytes(
+        result, filename = await bot.download_file_as_bytes(
             url="https://fd.oneme.ru/getfile?sig=test&expires=123",
         )
 
@@ -305,7 +305,7 @@ class TestDownloadFileAsBytes:
         )
         mock_session.request = AsyncMock(return_value=mock_response)
 
-        result = await bot.download_file_as_bytes(
+        result, filename = await bot.download_file_as_bytes(
             url="https://i.oneme.ru/i?r=test_token",
         )
 
@@ -359,7 +359,7 @@ class TestDownloadFileAsBytes:
         bot.default_connection.retry_backoff_factor = 0.0
 
         with patch("asyncio.sleep", new_callable=AsyncMock):
-            result = await bot.download_file_as_bytes(
+            result, filename = await bot.download_file_as_bytes(
                 url="https://example.com/file",
             )
             assert result == b"success"
@@ -373,7 +373,7 @@ class TestDownloadFileAsBytes:
         )
         mock_session.request = AsyncMock(return_value=mock_response)
 
-        result = await bot.download_file_as_bytes(
+        result, filename = await bot.download_file_as_bytes(
             url="https://example.com/empty",
         )
 
@@ -411,7 +411,7 @@ class TestDownloadFileAsBytes:
         disk_content = path.read_bytes()
 
         # Скачиваем в память
-        bytes_content = await bot.download_file_as_bytes(
+        bytes_content, filename = await bot.download_file_as_bytes(
             url="https://example.com/file",
         )
 

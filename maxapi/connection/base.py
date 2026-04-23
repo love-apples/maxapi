@@ -381,17 +381,17 @@ class BaseConnection(BotMixin):
             response: Ответ сервера с заголовками файла
 
         Returns:
-            str: Имя файла. В зависимости от содержиния заголовков может быть вида:
-                "filename.doc", ".doc", "filename"
+            str: Имя файла из заголовков. Если не удалось определить, то возвращается default
         """
         filename = ext = None
+        url = response.url
         try:
             cd = response.content_disposition
             if cd and cd.filename:
                 filename = Path(cd.filename).name
                 ext = Path(filename).suffix
             else:
-                parsed = urlparse(response.url)
+                parsed = urlparse(url)
                 name = unquote(parsed.path, encoding='utf-8', errors='replace')
                 filename = Path(name).name  # Защита от path traversal
                 ext = Path(filename).suffix
@@ -402,6 +402,21 @@ class BaseConnection(BotMixin):
             if re.search(r'%[0-9A-Fa-f]{2}', filename):
                 # Сервера Max возвращают имя файла дважды закодированное. Проверяем
                 filename = unquote(filename, encoding='utf-8', errors='replace')
+
+            # Если имя не определилось
+            datetime_str = datetime.now().strftime("%y%m%d_%H%M%S")
+            is_photo = url.startswith("https://i.oneme.ru/")
+            if not filename or filename.startswith("."):
+                if is_photo:
+                    if not ext:
+                        ext = '.webp'
+                    filename = f"image_{datetime_str}{ext}"
+                else:
+                    if not ext:
+                        ext = '.bin'
+                    filename = f"{datetime_str}{ext}"
+            elif is_photo:
+                filename = f"image_{datetime_str}{ext}"
 
         except (AttributeError, TypeError, ValueError) as e:
             logger_bot.warning("Не удалось определить имя файла из заголовков: %s", e)
@@ -497,27 +512,6 @@ class BaseConnection(BotMixin):
                 await f.write(chunk)
         
         filename = response.get('filename')
-        ext = None
-        if filename:
-            name_ext = filename.rsplit(".", maxsplit=1)
-            if len(name_ext) == 2:
-                ext = f".{name_ext[1]}"
-        
-        # Если имя не определилось
-        datetime_str = datetime.now().strftime("%y%m%d_%H%M%S")
-        is_photo = url.startswith("https://i.oneme.ru/")
-        if not filename or filename.startswith("."):
-            if is_photo:
-                if not ext:
-                    ext = '.webp'
-                filename = f"image_{datetime_str}{ext}"
-            else:
-                if not ext:
-                    ext = '.bin'
-                filename = f"{datetime_str}{ext}"
-        elif is_photo:
-            filename = f"image_{datetime_str}{ext}"
-
         final_path = self._check_file_exists(dest / filename)
         if final_path != temp_path:
             temp_path.replace(final_path)
@@ -530,7 +524,7 @@ class BaseConnection(BotMixin):
         url: str,
         *,
         chunk_size: int = DOWNLOAD_CHUNK_SIZE,
-    ) -> bytes:
+    ) -> tuple[bytes, str]:
         """
         Скачивает файл по URL и возвращает его содержимое как bytes.
 
@@ -543,11 +537,14 @@ class BaseConnection(BotMixin):
 
         Returns:
             bytes: Содержимое файла.
+            str: Имя файла из заголовков или default
 
         Raises:
             DownloadFileError: при ошибке скачивания.
         """
         chunks: list[bytes] = []
-        async for chunk in self._fetch_content_stream(url, chunk_size=chunk_size):
+        response = {}
+        async for chunk in self._fetch_content_stream(url, chunk_size=chunk_size, response_dict=response):
             chunks.append(chunk)
-        return b"".join(chunks)
+        filename = response.get('filename')
+        return b"".join(chunks), filename
