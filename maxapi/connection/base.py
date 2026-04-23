@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, BinaryIO
+from typing import TYPE_CHECKING, Any, BinaryIO, NotRequired, TypedDict
 from urllib.parse import unquote, urlparse
 
 import aiofiles
@@ -39,6 +39,9 @@ if TYPE_CHECKING:
     from ..enums.http_method import HTTPMethod
     from ..enums.upload_type import UploadType
 
+    class ResponseDict(TypedDict):
+        resp: NotRequired[ClientResponse]
+        filename: str
 
 DOWNLOAD_CHUNK_SIZE = 65536
 
@@ -326,7 +329,7 @@ class BaseConnection(BotMixin):
         url: str,
         *,
         chunk_size: int = DOWNLOAD_CHUNK_SIZE,
-        response_dict: dict[str, str] | None = None,
+        response_dict: ResponseDict | dict[str, Any] | None = None,
     ) -> AsyncIterator[bytes]:
         """
         Асинхронный генератор, который отдаёт чанки файла по мере скачивания.
@@ -376,7 +379,7 @@ class BaseConnection(BotMixin):
                 f"Ошибка при скачивании файла: HTTP {response.status}"
             )
 
-        if isinstance(response_dict, dict):
+        if isinstance(response_dict, (dict)):
             response_dict["resp"] = response
             response_dict["filename"] = self._capture_filename(response)
         elif response_dict is not None:
@@ -400,8 +403,8 @@ class BaseConnection(BotMixin):
         Returns:
             str: Имя файла из заголовков. Если не удалось определить, то возвращается default
         """
-        filename = ext = None
-        url = response.url
+        filename = ext = ""
+        url = str(response.url)
         try:
             cd = response.content_disposition
             if cd and cd.filename:
@@ -519,7 +522,7 @@ class BaseConnection(BotMixin):
         temp_filename = f"tmp_{uuid.uuid4().hex}.part"
         temp_path = dest / temp_filename
 
-        response = {}
+        response: ResponseDict = {"filename": ""}
         async with aiofiles.open(temp_path, "wb") as f:
             async for chunk in self._fetch_content_stream(
                 url,
@@ -528,7 +531,7 @@ class BaseConnection(BotMixin):
             ):
                 await f.write(chunk)
 
-        filename = response.get("filename")
+        filename = response["filename"]
         final_path = self._check_file_exists(dest / filename)
         if final_path != temp_path:
             temp_path.replace(final_path)
