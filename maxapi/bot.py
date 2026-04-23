@@ -424,13 +424,14 @@ class Bot(BaseConnection):
         Returns:
             SendedAction: Результат отправки действия.
         """
-        try:
-            action = SenderAction(action)
-        except ValueError as e:
-            allowed = ", ".join(item.value for item in SenderAction)
-            raise ValueError(
-                f"Неверный action: {action!r}. Ожидается: {allowed}"
-            ) from e
+        if not isinstance(action, SenderAction):
+            try:
+                action = SenderAction(action)
+            except ValueError as e:
+                allowed = ", ".join(item.value for item in SenderAction)
+                raise ValueError(
+                    f"Неверный action: {action!r}. Ожидается: {allowed}"
+                ) from e
 
         return await SendAction(
             bot=self, chat_id=chat_id, action=action
