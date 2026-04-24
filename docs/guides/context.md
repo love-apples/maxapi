@@ -59,6 +59,8 @@ dp = Dispatcher(storage=MemoryContext, ttl=1800)
 Тот же параметр можно использовать и для `RedisContext`:
 
 ```python
+from maxapi.context import RedisContext
+
 dp = Dispatcher(
     storage=RedisContext,
     redis_client=redis_client,

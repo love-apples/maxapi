@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from time import monotonic
 
 
@@ -9,8 +10,8 @@ class TTLTracker:
     """
 
     def __init__(self, ttl: float | None = None) -> None:
-        if ttl is not None and ttl <= 0:
-            raise ValueError("ttl must be greater than 0")
+        if ttl is not None and (not math.isfinite(ttl) or ttl <= 0):
+            raise ValueError("ttl must be a positive finite number")
         self.ttl = ttl
         self._expires_at: float | None = None
 

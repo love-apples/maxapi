@@ -6,6 +6,12 @@ from ..context.base import BaseContext
 from ..context.state_machine import State
 
 
+def _ttl_to_ms(ttl: float | None) -> int | None:
+    if ttl is None:
+        return None
+    return max(1, round(ttl * 1000))
+
+
 class MemoryContext(BaseContext):
     """
     Контекст хранения данных пользователя в оперативной памяти.
@@ -128,8 +134,13 @@ class RedisContext(BaseContext):
         return json.loads(data) if data else {}
 
     async def set_data(self, data: dict[str, Any]) -> None:
-        await self.redis.set(self.data_key, json.dumps(data))
-        await self._touch_redis_ttl()
+        ttl_ms = _ttl_to_ms(self.ttl)
+        payload = json.dumps(data)
+        if ttl_ms is None:
+            await self.redis.set(self.data_key, payload)
+        else:
+            await self.redis.set(self.data_key, payload, px=ttl_ms)
+            await self.redis.pexpire(self.state_key, ttl_ms)
 
     async def update_data(self, **kwargs: Any) -> None:
         """
@@ -145,11 +156,23 @@ class RedisContext(BaseContext):
         for k, v in pairs(updates) do
             decoded[k] = v
         end
-        redis.call('set', KEYS[1], cjson.encode(decoded))
+        if ARGV[2] then
+            redis.call('set', KEYS[1], cjson.encode(decoded), 'PX', ARGV[2])
+        else
+            redis.call('set', KEYS[1], cjson.encode(decoded))
+        end
         return redis.status_reply("OK")
         """
-        await self.redis.eval(lua_script, 1, self.data_key, json.dumps(kwargs))
-        await self._touch_redis_ttl()
+        ttl_ms = _ttl_to_ms(self.ttl)
+        await self.redis.eval(
+            lua_script,
+            1,
+            self.data_key,
+            json.dumps(kwargs),
+            str(ttl_ms) if ttl_ms is not None else "",
+        )
+        if ttl_ms is not None:
+            await self.redis.pexpire(self.state_key, ttl_ms)
 
     async def set_state(self, state: State | str | None = None) -> None:
         if state is None:
@@ -175,11 +198,12 @@ class RedisContext(BaseContext):
 
     async def clear(self) -> None:
         await self.redis.delete(self.data_key, self.state_key)
+        self._ttl_tracker.clear()
 
     async def _touch_redis_ttl(self) -> None:
         """Продлевает TTL обоих ключей контекста при активности."""
-        if self.ttl is None:
+        ttl_ms = _ttl_to_ms(self.ttl)
+        if ttl_ms is None:
             return
-        ttl_ms = max(1, round(self.ttl * 1000))
         await self.redis.pexpire(self.data_key, ttl_ms)
         await self.redis.pexpire(self.state_key, ttl_ms)
