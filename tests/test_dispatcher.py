@@ -305,6 +305,22 @@ class TestDispatcherContext:
         assert context1 is not context2
         assert len(dispatcher.contexts) == 2
 
+    def test_get_memory_context_recreates_expired_context(self):
+        """Просроченный context не должен переиспользоваться."""
+        current_time = {"value": 0.0}
+        dispatcher = Dispatcher(ttl=0.01)
+
+        with patch(
+            "maxapi.context.ttl.monotonic",
+            side_effect=lambda: current_time["value"],
+        ):
+            context1 = dispatcher._Dispatcher__get_context(12345, 67890)
+            current_time["value"] = 0.02
+            context2 = dispatcher._Dispatcher__get_context(12345, 67890)
+
+        assert context1 is not context2
+        assert len(dispatcher.contexts) == 1
+
 
 class TestDispatcherMiddlewareChain:
     """Тесты цепочки middleware."""
