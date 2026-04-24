@@ -166,6 +166,16 @@ flake8-type-checking.runtime-evaluated-base-classes = [
     "S",
     "SLF",
 ]
+"examples/**.py" = [
+    "INP001",
+    "PTH",
+    "ASYNC240",
+    "PLC0415",
+    "S",
+    "T20",
+    "FBT",
+    "SIM105",
+]
 "maxapi/methods/send_message.py" = [
     "C90", # TODO: требует рефакторинга
 ]
