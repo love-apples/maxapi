@@ -518,6 +518,11 @@ class BaseConnection(BotMixin):
         Args:
             url: URL файла для скачивания (из payload.url вложения).
             destination: Путь к директории для сохранения файла.
+                Если путь не содержит имя файла (не имеет расширения),
+                то будет использовано имя, предоставляемое сервером
+                или значение по умолчанию.
+                Если путь содержит расширение, он трактуется как
+                полное имя файла для сохранения.
             chunk_size: Размер чанка при потоковом чтении
                 (по умолчанию 64 КБ).
 
@@ -528,12 +533,22 @@ class BaseConnection(BotMixin):
             DownloadFileError: при ошибке скачивания.
         """
         dest = Path(destination)
-        await aiofiles.os.makedirs(destination, exist_ok=True)
 
+        # Получаем ответ для определения имени файла из заголовков
         response = await self._fetch_response(url)
 
-        filename = self._capture_filename(response)
-        final_path = self._check_file_exists(dest / filename)
+        # Определяем конечный путь для сохранения:
+        # - если destination имеет расширение (суффикс) → это имя файла
+        # - иначе → это директория, добавляем имя из ответа
+        if dest.suffix:
+            # destination содержит имя файла с расширением
+            await aiofiles.os.makedirs(dest.parent, exist_ok=True)
+            final_path = self._check_file_exists(dest)
+        else:
+            # destination - это директория, добавляем имя файла из ответа
+            await aiofiles.os.makedirs(dest, exist_ok=True)
+            filename = self._capture_filename(response)
+            final_path = self._check_file_exists(dest / filename)
 
         try:
             async with aiofiles.open(final_path, "wb") as f:

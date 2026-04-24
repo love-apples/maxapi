@@ -336,8 +336,138 @@ class TestDownloadFile:
         session = await bot.ensure_session()
         assert session is mock_session
 
+    async def test_download_file_destination_with_filename(
+        self, bot, tmp_dir, mock_session
+    ):
+        """Скачивание файла когда destination содержит имя файла."""
+        chunks = [b"chunk1", b"chunk2"]
+        url = "https://example.com/remote.pdf"
+        mock_response = _make_mock_response(
+            url=url,
+            content_type="application/pdf",
+            cd_filename="server_name.pdf",  # Имя от сервера
+            chunks=chunks,
+        )
+        mock_session.request = AsyncMock(return_value=mock_response)
 
-# tests/test_download_file.py
+        # destination содержит своё имя файла
+        result = await bot.download_file(
+            url=url,
+            destination=tmp_dir / "my_custom_name.pdf",
+        )
+
+        # Должно использоваться имя из destination, а не от сервера
+        assert result == tmp_dir / "my_custom_name.pdf"
+        assert result.read_bytes() == b"".join(chunks)
+
+    async def test_download_file_destination_with_filename_collision(
+        self, bot, tmp_dir, mock_session
+    ):
+        """Проверка коллизии имён когда destination содержит имя файла."""
+        # Создаём существующий файл
+        existing_file = tmp_dir / "report.pdf"
+        existing_file.write_bytes(b"old content")
+
+        chunks = [b"new content"]
+        url = "https://example.com/file"
+        mock_response = _make_mock_response(
+            url=url,
+            chunks=chunks,
+        )
+        mock_session.request = AsyncMock(return_value=mock_response)
+
+        # Пытаемся скачать в тот же путь
+        result = await bot.download_file(
+            url=url,
+            destination=tmp_dir / "report.pdf",
+        )
+
+        # Должен быть создан новый файл с суффиксом (2)
+        assert result == tmp_dir / "report(2).pdf"
+        assert result.read_bytes() == b"".join(chunks)
+        # Старый файл не должен быть перезаписан
+        assert existing_file.read_bytes() == b"old content"
+
+    async def test_download_file_destination_directory_uses_server_filename(
+        self, bot, tmp_dir, mock_session
+    ):
+        """Проверка, что при указании директории используется имя от сервера."""
+        chunks = [b"data"]
+        url = "https://example.com/download"
+        mock_response = _make_mock_response(
+            url=url,
+            content_type="text/plain",
+            cd_filename="server_file.txt",
+            chunks=chunks,
+        )
+        mock_session.request = AsyncMock(return_value=mock_response)
+
+        # destination - только директория (без имени файла)
+        result = await bot.download_file(
+            url=url,
+            destination=tmp_dir,
+        )
+
+        # Должно использоваться имя от сервера
+        assert result == tmp_dir / "server_file.txt"
+        assert result.read_bytes() == b"".join(chunks)
+
+    async def test_download_file_destination_without_extension_uses_server_name(
+        self, bot, tmp_dir, mock_session
+    ):
+        """Проверка: путь без расширения трактуется как директория."""
+        chunks = [b"binary"]
+        url = "https://example.com/data"
+        mock_response = _make_mock_response(
+            url=url,
+            content_type="application/octet-stream",
+            cd_filename="data.bin",
+            chunks=chunks,
+        )
+        mock_session.request = AsyncMock(return_value=mock_response)
+
+        # Путь без расширения → трактуется как директория
+        result = await bot.download_file(
+            url=url,
+            destination=tmp_dir / "downloads",  # Нет расширения
+        )
+
+        # Файл должен быть сохранён внутри директории с именем от сервера
+        assert result == tmp_dir / "downloads" / "data.bin"
+        assert result.read_bytes() == b"".join(chunks)
+
+    async def test_download_file_destination_relative_filename(
+        self, bot, tmp_dir, mock_session
+    ):
+        """Скачивание с относительным путём к файлу."""
+        import os
+
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(tmp_dir)
+
+            chunks = [b"relative"]
+            url = "https://example.com/file"
+            mock_response = _make_mock_response(
+                url=url,
+                cd_filename="ignored.txt",
+                chunks=chunks,
+            )
+            mock_session.request = AsyncMock(return_value=mock_response)
+
+            # Относительный путь с расширением
+            destination = "subdir/my_file.txt"
+            result = await bot.download_file(
+                url=url,
+                destination=destination,
+            )
+
+            # Приводим оба пути к абсолютным для сравнения
+            assert result.resolve() == Path(destination).resolve()
+            assert result.read_bytes() == b"".join(chunks)
+            assert result.exists()
+        finally:
+            os.chdir(original_cwd)
 
 
 class TestDownloadFileAsBytes:
