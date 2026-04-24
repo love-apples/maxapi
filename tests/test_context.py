@@ -368,9 +368,7 @@ class TestRedisContext:
     async def test_redis_context_manager_and_clear(self):
         """Контекстный менеджер и clear работают без побочных эффектов."""
         redis = AsyncMock()
-        context = RedisContext(
-            chat_id=1, user_id=2, redis_client=redis, ttl=1
-        )
+        context = RedisContext(chat_id=1, user_id=2, redis_client=redis, ttl=1)
         context.touch_ttl()
 
         entered = await context.__aenter__()
