@@ -186,6 +186,57 @@ class TestBotMethods:
             assert mock_fetch.called
 
     @pytest.mark.asyncio
+    async def test_send_invalid_action_as_string(self, bot):
+        """Тест вызова send_action с неверными данными."""
+        # Core Stuff
+        from maxapi.methods.send_action import SendAction
+
+        available_actions = ", ".join(action.value for action in SenderAction)
+
+        with patch.object(
+            SendAction, "fetch", new_callable=AsyncMock
+        ) as mock_fetch:
+            mock_fetch.return_value = Mock()
+
+            with pytest.raises(ValueError) as exc_info:  # noqa: PT011
+                await bot.send_action(chat_id=12345, action="fake_action")
+
+            exc_message = str(exc_info.value)
+
+            assert "Неверный" in exc_message
+            assert available_actions in exc_message
+
+    @pytest.mark.asyncio
+    async def test_send_valid_action_as_string(self, bot):
+        """Тест вызова send_action с верными данными."""
+        # Core Stuff
+        from maxapi.methods.send_action import SendAction
+
+        with patch.object(
+            SendAction, "fetch", new_callable=AsyncMock
+        ) as mock_fetch:
+            mock_fetch.return_value = Mock()
+
+            await bot.send_action(chat_id=12345, action="typing_on")
+
+            assert mock_fetch.called
+
+    @pytest.mark.asyncio
+    async def test_send_none_action(self, bot):
+        """Тест вызова send_action без передачи action"""
+        # Core Stuff
+        from maxapi.methods.send_action import SendAction
+
+        with patch.object(
+            SendAction, "fetch", new_callable=AsyncMock
+        ) as mock_fetch:
+            mock_fetch.return_value = Mock()
+
+            await bot.send_action(chat_id=12345)
+
+            assert mock_fetch.called
+
+    @pytest.mark.asyncio
     async def test_get_me_structure(self, bot):
         """Тест структуры вызова get_me."""
         # Core Stuff
