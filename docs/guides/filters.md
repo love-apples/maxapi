@@ -22,7 +22,8 @@ async def attachment_handler(event: MessageCreated):
 # Комбинация условий
 from maxapi.enums.chat_type import ChatType
 
-@dp.message_created(F.message.body.text & F.message.chat.type == ChatType.DIALOG)
+# ⚠️ Скобки обязательны: & и | имеют более высокий приоритет, чем ==
+@dp.message_created(F.message.body.text & (F.message.chat.type == ChatType.DIALOG))
 async def dialog_text_handler(event: MessageCreated):
     ...
 ```
@@ -117,17 +118,29 @@ async def on_channel_post(event: MessageCreated):
 
 ## Комбинация фильтров
 
-```python
-# И (AND)
-F.message.body.text & F.message.chat.type == ChatType.DIALOG
+!!! warning "Приоритет операторов"
+    Операторы `&` и `|` имеют **более высокий приоритет**, чем `==`.
+    Без скобок выражение `F.x == "a" | F.x == "b"` парсится как
+    `F.x == ("a" | F.x) == "b"` — что является ошибкой.
+    **Всегда оборачивайте** каждое сравнение в скобки.
 
-# Или (OR)
+```python
+# И (AND) — скобки обязательны при использовании ==
+F.message.body.text & (F.message.chat.type == ChatType.DIALOG)
+
+# Или (OR) — скобки обязательны при использовании ==
+(F.callback.payload == "ru") | (F.callback.payload == "en")
+
+# Для множественных значений удобнее .in_()
+F.callback.payload.in_({"ru", "en"})
+
+# Проверка на истинность (без ==) — скобки не нужны
 F.message.body.text | F.message.attachments
 
 # Отрицание (NOT)
 ~F.message.body.text
 
-# Несколько фильтров в декораторе
+# Несколько фильтров в декораторе (все объединяются через AND)
 @dp.message_created(F.message.body.text, Command('start'), Form.name)
 async def handler(event: MessageCreated):
     ...
