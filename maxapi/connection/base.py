@@ -54,12 +54,13 @@ class NamedBytesIO(BytesIO):
     """
     BytesIO с поддержкой атрибута .name для единообразия с файловыми объектами.
     """
+
     __slots__ = ("name",)
     name: str | None
 
-    def __init__(self, buffer: bytes = b"",
-                 *,
-                 name: str | None = None) -> None:
+    def __init__(
+        self, buffer: bytes = b"", *, name: str | None = None
+    ) -> None:
         super().__init__(buffer)
         self.name = name  # Соответствует протоколу typing.BinaryIO
 
@@ -118,7 +119,6 @@ class BaseConnection(BotMixin):
         self.after_input_media_delay: float = self.AFTER_MEDIA_INPUT_DELAY
         self.api_url = self.API_URL
 
-
     def set_api_url(self, url: str) -> None:
         """
         Установка API URL для запросов
@@ -128,7 +128,6 @@ class BaseConnection(BotMixin):
         """
 
         self.api_url = url
-
 
     async def request(
         self,
@@ -230,7 +229,6 @@ class BaseConnection(BotMixin):
 
         return bind_bot(model, bot)
 
-
     async def upload_file(self, url: str, path: str, type: UploadType) -> str:
         """
         Загружает файл на сервер.
@@ -270,7 +268,6 @@ class BaseConnection(BotMixin):
             ) as temp_session:
                 response = await temp_session.post(url=url, data=form)
                 return await response.text()
-
 
     async def upload_file_buffer(
         self, filename: str, url: str, buffer: bytes, type: UploadType
@@ -323,7 +320,6 @@ class BaseConnection(BotMixin):
                 response = await temp_session.post(url=url, data=form)
                 return await response.text()
 
-
     async def _fetch_response(self, url: str) -> ClientResponse:
         bot = self._ensure_bot()
         session = await bot.ensure_session()
@@ -355,10 +351,10 @@ class BaseConnection(BotMixin):
         if not response.ok:
             await response.release()
             raise DownloadFileError(
-                f"Ошибка при скачивании: HTTP {response.status}")
+                f"Ошибка при скачивании: HTTP {response.status}"
+            )
 
         return response
-
 
     async def _fetch_content_stream(
         self,
@@ -385,14 +381,14 @@ class BaseConnection(BotMixin):
         if not response.ok:
             await response.release()
             raise DownloadFileError(
-                f"Ошибка при скачивании: HTTP {response.status}")
+                f"Ошибка при скачивании: HTTP {response.status}"
+            )
 
         try:
             async for chunk in response.content.iter_chunked(chunk_size):
                 yield chunk
         finally:
             await response.release()
-
 
     @staticmethod
     def _capture_filename(response: ClientResponse) -> str:
@@ -412,7 +408,8 @@ class BaseConnection(BotMixin):
         datetime_str = datetime.now().strftime("%y%m%d_%H%M%S")
         if not isinstance(response, ClientResponse):
             raise TypeError(
-                f"Ожидается ClientResponse, получен {type(response)}")
+                f"Ожидается ClientResponse, получен {type(response)}"
+            )
         try:
             cd = response.content_disposition
             if cd and cd.filename:
@@ -450,15 +447,15 @@ class BaseConnection(BotMixin):
 
         except (AttributeError, TypeError, ValueError) as e:
             logger_bot.warning(
-                "Не удалось определить имя файла из заголовков: %s", e)
+                "Не удалось определить имя файла из заголовков: %s", e
+            )
             if not filename:
-                filename = f"{datetime_str}.bin" # fallback
+                filename = f"{datetime_str}.bin"  # fallback
 
         return filename
 
-
     @staticmethod
-    def _check_file_exists(path: Path|str) -> Path:
+    def _check_file_exists(path: Path | str) -> Path:
         """
         Проверяет, если файл существует, то возвращает
         новый свободный путь для сохранения Windows style:
@@ -480,7 +477,7 @@ class BaseConnection(BotMixin):
         dest = path.parent
 
         if path.exists():
-            max_num = 1 # Один уже существует
+            max_num = 1  # Один уже существует
             fname, ext = path.stem, path.suffix
             pattern = re.compile(
                 rf"^{re.escape(fname)}\((\d+)\){re.escape(ext)}$"
@@ -494,10 +491,9 @@ class BaseConnection(BotMixin):
                     if num > max_num:
                         max_num = num
 
-            path = dest / f"{fname}({max_num+1}){ext}"
+            path = dest / f"{fname}({max_num + 1}){ext}"
 
         return path
-
 
     async def download_file(
         self,
@@ -542,8 +538,7 @@ class BaseConnection(BotMixin):
         try:
             async with aiofiles.open(final_path, "wb") as f:
                 async for chunk in self._fetch_content_stream(
-                    response,
-                    chunk_size=chunk_size
+                    response, chunk_size=chunk_size
                 ):
                     await f.write(chunk)
         except Exception:
@@ -553,7 +548,6 @@ class BaseConnection(BotMixin):
             raise
 
         return final_path
-
 
     async def download_bytes_io(
         self,
@@ -594,7 +588,6 @@ class BaseConnection(BotMixin):
         bio.seek(0)  # обязательно переходим в начало
 
         return bio
-
 
     async def download_bytes(
         self,

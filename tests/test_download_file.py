@@ -91,10 +91,7 @@ def mock_session(bot):
 
 
 def freeze_datetime(
-    target_module: str,
-    fixed_dt: datetime | str,
-    *,
-    attr: str = "datetime"
+    target_module: str, fixed_dt: datetime | str, *, attr: str = "datetime"
 ) -> Callable:
     """
     Декоратор для заморозки datetime.now() в указанном модуле.
@@ -158,7 +155,6 @@ class TestDownloadFile:
         assert result == tmp_dir / "file.pdf"
         assert result.read_bytes() == b"".join(chunks)
 
-
     async def test_download_file_success(self, bot, tmp_dir, mock_session):
         """Скачивание файла с корректным Content-Disposition."""
         chunks = [b"chunk1", b"chunk2", b"chunk3"]
@@ -206,7 +202,7 @@ class TestDownloadFile:
         url = "https://example.com/"
         mock_response = _make_mock_response(
             url=url,
-            content_type=None, # Без типа # type: ignore
+            content_type=None,  # Без типа # type: ignore
             chunks=[b"some_binary_data"],
         )
         mock_session.request = AsyncMock(return_value=mock_response)
@@ -219,11 +215,8 @@ class TestDownloadFile:
         assert result.name == "260416_103050.bin"
         assert result.parent == tmp_dir
 
-
     @freeze_datetime("maxapi.connection.base", "2026-04-16 10:30:50")
-    async def test_download_photo(
-        self, bot, tmp_dir, mock_session
-    ):
+    async def test_download_photo(self, bot, tmp_dir, mock_session):
         """Скачивание вложения-фото по ссылке выда https://i.oneme.ru/i?r=photo_token"""
         url = "https://i.oneme.ru/i?r=photo_token"
         mock_response = _make_mock_response(
@@ -270,7 +263,7 @@ class TestDownloadFile:
 
         with pytest.raises(DownloadFileError, match="HTTP 404"):
             await bot.download_file(
-                url = "https://example.com/missing",
+                url="https://example.com/missing",
                 destination=tmp_dir,
             )
 
@@ -285,10 +278,11 @@ class TestDownloadFile:
         )
         bot.default_connection.max_retries = 0
 
-        with pytest.raises(DownloadFileError,
-                           match="Network error: connection refused"):
+        with pytest.raises(
+            DownloadFileError, match="Network error: connection refused"
+        ):
             await bot.download_file(
-                url = "https://example.com/file",
+                url="https://example.com/file",
                 destination=tmp_dir,
             )
 
@@ -342,7 +336,9 @@ class TestDownloadFile:
         session = await bot.ensure_session()
         assert session is mock_session
 
+
 # tests/test_download_file.py
+
 
 class TestDownloadFileAsBytes:
     """
@@ -396,7 +392,6 @@ class TestDownloadFileAsBytes:
         assert result.startswith(b"\x89PNG")
         assert len(result) > 0
 
-
     async def test_download_bytes_http_error(self, bot, mock_session):
         """DownloadFileError при HTTP 404."""
         mock_response = _make_mock_response(ok=False, status=404)
@@ -406,9 +401,7 @@ class TestDownloadFileAsBytes:
         with pytest.raises(DownloadFileError, match="HTTP 404"):
             await bot.download_bytes(url=url)
 
-    async def test_download_bytes_connection_error(
-        self, bot, mock_session
-    ):
+    async def test_download_bytes_connection_error(self, bot, mock_session):
         """DownloadFileError при ошибке соединения."""
         from aiohttp import ClientConnectionError
 
@@ -421,9 +414,7 @@ class TestDownloadFileAsBytes:
         with pytest.raises(DownloadFileError, match="Network error: timeout"):
             await bot.download_bytes(url=url)
 
-    async def test_download_bytes_retry_on_503(
-        self, bot, mock_session
-    ):
+    async def test_download_bytes_retry_on_503(self, bot, mock_session):
         """Retry при 503, затем успех."""
         retry_response = _make_mock_response(ok=False, status=503)
         retry_response.read = AsyncMock()
@@ -461,7 +452,8 @@ class TestDownloadFileAsBytes:
     async def test_download_bytes_encoded_filename(self, bot, mock_session):
         """Скачивание пустого файла."""
         chunks = [b"chunk1", b"chunk2", b"chunk3"]
-        url = ("https://fd.oneme.ru/getfile?sig=Dm00IcsNNg1fIU1X4CB_R0777"
+        url = (
+            "https://fd.oneme.ru/getfile?sig=Dm00IcsNNg1fIU1X4CB_R0777"
             "_saII2AAtcffL6lmnT3TTiVuBBB95jo-4qfyGElLLh1w4ZdD4QpwliVoW77Kg"
             "&expires=1779148580110&clientType=3&id=3100094539&userId=111973341"
         )
@@ -469,7 +461,7 @@ class TestDownloadFileAsBytes:
             url=url,
             cd_filename="%D0%94%D0%BE%D0%BA%D1%83%D0%BC%D0%B5%D0%BD%D1%82.pdf",
             content_type="application/octet-stream",
-            chunks=chunks
+            chunks=chunks,
         )
         mock_session.request = AsyncMock(return_value=mock_response)
 
@@ -483,7 +475,7 @@ class TestDownloadFileAsBytes:
         download_file и download_bytes возвращают одинаковые данные
         """
         content = b"test content for comparison"
-        chunks = [content[i:i+10] for i in range(0, len(content), 10)]
+        chunks = [content[i : i + 10] for i in range(0, len(content), 10)]
         url = "https://example.com/file"
 
         # Для download_file
@@ -505,10 +497,7 @@ class TestDownloadFileAsBytes:
         )
 
         # Скачиваем на диск
-        path = await bot.download_file(
-            url=url,
-            destination=tmp_dir
-        )
+        path = await bot.download_file(url=url, destination=tmp_dir)
         disk_content = path.read_bytes()
 
         # Скачиваем в память
@@ -527,10 +516,9 @@ class TestDownloadFileAsBytes:
         # Пытаемся скачать сразу 5 файлов
         results: list[Path] = []
         for i in range(5):
-            url = f"https://i.oneme.ru/i?r=file{i+1}"
+            url = f"https://i.oneme.ru/i?r=file{i + 1}"
             mock_response = _make_mock_response(
-                url=url,
-                chunks=[f"new {i+1}".encode()]
+                url=url, chunks=[f"new {i + 1}".encode()]
             )
             mock_session.request = AsyncMock(return_value=mock_response)
             results.append(
@@ -541,16 +529,15 @@ class TestDownloadFileAsBytes:
             )
 
         for i, result in enumerate(results):
-            if i == 0: # Первый файл не проверяем
+            if i == 0:  # Первый файл не проверяем
                 # Первый файл должен быть без суффикса _N
                 # Только image_date_time
                 assert "(" not in result.stem
                 assert ")" not in result.stem
             else:
                 # Ожидаем, что файлы сохранится с суффиксами
-                assert result.stem.endswith(f"({i+1})")
-                assert result.read_bytes() == f"new {i+1}".encode()
-
+                assert result.stem.endswith(f"({i + 1})")
+                assert result.read_bytes() == f"new {i + 1}".encode()
 
     async def test_download_file_photo_correct_extension(
         self, bot, tmp_dir, mock_session
@@ -574,7 +561,6 @@ class TestDownloadFileAsBytes:
         assert result.suffix == ".png"  # не .webp!
         assert result.name.startswith("image_")
 
-
     async def test_download_file_retryable_server_error(
         self, bot, mock_session
     ):
@@ -585,10 +571,9 @@ class TestDownloadFileAsBytes:
         mock_session.request = AsyncMock(return_value=mock_response)
 
         with pytest.raises(DownloadFileError) as exc_info:
-            await bot.download_bytes(url = "https://i.oneme.ru/i?r=test")
+            await bot.download_bytes(url="https://i.oneme.ru/i?r=test")
 
         assert "HTTP 502" in str(exc_info.value)
-
 
     @freeze_datetime("maxapi.connection.base", "2026-04-16 10:30:50")
     async def test_capture_filename_no_extension_fallback(self):
@@ -597,13 +582,11 @@ class TestDownloadFileAsBytes:
 
         # 1. Случай с фото
         url = "https://i.oneme.ru/"  # Нет имени файла в URL
-        mock_response = _make_mock_response(
-            url = url, content_type=None) # type: ignore # Нет заголовка и content_type
+        mock_response = _make_mock_response(url=url, content_type=None)  # type: ignore # Нет заголовка и content_type
 
         filename = BaseConnection._capture_filename(mock_response)
 
         assert filename == "image_260416_103050.webp"
-
 
     def test_capture_filename_wrong_response(self):
         """Покрытие: except (TypeError, AttributeError) при доступе к полям"""
@@ -613,8 +596,7 @@ class TestDownloadFileAsBytes:
             pass
 
         with pytest.raises(TypeError, match="Ожидается ClientResponse"):
-            BaseConnection._capture_filename(BrokenResponse()) # type: ignore
-
+            BaseConnection._capture_filename(BrokenResponse())  # type: ignore
 
     @freeze_datetime("maxapi.connection.base", "2026-04-16 10:30:50")
     def test_capture_filename_minimal_object(self):
@@ -623,12 +605,11 @@ class TestDownloadFileAsBytes:
 
         # Нет ни content_disposition, ни url, ни content_type
         mock_response = _make_mock_response(
-            content_type=None, # type: ignore
+            content_type=None,  # type: ignore
         )
 
         filename = BaseConnection._capture_filename(mock_response)
         assert filename == "260416_103050.bin"  # fallback-результат
-
 
 
 class FailingAsyncStream:
@@ -636,14 +617,15 @@ class FailingAsyncStream:
     Имитирует async generator, который падает на первой итерации.
     Именно это вызывает срабатывание блока except Exception в download_file.
     """
+
     def __aiter__(self):
         return self
+
     async def __anext__(self):
         raise RuntimeError("Ошибка сети при чтении потока")
 
 
 class TestInternalUncoveredParts:
-
     async def test_fetch_content_stream_closed_response(self, bot):
         """Проверка ветки: response.closed == True"""
         mock_response = _make_mock_response(
@@ -651,8 +633,9 @@ class TestInternalUncoveredParts:
             closed=True,
         )
 
-        with pytest.raises(DownloadFileError,
-                           match="response соединение закрыто"):
+        with pytest.raises(
+            DownloadFileError, match="response соединение закрыто"
+        ):
             async for _ in bot._fetch_content_stream(mock_response):
                 pass
 
@@ -663,16 +646,16 @@ class TestInternalUncoveredParts:
         mock_response = _make_mock_response(
             ok=False,
             closed=False,
-            status=403, # любой не-2xx статус
+            status=403,  # любой не-2xx статус
         )
 
-        with pytest.raises(DownloadFileError,
-                           match="Ошибка при скачивании: HTTP 403"):
+        with pytest.raises(
+            DownloadFileError, match="Ошибка при скачивании: HTTP 403"
+        ):
             async for _ in bot._fetch_content_stream(mock_response):
                 pass
 
         mock_response.release.assert_awaited_once()
-
 
     async def test_download_file_cleanup_partial_file_on_error(self, bot):
         """Проверка download_file ветки:
@@ -695,7 +678,8 @@ class TestInternalUncoveredParts:
 
         # 3. Ломаем поток именно на этапе async for chunk in ...
         bot._fetch_content_stream = MagicMock(
-            return_value=FailingAsyncStream())
+            return_value=FailingAsyncStream()
+        )
 
         # 4. Мокаем aiofiles.open как контекстный менеджер
         mock_file = AsyncMock()
@@ -705,11 +689,12 @@ class TestInternalUncoveredParts:
 
         # Важно: путь в patch должен совпадать с тем,
         # как aiofiles импортирован в вашем модуле
-        with patch("aiofiles.open", return_value=mock_cm), \
-        pytest.raises(RuntimeError, match="Ошибка сети при чтении потока"):
+        with (
+            patch("aiofiles.open", return_value=mock_cm),
+            pytest.raises(RuntimeError, match="Ошибка сети при чтении потока"),
+        ):
             await bot.download_file("http://example.com/file", "/tmp/dl")
 
         # ✅ 5. Проверяем покрытие целевой ветки
         mock_final_path.exists.assert_called_once()
         mock_final_path.unlink.assert_called_once()
-
