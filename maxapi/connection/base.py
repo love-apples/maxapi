@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import mimetypes
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import aiofiles
 import aiofiles.os
@@ -17,9 +17,9 @@ from ..exceptions.download_file import DownloadFileError
 from ..exceptions.max import InvalidToken, MaxApiError, MaxConnection
 from ..loggers import logger_bot
 from ..types.bot_mixin import BotMixin
+from ..utils.runtime import bind_bot
 
 if TYPE_CHECKING:
-    from backoff._typing import Details
     from pydantic import BaseModel
 
     from ..bot import Bot
@@ -38,11 +38,11 @@ class _RetryableServerError(Exception):
         super().__init__(f"Server error {status}")
 
 
-def _on_backoff(details: Details) -> None:
+def _on_backoff(details: dict[str, Any]) -> None:
     """Логирование при retry."""
     wait = details["wait"]
     tries = details["tries"]
-    exc = cast(dict[str, Any], details).get("exception")
+    exc = details.get("exception")
     if isinstance(exc, _RetryableServerError):
         logger_bot.warning(
             "Серверная ошибка %d, попытка %d, жду %.1fс",
@@ -134,7 +134,7 @@ class BaseConnection(BotMixin):
         """
 
         bot = self._ensure_bot()
-        session = await bot.ensure_session()
+        await bot.ensure_session()
 
         conn = bot.default_connection
         retry_statuses = conn.retry_on_statuses
@@ -149,14 +149,14 @@ class BaseConnection(BotMixin):
             on_backoff=_on_backoff,
         )
         async def _do_request() -> Any:
-            r = await session.request(
+            r = await bot.session.request(
                 method=method.value,
                 url=url,
                 **kwargs,
             )
 
             if r.status == 401:
-                await session.close()
+                await bot.session.close()
                 raise InvalidToken("Неверный токен!")
 
             if r.status in retry_statuses:
@@ -196,15 +196,7 @@ class BaseConnection(BotMixin):
 
         model = model(**raw)  # type: ignore
 
-        if hasattr(model, "message"):
-            attr = model.message
-            if hasattr(attr, "bot"):
-                attr.bot = bot
-
-        if hasattr(model, "bot"):
-            model.bot = bot  # type: ignore
-
-        return model
+        return bind_bot(model, bot)
 
     async def upload_file(self, url: str, path: str, type: UploadType) -> str:
         """
