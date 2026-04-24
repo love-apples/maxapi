@@ -531,9 +531,6 @@ def _setup_for_handle(dispatcher: Dispatcher, bot: Bot) -> None:
     """Настраивает dispatcher для тестирования полного dispatch-пайплайна."""
     dispatcher.routers.append(dispatcher)
     dispatcher._prepare_handlers(bot)
-    dispatcher._global_mw_chain = dispatcher.build_middleware_chain(
-        dispatcher.middlewares, dispatcher._process_event
-    )
 
 
 # ===========================================================================
@@ -620,6 +617,26 @@ class TestHandlePipeline:
         dispatcher.middleware(FailingMiddleware())
         _setup_for_handle(dispatcher, bot)
         await dispatcher.handle(fixture_message_created)  # не должно всплывать
+
+    async def test_dispatcher_middleware_skipped_without_matching_handler(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """Middleware диспетчера не вызывается без подходящего handler."""
+        from maxapi.filters.middleware import BaseMiddleware
+
+        calls: list = []
+
+        class DispatcherMW(BaseMiddleware):
+            async def __call__(self, handler, event, data):
+                calls.append("mw")
+                return await handler(event, data)
+
+        dispatcher.middleware(DispatcherMW())
+        _setup_for_handle(dispatcher, bot)
+
+        await dispatcher.handle(fixture_message_created)
+
+        assert calls == []
 
 
 # ===========================================================================
@@ -1034,6 +1051,27 @@ class TestCallHandlerWithKwargs:
 
         assert received.get("answer") == 42
 
+    async def test_handler_receives_unannotated_kwargs_from_signature(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """kwargs фильтруются по сигнатуре, а не по аннотациям."""
+        from maxapi.filters.filter import BaseFilter
+
+        received: dict = {}
+
+        class DataFilter(BaseFilter):
+            async def __call__(self, event):
+                return {"answer": 42, "unused": "drop"}
+
+        @dispatcher.message_created(DataFilter())
+        async def _h(event, answer):
+            received["answer"] = answer
+
+        _setup_for_handle(dispatcher, bot)
+        await dispatcher.handle(fixture_message_created)
+
+        assert received.get("answer") == 42
+
 
 # ===========================================================================
 # _iter_routers — вложенные роутеры и защита от циклов
@@ -1192,6 +1230,35 @@ class TestRouterMiddlewareChain:
 
         assert "mw" in calls
         assert "handler" in calls
+
+    async def test_router_middleware_skipped_when_handler_does_not_match(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        from maxapi.filters.middleware import BaseMiddleware
+
+        calls: list = []
+
+        class RequiredState:
+            pass
+
+        class RouterMW(BaseMiddleware):
+            async def __call__(self, handler, event, data):
+                calls.append("mw")
+                return await handler(event, data)
+
+        router = Router(router_id="mw_router")
+        router.middlewares.append(RouterMW())
+
+        @router.message_created(states=RequiredState())
+        async def _h(event: MessageCreated):
+            calls.append("handler")
+
+        dispatcher.include_routers(router)
+        _setup_for_handle(dispatcher, bot)
+
+        await dispatcher.handle(fixture_message_created)
+
+        assert calls == []
 
 
 # ===========================================================================

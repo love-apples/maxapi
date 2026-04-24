@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import inspect
 import warnings
 from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
 from collections import OrderedDict
@@ -38,6 +39,32 @@ if TYPE_CHECKING:
 CONNECTION_RETRY_DELAY = 30
 GET_UPDATES_RETRY_DELAY = 5
 CONTEXTS_MAX_SIZE = 10_000
+
+
+def _filter_kwargs_by_signature(
+    func: Callable[..., Any], data: dict[str, Any]
+) -> dict[str, Any]:
+    """Фильтрует kwargs на основе сигнатуры обработчика."""
+
+    try:
+        params = inspect.signature(func).parameters.values()
+    except (TypeError, ValueError):
+        func_args = getattr(func, "__annotations__", {}).keys()
+        return {k: v for k, v in data.items() if k in func_args}
+
+    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params):
+        return data.copy()
+
+    allowed_names = {
+        p.name
+        for p in params
+        if p.kind
+        in (
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.KEYWORD_ONLY,
+        )
+    }
+    return {k: v for k, v in data.items() if k in allowed_names}
 
 
 class Dispatcher(BotMixin):
@@ -257,10 +284,6 @@ class Dispatcher(BotMixin):
             self.routers.append(self)
         self._prepare_handlers(bot)
 
-        self._global_mw_chain = self.build_middleware_chain(
-            self.middlewares, self._process_event
-        )
-
         if self.on_started_func:
             await self.on_started_func()
 
@@ -281,9 +304,6 @@ class Dispatcher(BotMixin):
                 handlers_count += 1
                 extract_commands(handler, bot)
 
-                handler.func_args = frozenset(
-                    handler.func_event.__annotations__,
-                )
                 handler.mw_chain = self.build_middleware_chain(
                     handler.middlewares,
                     functools.partial(self.call_handler, handler),
@@ -455,11 +475,7 @@ class Dispatcher(BotMixin):
             if router_key in path:
                 continue
 
-            accumulated_middlewares: list[BaseMiddleware]
-            if router is self:
-                accumulated_middlewares = middlewares
-            else:
-                accumulated_middlewares = middlewares + router.middlewares
+            accumulated_middlewares = middlewares + router.middlewares
 
             accumulated_filters = filters + router.filters
             accumulated_base_filters = base_filters + router.base_filters
@@ -663,11 +679,10 @@ class Dispatcher(BotMixin):
         Raises:
             HandlerException: При ошибке выполнения обработчика.
         """
-        func_args = (
-            handler.func_args
-            or getattr(handler.func_event, "__annotations__", {}).keys()
+        kwargs_filtered = _filter_kwargs_by_signature(
+            handler.func_event,
+            data,
         )
-        kwargs_filtered = {k: v for k, v in data.items() if k in func_args}
 
         handler_chain = handler.mw_chain or self.build_middleware_chain(
             handler_middlewares,
@@ -734,10 +749,11 @@ class Dispatcher(BotMixin):
             bool: True если обработчик был выполнен.
         """
         for handler in matching_handlers:
+            handler_state = await memory_context.get_state()
             handler_match_result = await self._check_handler_match(
                 handler=handler,
                 event=event,
-                current_state=current_state,
+                current_state=handler_state,
             )
             if handler_match_result is None:
                 continue
@@ -748,7 +764,7 @@ class Dispatcher(BotMixin):
                 data=data,
                 handler_middlewares=handler.middlewares,
                 memory_context=memory_context,
-                current_state=current_state,
+                current_state=handler_state,
                 router_id=router_id,
                 process_info=process_info,
             )
@@ -756,6 +772,31 @@ class Dispatcher(BotMixin):
                 "Обработано: router_id: %s | %s", router_id, process_info
             )
             return True
+        return False
+
+    async def _has_matching_handler(
+        self,
+        event: UpdateUnion,
+        matching_handlers: list[Handler],
+        memory_context: BaseContext,
+    ) -> bool:
+        """
+        Проверяет наличие подходящего обработчика до запуска middleware.
+
+        Middleware роутера не должны запускаться для события, которое
+        не проходит ни один handler этого роутера.
+        """
+        for handler in matching_handlers:
+            current_state = await memory_context.get_state()
+            if (
+                await self._check_handler_match(
+                    handler=handler,
+                    event=event,
+                    current_state=current_state,
+                )
+                is not None
+            ):
+                return True
         return False
 
     async def _invoke_router_handlers(
@@ -820,11 +861,27 @@ class Dispatcher(BotMixin):
             process_info=process_info,
         )
 
-        if router_middlewares:
-            chain = self.build_middleware_chain(router_middlewares, process_fn)
-            await chain(event_object, data)
-        else:
+        if not router_middlewares:
             await process_fn(event_object, data)
+            return data.pop("_handled", False)
+
+        chain = self.build_middleware_chain(router_middlewares, process_fn)
+        try:
+            await chain(event_object, data)
+        except HandlerException:
+            raise
+        except Exception as e:
+            mem_data = await memory_context.get_data()
+            raise MiddlewareException(
+                middleware_title=self._get_middleware_title(chain),
+                router_id=router_id,
+                process_info=process_info,
+                memory_context={
+                    "data": mem_data,
+                    "state": current_state,
+                },
+                cause=e,
+            ) from e
 
         return data.pop("_handled", False)
 
@@ -865,7 +922,6 @@ class Dispatcher(BotMixin):
             )
             if router_filter_result is None:
                 continue
-            data.update(router_filter_result)
 
             matching_handlers = self._find_matching_handlers(
                 router=router,
@@ -874,9 +930,19 @@ class Dispatcher(BotMixin):
             if not matching_handlers:
                 continue
 
+            if not await self._has_matching_handler(
+                event=event_object,
+                matching_handlers=matching_handlers,
+                memory_context=memory_context,
+            ):
+                continue
+
+            router_data = data.copy()
+            router_data.update(router_filter_result)
+
             if await self._dispatch_to_router(
                 event_object=event_object,
-                data=data,
+                data=router_data,
                 matching_handlers=matching_handlers,
                 router_middlewares=router_middlewares,
                 memory_context=memory_context,
@@ -917,14 +983,12 @@ class Dispatcher(BotMixin):
         data: dict[str, Any],
     ) -> None:
         """
-        Endpoint глобальной middleware-цепочки: диспатчит событие
-        по роутерам.
+        Диспатчит событие по роутерам.
 
         Args:
             event_object (UpdateUnion): Событие.
-            data (dict): Данные от middleware-цепочки,
-                содержащие ``_memory_context``, ``_current_state``
-                и ``_process_info``.
+            data (dict): Данные события, содержащие ``_memory_context``,
+                ``_current_state`` и ``_process_info``.
         """
         memory_context = data["_memory_context"]
         data["context"] = memory_context
@@ -967,28 +1031,7 @@ class Dispatcher(BotMixin):
                 "_process_info": process_info,
             }
 
-            global_chain = (
-                self._global_mw_chain
-                or self.build_middleware_chain(
-                    self.middlewares, self._process_event
-                )
-            )
-
-            try:
-                await global_chain(event_object, kwargs)
-            except Exception as e:
-                mem_data = await memory_context.get_data()
-
-                raise MiddlewareException(
-                    middleware_title=self._get_middleware_title(global_chain),
-                    router_id=kwargs.get("_router_id", router_id),
-                    process_info=process_info,
-                    memory_context={
-                        "data": mem_data,
-                        "state": current_state,
-                    },
-                    cause=e,
-                ) from e
+            await self._process_event(event_object, kwargs)
 
             router_id = kwargs.get("_router_id")
             is_handled = kwargs.get("_is_handled", False)
