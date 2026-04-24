@@ -39,7 +39,6 @@ class TestMessageUrlProperty:
         assert dumped["url"] == api_url
         assert "url_api" not in dumped
 
-
     def test_url_generated_for_dialog(self):
         """Для диалога без url из API — ссылка генерируется из body.mid."""
         data = {
@@ -60,7 +59,6 @@ class TestMessageUrlProperty:
         assert msg.url == "https://max.ru/c/-73455901853123/AZ2H-TzaAOc"
         assert msg.url_api is None
         assert msg.model_dump()["url"] is None
-
 
     def test_url_generated_for_group_chat(self):
         """Для группового чата без url из API — ссылка генерируется."""
@@ -99,7 +97,6 @@ class TestMessageUrlProperty:
         assert msg.url_api is None
         assert msg.model_dump()["url"] is None
 
-
     def test_url_none_when_no_body_but_url_from_api(self):
         """Если API прислал url, но нет body — возвращается url из API."""
         api_url = "https://max.ru/special_channel/AZ113QDTS3o"
@@ -123,27 +120,39 @@ class TestMessageUrlProperty:
         api_url = "https://max.ru/channel/AZ2H-TzaAOc"
 
         # Случай 1: с url из API
-        msg_with_url = Message.model_validate({
-            "url": api_url,
-            "recipient": {"chat_id": None,
-                          "user_id": None,
-                          "chat_type": "channel"},
-            "timestamp": 123,
-            "body": {"mid": "mid.ffffbd3137103a3d019d87f93cda00e7",
-                     "seq": 116398669919027431},
-        })
+        msg_with_url = Message.model_validate(
+            {
+                "url": api_url,
+                "recipient": {
+                    "chat_id": None,
+                    "user_id": None,
+                    "chat_type": "channel",
+                },
+                "timestamp": 123,
+                "body": {
+                    "mid": "mid.ffffbd3137103a3d019d87f93cda00e7",
+                    "seq": 116398669919027431,
+                },
+            }
+        )
         dumped = msg_with_url.model_dump()
         assert dumped["url"] == api_url
 
         # Случай 2: без url из API
-        msg_no_url = Message.model_validate({
-            "recipient": {"chat_id": 241387420,
-                          "user_id": None,
-                          "chat_type": "dialog"},
-            "timestamp": 123,
-            "body": {"mid": "mid.ffffbd3137103a3d019d87f93cda00e7",
-                     "seq": 116398669919027431},
-        })
+        msg_no_url = Message.model_validate(
+            {
+                "recipient": {
+                    "chat_id": 241387420,
+                    "user_id": None,
+                    "chat_type": "dialog",
+                },
+                "timestamp": 123,
+                "body": {
+                    "mid": "mid.ffffbd3137103a3d019d87f93cda00e7",
+                    "seq": 116398669919027431,
+                },
+            }
+        )
         dumped = msg_no_url.model_dump()
         assert dumped["url"] is None
 
@@ -152,12 +161,16 @@ class TestMessageUrlProperty:
         api_url = "https://max.ru/priority_test/AZ2H-TzaAOc"
         data = {
             "url": api_url,
-            "recipient": {"chat_id": 241387420,
-                          "user_id": None,
-                          "chat_type": "dialog"},
+            "recipient": {
+                "chat_id": 241387420,
+                "user_id": None,
+                "chat_type": "dialog",
+            },
             "timestamp": 123,
-            "body": {"mid": "mid.ffffbd3137103a3d019d87f93cda00e7",
-                     "seq": 116398669919027431},
+            "body": {
+                "mid": "mid.ffffbd3137103a3d019d87f93cda00e7",
+                "seq": 116398669919027431,
+            },
         }
         msg = Message.model_validate(data)
 
@@ -169,12 +182,16 @@ class TestMessageUrlProperty:
         expected_url = "https://max.ru/c/-71955698945289/AZ113QDTS3o"
 
         data = {
-            "recipient": {"chat_id": -71955698945289,
-                          "user_id": None,
-                          "chat_type": "channel"},
+            "recipient": {
+                "chat_id": -71955698945289,
+                "user_id": None,
+                "chat_type": "channel",
+            },
             "timestamp": 123,
-            "body": {"mid": "mid.ffffbe8e821ff2f7019d75dd00d34b7a",
-                     "seq": 116378757443570554},
+            "body": {
+                "mid": "mid.ffffbe8e821ff2f7019d75dd00d34b7a",
+                "seq": 116378757443570554,
+            },
         }
         msg = Message.model_validate(data)
 
@@ -182,15 +199,21 @@ class TestMessageUrlProperty:
 
     def test_model_dump_json_includes_url(self):
         """model_dump(mode='json') включает url с правильным значением."""
-        msg = Message.model_validate({
-            "url": "https://max.ru/test/AZ113QDTS3o",
-            "recipient": {"chat_id": None,
-                          "user_id": None,
-                          "chat_type": "channel"},
-            "timestamp": 123,
-            "body": {"mid": "mid.ffffbe8e821ff2f7019d75dd00d34b7a",
-                     "seq": 116378757443570554},
-        })
+        msg = Message.model_validate(
+            {
+                "url": "https://max.ru/test/AZ113QDTS3o",
+                "recipient": {
+                    "chat_id": None,
+                    "user_id": None,
+                    "chat_type": "channel",
+                },
+                "timestamp": 123,
+                "body": {
+                    "mid": "mid.ffffbe8e821ff2f7019d75dd00d34b7a",
+                    "seq": 116378757443570554,
+                },
+            }
+        )
 
         dumped_json = msg.model_dump(mode="json")
         assert dumped_json["url"] == "https://max.ru/test/AZ113QDTS3o"

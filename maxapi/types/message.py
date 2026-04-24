@@ -329,6 +329,7 @@ class Message(
                             Может быть None в случае отсутвия body.
         bot (Optional[Bot]): Объект бота, исключается из сериализации.
     """
+
     model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
     sender: User | None = None
     recipient: Recipient

@@ -8,7 +8,9 @@ def _validate_chat_id(chat_id: int) -> None:
     """Проверяет, что chat_id в диапазоне signed int64."""
     if chat_id < -(1 << 63) or chat_id >= (1 << 63):
         raise ValueError(
-            "chat_id выходит за пределы знакового 64-битного диапазона")
+            "chat_id выходит за пределы знакового 64-битного диапазона"
+        )
+
 
 def mid_to_chatid_seq(mid: str) -> tuple[int, int]:
     """
@@ -77,7 +79,8 @@ def chatid_seq_to_mid(chat_id: int, seq: int) -> str:
     _validate_chat_id(chat_id)
     if seq < 0 or seq >= (1 << 64):
         raise ValueError(
-            "seq выходит за пределы беззнакового 64-битного диапазона")
+            "seq выходит за пределы беззнакового 64-битного диапазона"
+        )
 
     # Битовая маска гарантирует корректное hex-представление для signed int
     # (отрицательные числа автоматически преобразуются в two"s complement)
@@ -103,7 +106,7 @@ def build_message_link(mid: str) -> str:
         ValueError: Если mid не соответствует формату "mid." + 32 hex-символа
     """
 
-    chat_id, seq = mid_to_chatid_seq(mid) # Валидация происходит здесь
+    chat_id, seq = mid_to_chatid_seq(mid)  # Валидация происходит здесь
 
     # 1. Преобразуем seq в 8 байт (big-endian)
     seq_bytes = seq.to_bytes(8, byteorder="big")
@@ -146,7 +149,8 @@ def link_to_chatid_seq(link: str) -> tuple[int, int]:
     path_parts = parsed.path.strip("/").split("/")
     if len(path_parts) != 3 or path_parts[0] != "c":
         raise ValueError(
-            "Неверный формат пути в ссылке. Ожидается: /c/{chat_id}/{seq_b64}")
+            "Неверный формат пути в ссылке. Ожидается: /c/{chat_id}/{seq_b64}"
+        )
 
     # Извлечение и валидация chat_id
     try:
