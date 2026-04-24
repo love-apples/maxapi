@@ -347,6 +347,15 @@ class TestInjectBot:
         _inject_bot(fixture_bot_started, bot)
         assert fixture_bot_started.bot is bot
 
+    def test_sets_bot_on_nested_user_models(
+        self, bot, fixture_message_created, fixture_message_callback
+    ):
+        _inject_bot(fixture_message_created, bot)
+        _inject_bot(fixture_message_callback, bot)
+
+        assert fixture_message_created.message.sender.bot is bot
+        assert fixture_message_callback.callback.user.bot is bot
+
     def test_sets_bot_on_attachment_with_bot_attr(
         self, bot, fixture_message_created
     ):

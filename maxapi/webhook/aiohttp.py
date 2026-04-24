@@ -20,6 +20,13 @@ class AiohttpMaxWebhook(BaseMaxWebhook):
     Обеспечивает регистрацию POST-маршрута для приёма обновлений,
     парсинг JSON и инициализацию диспетчера в хуке запуска.
 
+    При передаче ``secret`` фреймворк **автоматически** проверяет
+    заголовок ``X-Max-Bot-Api-Secret`` в каждом входящем запросе
+    (возвращает ``403 Forbidden`` при несоответствии).  Для полной
+    защиты тот же ``secret`` нужно передать в
+    :meth:`~maxapi.Bot.subscribe_webhook`, чтобы платформа MAX
+    добавляла этот заголовок к каждому запросу.
+
     Пример использования::
 
         import aiohttp.web as web
@@ -28,7 +35,7 @@ class AiohttpMaxWebhook(BaseMaxWebhook):
 
         dp = Dispatcher()
         bot = Bot(token="...")
-        webhook = AiohttpMaxWebhook(dp=dp, bot=bot)
+        webhook = AiohttpMaxWebhook(dp=dp, bot=bot, secret="my-secret")
 
         # Вариант 1 — создать готовое приложение:
         app = webhook.create_app(path="/webhook")

@@ -49,9 +49,11 @@ class BaseMaxWebhook(ABC):
         self.secret = secret
         if not self.secret:
             logger_dp.warning(
-                "Webhook запущен без secret. "
-                "Рекомендуется установить secret для защиты "
-                "от поддельных обновлений."
+                "Webhook запущен без secret. Передайте secret= в "
+                "handle_webhook() или в конструктор вебхука. Тот же "
+                "secret укажите в bot.subscribe_webhook(secret='...'). "
+                "Фреймворк автоматически проверит X-Max-Bot-Api-Secret "
+                "в каждом запросе."
             )
 
     async def _startup(self) -> None:

@@ -22,10 +22,12 @@ async def attachment_handler(event: MessageCreated):
 # Комбинация условий
 from maxapi.enums.chat_type import ChatType
 
-@dp.message_created(F.message.body.text & F.message.chat.type == ChatType.PRIVATE)
-async def private_text_handler(event: MessageCreated):
+@dp.message_created(F.message.body.text & F.message.chat.type == ChatType.DIALOG)
+async def dialog_text_handler(event: MessageCreated):
     ...
 ```
+
+Для личных сообщений используйте `ChatType.DIALOG`.
 
 ## Command фильтр
 
@@ -117,7 +119,7 @@ async def on_channel_post(event: MessageCreated):
 
 ```python
 # И (AND)
-F.message.body.text & F.message.chat.type == ChatType.PRIVATE
+F.message.body.text & F.message.chat.type == ChatType.DIALOG
 
 # Или (OR)
 F.message.body.text | F.message.attachments

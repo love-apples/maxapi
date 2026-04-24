@@ -1,12 +1,21 @@
-from pydantic import BaseModel
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from pydantic import BaseModel, PrivateAttr
 
 from ..enums.chat_permission import ChatPermission
+from ..types.bot_mixin import BotMixin
 from ..types.command import BotCommand
 from ..types.fetchable import FetchableMixin
+from ..types.shortcuts import PeerShortcutMixin
 from ..utils.formatting import UserMention
 
+if TYPE_CHECKING:
+    from ..bot import Bot
 
-class User(FetchableMixin, BaseModel):
+
+class User(FetchableMixin, BaseModel, BotMixin, PeerShortcutMixin):
     """
     Модель пользователя.
 
@@ -35,12 +44,24 @@ class User(FetchableMixin, BaseModel):
     avatar_url: str | None = None
     full_avatar_url: str | None = None
     commands: list[BotCommand] | None = None
+    _bot: Any | None = PrivateAttr(default=None)
+
+    @property
+    def bot(self) -> Bot | None:
+        return self._bot
+
+    @bot.setter
+    def bot(self, value: Bot | None) -> None:
+        self._bot = value
+
+    def _resolve_send_target(self) -> tuple[int | None, int | None]:
+        return None, self.user_id
 
     @property
     def full_name(self) -> str:
         """Полное имя пользователя"""
 
-        if self.last_name is None:
+        if not self.last_name:
             return self.first_name
 
         return f"{self.first_name} {self.last_name}"

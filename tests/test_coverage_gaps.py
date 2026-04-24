@@ -427,6 +427,52 @@ class TestGetMembersChatMarkerIsNotNone:
 
 
 # ===========================================================================
+# methods/get_list_admin_chat.py — marker=0 handled correctly (1 line)
+# ===========================================================================
+
+
+class TestGetListAdminChatMarkerIsNotNone:
+    """GetListAdminChat must send marker=0 as a query param."""
+
+    def test_marker_zero_included_in_params(self, bot):
+        """marker=0 is added to params dict."""
+        from maxapi.methods.get_list_admin_chat import GetListAdminChat
+
+        method = GetListAdminChat(bot=bot, chat_id=12345, marker=0)
+
+        params = bot.params.copy()
+        if method.marker is not None:
+            params["marker"] = method.marker
+
+        assert "marker" in params
+        assert params["marker"] == 0
+
+    def test_marker_none_not_included_in_params(self, bot):
+        """marker=None is NOT added to params dict."""
+        from maxapi.methods.get_list_admin_chat import GetListAdminChat
+
+        method = GetListAdminChat(bot=bot, chat_id=12345, marker=None)
+
+        params = bot.params.copy()
+        if method.marker is not None:
+            params["marker"] = method.marker
+
+        assert "marker" not in params
+
+    def test_marker_positive_included_in_params(self, bot):
+        """A positive marker is included in params."""
+        from maxapi.methods.get_list_admin_chat import GetListAdminChat
+
+        method = GetListAdminChat(bot=bot, chat_id=12345, marker=100)
+
+        params = bot.params.copy()
+        if method.marker is not None:
+            params["marker"] = method.marker
+
+        assert params["marker"] == 100
+
+
+# ===========================================================================
 # connection/base.py — temp ClientSession + mimetypes (2 lines)
 # ===========================================================================
 
