@@ -135,7 +135,7 @@ F.message.body.text & (F.message.chat.type == ChatType.DIALOG)
 F.callback.payload.in_({"ru", "en"})
 
 # Проверка на истинность (без ==) — скобки не нужны
-F.message.body.text | F.message.attachments
+F.message.body.text | F.message.body.attachments
 
 # Отрицание (NOT)
 ~F.message.body.text

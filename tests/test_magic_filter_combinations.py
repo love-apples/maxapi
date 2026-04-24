@@ -24,7 +24,7 @@ from maxapi.filters.filter import BaseFilter
 
 
 def _callback_event(payload: str):
-    """Объект с аттрибутом callback.payload."""
+    """Объект с атрибутом callback.payload."""
     return SimpleNamespace(callback=SimpleNamespace(payload=payload))
 
 
@@ -34,7 +34,7 @@ def _message_event(
     chat_type=None,
     attachments=None,
 ):
-    """Объект с аттрибутом message.body.text / chat.type / body.attachments."""
+    """Объект с атрибутом message.body.text / chat.type / body.attachments."""
     return SimpleNamespace(
         message=SimpleNamespace(
             body=SimpleNamespace(text=text, attachments=attachments),
@@ -205,6 +205,82 @@ class TestAndCombination:
         event = _message_event(text="привет", chat_type="group")
         f = F.message.body.text & (F.message.chat.type == ChatType.DIALOG)
         assert filter_attrs(event, f) is False
+
+
+# ---------------------------------------------------------------------------
+# AND без скобок — предупреждение + демонстрация неверного результата
+# ---------------------------------------------------------------------------
+
+
+class TestAndWithoutParenthesesBug:
+    """F.x == "a" & F.x == "b" — скобки ОТСУТСТВУЮТ.
+
+    Из-за более высокого приоритета & по сравнению с ==, выражение парсится
+    Python как: F.x == ("a" & F.x) == "b" — chained comparison без скобок.
+
+    _SafeMagicFilter перехватывает вызов __rand__ с нефильтровым аргументом
+    слева и эмитирует UserWarning в момент создания выражения.
+    """
+
+    def test_wrong_form_emits_warning(self):
+        """При создании выражения без скобок выдаётся UserWarning."""
+        with pytest.warns(UserWarning, match="приоритет"):
+            _bad = (
+                F.callback.payload
+                == "confirm" & F.callback.payload
+                == "cancel"
+            )
+
+    def test_wrong_form_warning_contains_hint(self):
+        """Текст предупреждения содержит правильную форму записи."""
+        with pytest.warns(UserWarning, match=r"\(F\.x == .+\) &"):
+            _bad = (
+                F.callback.payload
+                == "confirm" & F.callback.payload
+                == "cancel"
+            )
+
+    def test_wrong_form_does_not_match(self):
+        """Неверная форма НЕ срабатывает, даже когда значение совпадает."""
+        event = _callback_event("confirm")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            wrong_filter = (
+                F.callback.payload
+                == "confirm" & F.callback.payload
+                == "cancel"
+            )
+        assert filter_attrs(event, wrong_filter) is False
+
+
+# ---------------------------------------------------------------------------
+# Ложные срабатывания для &: BaseFilter & F.x не должен вызывать предупреждение
+# ---------------------------------------------------------------------------
+
+
+class TestNoFalsePositiveAndWithBaseFilter:
+    """BaseFilter слева от '&' не является ошибкой приоритета.
+
+    _SafeMagicFilter должен НЕ выдавать предупреждение, если слева стоит
+    BaseFilter или MagicFilter.
+    """
+
+    def test_base_filter_and_magic_filter_no_warning(self):
+        """BaseFilter() & F.x не вызывает UserWarning."""
+
+        class AlwaysTrue(BaseFilter):
+            async def __call__(self, event):
+                return True
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", UserWarning)
+            _ = AlwaysTrue() & F.callback.payload
+
+    def test_magic_filter_and_magic_filter_no_warning(self):
+        """(F.x == "a") & (F.x == "b") не вызывает UserWarning."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", UserWarning)
+            _ = (F.callback.payload == "yes") & (F.callback.payload == "no")
 
 
 # ---------------------------------------------------------------------------
