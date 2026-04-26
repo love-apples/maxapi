@@ -156,7 +156,7 @@ class RedisContext(BaseContext):
         for k, v in pairs(updates) do
             decoded[k] = v
         end
-        if ARGV[2] then
+        if ARGV[2] ~= "" then
             redis.call('set', KEYS[1], cjson.encode(decoded), 'PX', ARGV[2])
         else
             redis.call('set', KEYS[1], cjson.encode(decoded))
