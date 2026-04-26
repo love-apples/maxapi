@@ -16,9 +16,9 @@ def detect_file_type(data: bytes) -> UploadType:
     Args:
         data (bytes): Буфер с содержимым файла.
     Returns:
-            UploadType: Определенный тип файла. Если MIME-тип не удалось
-                        определить или при определении произошла ошибка,
-                        возвращается ``UploadType.FILE``.
+        UploadType: Определенный тип файла. Если MIME-тип не удалось
+                    определить или при определении произошла ошибка,
+                    возвращается ``UploadType.FILE``.
     """
     try:
         matches = puremagic.magic_string(data)
@@ -60,9 +60,9 @@ class InputMedia:
 
     Attributes:
         path (str): Путь к файлу.
-        type (UploadType | str | None): Тип файла, определенный на основе содержимого
-            (MIME-типа).
-    """  # noqa: E501
+        type (UploadType): Тип файла, определенный на основе содержимого
+            (MIME-типа) или указанный вручную.
+    """
 
     def __init__(self, path: str, type: UploadType | str | None = None):
         """
@@ -70,7 +70,7 @@ class InputMedia:
 
         Args:
             path (str): Путь к файлу.
-            type (UploadType | str |None): Тип файла. Если не указан,
+            type (UploadType | str | None): Тип файла. Если не указан,
                 определяется автоматически.
         """
 
@@ -95,7 +95,8 @@ class InputMediaBuffer:
 
     Attributes:
         buffer (bytes): Буфер с содержимым файла.
-        type (UploadType | str | None): Тип файла, определенный по содержимому.
+        type (UploadType): Тип файла, определенный на основе содержимого
+            (MIME-типа) или указанный вручную.
     """
 
     def __init__(
