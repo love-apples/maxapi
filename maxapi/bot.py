@@ -374,8 +374,7 @@ class Bot(BaseConnection):
                 user_id).
             user_id (Optional[int]): ID пользователя (если не chat_id).
             text (Optional[str]): Текст сообщения.
-            attachments (Optional[List[Attachment | InputMedia |
-                InputMediaBuffer]]): Вложения.
+            attachments: Вложения.
             link (Optional[NewMessageLink]): Данные ссылки сообщения.
             notify (Optional[bool]): Флаг уведомления.
             format (Optional[TextFormat]): Режим форматирования
@@ -453,8 +452,7 @@ class Bot(BaseConnection):
         Args:
             message_id (str): ID сообщения.
             text (Optional[str]): Новый текст.
-            attachments (Optional[List[Attachment | InputMedia |
-                InputMediaBuffer]]): Новые вложения.
+            attachments: Новые вложения.
             link (Optional[NewMessageLink]): Новая ссылка.
             notify (Optional[bool]): Флаг уведомления.
             format (Optional[TextFormat]): Режим форматирования

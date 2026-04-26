@@ -6,6 +6,8 @@
       members_order: source
       filters:
         - "!^_[^_]"
+        - "!^DownloadFileError$"
+        - "!^NotAvailableForDownload$"
         - "^InvalidToken$"
         - "^MaxConnection$"
         - "^MaxUploadFileFailed$"

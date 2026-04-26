@@ -105,11 +105,8 @@ class MessageBody(BaseModel):
         mid (str): Уникальный идентификатор сообщения.
         seq (int): Порядковый номер сообщения.
         text (str): Текст сообщения. Может быть None.
-        attachments (Optional[List[Union[AttachmentButton, Audio, Video,
-            File, Image, Sticker, Share]]]):
-            Список вложений. По умолчанию пустой.
-        markup (Optional[List[Union[MarkupLink, MarkupUserMention,
-            MarkupElement]]]): Список элементов разметки. По умолчанию пустой.
+        attachments: Список вложений. По умолчанию пустой.
+        markup: Список элементов разметки. По умолчанию пустой.
     """
 
     mid: str
@@ -369,9 +366,7 @@ class Message(
 
         Args:
             text (str, optional): Текст ответа. Может быть None.
-            attachments (List[Attachment | InputMedia | InputMediaBuffer
-                | AttachmentUpload], optional): Список вложений.
-                Может быть None.
+            attachments (list, optional): Список вложений. Может быть None.
             link (NewMessageLink, optional): Связь с другим сообщением.
                 Может быть None.
             format (TextFormat, optional): Режим форматирования текста.
@@ -418,16 +413,15 @@ class Message(
 
         Args:
             text (str, optional): Текст ответа. Может быть None.
-            attachments (List[Attachment | InputMedia | InputMediaBuffer
-                | AttachmentUpload], optional): Список вложений.
-                Может быть None.
+            attachments (list, optional): Список вложений. Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
             format (TextFormat, optional): Режим форматирования текста.
                 Может быть None.
             parse_mode (ParseMode, optional): Режим форматирования текста.
                 Может быть None.
             disable_link_preview (bool, optional): Флаг генерации превью.
-            sleep_after_input_media: Optional[bool] = True,
+            sleep_after_input_media (bool, optional): Флаг задержки
+                после отправки вложений типа InputMedia. По умолчанию True.
 
         Returns:
             Optional[SendedMessage]: Результат выполнения метода
@@ -479,16 +473,15 @@ class Message(
                 указан user_id)
             user_id (int): ID пользователя для отправки (обязателен,
                 если не указан chat_id). По умолчанию None
-            attachments (List[Attachment | InputMedia | InputMediaBuffer
-                | AttachmentUpload], optional): Список вложений.
-                Может быть None.
+            attachments (list, optional): Список вложений. Может быть None.
             notify (bool): Флаг отправки уведомления. По умолчанию True.
             format (TextFormat, optional): Режим форматирования
                 текста. Может быть None.
             parse_mode (ParseMode, optional): Режим форматирования
                 текста. Может быть None.
             disable_link_preview (bool, optional): Флаг генерации превью.
-            sleep_after_input_media: Optional[bool] = True,
+            sleep_after_input_media (bool, optional): Флаг задержки
+                после отправки вложений типа InputMedia. По умолчанию True.
 
         Returns:
             Optional[SendedMessage]: Результат выполнения метода
@@ -533,8 +526,7 @@ class Message(
 
         Args:
             text (str, optional): Новый текст сообщения. Может быть None.
-            attachments (List[Attachment | InputMedia | InputMediaBuffer |
-                AttachmentUpload], optional): Новые вложения. Может быть None.
+            attachments (list, optional): Новые вложения. Может быть None.
             link (NewMessageLink, optional): Новая связь с сообщением.
                 Может быть None.
             format (TextFormat, optional): Режим форматирования текста.
