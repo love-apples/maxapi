@@ -13,6 +13,77 @@ from maxapi.bot import Bot
 from maxapi.exceptions.download_file import DownloadFileError
 from yarl import URL
 
+REAL_URL_LINKS = {
+    "audio": {
+        "url": (
+            "http://vd624.okcdn.ru/?expires=1777235877381&srcIp=10.205.180.43"
+            "&pr=96&srcAg=UNKNOWN&ms=185.180.203.12&type=2&sig=fZchtK7v5ww"
+            "&ct=2&urls=176.112.172.22&clientType=11&appId=1248243456&"
+            "id=15115318397640&scl=2"
+        ),
+        "cd_filename": "15115318397640.mp3",
+        "content_type": "audio/mpeg",
+        "expected": "15115318397640.mp3",
+    },
+    "image": {
+        "url": (
+            "https://i.oneme.ru/i?r="
+            "BTGBPUwtwgYUeoFhO7rESmr8"  # head
+            "1n-DnwjHYFhx5_EAhKk7Np"  # unique_part
+            "BwxbPWZMl-nt3whnrS81A"  # tail
+        ),
+        "cd_filename": None,
+        "content_type": "image/webp",
+        "expected": "image_1n-DnwjHYFhx5_EAhKk7Ng.webp",
+    },
+    "image_user_avatar": {
+        "url": (
+            "https://i.oneme.ru/i?r="
+            "BUFglOvkF6bn--g5U-BFgIkJ"  # head
+            "K6mx6ae5OiOa8c66MUn6oXkSMPFAFZx509DvRP7Cxt1"  # unique_part
+            "44dcdJWD0pBaSRiPxZ0Ss"  # tail
+        ),
+        "cd_filename": None,
+        "content_type": "image/webp",
+        "expected": "image_K6mx6ae5OiOa8c66MUn6oXkSMPFAFZx509DvRP7Cxt0.webp",
+    },
+    "sticker": {
+        "url": "https://i.oneme.ru/getSmile?smileId=c1453bbb&smileType=4",
+        "cd_filename": None,
+        "content_type": "image/png",
+        "expected": "sticker_c1453bbb.png",
+    },
+    "file": {
+        "url": (
+            "https://fd.oneme.ru/getfile?sig=DmSN4pnkY6CxxF2-"
+            "VDxpsKJfw7AZy8m9qV2ynnU6IqIAS6kiJIV39Bq3D8XZ9Ut4WOhDSRfyhSCmvNhzHZDpGg"
+            "&expires=1778011573929&clientType=3&id=3118979750&userId=251973343"
+        ),
+        "cd_filename": "205046_55821186.jpeg",
+        "content_type": "application/octet-stream",
+        "expected": "205046_55821186.jpeg",
+    },
+    "video": {
+        "url": (
+            "https://vd545.okcdn.ru/?expires=1777181558195&srcIp=127.0.0.1"
+            "&pr=95&srcAg=UNKNOWN&ms=123.456.78.90&type=3&sig=mJM_Fry0PSY"
+            "&ct=0&urls=10.145.67.89&clientType=11&appId=1234567890"
+            "&id=12345678901234&scl=1"
+        ),
+        "cd_filename": "12345678901234.mp4",
+        "content_type": "video/mp4",
+        "expected": "12345678901234.mp4",
+    },
+    # "thumbnail": (
+    #     "https://pimg.mycdn.me/getImage?disableStub=true"
+    #     "&type=PREPARE&url=https%3A%2F%2Fiv.okcdn.ru%2F"
+    #     "videoPreview%3Fid%3D15054635666120%26type%3D39%26idx"
+    #     "%3D0%26scl%3D2%26tkn%3Dt-XIJ6RzOp2je0aLFQX3rkMuTkY"
+    #     "&signatureToken=xH6_Hq_03SyJsP_ZsL_UAQ"
+    # ),
+    # url link not works yet
+}
+
 
 @pytest.fixture
 def bot():
@@ -59,7 +130,7 @@ def _make_mock_response(
     mock_response.closed = closed
     mock_response.status = status
     mock_response.content_type = content_type
-    mock_response.__class__ = ClientResponse
+    mock_response.__class__ = ClientResponse  # type: ignore
 
     if cd_filename is not None:
         cd = MagicMock()
@@ -143,8 +214,12 @@ class TestDownloadFile:
     async def test_download_file_path_as_str(self, bot, tmp_dir, mock_session):
         """Скачивание файла с корректным Content-Disposition."""
         chunks = [b"chunk1", b"chunk2", b"chunk3"]
-        url = "https://example.com/file.pdf"
-        mock_response = _make_mock_response(url=url, chunks=chunks)
+        url = REAL_URL_LINKS["file"]["url"]
+        mock_response = _make_mock_response(
+            url=url,
+            chunks=chunks,
+            cd_filename=REAL_URL_LINKS["file"]["cd_filename"],
+        )
         mock_session.request = AsyncMock(return_value=mock_response)
 
         result = await bot.download_file(
@@ -152,27 +227,27 @@ class TestDownloadFile:
             destination=str(tmp_dir),
         )
 
-        assert result == tmp_dir / "file.pdf"
+        assert result == tmp_dir / REAL_URL_LINKS["file"]["cd_filename"]
         assert result.read_bytes() == b"".join(chunks)
 
     async def test_download_file_success(self, bot, tmp_dir, mock_session):
         """Скачивание файла с корректным Content-Disposition."""
         chunks = [b"chunk1", b"chunk2", b"chunk3"]
-        url = "https://example.com/file.pdf"
+
         mock_response = _make_mock_response(
-            url=url,
-            content_type="application/pdf",
-            cd_filename="document.pdf",
+            url=REAL_URL_LINKS["file"]["url"],
+            content_type=REAL_URL_LINKS["file"]["content_type"],
+            cd_filename=REAL_URL_LINKS["file"]["cd_filename"],
             chunks=chunks,
         )
         mock_session.request = AsyncMock(return_value=mock_response)
 
         result = await bot.download_file(
-            url=url,
+            url=REAL_URL_LINKS["file"]["url"],
             destination=tmp_dir,
         )
 
-        assert result == tmp_dir / "document.pdf"
+        assert result == tmp_dir / REAL_URL_LINKS["file"]["cd_filename"]
         assert result.read_bytes() == b"".join(chunks)
 
     async def test_download_file_no_content_disposition(
@@ -216,22 +291,99 @@ class TestDownloadFile:
         assert result.parent == tmp_dir
 
     @freeze_datetime("maxapi.connection.base", "2026-04-16 10:30:50")
-    async def test_download_photo(self, bot, tmp_dir, mock_session):
-        """Скачивание вложения-фото по ссылке выда https://i.oneme.ru/i?r=photo_token"""
-        url = "https://i.oneme.ru/i?r=photo_token"
+    async def test_download_image(self, bot, tmp_dir, mock_session):
+        """Скачивание вложения-изображения"""
+        url_case = REAL_URL_LINKS["image"]
         mock_response = _make_mock_response(
-            url=url,
-            content_type="image/jpeg",
+            url=url_case["url"],
+            content_type=url_case["content_type"],
             chunks=[b"imagedata"],
         )
         mock_session.request = AsyncMock(return_value=mock_response)
 
         result = await bot.download_file(
-            url=url,
+            url=url_case["url"],
             destination=tmp_dir,
         )
-        expected = "image_260416_103050.jpg"
-        assert result.name == expected
+
+        assert result.name == url_case["expected"]
+        assert result.parent == tmp_dir
+
+    async def test_download_image_user_avatar(
+        self, bot, tmp_dir, mock_session
+    ):
+        """Скачивание вложения-изображения"""
+        url_case = REAL_URL_LINKS["image_user_avatar"]
+        mock_response = _make_mock_response(
+            url=url_case["url"],
+            content_type=url_case["content_type"],
+            chunks=[b"imagedata"],
+        )
+        mock_session.request = AsyncMock(return_value=mock_response)
+
+        result = await bot.download_file(
+            url=url_case["url"],
+            destination=tmp_dir,
+        )
+
+        assert result.name == url_case["expected"]
+        assert result.parent == tmp_dir
+
+    async def test_download_video(self, bot, tmp_dir, mock_session):
+        """Скачивание вложения-видео"""
+        url_case = REAL_URL_LINKS["video"]
+        mock_response = _make_mock_response(
+            url=url_case["url"],
+            cd_filename=url_case["cd_filename"],
+            content_type=url_case["content_type"],
+            chunks=[b"mp4videodata"],
+        )
+        mock_session.request = AsyncMock(return_value=mock_response)
+
+        result = await bot.download_file(
+            url=url_case["url"],
+            destination=tmp_dir,
+        )
+
+        assert result.name == url_case["cd_filename"]
+        assert result.parent == tmp_dir
+
+    async def test_download_audio(self, bot, tmp_dir, mock_session):
+        """Скачивание вложения-аудио"""
+        url_case = REAL_URL_LINKS["audio"]
+        mock_response = _make_mock_response(
+            url=url_case["url"],
+            cd_filename=url_case["cd_filename"],
+            content_type=url_case["content_type"],
+            chunks=[b"mp3audiodata"],
+        )
+        mock_session.request = AsyncMock(return_value=mock_response)
+
+        result = await bot.download_file(
+            url=url_case["url"],
+            destination=tmp_dir,
+        )
+
+        assert result.name == url_case["cd_filename"]
+        assert result.parent == tmp_dir
+
+    async def test_download_sticker(self, bot, tmp_dir, mock_session):
+        """Скачивание вложения-аудио"""
+        url_case = REAL_URL_LINKS["sticker"]
+        mock_response = _make_mock_response(
+            url=url_case["url"],
+            cd_filename=url_case["cd_filename"],
+            content_type=url_case["content_type"],
+            chunks=[b"PNGdata"],
+        )
+        mock_session.request = AsyncMock(return_value=mock_response)
+
+        result = await bot.download_file(
+            url=url_case["url"],
+            destination=tmp_dir,
+        )
+
+        assert result.name == url_case["expected"]
         assert result.parent == tmp_dir
 
     async def test_download_file_path_traversal_protection(
@@ -391,7 +543,9 @@ class TestDownloadFile:
     async def test_download_file_destination_directory_uses_server_filename(
         self, bot, tmp_dir, mock_session
     ):
-        """Проверка, что при указании директории используется имя от сервера."""
+        """
+        Проверка, что при указании директории используется имя от сервера.
+        """
         chunks = [b"data"]
         url = "https://example.com/download"
         mock_response = _make_mock_response(
@@ -412,7 +566,7 @@ class TestDownloadFile:
         assert result == tmp_dir / "server_file.txt"
         assert result.read_bytes() == b"".join(chunks)
 
-    async def test_download_file_destination_without_extension_uses_server_name(
+    async def test_download_file_destination_without_extension(
         self, bot, tmp_dir, mock_session
     ):
         """Проверка: путь без расширения трактуется как директория."""
@@ -442,7 +596,7 @@ class TestDownloadFile:
         """Скачивание с относительным путём к файлу."""
         import os
 
-        original_cwd = os.getcwd()
+        original_cwd = Path.cwd()
         try:
             os.chdir(tmp_dir)
 
@@ -463,7 +617,7 @@ class TestDownloadFile:
             )
 
             # Приводим оба пути к абсолютным для сравнения
-            assert result.resolve() == Path(destination).resolve()
+            assert result.resolve() == Path(destination).resolve()  # noqa: ASYNC240
             assert result.read_bytes() == b"".join(chunks)
             assert result.exists()
         finally:
@@ -489,16 +643,15 @@ class TestDownloadFileAsBytes:
         GET https://fd.oneme.ru/getfile?sig=...&expires=...
         """
         chunks = [b"chunk1", b"chunk2", b"chunk3"]
-        url = "https://fd.oneme.ru/getfile?sig=test&expires=123"
         mock_response = _make_mock_response(
-            url=url,
-            content_type="application/octet-stream",
-            cd_filename="document.pdf",
+            url=REAL_URL_LINKS["file"]["url"],
+            content_type=REAL_URL_LINKS["file"]["content_type"],
+            cd_filename=REAL_URL_LINKS["file"]["cd_filename"],
             chunks=chunks,
         )
         mock_session.request = AsyncMock(return_value=mock_response)
 
-        result = await bot.download_bytes(url=url)
+        result = await bot.download_bytes(url=REAL_URL_LINKS["file"]["url"])
 
         assert result == b"chunk1chunk2chunk3"
         mock_response.release.assert_called_once()
@@ -509,15 +662,15 @@ class TestDownloadFileAsBytes:
         """
         # Эмулируем PNG-изображение (минимальный валидный заголовок)
         png_header = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
-        url = "https://i.oneme.ru/i?r=BTGBPUwtwgYUeoFhO7rESmr81n-DnwjHYFhx5_EAhKk..."
+
         mock_response = _make_mock_response(
-            url=url,
-            content_type="image/png",
+            url=REAL_URL_LINKS["sticker"]["url"],
+            content_type=REAL_URL_LINKS["sticker"]["content_type"],
             chunks=[png_header],
         )
         mock_session.request = AsyncMock(return_value=mock_response)
 
-        result = await bot.download_bytes(url=url)
+        result = await bot.download_bytes(url=REAL_URL_LINKS["sticker"]["url"])
 
         assert result.startswith(b"\x89PNG")
         assert len(result) > 0
@@ -598,7 +751,7 @@ class TestDownloadFileAsBytes:
         result = await bot.download_bytes(url=url)
         assert result == b"".join(chunks)
 
-    async def test_download_file_vs_as_bytes_same_content(
+    async def test_download_file_vs_bytes_same_content(
         self, bot, tmp_dir, mock_session
     ):
         """
@@ -669,27 +822,26 @@ class TestDownloadFileAsBytes:
                 assert result.stem.endswith(f"({i + 1})")
                 assert result.read_bytes() == f"new {i + 1}".encode()
 
-    async def test_download_file_photo_correct_extension(
+    async def test_download_file_image_correct_extension(
         self, bot, tmp_dir, mock_session
     ):
         """
         Для i.oneme.ru расширение определяется по Content-Type, а не .webp
         """
-        url = "https://i.oneme.ru/i?r=test"
         mock_response = _make_mock_response(
-            url=url,
-            content_type="image/png",
+            url=REAL_URL_LINKS["sticker"]["url"],
+            content_type=REAL_URL_LINKS["sticker"]["content_type"],
             chunks=[b"\x89PNG\r\n\x1a\n"],
         )
         mock_session.request = AsyncMock(return_value=mock_response)
 
         result = await bot.download_file(
-            url=url,
+            url=REAL_URL_LINKS["sticker"]["url"],
             destination=tmp_dir,
         )
 
         assert result.suffix == ".png"  # не .webp!
-        assert result.name.startswith("image_")
+        assert result.name.startswith("sticker_")
 
     async def test_download_file_retryable_server_error(
         self, bot, mock_session
@@ -706,39 +858,34 @@ class TestDownloadFileAsBytes:
         assert "HTTP 502" in str(exc_info.value)
 
     @freeze_datetime("maxapi.connection.base", "2026-04-16 10:30:50")
-    async def test_capture_filename_no_extension_fallback(self):
-        """Покрытие: is_photo=True, ext='', fallback на .webp"""
-        from maxapi.connection.base import BaseConnection
-
-        # 1. Случай с фото
+    async def test_capture_filename_no_extension_fallback(self, bot):
+        """Покрытие: is_image=True, ext='', fallback на .webp"""
+        # 1. Случай с изображением
         url = "https://i.oneme.ru/"  # Нет имени файла в URL
         mock_response = _make_mock_response(url=url, content_type=None)  # type: ignore # Нет заголовка и content_type
 
-        filename = BaseConnection._capture_filename(mock_response)
+        filename = bot._capture_filename(mock_response)
 
-        assert filename == "image_260416_103050.webp"
+        assert filename == "260416_103050.bin"
 
-    def test_capture_filename_wrong_response(self):
+    def test_capture_filename_wrong_response(self, bot):
         """Покрытие: except (TypeError, AttributeError) при доступе к полям"""
-        from maxapi.connection.base import BaseConnection
 
         class BrokenResponse:
             pass
 
         with pytest.raises(TypeError, match="Ожидается ClientResponse"):
-            BaseConnection._capture_filename(BrokenResponse())  # type: ignore
+            bot._capture_filename(BrokenResponse())  # type: ignore
 
     @freeze_datetime("maxapi.connection.base", "2026-04-16 10:30:50")
-    def test_capture_filename_minimal_object(self):
+    def test_capture_filename_minimal_object(self, bot):
         """Покрытие: except (TypeError, AttributeError) при доступе к полям"""
-        from maxapi.connection.base import BaseConnection
-
         # Нет ни content_disposition, ни url, ни content_type
         mock_response = _make_mock_response(
             content_type=None,  # type: ignore
         )
 
-        filename = BaseConnection._capture_filename(mock_response)
+        filename = bot._capture_filename(mock_response)
         assert filename == "260416_103050.bin"  # fallback-результат
 
 
@@ -828,3 +975,58 @@ class TestInternalUncoveredParts:
         # ✅ 5. Проверяем покрытие целевой ветки
         mock_final_path.exists.assert_called_once()
         mock_final_path.unlink.assert_called_once()
+
+    @freeze_datetime("maxapi.connection.base", "2026-04-16 10:30:50")
+    async def test_download_image_broken_image_id(self, bot, mock_session):
+        """
+        Проверяем определение имени файла изображения в случае невозможности
+        выделить уникальную часть токена изображения. Блок:
+        def _get_image_id(r: str):
+            ...
+            try:
+                data = base64.b64decode(r)
+        """
+        url_case = REAL_URL_LINKS["image"]
+        mock_response = _make_mock_response(
+            url=url_case["url"][:-30],  # отрезаем данные
+            content_type=url_case["content_type"],
+            chunks=[b"imagedata"],
+        )
+        mock_session.request = AsyncMock(return_value=mock_response)
+
+        result = await bot.download_bytes_io(url=url_case["url"])
+
+        assert result.name != url_case["expected"]
+        assert result.name == "image_260416_103050.webp"
+
+        """
+        Блок:
+        def _get_image_id(r: str):
+            ...
+            if len(data) < 50:
+                return None
+        """
+        mock_response.url = URL(url_case["url"][:-31])  # отрезаем данные
+        mock_response.closed = False
+        # mock_session.request = AsyncMock(return_value=mock_response)
+
+        result = await bot.download_bytes_io(url=url_case["url"])
+
+        assert result.name != url_case["expected"]
+        assert result.name == "image_260416_103050.webp"
+
+    @freeze_datetime("maxapi.connection.base", "2026-04-16 10:30:50")
+    async def test_download_sticker_broken_id(self, bot, mock_session):
+        """Скачивание вложения-аудио"""
+        url_case = REAL_URL_LINKS["sticker"]
+        mock_response = _make_mock_response(
+            url="https://i.oneme.ru/getSmile?brokensmileId=None&smileType=4",
+            cd_filename=url_case["cd_filename"],
+            chunks=[b"PNGdata"],
+        )
+        mock_session.request = AsyncMock(return_value=mock_response)
+
+        result = await bot.download_bytes_io(url=url_case["url"])
+
+        assert result.name != url_case["expected"]
+        assert result.name == "sticker_260416_103050.png"

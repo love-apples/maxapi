@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import mimetypes
 import re
 from datetime import datetime
@@ -395,7 +396,38 @@ class BaseConnection(BotMixin):
             await response.release()
 
     @staticmethod
-    def _capture_filename(response: ClientResponse) -> str:
+    def _get_image_id(r: str) -> str | None:
+        """
+        Извлекает уникальную часть из токена изображения ссылки вида
+        https://i.oneme.ru/i?r=image_token_base64url
+        Args:
+            r: Параметр из url
+
+        Returns:
+            str: Уникальная часть токена
+            None: В случае ошибки ил ине верного формата
+        """
+        # Добавляем паддинг и конвертируем base64url
+        r += "=" * (-len(r) % 4)
+        # Конвертируем base64url в стандартный base64
+        r = r.replace("-", "+").replace("_", "/")
+        try:
+            data = base64.b64decode(r)
+        except Exception:
+            return None
+
+        if len(data) < 50:
+            return None
+
+        # Заголовок и хвост одинаковы для ссылок одного бота
+        # head = base64.urlsafe_b64encode(data[0:16]).rstrip(b'=').decode()
+        # tail = base64.urlsafe_b64encode(data[:-16]).rstrip(b'=').decode()
+
+        # уникальный идентификатор изобраения для текущего бота
+        image_id = base64.urlsafe_b64encode(data[18:-16]).rstrip(b"=").decode()
+        return image_id
+
+    def _capture_filename(self, response: ClientResponse) -> str:
         """
         Получает имя файла из заголовков
         Используется в _fetch_content_stream
@@ -433,21 +465,31 @@ class BaseConnection(BotMixin):
             if re.search(r"%[0-9A-Fa-f]{2}", filename):
                 filename = unquote(filename, encoding="utf-8")
 
-            # Если имя не определилось
-            is_photo = response.url.host == "i.oneme.ru"
-            if not filename or filename.startswith("."):
-                if is_photo:
+            if response.url.host == "i.oneme.ru":
+                # is_sticker
+                if response.url.name == "getSmile":
+                    if not ext or ext == ".bin":
+                        ext = ".png"
+                    if smileId := response.url.query.get("smileId"):
+                        filename = f"sticker_{smileId}{ext}"
+                    else:
+                        filename = f"sticker_{datetime_str}{ext}"
+                # is_image
+                if response.url.name == "i":
                     if not ext or ext == ".bin":
                         ext = ".webp"
-                    filename = f"image_{datetime_str}{ext}"
-                else:
-                    if not ext:
-                        ext = ".bin"
-                    filename = f"{datetime_str}{ext}"
-            elif is_photo:
-                if not ext or ext == ".bin":
-                    ext = ".webp"
-                filename = f"image_{datetime_str}{ext}"
+                    if (r_value := response.url.query.get("r")) and (
+                        image_id := self._get_image_id(r_value)
+                    ):
+                        filename = f"image_{image_id}{ext}"
+                    else:
+                        filename = f"image_{datetime_str}{ext}"
+
+            # Если имя не определилось
+            if not filename or filename.startswith("."):
+                if not ext:
+                    ext = ".bin"
+                filename = f"{datetime_str}{ext}"
 
         except (AttributeError, TypeError, ValueError) as e:
             logger_bot.warning(
