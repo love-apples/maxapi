@@ -120,9 +120,7 @@ flowchart TD
   реально стартует.
 
 ```python
-import asyncio
 from maxapi import Bot, Dispatcher, Router
-from maxapi.filters import F
 from maxapi.filters.command import Command
 from maxapi.filters.filter import BaseFilter
 from maxapi.filters.middleware import BaseMiddleware
