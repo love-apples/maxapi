@@ -333,8 +333,7 @@ class TestInputMediaBufferTypeValidation:
         assert media.type == UploadType.AUDIO
         mock_detect.assert_not_called()
 
-    @pytest.mark.asyncio
-    async def test_default_upload_type_input_media_buffer(self, tmp_path):
+    def test_default_upload_type_input_media_buffer(self, tmp_path):
         """
         Если mimetype не определился (None),
         для файла должен вернуться тип UploadType.FILE
@@ -346,8 +345,7 @@ class TestInputMediaBufferTypeValidation:
 
         assert media.type == UploadType.FILE
 
-    @pytest.mark.asyncio
-    async def test_default_upload_type_input_media(self, tmp_path):
+    def test_default_upload_type_input_media(self, tmp_path):
         """
         Если mimetype не определился (None),
         для файла должен вернуться тип UploadType.FILE
