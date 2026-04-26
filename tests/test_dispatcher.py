@@ -1047,6 +1047,60 @@ class TestCallHandlerWithKwargs:
 
         assert received.get("answer") == 42
 
+    async def test_handler_receives_kwargs_from_middleware(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """Middleware кладёт ключ в ``data`` → handler получает его как
+        kwarg, несовместимые ключи безопасно отфильтровываются."""
+        from maxapi.filters.middleware import BaseMiddleware
+
+        received: dict = {}
+
+        class InjectingMiddleware(BaseMiddleware):
+            async def __call__(self, handler, event, data):
+                # известный handler kwarg + лишний ключ, который
+                # handler не принимает (должен быть отфильтрован)
+                data["user_role"] = "admin"
+                data["unrelated_key"] = "should_be_dropped"
+                return await handler(event, data)
+
+        @dispatcher.message_created()
+        async def _h(event: MessageCreated, user_role: str = "", **_kw):
+            # Явно фиксируем ВСЕ полученные kwargs —
+            # лишних быть не должно
+            received.update({"user_role": user_role, "extra": _kw})
+
+        dispatcher.register_inner_middleware(InjectingMiddleware())
+        _setup_for_handle(dispatcher, bot)
+        await dispatcher.handle(fixture_message_created)
+
+        # Middleware-инжекция доехала до handler
+        assert received["user_role"] == "admin"
+        # Лишние ключи не просочились
+        assert received["extra"] == {}
+
+    async def test_call_handler_filters_unknown_kwargs(self, dispatcher):
+        """call_handler не передаёт в func_event ключи, которых нет
+        в его аннотациях/func_args (защита от TypeError)."""
+        received: dict = {}
+
+        async def _func(event, known_arg: str):
+            received["known"] = known_arg
+
+        handler = Handler(
+            func_event=_func,
+            update_type=UpdateType.MESSAGE_CREATED,
+        )
+        handler.func_args = frozenset({"event", "known_arg"})
+
+        await dispatcher.call_handler(
+            handler=handler,
+            event_object="evt",
+            data={"known_arg": "ok", "junk": "ignored"},
+        )
+
+        assert received == {"known": "ok"}
+
 
 # ===========================================================================
 # _iter_routers — вложенные роутеры и защита от циклов

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import inspect
 import warnings
 from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
 from collections import OrderedDict
@@ -373,7 +374,7 @@ class Dispatcher(BotMixin):
                 extract_commands(handler, bot)
 
                 handler.func_args = frozenset(
-                    handler.func_event.__annotations__,
+                    inspect.get_annotations(handler.func_event),
                 )
 
                 all_inner = (
@@ -501,19 +502,34 @@ class Dispatcher(BotMixin):
         """
         Вызывает хендлер с нужными аргументами.
 
+        Перед вызовом фильтрует ``data``, оставляя только те ключи,
+        которые handler реально принимает (по ``handler.func_args`` или
+        аннотациям, полученным через :func:`inspect.get_annotations`).
+        Это безопасно для middleware, которые могут добавлять
+        произвольные ключи через ``data.update(...)``: несовместимые
+        ключи не дойдут до handler и не приведут к ``TypeError``.
+
         Args:
             handler: Handler.
             event_object: Объект события.
-            data: Уже отфильтрованные данные для хендлера.
+            data: Данные, накопленные фильтрами и middleware.
 
         Returns:
             None
         """
-
         if data:
-            await handler.func_event(event_object, **data)
-        else:
-            await handler.func_event(event_object)
+            func_args = (
+                handler.func_args
+                or inspect.get_annotations(
+                    handler.func_event,
+                ).keys()
+            )
+            kwargs = {k: v for k, v in data.items() if k in func_args}
+            if kwargs:
+                await handler.func_event(event_object, **kwargs)
+                return
+
+        await handler.func_event(event_object)
 
     @staticmethod
     async def process_base_filters(
@@ -822,19 +838,13 @@ class Dispatcher(BotMixin):
         Raises:
             HandlerException: При ошибке выполнения обработчика.
         """
-        func_args = (
-            handler.func_args
-            or getattr(handler.func_event, "__annotations__", {}).keys()
-        )
-        kwargs_filtered = {k: v for k, v in data.items() if k in func_args}
-
         handler_chain = handler.mw_chain or self.build_middleware_chain(
             handler_middlewares,
             functools.partial(self.call_handler, handler),
         )
 
         try:
-            await handler_chain(event, kwargs_filtered)
+            await handler_chain(event, data)
         except Exception as e:
             mem_data = await memory_context.get_data()
             raise HandlerException(
