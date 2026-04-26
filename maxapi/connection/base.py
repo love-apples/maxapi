@@ -262,7 +262,7 @@ class BaseConnection(BotMixin):
         try:
             matches = puremagic.magic_string(buffer[:4096])
             if matches:
-                mime_type = matches[0][1]
+                mime_type = matches[0].mime_type
                 ext = mimetypes.guess_extension(mime_type) or ""
             else:
                 mime_type = f"{type.value}/*"

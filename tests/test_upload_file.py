@@ -7,6 +7,7 @@ from aiohttp import ClientSession
 from maxapi.client.default import DefaultConnectionProperties
 from maxapi.connection.base import BaseConnection
 from maxapi.enums.upload_type import UploadType
+from maxapi.types.input_media import InputMedia, InputMediaBuffer
 
 
 def _make_connection_with_bot(*, session=None):
@@ -170,3 +171,188 @@ class TestUploadFileTempSession:
 
             mock_cs_cls.assert_not_called()
             mock_session.post.assert_awaited_once()
+
+
+def assert_invalid_type_error(exc_info, invalid_value: str) -> None:
+    """Проверяет текст ошибки для невалидного type."""
+    message = str(exc_info.value)
+    assert "Неверный тип загружаемого файла" in message
+    assert repr(invalid_value) in message
+    assert "file" in message
+    assert "image" in message
+    assert "video" in message
+    assert "audio" in message
+
+
+class TestInputMediaTypeValidation:
+    """Тесты валидации type в InputMedia."""
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            ("file", UploadType.FILE),
+            ("image", UploadType.IMAGE),
+            ("video", UploadType.VIDEO),
+            ("audio", UploadType.AUDIO),
+        ],
+    )
+    def test_accepts_valid_string_type(
+        self, tmp_path, monkeypatch, value, expected
+    ):
+        """Явно переданный строковый type валидируется без autodetect."""
+        test_file = tmp_path / "sample.bin"
+        test_file.write_bytes(b"fake-data")
+
+        mock_detect = Mock(return_value=UploadType.FILE)
+        monkeypatch.setattr(
+            "maxapi.types.input_media.detect_file_type",
+            mock_detect,
+        )
+
+        media = InputMedia(path=str(test_file), type=value)
+
+        assert media.path == str(test_file)
+        assert media.type == expected
+        mock_detect.assert_not_called()
+
+    def test_invalid_string_type_raises_value_error(self, tmp_path):
+        """Невалидный строковый type вызывает ValueError со списком значений."""  # noqa: E501
+        test_file = tmp_path / "sample.bin"
+        test_file.write_bytes(b"fake-data")
+
+        with pytest.raises(ValueError) as exc_info:  # noqa: PT011
+            InputMedia(path=str(test_file), type="document")
+
+        assert_invalid_type_error(exc_info, "document")
+
+    def test_none_type_detects_from_file(self, tmp_path, monkeypatch):
+        """Если type не передан, тип определяется автоматически."""
+        test_file = tmp_path / "sample.bin"
+        test_file.write_bytes(b"fake-data")
+
+        mock_detect = Mock(return_value=UploadType.VIDEO)
+        monkeypatch.setattr(
+            "maxapi.types.input_media.detect_file_type",
+            mock_detect,
+        )
+
+        media = InputMedia(path=str(test_file))
+
+        assert media.path == str(test_file)
+        assert media.type == UploadType.VIDEO
+        mock_detect.assert_called_once()
+
+    def test_accepts_enum_type_without_autodetect(self, tmp_path, monkeypatch):
+        """Явно переданный UploadType используется без autodetect."""
+        test_file = tmp_path / "sample.bin"
+        test_file.write_bytes(b"fake-data")
+
+        mock_detect = Mock(return_value=UploadType.FILE)
+        monkeypatch.setattr(
+            "maxapi.types.input_media.detect_file_type",
+            mock_detect,
+        )
+
+        media = InputMedia(path=str(test_file), type=UploadType.IMAGE)
+
+        assert media.type == UploadType.IMAGE
+        mock_detect.assert_not_called()
+
+
+class TestInputMediaBufferTypeValidation:
+    """Тесты валидации type в InputMediaBuffer."""
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            ("file", UploadType.FILE),
+            ("image", UploadType.IMAGE),
+            ("video", UploadType.VIDEO),
+            ("audio", UploadType.AUDIO),
+        ],
+    )
+    def test_accepts_valid_string_type(self, monkeypatch, value, expected):
+        """Явно переданный строковый type валидируется без autodetect."""
+        mock_detect = Mock(return_value=UploadType.FILE)
+        monkeypatch.setattr(
+            "maxapi.types.input_media.detect_file_type",
+            mock_detect,
+        )
+
+        media = InputMediaBuffer(
+            buffer=b"fake-bytes",
+            filename="sample.bin",
+            type=value,
+        )
+
+        assert media.filename == "sample.bin"
+        assert media.buffer == b"fake-bytes"
+        assert media.type == expected
+        mock_detect.assert_not_called()
+
+    def test_invalid_string_type_raises_value_error(self):
+        """Невалидный строковый type вызывает ValueError со списком значений."""  # noqa: E501
+        with pytest.raises(ValueError) as exc_info:  # noqa: PT011
+            InputMediaBuffer(
+                buffer=b"fake-bytes",
+                filename="sample.bin",
+                type="document",
+            )
+
+        assert_invalid_type_error(exc_info, "document")
+
+    def test_none_type_detects_from_buffer(self, monkeypatch):
+        """Если type не передан, тип определяется автоматически."""
+        mock_detect = Mock(return_value=UploadType.IMAGE)
+        monkeypatch.setattr(
+            "maxapi.types.input_media.detect_file_type",
+            mock_detect,
+        )
+
+        media = InputMediaBuffer(buffer=b"fake-bytes")
+
+        assert media.filename is None
+        assert media.buffer == b"fake-bytes"
+        assert media.type == UploadType.IMAGE
+        mock_detect.assert_called_once_with(b"fake-bytes")
+
+    def test_accepts_enum_type_without_autodetect(self, monkeypatch):
+        """Явно переданный UploadType используется без autodetect."""
+        mock_detect = Mock(return_value=UploadType.FILE)
+        monkeypatch.setattr(
+            "maxapi.types.input_media.detect_file_type",
+            mock_detect,
+        )
+
+        media = InputMediaBuffer(
+            buffer=b"fake-bytes",
+            filename="sample.bin",
+            type=UploadType.AUDIO,
+        )
+
+        assert media.type == UploadType.AUDIO
+        mock_detect.assert_not_called()
+
+    def test_default_upload_type_input_media_buffer(self, tmp_path):
+        """
+        Если mimetype не определился (None),
+        для файла должен вернуться тип UploadType.FILE
+        """
+        media = InputMediaBuffer(
+            buffer=b"fake-bytes",
+            filename="sample.bin",
+        )
+
+        assert media.type == UploadType.FILE
+
+    def test_default_upload_type_input_media(self, tmp_path):
+        """
+        Если mimetype не определился (None),
+        для файла должен вернуться тип UploadType.FILE
+        """
+        test_file = tmp_path / "sample.bin"
+        test_file.write_bytes(b"fake-data")
+
+        media = InputMedia(path=test_file)
+
+        assert media.type == UploadType.FILE
