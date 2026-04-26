@@ -290,7 +290,6 @@ class TestDownloadFile:
         assert result.name == "260416_103050.bin"
         assert result.parent == tmp_dir
 
-    @freeze_datetime("maxapi.connection.base", "2026-04-16 10:30:50")
     async def test_download_image(self, bot, tmp_dir, mock_session):
         """Скачивание вложения-изображения"""
         url_case = REAL_URL_LINKS["image"]
