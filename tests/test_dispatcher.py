@@ -532,15 +532,15 @@ class TestHandlePipeline:
         _setup_for_handle(dispatcher, bot)
         dispatcher._ready = True
         # _prepare_handlers уже заполнил кеш; сбрасываем, чтобы
-        # покрыть ветку «кеш пуст → построить» внутри handle()
+        # покрыть ветку «кеш пуст → строится через _build_dispatch_entries()»
         dispatcher._cached_router_entries = None
 
-        # Первый вызов — строит и кладёт в кеш (строка 1001)
+        # Первый вызов строит и сохраняет список записей в кеш.
         await dispatcher.handle(fixture_message_created)
         cached = dispatcher._cached_router_entries
         assert cached is not None
 
-        # Второй вызов — использует тот же объект из кеша (строка 1002)
+        # Повторный вызов использует уже заполненный _cached_router_entries.
         await dispatcher.handle(fixture_message_created)
         assert dispatcher._cached_router_entries is cached
 
