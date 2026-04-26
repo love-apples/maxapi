@@ -546,6 +546,44 @@ class TestHandlePipeline:
 
         assert len(handled) == 2
 
+    async def test_iter_dispatch_entries_is_lazy(self, dispatcher, bot):
+        """_iter_dispatch_entries() возвращает ленивый генератор,
+        а не материализованный список."""
+        import types
+
+        _setup_for_handle(dispatcher, bot)
+
+        gen = dispatcher._iter_dispatch_entries()
+        assert isinstance(gen, types.GeneratorType)
+
+        # Генератор выдаёт кортежи (router, outer_mw, filters, base_filters)
+        entries = list(gen)
+        assert len(entries) >= 1
+        _router, outer_mw, filters, base_filters = entries[0]
+        assert isinstance(outer_mw, list)
+        assert isinstance(filters, list)
+        assert isinstance(base_filters, list)
+
+    async def test_not_ready_does_not_cache_entries(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """При _ready=False _cached_router_entries не заполняется
+        в ходе handle() — кеш остаётся None."""
+
+        @dispatcher.message_created()
+        async def _handler(event: MessageCreated):
+            pass
+
+        _setup_for_handle(dispatcher, bot)
+        # Сбрасываем кеш, выставленный _prepare_handlers
+        dispatcher._cached_router_entries = None
+        assert dispatcher._ready is False
+
+        await dispatcher.handle(fixture_message_created)
+
+        # После handle() при _ready=False кеш по-прежнему None
+        assert dispatcher._cached_router_entries is None
+
     async def test_handle_handler_state_mismatch_skips_and_returns_false(
         self, dispatcher, bot, fixture_message_created
     ):

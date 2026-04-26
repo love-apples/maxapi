@@ -26,7 +26,7 @@ from .webhook import DEFAULT_HOST, DEFAULT_PATH, DEFAULT_PORT, BaseMaxWebhook
 from .webhook.aiohttp import AiohttpMaxWebhook
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Iterator
+    from collections.abc import Awaitable, Callable, Iterable, Iterator
 
     from magic_filter import MagicFilter
 
@@ -395,6 +395,34 @@ class Dispatcher(BotMixin):
             "Зарегистрировано %d обработчиков событий", handlers_count
         )
 
+    def _iter_dispatch_entries(
+        self,
+    ) -> Iterator[
+        tuple[
+            Router | Dispatcher,
+            list[BaseMiddleware],
+            list[MagicFilter],
+            list[BaseFilter],
+        ]
+    ]:
+        """Ленивый генератор entries для dispatch.
+
+        Используется когда ``_ready=False`` — позволяет остановить обход
+        дерева роутеров сразу после первого совпадения, не аллоцируя
+        полный список.  Inner-middleware уже выпечены в
+        ``handler.mw_chain`` в :meth:`_prepare_handlers`, поэтому в
+        кортеж попадают только ``(router, outer_mw, filters,
+        base_filters)``.
+        """
+        for (
+            router,
+            outer_mw,
+            _inner_mw,
+            filters,
+            base_filters,
+        ) in self._iter_unique_routers(self.routers):
+            yield router, outer_mw, filters, base_filters
+
     def _build_dispatch_entries(
         self,
     ) -> list[
@@ -405,29 +433,13 @@ class Dispatcher(BotMixin):
             list[BaseFilter],
         ]
     ]:
-        """Возвращает entries для горячего пути dispatch.
+        """Материализует полный список entries для кеша горячего пути.
 
-        Inner-middleware на этом этапе уже выпечены в ``handler.mw_chain``
-        в :meth:`_prepare_handlers`, поэтому в кортеж попадают только
-        ``(router, outer_mw, filters, base_filters)``.
+        Вызывается один раз при ``_ready=True`` и результат сохраняется в
+        ``_cached_router_entries``. Для ``_ready=False`` используйте
+        :meth:`_iter_dispatch_entries`.
         """
-        entries: list[
-            tuple[
-                Router | Dispatcher,
-                list[BaseMiddleware],
-                list[MagicFilter],
-                list[BaseFilter],
-            ]
-        ] = []
-        for (
-            router,
-            outer_mw,
-            _inner_mw,
-            filters,
-            base_filters,
-        ) in self._iter_unique_routers(self.routers):
-            entries.append((router, outer_mw, filters, base_filters))
-        return entries
+        return list(self._iter_dispatch_entries())
 
     @staticmethod
     async def _check_subscriptions(bot: Bot) -> None:
@@ -996,12 +1008,20 @@ class Dispatcher(BotMixin):
         """
         router_id = None
 
+        entries: Iterable[
+            tuple[
+                Router | Dispatcher,
+                list[BaseMiddleware],
+                list[MagicFilter],
+                list[BaseFilter],
+            ]
+        ]
         if self._ready:
             if self._cached_router_entries is None:
                 self._cached_router_entries = self._build_dispatch_entries()
             entries = self._cached_router_entries
         else:
-            entries = self._build_dispatch_entries()
+            entries = self._iter_dispatch_entries()
 
         for (
             router,
