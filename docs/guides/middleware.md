@@ -172,7 +172,7 @@ dp.include_routers(admin_router, fallback_router)
 | Событие | Request<br>Id | Admin<br>AccessLog | Db<br>Transaction | Broadcast<br>Lock | handler |
 |---|:-:|:-:|:-:|:-:|:-:|
 | Сообщение от не-админа (не `/broadcast`) | ✅ | ✅¹ | ✅ | ❌ | `fallback` |
-| `/broadcast` от не-админа | ✅ | ✅¹ | ❌ | ❌ | ❌ |
+| `/broadcast` от не-админа | ✅ | ✅¹ | ✅ | ❌ | `fallback` |
 | `/broadcast` от админа | ✅ | ✅ | ✅ | ✅ | `broadcast` |
 
 ¹ `AdminAccessLogMiddleware` — outer на `admin_router`, поэтому он

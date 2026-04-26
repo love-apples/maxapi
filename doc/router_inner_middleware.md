@@ -641,7 +641,8 @@ Dispatcher.feed_update
    роутер сразу».
 3. **`data: dict` накапливается через цепочку** — middleware может
    положить ключи в `data`, и они приедут в handler как kwargs (это у нас
-   уже есть через `data.update(...)` + `_filter_kwargs_by_signature`).
+   уже есть через `data.update(...)`, а затем `Dispatcher._execute_handler()`
+   отбирает подходящие аргументы по `handler.func_args`/`__annotations__`).
 4. **Цепочка строится динамически** — нет кеша, на каждое событие
    собирается заново через `_resolve_middlewares()`. Это **минус**
    aiogram (больше аллокаций), у нас здесь архитектурное преимущество.
@@ -757,9 +758,10 @@ async def handler(event): ...
 #### 3. ✅ Накопление `data` через цепочку — уже есть
 
 Aiogram позволяет middleware класть ключи в `data: dict`, которые потом
-доедут до handler как kwargs. У нас это работает: `data.update(...)`
-внутри middleware + `_filter_kwargs_by_signature` (строка 660–664
-`dispatcher.py`) пропустит только те ключи, которые handler объявил.
+доедут до handler как kwargs. У нас это тоже работает: middleware может
+делать `data.update(...)`, а дальше `Dispatcher._execute_handler()`
+передаст в handler только те kwargs, которые он реально принимает,
+ориентируясь на `handler.func_args` / `__annotations__`.
 
 Заимствовать ничего не нужно — паритет по факту достигнут.
 
