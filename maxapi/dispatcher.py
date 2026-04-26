@@ -374,7 +374,7 @@ class Dispatcher(BotMixin):
                 extract_commands(handler, bot)
 
                 handler.func_args = frozenset(
-                    inspect.get_annotations(handler.func_event),
+                    inspect.signature(handler.func_event).parameters,
                 )
 
                 all_inner = (
@@ -504,10 +504,11 @@ class Dispatcher(BotMixin):
 
         Перед вызовом фильтрует ``data``, оставляя только те ключи,
         которые handler реально принимает (по ``handler.func_args`` или
-        аннотациям, полученным через :func:`inspect.get_annotations`).
-        Это безопасно для middleware, которые могут добавлять
-        произвольные ключи через ``data.update(...)``: несовместимые
-        ключи не дойдут до handler и не приведут к ``TypeError``.
+        параметрам, полученным через :func:`inspect.signature`).
+        В отличие от ``get_annotations``, ``signature`` не включает
+        ``"return"`` и не требует eval строковых аннотаций — безопасен
+        при ``from __future__ import annotations``. Несовместимые ключи
+        не дойдут до handler и не приведут к ``TypeError``.
 
         Args:
             handler: Handler.
@@ -518,11 +519,8 @@ class Dispatcher(BotMixin):
             None
         """
         if data:
-            func_args = (
-                handler.func_args
-                or inspect.get_annotations(
-                    handler.func_event,
-                ).keys()
+            func_args = handler.func_args or frozenset(
+                inspect.signature(handler.func_event).parameters,
             )
             kwargs = {k: v for k, v in data.items() if k in func_args}
             if kwargs:

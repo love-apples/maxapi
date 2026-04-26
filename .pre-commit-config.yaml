@@ -5,6 +5,10 @@ repos:
       - id: trailing-whitespace
         exclude: ^(.*\.md|.*\.yml|.*\.yaml)
       - id: check-yaml
+        # --unsafe нужен для mkdocs.yml: MkDocs использует Python-специфичные
+        # YAML-теги (!!python/name:...) для настройки pymdownx.superfences,
+        # которые стандартный парсер check-yaml не распознаёт без этого флага.
+        args: ['--unsafe']
       - id: check-json
       - id: check-toml
       - id: check-added-large-files
