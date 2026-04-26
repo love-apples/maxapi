@@ -234,8 +234,8 @@ class BaseConnection(BotMixin):
 
         session = bot.session
         if session is not None and not session.closed:
-            response = await session.post(url=url, data=form)
-            return await response.text()
+            async with session.post(url=url, data=form) as response:
+                return await response.text()
         else:
             async with ClientSession(
                 timeout=bot.default_connection.timeout
@@ -285,8 +285,8 @@ class BaseConnection(BotMixin):
 
         session = bot.session
         if session is not None and not session.closed:
-            response = await session.post(url=url, data=form)
-            return await response.text()
+            async with session.post(url=url, data=form) as response:
+                return await response.text()
         else:
             async with ClientSession(
                 timeout=bot.default_connection.timeout
