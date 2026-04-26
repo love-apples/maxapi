@@ -996,10 +996,12 @@ class Dispatcher(BotMixin):
         """
         router_id = None
 
-        if self._cached_router_entries is None:
-            self._cached_router_entries = self._build_dispatch_entries()
-
-        entries = self._cached_router_entries
+        if self._ready:
+            if self._cached_router_entries is None:
+                self._cached_router_entries = self._build_dispatch_entries()
+            entries = self._cached_router_entries
+        else:
+            entries = self._build_dispatch_entries()
 
         for (
             router,

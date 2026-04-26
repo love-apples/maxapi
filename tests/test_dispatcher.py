@@ -518,6 +518,34 @@ class TestHandlePipeline:
         _setup_for_handle(dispatcher, bot)
         await dispatcher.handle(fixture_message_created)  # не должно падать
 
+    async def test_handle_uses_cached_router_entries_when_ready(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """При _ready=True _cached_router_entries строится один раз и
+        переиспользуется при повторных вызовах handle()."""
+        handled = []
+
+        @dispatcher.message_created()
+        async def _handler(event: MessageCreated):
+            handled.append(event)
+
+        _setup_for_handle(dispatcher, bot)
+        dispatcher._ready = True
+        # _prepare_handlers уже заполнил кеш; сбрасываем, чтобы
+        # покрыть ветку «кеш пуст → построить» внутри handle()
+        dispatcher._cached_router_entries = None
+
+        # Первый вызов — строит и кладёт в кеш (строка 1001)
+        await dispatcher.handle(fixture_message_created)
+        cached = dispatcher._cached_router_entries
+        assert cached is not None
+
+        # Второй вызов — использует тот же объект из кеша (строка 1002)
+        await dispatcher.handle(fixture_message_created)
+        assert dispatcher._cached_router_entries is cached
+
+        assert len(handled) == 2
+
     async def test_handle_handler_state_mismatch_skips_and_returns_false(
         self, dispatcher, bot, fixture_message_created
     ):

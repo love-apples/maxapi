@@ -48,9 +48,10 @@ router.register_inner_middleware(LockMiddleware())
 
 !!! warning "Deprecated"
     Безымянные `dp.middleware(mw)` / `router.middleware(mw)` и
-    `dp.outer_middleware(mw)` помечены как deprecated и выводят
-    `DeprecationWarning`. Используйте явные
-    `register_outer_middleware()` / `register_inner_middleware()`.
+    `dp.outer_middleware(mw)` / `router.outer_middleware(mw)`
+    помечены как deprecated и выводят `DeprecationWarning`.
+    Используйте явные `register_outer_middleware()` /
+    `register_inner_middleware()`.
 
 ## Развёрнутый пример: admin-роутер с broadcast
 
