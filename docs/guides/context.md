@@ -159,7 +159,7 @@ from maxapi import Bot, Dispatcher
 
 bot = Bot()
 dp = Dispatcher()
-dp.middleware(SaveMarkerMiddleware())
+dp.register_outer_middleware(SaveMarkerMiddleware())
 
 async def main() -> None:
     marker = await load_marker()  # str | None

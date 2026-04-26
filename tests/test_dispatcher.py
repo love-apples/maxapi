@@ -30,7 +30,7 @@ class TestDispatcherInitialization:
         assert len(dp.event_handlers) == 0
         assert isinstance(dp.contexts, dict)
         assert isinstance(dp.routers, list)
-        assert isinstance(dp.middlewares, list)
+        assert isinstance(dp.outer_middlewares, list)
         assert dp.bot is None
         assert dp.polling is False
 
@@ -218,43 +218,6 @@ class TestDispatcherRouters:
 
         dispatcher.include_routers(router)
         assert len(router.event_handlers) == 1
-
-
-class TestDispatcherMiddleware:
-    """Тесты middleware."""
-
-    def test_add_middleware(self, dispatcher):
-        """Тест добавления middleware."""
-        # Core Stuff
-        from maxapi.filters.middleware import BaseMiddleware
-
-        class TestMiddleware(BaseMiddleware):
-            async def __call__(self, handler, event, data):
-                return await handler(event, data)
-
-        middleware = TestMiddleware()
-        dispatcher.middleware(middleware)
-
-        assert len(dispatcher.middlewares) == 1
-        assert dispatcher.middlewares[0] == middleware
-
-    def test_add_outer_middleware(self, dispatcher):
-        """Тест добавления outer middleware."""
-        # Core Stuff
-        from maxapi.filters.middleware import BaseMiddleware
-
-        class TestMiddleware(BaseMiddleware):
-            async def __call__(self, handler, event, data):
-                return await handler(event, data)
-
-        middleware1 = TestMiddleware()
-        middleware2 = TestMiddleware()
-
-        dispatcher.middleware(middleware1)
-        dispatcher.outer_middleware(middleware2)
-
-        assert dispatcher.middlewares[0] == middleware2
-        assert dispatcher.middlewares[1] == middleware1
 
 
 class TestDispatcherFilters:
@@ -516,7 +479,7 @@ def _setup_for_handle(dispatcher: Dispatcher, bot: Bot) -> None:
     dispatcher.routers.append(dispatcher)
     dispatcher._prepare_handlers(bot)
     dispatcher._global_mw_chain = dispatcher.build_middleware_chain(
-        dispatcher.middlewares, dispatcher._process_event
+        dispatcher.outer_middlewares, dispatcher._process_event
     )
 
 
@@ -601,7 +564,7 @@ class TestHandlePipeline:
             async def __call__(self, handler, event, data):
                 raise RuntimeError("сбой middleware")
 
-        dispatcher.middleware(FailingMiddleware())
+        dispatcher.register_outer_middleware(FailingMiddleware())
         _setup_for_handle(dispatcher, bot)
         await dispatcher.handle(fixture_message_created)  # не должно всплывать
 
@@ -1163,7 +1126,7 @@ class TestRouterMiddlewareChain:
                 return await handler(event, data)
 
         router = Router(router_id="mw_router")
-        router.middlewares.append(RouterMW())
+        router.register_outer_middleware(RouterMW())
 
         @router.message_created()
         async def _h(event: MessageCreated):

@@ -45,5 +45,5 @@ class RouterMiddleware(BaseMiddleware):
         # Логика только для этого роутера
         return await handler(event_object, data)
 
-router.middleware(RouterMiddleware())
+router.register_outer_middleware(RouterMiddleware())
 ```
