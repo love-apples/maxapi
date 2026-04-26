@@ -171,13 +171,15 @@ dp.include_routers(admin_router, fallback_router)
 
 | Событие | Request<br>Id | Admin<br>AccessLog | Db<br>Transaction | Broadcast<br>Lock | handler |
 |---|:-:|:-:|:-:|:-:|:-:|
-| Сообщение от не-админа (не `/broadcast`) | ✅ | ❌ | ✅ | ❌ | `fallback` |
+| Сообщение от не-админа (не `/broadcast`) | ✅ | ✅¹ | ✅ | ❌ | `fallback` |
 | `/broadcast` от не-админа | ✅ | ✅¹ | ❌ | ❌ | ❌ |
 | `/broadcast` от админа | ✅ | ✅ | ✅ | ✅ | `broadcast` |
 
-¹ `AdminAccessLogMiddleware` — outer на роутере, поэтому фиксирует
-**попытку** войти в admin-flow до того, как `IsAdmin` её отсечёт.
-Именно это нужно security-аудиту: видеть не только успехи, но и отказы.
+¹ `AdminAccessLogMiddleware` — outer на `admin_router`, поэтому он
+срабатывает для любого `MessageCreated`, дошедшего до этого роутера,
+ещё до handler-фильтров (`IsAdmin`, `Command`). Если outer-middleware
+должен логировать только `/broadcast`, такую проверку нужно делать
+внутри него самого или вынести на уровень router-level фильтра.
 
 ### Порядок вызовов при успешном broadcast
 

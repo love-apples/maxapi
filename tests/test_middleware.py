@@ -185,6 +185,21 @@ class TestDeprecatedMiddlewareAliases:
 
         assert mw in dp.outer_middlewares
 
+    def test_middlewares_setter_warns_and_replaces(self):
+        """Setter middlewares даёт DeprecationWarning и заменяет outer."""
+        dp = Dispatcher()
+        mw1 = TrackingMW("a", [])
+        mw2 = TrackingMW("b", [])
+        dp.outer_middlewares.append(mw1)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            dp.middlewares = [mw2]
+
+        assert any(issubclass(x.category, DeprecationWarning) for x in w)
+        assert dp.outer_middlewares == [mw2]
+        assert mw1 not in dp.outer_middlewares
+
 
 # ===========================================================================
 # Поведение outer_mw при dispatch

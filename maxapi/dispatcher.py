@@ -172,6 +172,23 @@ class Dispatcher(BotMixin):
         )
         return self.outer_middlewares
 
+    @middlewares.setter
+    def middlewares(self, value: list[BaseMiddleware]) -> None:
+        """
+        Устанавливает outer_middlewares через устаревший атрибут.
+
+        .. deprecated::
+            Присвоение ``dp.middlewares = [...]`` устарело.
+            Используйте :attr:`outer_middlewares` напрямую.
+        """
+        warnings.warn(
+            f"{type(self).__name__}.middlewares = [...] устарел. "
+            "Используйте outer_middlewares.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.outer_middlewares = value
+
     async def check_me(self) -> None:
         """
         Проверяет и логирует информацию о боте.
@@ -979,10 +996,10 @@ class Dispatcher(BotMixin):
         """
         router_id = None
 
-        if self._cached_router_entries is not None:
-            entries = self._cached_router_entries
-        else:
-            entries = self._build_dispatch_entries()
+        if self._cached_router_entries is None:
+            self._cached_router_entries = self._build_dispatch_entries()
+
+        entries = self._cached_router_entries
 
         for (
             router,
