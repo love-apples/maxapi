@@ -375,7 +375,10 @@ class TestOuterMiddlewareInheritance:
         parent.include_routers(child)
         dp.include_routers(parent)
 
-        results = {r: omw for r, omw, *_ in dp._iter_routers(dp.routers)}
+        results = {
+            r: omw
+            for r, omw, *_ in dp._iter_routers(dp.routers)
+        }
         assert results[parent] == [mw_p]
         assert results[child] == [mw_p, mw_c]
 
