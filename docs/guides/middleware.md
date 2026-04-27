@@ -46,61 +46,6 @@ router.register_outer_middleware(AuditMiddleware())
 router.register_inner_middleware(LockMiddleware())
 ```
 
-## Схема потока вызовов
-
-```mermaid
-flowchart TD
-    Event(["📨 Входящее событие"]):::event --> GO
-
-    subgraph GO ["Глобальный outer\n(dp.outer_middlewares)"]
-        direction LR
-        GO1["OuterMW 1"] --> GO2["OuterMW 2"] --> GON["…"]
-    end
-
-    GO --> Routers
-
-    subgraph Routers ["Перебор роутеров"]
-        direction TB
-        RF{"Фильтры\nроутера?"}
-        RF -->|"❌ не прошли"| Skip1(["Следующий роутер"]):::skip
-        RF -->|"✅ прошли"| HT{"Есть handler\nдля update_type?"}
-        HT -->|"❌ нет"| Skip2(["Следующий роутер"]):::skip
-        HT -->|"✅ есть"| RO
-    end
-
-    subgraph RO ["Router outer\n(router.outer_middlewares)"]
-        ROmw["RouterOuterMW…"]
-    end
-
-    RO --> HCheck
-
-    subgraph HCheck ["_check_handler_match"]
-        direction TB
-        SC{"State\nсовпадает?"}
-        SC -->|"❌"| SkipH(["Пропустить\nhandler"]):::skip
-        SC -->|"✅"| FC{"Фильтры\nhandler?"}
-        FC -->|"❌"| SkipH
-        FC -->|"✅"| Chain
-    end
-
-    subgraph Chain ["handler.mw_chain\n(выпекается при startup)"]
-        direction LR
-        GI["dp.inner_middlewares"] --> RI["router.inner_middlewares"] --> HM["handler.middlewares"] --> CH["call_handler"]
-    end
-
-    CH --> H(["🎯 handler(event, **kwargs)"]):::handler
-
-    classDef event fill:#e8f4fd,stroke:#1971c2,stroke-width:2px,color:#1971c2
-    classDef handler fill:#ebfbee,stroke:#2f9e44,stroke-width:2px,color:#2f9e44
-    classDef skip fill:#fff5f5,stroke:#c92a2a,stroke-width:1px,color:#c92a2a
-```
-
-!!! info "Ключевое свойство inner middleware"
-    Всё то, что зарегистрировано через `register_inner_middleware()`,
-    **выпекается** в `handler.mw_chain` один раз при
-    `startup()` / `start_polling()`. В горячем пути — ноль лишних
-    аллокаций.
-
 !!! warning "Deprecated"
     Безымянные `dp.middleware(mw)` / `router.middleware(mw)` и
     `dp.outer_middleware(mw)` / `router.outer_middleware(mw)`
