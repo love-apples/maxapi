@@ -502,8 +502,11 @@ class TestBaseConnectionUploadFallback:
         mock_response = AsyncMock()
         mock_response.text = AsyncMock(return_value='{"token":"abc"}')
 
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__.return_value = mock_response
+
         mock_session_instance = AsyncMock()
-        mock_session_instance.post = AsyncMock(return_value=mock_response)
+        mock_session_instance.post = Mock(return_value=mock_cm)
         mock_session_instance.__aenter__ = AsyncMock(
             return_value=mock_session_instance
         )
@@ -538,9 +541,12 @@ class TestBaseConnectionUploadFallback:
 
         mock_response = AsyncMock()
         mock_response.text = AsyncMock(return_value='{"token":"xyz"}')
+        mock_cm_buf = AsyncMock()
+        mock_cm_buf.__aenter__.return_value = mock_response
+
         bot.session = MagicMock()
         bot.session.closed = False
-        bot.session.post = AsyncMock(return_value=mock_response)
+        bot.session.post = Mock(return_value=mock_cm_buf)
 
         # Подменяем puremagic, чтобы вернуть распознаваемый MIME-матч,
         # и mimetypes.guess_extension — чтобы вернуть реальное расширение.
