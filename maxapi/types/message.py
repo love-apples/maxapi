@@ -105,8 +105,8 @@ class MessageBody(BaseModel):
         mid (str): Уникальный идентификатор сообщения.
         seq (int): Порядковый номер сообщения.
         text (str): Текст сообщения. Может быть None.
-        attachments: Список вложений. По умолчанию пустой.
-        markup: Список элементов разметки. По умолчанию пустой.
+        attachments (Optional[list[Attachments]]): Список вложений. По умолчанию пустой список.
+        markup (Optional[list[MarkupUserMention | MarkupLink | MarkupElement]]): Список элементов разметки. По умолчанию пустой список.
     """
 
     mid: str

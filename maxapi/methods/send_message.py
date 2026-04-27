@@ -35,7 +35,8 @@ class SendMessage(BaseConnection):
         user_id (Optional[int]): Идентификатор пользователя, если нужно
             отправить личное сообщение.
         text (Optional[str]): Текст сообщения.
-        attachments: Список вложений к сообщению.
+        attachments (Optional[list]): Список вложений к сообщению.
+            Может быть None.
         link (Optional[NewMessageLink]): Связь с другим сообщением
             (например, ответ или пересылка).
         notify (Optional[bool]): Отправлять ли уведомление о сообщении.

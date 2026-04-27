@@ -31,7 +31,7 @@ class MessageForCallback(BaseModel):
 
     Attributes:
         text (Optional[str]): Текст сообщения.
-        attachments: Список вложений.
+        attachments (Optional[list[Attachments]]): Список вложений. По умолчанию пустой список.
         link (Optional[NewMessageLink]): Связь с другим сообщением.
         notify (Optional[bool]): Отправлять ли уведомление.
         format (Optional[ParseMode]): Режим разбора текста.
