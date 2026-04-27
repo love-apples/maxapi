@@ -83,9 +83,9 @@ class BaseConnection(BotMixin):
         Инициализация BaseConnection.
 
         Атрибуты:
-            bot (Optional[Bot]): Экземпляр бота.
-            session (Optional[ClientSession]): aiohttp-сессия.
-            after_input_media_delay (float): Задержка после ввода медиа.
+            bot: Экземпляр бота.
+            session: aiohttp-сессия.
+            after_input_media_delay: Задержка после ввода медиа.
         """
 
         self.bot: Bot | None = None
@@ -98,7 +98,7 @@ class BaseConnection(BotMixin):
         Установка API URL для запросов
 
         Args:
-            url (str): Новый API URl
+            url: Новый API URl
         """
 
         self.api_url = url
@@ -121,11 +121,11 @@ class BaseConnection(BotMixin):
         ``max_retries`` раз с экспоненциальной задержкой.
 
         Args:
-            method (HTTPMethod): HTTP-метод (GET, POST и т.д.).
-            path (ApiPath | str): Путь до конечной точки.
-            model (BaseModel | Any, optional): Pydantic-модель для
+            method: HTTP-метод (GET, POST и т.д.).
+            path: Путь до конечной точки.
+            model: Pydantic-модель для
                 десериализации ответа, если is_return_raw=False.
-            is_return_raw (bool, optional): Если True — вернуть сырой
+            is_return_raw: Если True — вернуть сырой
                 ответ, иначе — результат десериализации.
             **kwargs: Дополнительные параметры (query, headers, json).
 
@@ -208,9 +208,9 @@ class BaseConnection(BotMixin):
         Загружает файл на сервер.
 
         Args:
-            url (str): URL загрузки.
-            path (str): Путь к файлу.
-            type (UploadType): Тип файла.
+            url: URL загрузки.
+            path: Путь к файлу.
+            type: Тип файла.
 
         Returns:
             str: Сырой .text() ответ от сервера.
@@ -250,10 +250,10 @@ class BaseConnection(BotMixin):
         Загружает файл из буфера.
 
         Args:
-            filename (str): Имя файла.
-            url (str): URL загрузки.
-            buffer (bytes): Буфер данных.
-            type (UploadType): Тип файла.
+            filename: Имя файла.
+            url: URL загрузки.
+            buffer: Буфер данных.
+            type: Тип файла.
 
         Returns:
             str: Сырой .text() ответ от сервера.

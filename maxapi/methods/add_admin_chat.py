@@ -17,10 +17,10 @@ class AddAdminChat(BaseConnection):
     https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members/admins
 
     Attributes:
-        bot (Bot): Экземпляр бота, через который выполняется запрос.
-        chat_id (int): Идентификатор чата.
-        admins (List[ChatAdmin]): Список администраторов для добавления.
-        marker (int, optional): Маркер для пагинации или дополнительных
+        bot: Экземпляр бота, через который выполняется запрос.
+        chat_id: Идентификатор чата.
+        admins: Список администраторов для добавления.
+        marker: Маркер для пагинации или дополнительных
             настроек. По умолчанию None.
     """
 

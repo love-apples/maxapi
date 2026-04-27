@@ -8,7 +8,7 @@ class GettedSubscriptions(BaseModel):
     Ответ API с отправленным сообщением.
 
     Attributes:
-        message (Message): Объект отправленного сообщения.
+        subscriptions: Список подписок бота.
     """
 
     subscriptions: list[Subscription]

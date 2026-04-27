@@ -17,11 +17,11 @@ class GetChatByLink(BaseConnection):
     https://dev.max.ru/docs-api/methods/GET/chats/-chatLink-
 
     Attributes:
-        link (list[str]): Список валидных частей ссылки.
-        PATTERN_LINK (str): Регулярное выражение для парсинга ссылки.
+        link: Список валидных частей ссылки.
+        PATTERN_LINK: Регулярное выражение для парсинга ссылки.
     """
 
-    PATTERN_LINK = r"@?[a-zA-Z]+[a-zA-Z0-9-_]*"
+    PATTERN_LINK: str = r"@?[a-zA-Z]+[a-zA-Z0-9-_]*"
 
     def __init__(self, bot: "Bot", link: str):
         super().__init__()

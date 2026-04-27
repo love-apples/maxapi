@@ -8,11 +8,11 @@ class Callback(BaseModel):
     Модель callback-запроса.
 
     Attributes:
-        timestamp (int): Временная метка callback.
-        callback_id (str): Уникальный идентификатор callback.
-        payload (Optional[str]): Дополнительные данные callback.
+        timestamp: Временная метка callback.
+        callback_id: Уникальный идентификатор callback.
+        payload: Дополнительные данные callback.
             Может быть None.
-        user (User): Объект пользователя, инициировавшего callback.
+        user: Объект пользователя, инициировавшего callback.
     """
 
     timestamp: int

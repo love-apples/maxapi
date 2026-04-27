@@ -60,12 +60,12 @@ class Dispatcher(BotMixin):
         Инициализация диспетчера.
 
         Args:
-            router_id (str | None): Идентификатор роутера для логов.
-            use_create_task (bool): Флаг, отвечающий за параллелизацию
+            router_id: Идентификатор роутера для логов.
+            use_create_task: Флаг, отвечающий за параллелизацию
                 обработок событий.
-            storage (type[BaseContext]): Класс контекста для хранения
+            storage: Класс контекста для хранения
                 данных (MemoryContext, RedisContext и т.д.).
-            **storage_kwargs (Any): Дополнительные аргументы для
+            **storage_kwargs: Дополнительные аргументы для
                 инициализации хранилища.
         """
 
@@ -181,8 +181,8 @@ class Dispatcher(BotMixin):
         Формирует цепочку вызова middleware вокруг хендлера.
 
         Args:
-            middlewares (List[BaseMiddleware]): Список middleware.
-            handler (Callable): Финальный обработчик.
+            middlewares: Список middleware.
+            handler: Финальный обработчик.
 
         Returns:
             Callable: Обёрнутый обработчик.
@@ -198,7 +198,7 @@ class Dispatcher(BotMixin):
         Добавляет указанные роутеры в диспетчер.
 
         Args:
-            *routers (Router): Роутеры для добавления.
+            *routers: Роутеры для добавления.
         """
 
         self.routers.extend(routers)
@@ -208,7 +208,7 @@ class Dispatcher(BotMixin):
         Добавляет Middleware на первое место в списке.
 
         Args:
-            middleware (BaseMiddleware): Middleware.
+            middleware: Middleware.
         """
 
         self.middlewares.insert(0, middleware)
@@ -218,7 +218,7 @@ class Dispatcher(BotMixin):
         Добавляет Middleware в конец списка.
 
         Args:
-            middleware (BaseMiddleware): Middleware.
+            middleware: Middleware.
         """
 
         self.middlewares.append(middleware)
@@ -228,7 +228,7 @@ class Dispatcher(BotMixin):
         Добавляет фильтр в список.
 
         Args:
-            base_filter (BaseFilter): Фильтр.
+            base_filter: Фильтр.
         """
 
         self.base_filters.append(base_filter)
@@ -239,7 +239,7 @@ class Dispatcher(BotMixin):
         обработчики, вызывает on_started.
 
         Args:
-            bot (Bot): Экземпляр бота.
+            bot: Экземпляр бота.
         """
 
         if self._ready:
@@ -323,8 +323,8 @@ class Dispatcher(BotMixin):
         по chat_id и user_id.
 
         Args:
-            chat_id (Optional[int]): Идентификатор чата.
-            user_id (Optional[int]): Идентификатор пользователя.
+            chat_id: Идентификатор чата.
+            user_id: Идентификатор пользователя.
 
         Returns:
             BaseContext: Контекст.
@@ -382,8 +382,8 @@ class Dispatcher(BotMixin):
         Асинхронно применяет фильтры к событию.
 
         Args:
-            event (UpdateUnion): Событие.
-            filters (List[BaseFilter]): Список фильтров.
+            event: Событие.
+            filters: Список фильтров.
 
         Returns:
             dict[str, Any] | None: Словарь с результатом или None,
@@ -559,7 +559,7 @@ class Dispatcher(BotMixin):
         Проверяет накопленные фильтры роутера для события.
 
         Args:
-            event (UpdateUnion): Событие.
+            event: Событие.
             filters: Накопленные MagicFilter.
             base_filters: Накопленные BaseFilter.
 
@@ -585,8 +585,8 @@ class Dispatcher(BotMixin):
         Находит обработчики, соответствующие типу события в роутере.
 
         Args:
-            router (Router | Dispatcher): Роутер для поиска.
-            event_type (UpdateType): Тип события.
+            router: Роутер для поиска.
+            event_type: Тип события.
 
         Returns:
             List[Handler]: Список подходящих обработчиков.
@@ -611,9 +611,9 @@ class Dispatcher(BotMixin):
         Проверяет, подходит ли обработчик для события (фильтры, состояние).
 
         Args:
-            handler (Handler): Обработчик для проверки.
-            event (UpdateUnion): Событие.
-            current_state (Optional[Any]): Текущее состояние.
+            handler: Обработчик для проверки.
+            event: Событие.
+            current_state: Текущее состояние.
 
         Returns:
             dict[str, Any] | None: Словарь с данными или None,
@@ -644,15 +644,15 @@ class Dispatcher(BotMixin):
         и обработкой ошибок.
 
         Args:
-            handler (Handler): Обработчик для выполнения.
-            event (UpdateUnion): Событие.
-            data (Dict[str, Any]): Данные для обработчика.
-            handler_middlewares (List[BaseMiddleware]): Middleware для
+            handler: Обработчик для выполнения.
+            event: Событие.
+            data: Данные для обработчика.
+            handler_middlewares: Middleware для
                 обработчика.
-            memory_context (BaseContext): Контекст памяти.
-            current_state (Optional[Any]): Текущее состояние.
-            router_id (Any): Идентификатор роутера для логов.
-            process_info (str): Информация о процессе для логов.
+            memory_context: Контекст памяти.
+            current_state: Текущее состояние.
+            router_id: Идентификатор роутера для логов.
+            process_info: Информация о процессе для логов.
 
         Raises:
             HandlerException: При ошибке выполнения обработчика.
@@ -767,8 +767,8 @@ class Dispatcher(BotMixin):
         Endpoint middleware-цепочки роутера: вызывает подходящий обработчик.
 
         Args:
-            event (UpdateUnion): Событие.
-            handler_data (dict): Данные для обработчика.
+            event: Событие.
+            handler_data: Данные для обработчика.
             matching_handlers: Обработчики роутера для данного типа события.
             memory_context: Контекст памяти.
             current_state: Текущее состояние.
@@ -915,8 +915,8 @@ class Dispatcher(BotMixin):
         по роутерам.
 
         Args:
-            event_object (UpdateUnion): Событие.
-            data (dict): Данные от middleware-цепочки,
+            event_object: Событие.
+            data: Данные от middleware-цепочки,
                 содержащие ``_memory_context``, ``_current_state``
                 и ``_process_info``.
         """
@@ -939,7 +939,7 @@ class Dispatcher(BotMixin):
         и вызывает нужный handler.
 
         Args:
-            event_object (UpdateUnion): Событие.
+            event_object: Событие.
         """
         router_id = None
         process_info = "нет данных"
@@ -1095,8 +1095,8 @@ class Dispatcher(BotMixin):
         Запускает цикл получения обновлений (long polling).
 
         Args:
-            bot (Bot): Экземпляр бота.
-            skip_updates (bool): Флаг, отвечающий за обработку старых событий.
+            bot: Экземпляр бота.
+            skip_updates: Флаг, отвечающий за обработку старых событий.
         """
         self.polling = True
 
@@ -1144,7 +1144,7 @@ class Dispatcher(BotMixin):
         веб-фреймворка.
 
         Args:
-            bot (Bot): Экземпляр бота.
+            bot: Экземпляр бота.
         """
         await self.__ready(bot)
 
@@ -1171,14 +1171,14 @@ class Dispatcher(BotMixin):
         :class:`~maxapi.webhook.aiohttp.BaseMaxWebhook`.
 
         Args:
-            bot (Bot): Экземпляр бота.
-            host (str): Хост сервера (по умолчанию ``"0.0.0.0"``).
-            port (int): Порт сервера (по умолчанию ``8080``).
-            path (str): URL-путь для маршрута вебхука.
-            secret (str | None): Секрет для проверки заголовка
+            bot: Экземпляр бота.
+            host: Хост сервера (по умолчанию ``"0.0.0.0"``).
+            port: Порт сервера (по умолчанию ``8080``).
+            path: URL-путь для маршрута вебхука.
+            secret: Секрет для проверки заголовка
                 ``X-Max-Bot-Api-Secret``. Должен совпадать со значением,
                 переданным в :meth:`~maxapi.Bot.subscribe_webhook`.
-            webhook_type (type[BaseMaxWebhook]): Класс вебхука.
+            webhook_type: Класс вебхука.
             **kwargs: Дополнительные аргументы для ``aiohttp.web.AppRunner``.
         """
         webhook = webhook_type(dp=self, bot=bot, secret=secret)
@@ -1197,9 +1197,9 @@ class Dispatcher(BotMixin):
             Метод будет удалён в одной из следующих версий.
 
         Args:
-            bot (Bot): Экземпляр бота.
-            host (str): Хост.
-            port (int): Порт.
+            bot: Экземпляр бота.
+            host: Хост.
+            port: Порт.
         """
         warn(
             "init_serve устарел и будет удалён в следующих версиях. "
@@ -1220,7 +1220,7 @@ class Router(Dispatcher):
         Инициализация роутера.
 
         Args:
-            router_id (str | None): Идентификатор роутера для логов.
+            router_id: Идентификатор роутера для логов.
         """
 
         super().__init__(router_id)
@@ -1242,9 +1242,9 @@ class Event:
         Инициализирует событие-декоратор.
 
         Args:
-            update_type (UpdateType): Тип события.
-            router (Dispatcher | Router): Экземпляр роутера или диспетчера.
-            deprecated (bool): Флаг, указывающий на то, что событие устарело.
+            update_type: Тип события.
+            router: Экземпляр роутера или диспетчера.
+            deprecated: Флаг, указывающий на то, что событие устарело.
         """
 
         self.update_type = update_type
@@ -1258,7 +1258,7 @@ class Event:
         Регистрирует функцию как обработчик события.
 
         Args:
-            func_event (Callable): Функция-обработчик
+            func_event: Функция-обработчик
             *args: Фильтры
             **kwargs: Дополнительные параметры (например, states)
 

@@ -29,23 +29,23 @@ class SendMessage(BaseConnection):
     https://dev.max.ru/docs-api/methods/POST/messages
 
     Attributes:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        chat_id (Optional[int]): Идентификатор чата, куда отправлять
+        bot: Экземпляр бота для выполнения запроса.
+        chat_id: Идентификатор чата, куда отправлять
             сообщение.
-        user_id (Optional[int]): Идентификатор пользователя, если нужно
+        user_id: Идентификатор пользователя, если нужно
             отправить личное сообщение.
-        text (Optional[str]): Текст сообщения.
-        attachments (Optional[list]): Список вложений к сообщению.
+        text: Текст сообщения.
+        attachments: Список вложений к сообщению.
             Может быть None.
-        link (Optional[NewMessageLink]): Связь с другим сообщением
+        link: Связь с другим сообщением
             (например, ответ или пересылка).
-        notify (Optional[bool]): Отправлять ли уведомление о сообщении.
+        notify: Отправлять ли уведомление о сообщении.
             По умолчанию True.
-        format (Optional[TextFormat]): Режим форматирования
+        format: Режим форматирования
             (например, Markdown, HTML).
-        parse_mode (Optional[ParseMode]): Режим форматирования текста
+        parse_mode: Режим форматирования текста
             (например, Markdown, HTML).
-        disable_link_preview (Optional[bool]): Флаг генерации превью.
+        disable_link_preview: Флаг генерации превью.
     """
 
     def __init__(

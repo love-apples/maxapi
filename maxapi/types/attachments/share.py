@@ -9,10 +9,10 @@ class Share(Attachment):
     Вложение с типом "share" (поделиться).
 
     Attributes:
-        title (Optional[str]): Заголовок для шаринга.
-        description (Optional[str]): Описание.
-        image_url (Optional[str]): URL изображения для предпросмотра.
-        payload (Optional[ShareAttachmentPayload]): Данные share-вложения
+        title: Заголовок для шаринга.
+        description: Описание.
+        image_url: URL изображения для предпросмотра.
+        payload: Данные share-вложения
             (url + token).
     """
 

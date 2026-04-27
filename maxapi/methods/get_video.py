@@ -16,8 +16,8 @@ class GetVideo(BaseConnection):
     https://dev.max.ru/docs-api/methods/GET/videos/-videoToken-
 
     Attributes:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        video_token (str): Токен видео для запроса.
+        bot: Экземпляр бота для выполнения запроса.
+        video_token: Токен видео для запроса.
     """
 
     def __init__(self, bot: "Bot", video_token: str):

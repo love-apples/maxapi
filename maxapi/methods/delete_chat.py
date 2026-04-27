@@ -16,8 +16,8 @@ class DeleteChat(BaseConnection):
     https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-
 
     Attributes:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        chat_id (int): Идентификатор чата, который необходимо удалить.
+        bot: Экземпляр бота для выполнения запроса.
+        chat_id: Идентификатор чата, который необходимо удалить.
     """
 
     def __init__(self, bot: "Bot", chat_id: int):

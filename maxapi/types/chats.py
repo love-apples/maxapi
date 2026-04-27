@@ -49,7 +49,7 @@ class Icon(BaseModel):
     Модель иконки чата.
 
     Attributes:
-        url (str): URL-адрес иконки.
+        url: URL-адрес иконки.
     """
 
     url: str
@@ -215,27 +215,27 @@ class Chat(
     Модель чата.
 
     Attributes:
-        chat_id (int): Уникальный идентификатор чата.
-        type (ChatType): Тип чата.
-        status (ChatStatus): Статус чата.
-        title (Optional[str]): Название чата.
-        icon (Optional[Icon]): Иконка чата. Может быть None.
-        last_event_time (int): Временная метка последнего события
+        chat_id: Уникальный идентификатор чата.
+        type: Тип чата.
+        status: Статус чата.
+        title: Название чата.
+        icon: Иконка чата. Может быть None.
+        last_event_time: Временная метка последнего события
             в чате.
-        participants_count (int): Количество участников чата.
-        owner_id (Optional[int]): Идентификатор владельца чата.
-        participants (Optional[Dict[str, datetime]]): Словарь участников
+        participants_count: Количество участников чата.
+        owner_id: Идентификатор владельца чата.
+        participants: Словарь участников
             с временными метками. Может быть None.
-        is_public (bool): Флаг публичности чата.
-        link (Optional[str]): Ссылка на чат. Может быть None.
-        description (Optional[str]): Описание чата. Может быть None.
-        dialog_with_user (Optional[User]): Пользователь, с которым
+        is_public: Флаг публичности чата.
+        link: Ссылка на чат. Может быть None.
+        description: Описание чата. Может быть None.
+        dialog_with_user: Пользователь, с которым
             ведется диалог. Может быть None.
-        messages_count (Optional[int]): Количество сообщений в чате.
+        messages_count: Количество сообщений в чате.
             Может быть None.
-        chat_message_id (Optional[str]): Идентификатор сообщения чата.
+        chat_message_id: Идентификатор сообщения чата.
             Может быть None.
-        pinned_message (Optional[Message]): Закрепленное сообщение.
+        pinned_message: Закрепленное сообщение.
             Может быть None.
     """
 
@@ -306,7 +306,7 @@ class Chat(
         в объекты datetime.
 
         Args:
-            value (Optional[Dict[str, int]]): Словарь с временными
+            value: Словарь с временными
                 метками в миллисекундах. Может быть None, если участников нет.
 
         Returns:
@@ -439,8 +439,8 @@ class Chats(BaseModel):
     Модель списка чатов.
 
     Attributes:
-        chats (List[Chat]): Список чатов. По умолчанию пустой.
-        marker (Optional[int]): Маркер для пагинации. Может быть None.
+        chats: Список чатов. По умолчанию пустой.
+        marker: Маркер для пагинации. Может быть None.
     """
 
     chats: list[Chat] = Field(default_factory=list)
@@ -452,16 +452,16 @@ class ChatMember(User):
     Модель участника чата.
 
     Attributes:
-        last_access_time (Optional[int]): Время последнего доступа.
+        last_access_time: Время последнего доступа.
             Может быть None.
-        is_owner (Optional[bool]): Флаг владельца чата. Может быть None.
-        is_admin (Optional[bool]): Флаг администратора чата.
+        is_owner: Флаг владельца чата. Может быть None.
+        is_admin: Флаг администратора чата.
             Может быть None.
-        join_time (Optional[int]): Время присоединения к чату.
+        join_time: Время присоединения к чату.
             Может быть None.
-        permissions (Optional[List[ChatPermission]]): Список разрешений
+        permissions: Список разрешений
             участника. Может быть None.
-        alias (Optional[str]): Заголовок, который будет показан
+        alias: Заголовок, который будет показан
             на клиент. Может быть None.
     """
 

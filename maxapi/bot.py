@@ -116,40 +116,40 @@ class Bot(BaseConnection):
         Инициализирует экземпляр бота.
 
         Args:
-            token (str): Токен доступа к API бота. При None идет
+            token: Токен доступа к API бота. При None идет
                 получение из под окружения MAX_BOT_TOKEN.
-            format (Optional[TextFormat]): Форматирование по
+            format: Форматирование по
                 умолчанию.
-            parse_mode (Optional[ParseMode]): Форматирование по
+            parse_mode: Форматирование по
                 умолчанию.
-            notify (Optional[bool]): Отключение уведомлений при отправке
+            notify: Отключение уведомлений при отправке
                 сообщений.
-            disable_link_preview (Optional[bool]): Если false, сервер не
+            disable_link_preview: Если false, сервер не
                 будет генерировать превью для ссылок в тексте сообщений.
-            auto_requests (bool): Автоматическое заполнение
+            auto_requests: Автоматическое заполнение
                 chat/from_user через API (по умолчанию True).
                 При False дополнительные запросы для их заполнения не
                 выполняются: в event.chat/event.from_user могут
                 оставаться lazy ref с ручным await .fetch(), либо эти
                 поля уже могут быть заполнены данными из payload
                 события.
-            default_connection (Optional[DefaultConnectionProperties]):
+            default_connection:
                 Настройки соединения.
-            after_input_media_delay (Optional[float]): Задержка после
+            after_input_media_delay: Задержка после
                 загрузки файла.
-            after_upload_attempts (Optional[int]): Количество попыток
+            after_upload_attempts: Количество попыток
                 отправки сообщения после загрузки медиа
                 (по умолчанию 5).
-            after_upload_retry_delay (Optional[float]): Задержка между
+            after_upload_retry_delay: Задержка между
                 попытками отправки после загрузки медиа в секундах
                 (по умолчанию 2.0).
-            after_upload_give_up_timeout (Optional[float]): Максимальное
+            after_upload_give_up_timeout: Максимальное
                 общее время ожидания готовности медиа в секундах.
                 None — без ограничения по времени, только по количеству
                 попыток (по умолчанию None).
-            auto_check_subscriptions (bool): Проверка подписок для
+            auto_check_subscriptions: Проверка подписок для
                 метода start_polling.
-            marker_updates (Optional[int]): Маркер для получения
+            marker_updates: Маркер для получения
                 обновлений.
         """
 
@@ -216,7 +216,7 @@ class Bot(BaseConnection):
         Устанавливает маркер для получения обновлений.
 
         Args:
-            marker_updates (int): Маркер для получения обновлений.
+            marker_updates: Маркер для получения обновлений.
         """
 
         self.marker_updates = marker_updates
@@ -255,7 +255,7 @@ class Bot(BaseConnection):
         Определяет флаг превью.
 
         Args:
-            disable_link_preview (Optional[bool]): Локальный флаг.
+            disable_link_preview: Локальный флаг.
 
         Returns:
             Optional[bool]: Итоговый флаг.
@@ -272,7 +272,7 @@ class Bot(BaseConnection):
         Определяет флаг уведомления.
 
         Args:
-            notify (Optional[bool]): Локальный флаг.
+            notify: Локальный флаг.
 
         Returns:
             Optional[bool]: Итоговый флаг.
@@ -289,8 +289,8 @@ class Bot(BaseConnection):
         Определяет режим форматирования.
 
         Args:
-            format (Optional[TextFormat]): Локальный режим.
-            parse_mode (Optional[ParseMode]): Устаревший локальный режим.
+            format: Локальный режим.
+            parse_mode: Устаревший локальный режим.
 
         Returns:
             Optional[TextFormat]: Итоговый режим.
@@ -370,20 +370,20 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/POST/messages
 
         Args:
-            chat_id (Optional[int]): ID чата для отправки (если не
+            chat_id: ID чата для отправки (если не
                 user_id).
-            user_id (Optional[int]): ID пользователя (если не chat_id).
-            text (Optional[str]): Текст сообщения.
-            attachments (Optional[list]): Вложения.
-            link (Optional[NewMessageLink]): Данные ссылки сообщения.
-            notify (Optional[bool]): Флаг уведомления.
-            format (Optional[TextFormat]): Режим форматирования
+            user_id: ID пользователя (если не chat_id).
+            text: Текст сообщения.
+            attachments: Вложения.
+            link: Данные ссылки сообщения.
+            notify: Флаг уведомления.
+            format: Режим форматирования
                 текста.
-            parse_mode (Optional[ParseMode]): Режим форматирования
+            parse_mode: Режим форматирования
                 текста.
-            disable_link_preview (Optional[bool]): Флаг генерации
+            disable_link_preview: Флаг генерации
                 превью.
-            sleep_after_input_media (Optional[bool]): Нужно ли делать
+            sleep_after_input_media: Нужно ли делать
                 задержку после загрузки вложений.
 
         Returns:
@@ -417,8 +417,8 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/actions
 
         Args:
-            chat_id (Optional[int]): ID чата.
-            action (SenderAction): Тип действия.
+            chat_id: ID чата.
+            action: Тип действия.
 
         Returns:
             SendedAction: Результат отправки действия.
@@ -450,16 +450,16 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/PUT/messages
 
         Args:
-            message_id (str): ID сообщения.
-            text (Optional[str]): Новый текст.
-            attachments (Optional[list]): Новые вложения.
-            link (Optional[NewMessageLink]): Новая ссылка.
-            notify (Optional[bool]): Флаг уведомления.
-            format (Optional[TextFormat]): Режим форматирования
+            message_id: ID сообщения.
+            text: Новый текст.
+            attachments: Новые вложения.
+            link: Новая ссылка.
+            notify: Флаг уведомления.
+            format: Режим форматирования
                 текста.
-            parse_mode (Optional[ParseMode]): Режим форматирования
+            parse_mode: Режим форматирования
                 текста.
-            sleep_after_input_media (Optional[bool]): Нужно ли делать
+            sleep_after_input_media: Нужно ли делать
                 задержку после загрузки вложений.
 
         Returns:
@@ -486,7 +486,7 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/DELETE/messages
 
         Args:
-            message_id (str): ID сообщения.
+            message_id: ID сообщения.
 
         Returns:
             DeletedMessage: Результат удаления.
@@ -504,7 +504,7 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-
 
         Args:
-            chat_id (int): ID чата.
+            chat_id: ID чата.
 
         Returns:
             DeletedChat: Результат удаления чата.
@@ -529,11 +529,11 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/GET/messages
 
         Args:
-            chat_id (Optional[int]): ID чата.
-            message_ids (Optional[List[str]]): ID сообщений.
-            from_time (Optional[datetime | int]): Начало периода.
-            to_time (Optional[datetime | int]): Конец периода.
-            count (int): Количество сообщений.
+            chat_id: ID чата.
+            message_ids: ID сообщений.
+            from_time: Начало периода.
+            to_time: Конец периода.
+            count: Количество сообщений.
 
         Returns:
             Messages: Список сообщений.
@@ -555,7 +555,7 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/GET/messages/-messageId-
 
         Args:
-            message_id (str): ID сообщения.
+            message_id: ID сообщения.
 
         Returns:
             Message: Объект сообщения.
@@ -582,7 +582,7 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/pin
 
         Args:
-            chat_id (int): ID чата.
+            chat_id: ID чата.
 
         Returns:
             GettedPin: Закрепленное сообщение.
@@ -608,14 +608,14 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/PATCH/me
 
         Args:
-            first_name (Optional[str]): Новое имя бота (1–64 символа).
-            last_name (str, optional): Второе имя бота (1–64 символа).
-            description (Optional[str]): Новое описание бота
+            first_name: Новое имя бота (1–64 символа).
+            last_name: Второе имя бота (1–64 символа).
+            description: Новое описание бота
                 (1–16000 символов).
-            commands (Optional[List[BotCommand]]): Список команд бота
+            commands: Список команд бота
                 (до 32 элементов). Передайте пустой список, чтобы
                 удалить все команды.
-            photo (Optional[PhotoAttachmentRequestPayload]): Новое
+            photo: Новое
                 фото бота.
 
         Returns:
@@ -648,8 +648,8 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/GET/chats
 
         Args:
-            count (Optional[int]): Количество чатов (по умолчанию 50) (1-100).
-            marker (Optional[int]): Маркер для пагинации.
+            count: Количество чатов (по умолчанию 50) (1-100).
+            marker: Маркер для пагинации.
 
         Returns:
             Chats: Список чатов.
@@ -664,7 +664,7 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/GET/chats/-chatLink-
 
         Args:
-            link (str): Ссылка на чат.
+            link: Ссылка на чат.
 
         Returns:
             Chat: Объект чата.
@@ -679,7 +679,7 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/GET/chats/-chatId-
 
         Args:
-            id (int): ID чата.
+            id: ID чата.
 
         Returns:
             Chat: Объект чата.
@@ -702,11 +702,11 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/PATCH/chats/-chatId-
 
         Args:
-            chat_id (int): ID чата.
-            icon (Optional[PhotoAttachmentRequestPayload]): Иконка.
-            title (Optional[str]): Новый заголовок (1-200 символов).
-            pin (Optional[str]): ID сообщения для закрепления.
-            notify (Optional[bool]): Флаг уведомления.
+            chat_id: ID чата.
+            icon: Иконка.
+            title: Новый заголовок (1-200 символов).
+            pin: ID сообщения для закрепления.
+            notify: Флаг уведомления.
 
         Returns:
             Chat: Обновленный объект чата.
@@ -728,7 +728,7 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/GET/videos/-videoToken-
 
         Args:
-            video_token (str): Токен видео.
+            video_token: Токен видео.
 
         Returns:
             Video: Объект видео.
@@ -748,9 +748,9 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/POST/answers
 
         Args:
-            callback_id (str): ID callback.
-            message (Optional[MessageForCallback]): Сообщение для отправки.
-            notification (Optional[str]): Текст уведомления.
+            callback_id: ID callback.
+            message: Сообщение для отправки.
+            notification: Текст уведомления.
 
         Returns:
             SendedCallback: Результат отправки callback.
@@ -772,9 +772,9 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/PUT/chats/-chatId-/pin
 
         Args:
-            chat_id (int): ID чата.
-            message_id (str): ID сообщения.
-            notify (Optional[bool]): Флаг уведомления.
+            chat_id: ID чата.
+            message_id: ID сообщения.
+            notify: Флаг уведомления.
 
         Returns:
             PinnedMessage: Закрепленное сообщение.
@@ -797,7 +797,7 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-/pin
 
         Args:
-            chat_id (int): ID чата.
+            chat_id: ID чата.
 
         Returns:
             DeletedPinMessage: Результат удаления.
@@ -818,7 +818,7 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members/me
 
         Args:
-            chat_id (int): ID чата.
+            chat_id: ID чата.
 
         Returns:
             ChatMember: Информация о боте в чате.
@@ -839,7 +839,7 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-/members/me
 
         Args:
-            chat_id (int): ID чата.
+            chat_id: ID чата.
 
         Returns:
             DeletedBotFromChat: Результат удаления.
@@ -861,8 +861,8 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members/admins
 
         Args:
-            chat_id (int): ID чата.
-            marker (Optional[int]): Маркер для пагинации.
+            chat_id: ID чата.
+            marker: Маркер для пагинации.
 
         Returns:
             GettedListAdminChat: Список администраторов.
@@ -886,9 +886,9 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members/admins
 
         Args:
-            chat_id (int): ID чата.
-            admins (List[ChatAdmin]): Список администраторов.
-            marker (Optional[int]): Маркер для пагинации.
+            chat_id: ID чата.
+            admins: Список администраторов.
+            marker: Маркер для пагинации.
 
         Returns:
             AddedListAdminChat: Результат добавления.
@@ -908,8 +908,8 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-/members/admins/-userId-
 
         Args:
-            chat_id (int): ID чата.
-            user_id (int): ID пользователя.
+            chat_id: ID чата.
+            user_id: ID пользователя.
 
         Returns:
             RemovedAdmin: Результат удаления.
@@ -934,10 +934,10 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members
 
         Args:
-            chat_id (int): ID чата.
-            user_ids (Optional[List[int]]): Список ID участников.
-            marker (Optional[int]): Маркер для пагинации.
-            count (Optional[int]): Количество участников
+            chat_id: ID чата.
+            user_ids: Список ID участников.
+            marker: Маркер для пагинации.
+            count: Количество участников
                 (по умолчанию 20) (1-100).
 
         Returns:
@@ -963,8 +963,8 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members
 
         Args:
-            chat_id (int): ID чата.
-            user_id (int): ID участника.
+            chat_id: ID чата.
+            user_id: ID участника.
 
         Returns:
             Optional[ChatMember]: Участник.
@@ -990,8 +990,8 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members
 
         Args:
-            chat_id (int): ID чата.
-            user_ids (List[int]): Список ID пользователей.
+            chat_id: ID чата.
+            user_ids: Список ID пользователей.
 
         Returns:
             AddedMembersChat: Результат добавления.
@@ -1016,9 +1016,9 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-/members
 
         Args:
-            chat_id (int): ID чата.
-            user_id (int): ID пользователя.
-            block (bool): Блокировать пользователя (по умолчанию False).
+            chat_id: ID чата.
+            user_id: ID пользователя.
+            block: Блокировать пользователя (по умолчанию False).
 
         Returns:
             RemovedMemberChat: Результат исключения.
@@ -1058,7 +1058,7 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/POST/uploads
 
         Args:
-            type (UploadType): Тип загружаемого файла.
+            type: Тип загружаемого файла.
 
         Returns:
             GettedUploadUrl: URL для загрузки.
@@ -1076,7 +1076,7 @@ class Bot(BaseConnection):
         `attachments` без ручного вызова низкоуровневых upload-методов.
 
         Args:
-            media (InputMedia | InputMediaBuffer): Медиафайл для загрузки.
+            media: Медиафайл для загрузки.
 
         Returns:
             AttachmentUpload: Вложение типа upload с payload.token.
@@ -1123,7 +1123,7 @@ class Bot(BaseConnection):
         Устанавливает список команд бота.
 
         Args:
-            *commands (BotCommand): Список команд.
+            *commands: Список команд.
 
         Returns:
             User: Обновленная информация о боте.
@@ -1163,9 +1163,9 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/POST/subscriptions
 
         Args:
-            url (str): URL HTTP(S)-эндпойнта вашего бота.
-            update_types (Optional[List[UpdateType]]): Список типов обновлений.
-            secret (Optional[str]): Секрет для Webhook (5-256 симолов).
+            url: URL HTTP(S)-эндпойнта вашего бота.
+            update_types: Список типов обновлений.
+            secret: Секрет для Webhook (5-256 симолов).
 
         Returns:
             Subscribed: Результат подписки.
@@ -1185,7 +1185,7 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/DELETE/subscriptions
 
         Args:
-            url (str): URL HTTP(S)-эндпойнта вашего бота.
+            url: URL HTTP(S)-эндпойнта вашего бота.
 
         Returns:
             Unsubscribed: Результат отписки.

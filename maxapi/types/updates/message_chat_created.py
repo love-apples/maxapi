@@ -14,10 +14,10 @@ class MessageChatCreated(BaseUpdate):
     Событие создания чата.
 
     Attributes:
-        chat (Chat): Объект чата.
-        title (Optional[str]): Название чата.
-        message_id (Optional[str]): ID сообщения.
-        start_payload (Optional[str]): Payload для старта.
+        chat: Объект чата.
+        title: Название чата.
+        message_id: ID сообщения.
+        start_payload: Payload для старта.
     """
 
     chat: Chat  # type: ignore[assignment]

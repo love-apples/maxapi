@@ -18,12 +18,12 @@ class GetMessages(BaseConnection):
     https://dev.max.ru/docs-api/methods/GET/messages
 
     Attributes:
-        bot (Bot): Экземпляр бота.
-        chat_id (int): Идентификатор чата.
-        message_ids (List[str] | None): Фильтр по идентификаторам сообщений.
-        from_time (datetime | int | None): Начальная временная метка.
-        to_time (datetime | int | None): Конечная временная метка.
-        count (int): Максимальное число сообщений.
+        bot: Экземпляр бота.
+        chat_id: Идентификатор чата.
+        message_ids: Фильтр по идентификаторам сообщений.
+        from_time: Начальная временная метка.
+        to_time: Конечная временная метка.
+        count: Максимальное число сообщений.
     """
 
     def __init__(

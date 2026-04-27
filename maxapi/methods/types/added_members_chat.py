@@ -10,8 +10,8 @@ class FailedUserDetails(BaseModel):
     Детали ошибки для пользователя.
 
     Attributes:
-        error_code (str): Код ошибки.
-        user_ids (List[int]): Список ID пользователей, для которых произошла
+        error_code: Код ошибки.
+        user_ids: Список ID пользователей, для которых произошла
             ошибка.
     """
 
@@ -24,8 +24,8 @@ class AddedMembersChat(BaseModel):
     Ответ API при добавлении списка пользователей в чат.
 
     Attributes:
-        success (bool): Статус успешности операции.
-        message (Optional[str]): Дополнительное сообщение или ошибка.
+        success: Статус успешности операции.
+        message: Дополнительное сообщение или ошибка.
     """
 
     success: bool

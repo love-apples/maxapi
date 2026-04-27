@@ -20,17 +20,17 @@ class User(FetchableMixin, BaseModel, BotMixin, PeerShortcutMixin):
     Модель пользователя.
 
     Attributes:
-        user_id (int): Уникальный идентификатор пользователя.
-        first_name (str): Имя пользователя.
-        last_name (Optional[str]): Фамилия пользователя. Может быть None.
-        username (Optional[str]): Имя пользователя (ник). Может быть None.
-        is_bot (bool): Флаг, указывающий, является ли пользователь ботом.
-        last_activity_time (int): Временная метка последней активности.
-        description (Optional[str]): Описание пользователя. Может быть None.
-        avatar_url (Optional[str]): URL аватара пользователя. Может быть None.
-        full_avatar_url (Optional[str]): URL полного аватара пользователя.
+        user_id: Уникальный идентификатор пользователя.
+        first_name: Имя пользователя.
+        last_name: Фамилия пользователя. Может быть None.
+        username: Имя пользователя (ник). Может быть None.
+        is_bot: Флаг, указывающий, является ли пользователь ботом.
+        last_activity_time: Временная метка последней активности.
+        description: Описание пользователя. Может быть None.
+        avatar_url: URL аватара пользователя. Может быть None.
+        full_avatar_url: URL полного аватара пользователя.
             Может быть None.
-        commands (Optional[List[BotCommand]]): Список команд бота.
+        commands: Список команд бота.
             Может быть None.
     """
 
@@ -90,8 +90,8 @@ class ChatAdmin(BaseModel):
     Модель администратора чата.
 
     Attributes:
-        user_id (int): Уникальный идентификатор администратора.
-        permissions (List[ChatPermission]): Список разрешений администратора.
+        user_id: Уникальный идентификатор администратора.
+        permissions: Список разрешений администратора.
     """
 
     user_id: int

@@ -17,8 +17,8 @@ class StickerAttachmentPayload(BaseModel):
     Данные для вложения типа стикер.
 
     Attributes:
-        url (str): URL стикера.
-        code (str): Код стикера.
+        url: URL стикера.
+        code: Код стикера.
     """
 
     url: str
@@ -30,9 +30,9 @@ class PhotoAttachmentPayload(BaseModel):
     Данные для фото-вложения.
 
     Attributes:
-        photo_id (int): Идентификатор фотографии.
-        token (str): Токен для доступа к фото.
-        url (str): URL фотографии.
+        photo_id: Идентификатор фотографии.
+        token: Токен для доступа к фото.
+        url: URL фотографии.
     """
 
     photo_id: int
@@ -45,8 +45,8 @@ class OtherAttachmentPayload(BaseModel):
     Данные для общих типов вложений (файлы и т.п.).
 
     Attributes:
-        url (str): URL вложения.
-        token (Optional[str]): Опциональный токен доступа.
+        url: URL вложения.
+        token: Опциональный токен доступа.
     """
 
     url: str
@@ -58,8 +58,8 @@ class ShareAttachmentPayload(BaseModel):
     Данные для вложения типа "share".
 
     Attributes:
-        url (str): URL расшаренного ресурса.
-        token (str): Токен доступа.
+        url: URL расшаренного ресурса.
+        token: Токен доступа.
     """
 
     url: str
@@ -71,8 +71,8 @@ class ContactAttachmentPayload(BaseModel):
     Данные для контакта.
 
     Attributes:
-        vcf_info (Optional[str]): Информация в формате vcf.
-        max_info (Optional[User]): Дополнительная информация о пользователе.
+        vcf_info: Информация в формате vcf.
+        max_info: Дополнительная информация о пользователе.
     """
 
     vcf_info: str = ""  # для корректного определения
@@ -90,7 +90,7 @@ class ButtonsPayload(BaseModel):
     Данные для вложения с кнопками.
 
     Attributes:
-        buttons (List[List[InlineButtonUnion]]): Двумерный список
+        buttons: Двумерный список
             inline-кнопок.
     """
 
@@ -108,8 +108,8 @@ class Attachment(BaseModel):
     Универсальный класс вложения с типом и полезной нагрузкой.
 
     Attributes:
-        type (AttachmentType): Тип вложения.
-        payload (Optional[Union[...] ]): Полезная нагрузка, зависит
+        type: Тип вложения.
+        payload: Полезная нагрузка, зависит
             от типа вложения.
     """
 

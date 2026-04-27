@@ -16,10 +16,10 @@ class GetChats(BaseConnection):
     https://dev.max.ru/docs-api/methods/GET/chats
 
     Attributes:
-        bot (Bot): Инициализированный клиент бота.
-        count (Optional[int]): Максимальное количество чатов,
+        bot: Инициализированный клиент бота.
+        count: Максимальное количество чатов,
             возвращаемых за один запрос.
-        marker (Optional[int]): Маркер для продолжения пагинации.
+        marker: Маркер для продолжения пагинации.
     """
 
     def __init__(
