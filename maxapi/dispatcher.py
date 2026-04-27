@@ -27,13 +27,13 @@ from .webhook import DEFAULT_HOST, DEFAULT_PATH, DEFAULT_PORT, BaseMaxWebhook
 from .webhook.aiohttp import AiohttpMaxWebhook
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Iterable, Iterator
+    from collections.abc import Callable, Iterable, Iterator
 
     from magic_filter import MagicFilter
 
     from .bot import Bot
     from .filters.filter import BaseFilter
-    from .filters.middleware import BaseMiddleware
+    from .filters.middleware import BaseMiddleware, HandlerCallable
     from .types.updates import UpdateUnion
 
 CONNECTION_RETRY_DELAY = 30
@@ -100,9 +100,7 @@ class Dispatcher(BotMixin):
             ]
             | None
         ) = None
-        self._global_mw_chain: (
-            Callable[[Any, dict[str, Any]], Awaitable[Any]] | None
-        ) = None
+        self._global_mw_chain: HandlerCallable | None = None
         self._background_tasks: set[asyncio.Task] = set()
         self._ready: bool = False
 
@@ -210,8 +208,8 @@ class Dispatcher(BotMixin):
     @staticmethod
     def build_middleware_chain(
         middlewares: list[BaseMiddleware],
-        handler: Callable[[Any, dict[str, Any]], Awaitable[Any]],
-    ) -> Callable[[Any, dict[str, Any]], Awaitable[Any]]:
+        handler: HandlerCallable,
+    ) -> HandlerCallable:
         """
         Формирует цепочку вызова middleware вокруг хендлера.
 
@@ -496,7 +494,7 @@ class Dispatcher(BotMixin):
     @staticmethod
     async def call_handler(
         handler: Handler,
-        event_object: UpdateType | dict[str, Any],
+        event_object: UpdateUnion | dict[str, Any],
         data: dict[str, Any],
     ) -> None:
         """
