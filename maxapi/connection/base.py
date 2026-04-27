@@ -98,7 +98,7 @@ class BaseConnection(BotMixin):
         Установка API URL для запросов
 
         Args:
-            url: Новый API URl
+            url: Новый API URL
         """
 
         self.api_url = url

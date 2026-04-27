@@ -12,7 +12,7 @@ class CommandsInfo:
 
     Attributes:
         commands: Список команд
-        info: Информация о их предназначениях
+        info: Информация об их предназначениях
     """
 
     commands: list[str]
@@ -177,7 +177,7 @@ class CommandStart(Command):
         ignore_symbol_at_sign: Учитывать символ "@" при
             отправке команды с упоминанием бота (по умолчанию False).
         only_with_bot_username: Обязательно упоминать
-            бота при отправке команды (по умолчанию False)..
+            бота при отправке команды (по умолчанию False).
     """
 
     def __init__(
