@@ -5,7 +5,7 @@ from ...types.subscription import Subscription
 
 class GettedSubscriptions(BaseModel):
     """
-    Ответ API с отправленным сообщением.
+    Ответ API, возвращающий списка всех подписок бота.
 
     Attributes:
         subscriptions: Список подписок бота.

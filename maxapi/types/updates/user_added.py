@@ -10,17 +10,19 @@ class UserAdded(BaseUpdate):
     Класс для обработки события добавления пользователя в чат.
 
     Attributes:
-        inviter_id: Идентификатор пользователя, добавившего нового
-            участника. Может быть None.
-        chat_id: Идентификатор чата. Может быть None.
-        user: Объект пользователя, добавленного в чат.
-        is_channel: Указывает, был ли пользователь добавлен
-            в канал или нет
+
+        chat_id: ID чата, где произошло событие
+        user: Пользователь, добавленный в чат
+        inviter_id: Пользователь, который добавил пользователя в чат.
+            Может быть null, если пользователь присоединился к чату по
+            ссылке
+        is_channel: Указывает, был ли пользователь добавлен в канал или
+            нет
     """
 
-    inviter_id: int | None = None
     chat_id: int
     user: User
+    inviter_id: int | None = None
     is_channel: bool
     update_type: Literal[UpdateType.USER_ADDED] = UpdateType.USER_ADDED
 

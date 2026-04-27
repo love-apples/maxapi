@@ -1165,7 +1165,7 @@ class Bot(BaseConnection):
         Args:
             url: URL HTTP(S)-эндпойнта вашего бота.
             update_types: Список типов обновлений.
-            secret: Секрет для Webhook (5-256 симолов).
+            secret: Секрет для Webhook (5-256 символов).
 
         Returns:
             Subscribed: Результат подписки.
