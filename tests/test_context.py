@@ -323,6 +323,21 @@ class TestRedisContext:
         assert ttl_ms == "1250"
         redis.pexpire.assert_awaited_once_with(context.state_key, 1250)
 
+    async def test_redis_update_data_without_ttl(self):
+        """update_data без TTL передаёт пустую строку в ARGV[2] и не вызывает pexpire."""
+        redis = AsyncMock()
+        context = RedisContext(chat_id=1, user_id=2, redis_client=redis)
+
+        await context.update_data(food="mint", city="Samara")
+
+        redis.eval.assert_awaited_once()
+        _, keys_count, key, payload, ttl_arg = redis.eval.await_args.args
+        assert keys_count == 1
+        assert key == context.data_key
+        assert json.loads(payload) == {"food": "mint", "city": "Samara"}
+        assert ttl_arg == "", "ARGV[2] должен быть пустой строкой, чтобы Lua не входила в ветку PX"
+        redis.pexpire.assert_not_awaited()
+
     async def test_redis_set_state_none(self):
         """set_state(None) удаляет ключ состояния."""
         redis = AsyncMock()
