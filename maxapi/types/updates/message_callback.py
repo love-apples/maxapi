@@ -50,7 +50,7 @@ class MessageCallback(BaseUpdate):
 
     Attributes:
         message: Изначальное сообщение, содержащее
-            встроенную клавиатуру. Может быть null, если оно было
+            встроенную клавиатуру. Может быть None, если оно было
             удалено к моменту, когда бот получил это обновление.
         user_locale: Локаль пользователя.
         callback: Объект callback.
@@ -229,8 +229,8 @@ class MessageCallback(BaseUpdate):
         raise_if_not_exists: bool = True,
     ) -> SendedCallback:
         """
-        Отправляет ответ на callback с возможностью изменить текст,
-        вложения и параметры уведомления.
+        Отправляет ответ на callback с возможностью изменить текст
+        и параметры уведомления.
 
         Args:
             notification: Текст уведомления.
