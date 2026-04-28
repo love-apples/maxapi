@@ -6,6 +6,12 @@ from ..context.base import BaseContext
 from ..context.state_machine import State
 
 
+def _ttl_to_ms(ttl: float | None) -> int | None:
+    if ttl is None:
+        return None
+    return max(1, round(ttl * 1000))
+
+
 class MemoryContext(BaseContext):
     """
     Контекст хранения данных пользователя в оперативной памяти.
@@ -28,6 +34,8 @@ class MemoryContext(BaseContext):
         """
 
         async with self._lock:
+            await self._expire_if_needed()
+            self._ttl_tracker.touch()
             return self._context.copy()
 
     async def set_data(self, data: dict[str, Any]) -> None:
@@ -39,7 +47,9 @@ class MemoryContext(BaseContext):
         """
 
         async with self._lock:
+            await self._expire_if_needed()
             self._context = data
+            self._ttl_tracker.touch()
 
     async def update_data(self, **kwargs: Any) -> None:
         """
@@ -50,7 +60,9 @@ class MemoryContext(BaseContext):
         """
 
         async with self._lock:
+            await self._expire_if_needed()
             self._context.update(kwargs)
+            self._ttl_tracker.touch()
 
     async def set_state(self, state: State | str | None = None) -> None:
         """
@@ -61,7 +73,9 @@ class MemoryContext(BaseContext):
         """
 
         async with self._lock:
+            await self._expire_if_needed()
             self._state = state
+            self._ttl_tracker.touch()
 
     async def get_state(self) -> State | str | None:
         """
@@ -72,6 +86,8 @@ class MemoryContext(BaseContext):
         """
 
         async with self._lock:
+            await self._expire_if_needed()
+            self._ttl_tracker.touch()
             return self._state
 
     async def clear(self) -> None:
@@ -82,6 +98,14 @@ class MemoryContext(BaseContext):
         async with self._lock:
             self._state = None
             self._context = {}
+            self._ttl_tracker.clear()
+
+    async def _expire_if_needed(self) -> None:
+        """Очищает контекст, если его TTL истёк."""
+        if self._ttl_tracker.is_expired():
+            self._state = None
+            self._context = {}
+            self._ttl_tracker.clear()
 
 
 class RedisContext(BaseContext):
@@ -106,10 +130,17 @@ class RedisContext(BaseContext):
 
     async def get_data(self) -> dict[str, Any]:
         data = await self.redis.get(self.data_key)
+        await self._touch_redis_ttl()
         return json.loads(data) if data else {}
 
     async def set_data(self, data: dict[str, Any]) -> None:
-        await self.redis.set(self.data_key, json.dumps(data))
+        ttl_ms = _ttl_to_ms(self.ttl)
+        payload = json.dumps(data)
+        if ttl_ms is None:
+            await self.redis.set(self.data_key, payload)
+        else:
+            await self.redis.set(self.data_key, payload, px=ttl_ms)
+            await self.redis.pexpire(self.state_key, ttl_ms)
 
     async def update_data(self, **kwargs: Any) -> None:
         """
@@ -125,10 +156,23 @@ class RedisContext(BaseContext):
         for k, v in pairs(updates) do
             decoded[k] = v
         end
-        redis.call('set', KEYS[1], cjson.encode(decoded))
+        if ARGV[2] ~= "" then
+            redis.call('set', KEYS[1], cjson.encode(decoded), 'PX', ARGV[2])
+        else
+            redis.call('set', KEYS[1], cjson.encode(decoded))
+        end
         return redis.status_reply("OK")
         """
-        await self.redis.eval(lua_script, 1, self.data_key, json.dumps(kwargs))
+        ttl_ms = _ttl_to_ms(self.ttl)
+        await self.redis.eval(
+            lua_script,
+            1,
+            self.data_key,
+            json.dumps(kwargs),
+            str(ttl_ms) if ttl_ms is not None else "",
+        )
+        if ttl_ms is not None:
+            await self.redis.pexpire(self.state_key, ttl_ms)
 
     async def set_state(self, state: State | str | None = None) -> None:
         if state is None:
@@ -137,9 +181,11 @@ class RedisContext(BaseContext):
             # Сохраняем имя состояния, если это объект State
             state_val = state.name if isinstance(state, State) else state
             await self.redis.set(self.state_key, str(state_val))
+        await self._touch_redis_ttl()
 
     async def get_state(self) -> State | str | None:
         state = await self.redis.get(self.state_key)
+        await self._touch_redis_ttl()
         if isinstance(state, bytes):
             return state.decode("utf-8")
         return state
@@ -152,3 +198,12 @@ class RedisContext(BaseContext):
 
     async def clear(self) -> None:
         await self.redis.delete(self.data_key, self.state_key)
+        self._ttl_tracker.clear()
+
+    async def _touch_redis_ttl(self) -> None:
+        """Продлевает TTL обоих ключей контекста при активности."""
+        ttl_ms = _ttl_to_ms(self.ttl)
+        if ttl_ms is None:
+            return
+        await self.redis.pexpire(self.data_key, ttl_ms)
+        await self.redis.pexpire(self.state_key, ttl_ms)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import inspect
 import warnings
 from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
 from collections import OrderedDict
@@ -26,13 +27,13 @@ from .webhook import DEFAULT_HOST, DEFAULT_PATH, DEFAULT_PORT, BaseMaxWebhook
 from .webhook.aiohttp import AiohttpMaxWebhook
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Iterator
+    from collections.abc import Callable, Iterable, Iterator
 
     from magic_filter import MagicFilter
 
     from .bot import Bot
     from .filters.filter import BaseFilter
-    from .filters.middleware import BaseMiddleware
+    from .filters.middleware import BaseMiddleware, HandlerCallable
     from .types.updates import UpdateUnion
 
 CONNECTION_RETRY_DELAY = 30
@@ -81,7 +82,8 @@ class Dispatcher(BotMixin):
         self.routers: list[Router | Dispatcher] = []
         self.filters: list[MagicFilter] = []
         self.base_filters: list[BaseFilter] = []
-        self.middlewares: list[BaseMiddleware] = []
+        self.outer_middlewares: list[BaseMiddleware] = []
+        self.inner_middlewares: list[BaseMiddleware] = []
 
         self.bot: Bot | None = None
         self.on_started_func: Callable | None = None
@@ -98,9 +100,7 @@ class Dispatcher(BotMixin):
             ]
             | None
         ) = None
-        self._global_mw_chain: (
-            Callable[[Any, dict[str, Any]], Awaitable[Any]] | None
-        ) = None
+        self._global_mw_chain: HandlerCallable | None = None
         self._background_tasks: set[asyncio.Task] = set()
         self._ready: bool = False
 
@@ -155,6 +155,39 @@ class Dispatcher(BotMixin):
         )
         self.on_started = Event(update_type=UpdateType.ON_STARTED, router=self)
 
+    @property
+    def middlewares(self) -> list[BaseMiddleware]:
+        """
+        Список outer-middleware.
+
+        .. deprecated::
+            Используйте :attr:`outer_middlewares`.
+        """
+        warnings.warn(
+            f"{type(self).__name__}.middlewares устарел. "
+            "Используйте outer_middlewares.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.outer_middlewares
+
+    @middlewares.setter
+    def middlewares(self, value: list[BaseMiddleware]) -> None:
+        """
+        Устанавливает outer_middlewares через устаревший атрибут.
+
+        .. deprecated::
+            Присвоение ``dp.middlewares = [...]`` устарело.
+            Используйте :attr:`outer_middlewares` напрямую.
+        """
+        warnings.warn(
+            f"{type(self).__name__}.middlewares = [...] устарел. "
+            "Используйте outer_middlewares.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.outer_middlewares = value
+
     async def check_me(self) -> None:
         """
         Проверяет и логирует информацию о боте.
@@ -175,8 +208,8 @@ class Dispatcher(BotMixin):
     @staticmethod
     def build_middleware_chain(
         middlewares: list[BaseMiddleware],
-        handler: Callable[[Any, dict[str, Any]], Awaitable[Any]],
-    ) -> Callable[[Any, dict[str, Any]], Awaitable[Any]]:
+        handler: HandlerCallable,
+    ) -> HandlerCallable:
         """
         Формирует цепочку вызова middleware вокруг хендлера.
 
@@ -203,25 +236,81 @@ class Dispatcher(BotMixin):
 
         self.routers.extend(routers)
 
-    def outer_middleware(self, middleware: BaseMiddleware) -> None:
+    def register_outer_middleware(self, middleware: BaseMiddleware) -> None:
         """
-        Добавляет Middleware на первое место в списке.
+        Регистрирует outer middleware (до проверки фильтров handler).
+
+        Вызывается для каждого подходящего события ещё до того, как
+        диспетчер узнает, какой именно handler сработает.
+
+        Порядок регистрации сохраняется: первый зарегистрированный
+        outer middleware выполняется первым (внешний слой цепочки),
+        что симметрично с :meth:`register_inner_middleware`.
 
         Args:
             middleware: Middleware.
         """
+        self.outer_middlewares.append(middleware)
 
-        self.middlewares.insert(0, middleware)
+    def register_inner_middleware(self, middleware: BaseMiddleware) -> None:
+        """
+        Регистрирует inner middleware (после проверки фильтров handler).
+
+        Вызывается только тогда, когда конкретный handler прошёл все
+        свои фильтры и state и будет реально исполнен. На уровне
+        Dispatcher — только для событий, попавших хоть в один handler;
+        на уровне Router — только для handler этого роутера.
+
+        Args:
+            middleware (BaseMiddleware): Middleware.
+        """
+        self.inner_middlewares.append(middleware)
+
+    def outer_middleware(self, middleware: BaseMiddleware) -> None:
+        """
+        Добавляет Middleware на первое место в списке outer_middlewares.
+
+        Историческое поведение: ``insert(0, ...)``. В новом
+        :meth:`register_outer_middleware` порядок изменён на ``append``
+        (register order = execution order), поэтому при миграции
+        проверьте порядок вызовов, если он важен.
+
+        .. deprecated::
+            Используйте :meth:`register_outer_middleware`.
+
+        Args:
+            middleware (BaseMiddleware): Middleware.
+        """
+        warnings.warn(
+            f"{type(self).__name__}.outer_middleware() устарел. "
+            "Используйте register_outer_middleware().",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.outer_middlewares.insert(0, middleware)
 
     def middleware(self, middleware: BaseMiddleware) -> None:
         """
         Добавляет Middleware в конец списка.
 
+        .. deprecated::
+            Используйте :meth:`register_outer_middleware` (текущее
+            поведение — outer, до фильтров handler) или
+            :meth:`register_inner_middleware` (только когда handler
+            реально вызван).
+
         Args:
             middleware: Middleware.
         """
-
-        self.middlewares.append(middleware)
+        warnings.warn(
+            f"{type(self).__name__}.middleware() устарел. "
+            "Используйте register_outer_middleware() (поведение "
+            "сохраняется) или register_inner_middleware() для запуска "
+            "mw только после выбора handler.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.outer_middlewares.append(middleware)
 
     def filter(self, base_filter: BaseFilter) -> None:
         """
@@ -258,7 +347,7 @@ class Dispatcher(BotMixin):
         self._prepare_handlers(bot)
 
         self._global_mw_chain = self.build_middleware_chain(
-            self.middlewares, self._process_event
+            self.outer_middlewares, self._process_event
         )
 
         if self.on_started_func:
@@ -270,8 +359,9 @@ class Dispatcher(BotMixin):
         """Подготовить обработчики событий и построить кеши."""
 
         handlers_count = 0
+        global_inner_mw = self.inner_middlewares
 
-        for router, *_ in self._iter_unique_routers(
+        for router, _, accumulated_inner_mw, *_ in self._iter_unique_routers(
             self.routers, warn_duplicates=True
         ):
             router.bot = bot
@@ -282,23 +372,73 @@ class Dispatcher(BotMixin):
                 extract_commands(handler, bot)
 
                 handler.func_args = frozenset(
-                    handler.func_event.__annotations__,
+                    inspect.signature(handler.func_event).parameters,
+                )
+
+                all_inner = (
+                    global_inner_mw
+                    + accumulated_inner_mw
+                    + handler.middlewares
                 )
                 handler.mw_chain = self.build_middleware_chain(
-                    handler.middlewares,
+                    all_inner,
                     functools.partial(self.call_handler, handler),
                 )
                 router.handlers_by_type.setdefault(
                     handler.update_type, []
                 ).append(handler)
 
-        self._cached_router_entries = list(
-            self._iter_unique_routers(self.routers)
-        )
+        self._cached_router_entries = self._build_dispatch_entries()
 
         logger_dp.info(
             "Зарегистрировано %d обработчиков событий", handlers_count
         )
+
+    def _iter_dispatch_entries(
+        self,
+    ) -> Iterator[
+        tuple[
+            Router | Dispatcher,
+            list[BaseMiddleware],
+            list[MagicFilter],
+            list[BaseFilter],
+        ]
+    ]:
+        """Ленивый генератор entries для dispatch.
+
+        Используется когда ``_ready=False`` — позволяет остановить обход
+        дерева роутеров сразу после первого совпадения, не аллоцируя
+        полный список.  Inner-middleware уже выпечены в
+        ``handler.mw_chain`` в :meth:`_prepare_handlers`, поэтому в
+        кортеж попадают только ``(router, outer_mw, filters,
+        base_filters)``.
+        """
+        for (
+            router,
+            outer_mw,
+            _inner_mw,
+            filters,
+            base_filters,
+        ) in self._iter_unique_routers(self.routers):
+            yield router, outer_mw, filters, base_filters
+
+    def _build_dispatch_entries(
+        self,
+    ) -> list[
+        tuple[
+            Router | Dispatcher,
+            list[BaseMiddleware],
+            list[MagicFilter],
+            list[BaseFilter],
+        ]
+    ]:
+        """Материализует полный список entries для кеша горячего пути.
+
+        Вызывается один раз при ``_ready=True`` и результат сохраняется в
+        ``_cached_router_entries``. Для ``_ready=False`` используйте
+        :meth:`_iter_dispatch_entries`.
+        """
+        return list(self._iter_dispatch_entries())
 
     @staticmethod
     async def _check_subscriptions(bot: Bot) -> None:
@@ -333,10 +473,15 @@ class Dispatcher(BotMixin):
         key = (chat_id, user_id)
         ctx = self.contexts.get(key)
         if ctx is not None:
-            # Перемещаем в конец, чтобы LRU-вытеснение удаляло
-            # самые давно неиспользованные контексты
-            self.contexts.move_to_end(key)
-            return ctx
+            if ctx.is_ttl_expired():
+                logger_dp.debug("Истёк TTL контекста %s", key)
+                del self.contexts[key]
+            else:
+                ctx.touch_ttl()
+                # Перемещаем в конец, чтобы LRU-вытеснение удаляло
+                # самые давно неиспользованные контексты
+                self.contexts.move_to_end(key)
+                return ctx
 
         if len(self.contexts) >= CONTEXTS_MAX_SIZE:
             evicted_key = next(iter(self.contexts))
@@ -348,31 +493,45 @@ class Dispatcher(BotMixin):
             self.contexts.popitem(last=False)
 
         new_ctx = self.storage(chat_id, user_id, **self.storage_kwargs)
+        new_ctx.touch_ttl()
         self.contexts[key] = new_ctx
         return new_ctx
 
     @staticmethod
     async def call_handler(
         handler: Handler,
-        event_object: UpdateType | dict[str, Any],
+        event_object: UpdateUnion | dict[str, Any],
         data: dict[str, Any],
     ) -> None:
         """
         Вызывает хендлер с нужными аргументами.
 
+        Перед вызовом фильтрует ``data``, оставляя только те ключи,
+        которые handler реально принимает (по ``handler.func_args`` или
+        параметрам, полученным через :func:`inspect.signature`).
+        В отличие от ``get_annotations``, ``signature`` не включает
+        ``"return"`` и не требует eval строковых аннотаций — безопасен
+        при ``from __future__ import annotations``. Несовместимые ключи
+        не дойдут до handler и не приведут к ``TypeError``.
+
         Args:
             handler: Handler.
             event_object: Объект события.
-            data: Уже отфильтрованные данные для хендлера.
+            data: Данные, накопленные фильтрами и middleware.
 
         Returns:
             None
         """
-
         if data:
-            await handler.func_event(event_object, **data)
-        else:
-            await handler.func_event(event_object)
+            func_args = handler.func_args or frozenset(
+                inspect.signature(handler.func_event).parameters,
+            )
+            kwargs = {k: v for k, v in data.items() if k in func_args}
+            if kwargs:
+                await handler.func_event(event_object, **kwargs)
+                return
+
+        await handler.func_event(event_object)
 
     @staticmethod
     async def process_base_filters(
@@ -406,13 +565,15 @@ class Dispatcher(BotMixin):
     def _iter_routers(
         self,
         routers: list[Router | Dispatcher],
-        parent_middlewares: list[BaseMiddleware] | None = None,
+        parent_outer_middlewares: list[BaseMiddleware] | None = None,
+        parent_inner_middlewares: list[BaseMiddleware] | None = None,
         parent_filters: list[MagicFilter] | None = None,
         parent_base_filters: list[BaseFilter] | None = None,
         path: set[int] | None = None,
     ) -> Iterator[
         tuple[
             Router | Dispatcher,
+            list[BaseMiddleware],
             list[BaseMiddleware],
             list[MagicFilter],
             list[BaseFilter],
@@ -423,8 +584,10 @@ class Dispatcher(BotMixin):
 
         Args:
             routers: Список роутеров для обхода.
-            parent_middlewares: Накопленные middleware от родительских
-                роутеров.
+            parent_outer_middlewares: Накопленные outer middleware от
+                родительских роутеров.
+            parent_inner_middlewares: Накопленные inner middleware от
+                родительских роутеров.
             parent_filters: Накопленные MagicFilter от родительских
                 роутеров.
             parent_base_filters: Накопленные BaseFilter от родительских
@@ -434,10 +597,11 @@ class Dispatcher(BotMixin):
                 включениях между роутерами.
 
         Yields:
-            Кортеж (роутер, middleware, MagicFilter, BaseFilter) с накопленными
-            значениями от всех родителей.
+            Кортеж (роутер, outer_mw, inner_mw, MagicFilter, BaseFilter)
+            с накопленными значениями от всех родителей.
         """
-        middlewares = parent_middlewares or []
+        outer_middlewares = parent_outer_middlewares or []
+        inner_middlewares = parent_inner_middlewares or []
         filters = parent_filters or []
         base_filters = parent_base_filters or []
 
@@ -449,18 +613,27 @@ class Dispatcher(BotMixin):
             if router_key in path:
                 continue
 
-            accumulated_middlewares: list[BaseMiddleware]
+            accumulated_outer_middlewares: list[BaseMiddleware]
             if router is self:
-                accumulated_middlewares = middlewares
+                accumulated_outer_middlewares = outer_middlewares
+                accumulated_inner_middlewares: list[BaseMiddleware] = (
+                    inner_middlewares
+                )
             else:
-                accumulated_middlewares = middlewares + router.middlewares
+                accumulated_outer_middlewares = (
+                    outer_middlewares + router.outer_middlewares
+                )
+                accumulated_inner_middlewares = (
+                    inner_middlewares + router.inner_middlewares
+                )
 
             accumulated_filters = filters + router.filters
             accumulated_base_filters = base_filters + router.base_filters
 
             yield (
                 router,
-                accumulated_middlewares,
+                accumulated_outer_middlewares,
+                accumulated_inner_middlewares,
                 accumulated_filters,
                 accumulated_base_filters,
             )
@@ -475,7 +648,12 @@ class Dispatcher(BotMixin):
                 try:
                     yield from self._iter_routers(
                         routers=sub_routers,
-                        parent_middlewares=accumulated_middlewares,
+                        parent_outer_middlewares=(
+                            accumulated_outer_middlewares
+                        ),
+                        parent_inner_middlewares=(
+                            accumulated_inner_middlewares
+                        ),
                         parent_filters=accumulated_filters,
                         parent_base_filters=accumulated_base_filters,
                         path=path,
@@ -486,7 +664,8 @@ class Dispatcher(BotMixin):
     def _iter_unique_routers(
         self,
         routers: list[Router | Dispatcher],
-        parent_middlewares: list[BaseMiddleware] | None = None,
+        parent_outer_middlewares: list[BaseMiddleware] | None = None,
+        parent_inner_middlewares: list[BaseMiddleware] | None = None,
         parent_filters: list[MagicFilter] | None = None,
         parent_base_filters: list[BaseFilter] | None = None,
         *,
@@ -494,6 +673,7 @@ class Dispatcher(BotMixin):
     ) -> Iterator[
         tuple[
             Router | Dispatcher,
+            list[BaseMiddleware],
             list[BaseMiddleware],
             list[MagicFilter],
             list[BaseFilter],
@@ -507,8 +687,10 @@ class Dispatcher(BotMixin):
 
         Args:
             routers: Список роутеров для обхода.
-            parent_middlewares: Накопленные middleware от родительских
-                роутеров.
+            parent_outer_middlewares: Накопленные outer middleware от
+                родительских роутеров.
+            parent_inner_middlewares: Накопленные inner middleware от
+                родительских роутеров.
             parent_filters: Накопленные MagicFilter от родительских
                 роутеров.
             parent_base_filters: Накопленные BaseFilter от родительских
@@ -522,7 +704,8 @@ class Dispatcher(BotMixin):
         try:
             for item in self._iter_routers(
                 routers=routers,
-                parent_middlewares=parent_middlewares,
+                parent_outer_middlewares=parent_outer_middlewares,
+                parent_inner_middlewares=parent_inner_middlewares,
                 parent_filters=parent_filters,
                 parent_base_filters=parent_base_filters,
             ):
@@ -657,19 +840,13 @@ class Dispatcher(BotMixin):
         Raises:
             HandlerException: При ошибке выполнения обработчика.
         """
-        func_args = (
-            handler.func_args
-            or getattr(handler.func_event, "__annotations__", {}).keys()
-        )
-        kwargs_filtered = {k: v for k, v in data.items() if k in func_args}
-
         handler_chain = handler.mw_chain or self.build_middleware_chain(
             handler_middlewares,
             functools.partial(self.call_handler, handler),
         )
 
         try:
-            await handler_chain(event, kwargs_filtered)
+            await handler_chain(event, data)
         except Exception as e:
             mem_data = await memory_context.get_data()
             raise HandlerException(
@@ -791,14 +968,17 @@ class Dispatcher(BotMixin):
         event_object: UpdateUnion,
         data: dict[str, Any],
         matching_handlers: list[Handler],
-        router_middlewares: list[BaseMiddleware],
+        router_outer_middlewares: list[BaseMiddleware],
         memory_context: BaseContext,
         current_state: Any | None,
         router_id: Any,
         process_info: str,
     ) -> bool:
         """
-        Диспатчит событие через middleware одного роутера.
+        Диспатчит событие через outer middleware одного роутера.
+
+        Inner middleware к моменту вызова уже выпечены в
+        ``handler.mw_chain`` (см. :meth:`_prepare_handlers`).
 
         Returns:
             bool: True если событие было обработано.
@@ -814,8 +994,10 @@ class Dispatcher(BotMixin):
             process_info=process_info,
         )
 
-        if router_middlewares:
-            chain = self.build_middleware_chain(router_middlewares, process_fn)
+        if router_outer_middlewares:
+            chain = self.build_middleware_chain(
+                router_outer_middlewares, process_fn
+            )
             await chain(event_object, data)
         else:
             await process_fn(event_object, data)
@@ -838,15 +1020,24 @@ class Dispatcher(BotMixin):
         """
         router_id = None
 
-        entries = (
-            self._cached_router_entries
-            if self._cached_router_entries is not None
-            else self._iter_unique_routers(self.routers)
-        )
+        entries: Iterable[
+            tuple[
+                Router | Dispatcher,
+                list[BaseMiddleware],
+                list[MagicFilter],
+                list[BaseFilter],
+            ]
+        ]
+        if self._ready:
+            if self._cached_router_entries is None:
+                self._cached_router_entries = self._build_dispatch_entries()
+            entries = self._cached_router_entries
+        else:
+            entries = self._iter_dispatch_entries()
 
         for (
             router,
-            router_middlewares,
+            router_outer_middlewares,
             router_filters,
             router_base_filters,
         ) in entries:
@@ -872,7 +1063,7 @@ class Dispatcher(BotMixin):
                 event_object=event_object,
                 data=data,
                 matching_handlers=matching_handlers,
-                router_middlewares=router_middlewares,
+                router_outer_middlewares=router_outer_middlewares,
                 memory_context=memory_context,
                 current_state=current_state,
                 router_id=router_id,
@@ -964,7 +1155,7 @@ class Dispatcher(BotMixin):
             global_chain = (
                 self._global_mw_chain
                 or self.build_middleware_chain(
-                    self.middlewares, self._process_event
+                    self.outer_middlewares, self._process_event
                 )
             )
 

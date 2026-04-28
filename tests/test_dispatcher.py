@@ -30,7 +30,7 @@ class TestDispatcherInitialization:
         assert len(dp.event_handlers) == 0
         assert isinstance(dp.contexts, dict)
         assert isinstance(dp.routers, list)
-        assert isinstance(dp.middlewares, list)
+        assert isinstance(dp.outer_middlewares, list)
         assert dp.bot is None
         assert dp.polling is False
 
@@ -220,43 +220,6 @@ class TestDispatcherRouters:
         assert len(router.event_handlers) == 1
 
 
-class TestDispatcherMiddleware:
-    """Тесты middleware."""
-
-    def test_add_middleware(self, dispatcher):
-        """Тест добавления middleware."""
-        # Core Stuff
-        from maxapi.filters.middleware import BaseMiddleware
-
-        class TestMiddleware(BaseMiddleware):
-            async def __call__(self, handler, event, data):
-                return await handler(event, data)
-
-        middleware = TestMiddleware()
-        dispatcher.middleware(middleware)
-
-        assert len(dispatcher.middlewares) == 1
-        assert dispatcher.middlewares[0] == middleware
-
-    def test_add_outer_middleware(self, dispatcher):
-        """Тест добавления outer middleware."""
-        # Core Stuff
-        from maxapi.filters.middleware import BaseMiddleware
-
-        class TestMiddleware(BaseMiddleware):
-            async def __call__(self, handler, event, data):
-                return await handler(event, data)
-
-        middleware1 = TestMiddleware()
-        middleware2 = TestMiddleware()
-
-        dispatcher.middleware(middleware1)
-        dispatcher.outer_middleware(middleware2)
-
-        assert dispatcher.middlewares[0] == middleware2
-        assert dispatcher.middlewares[1] == middleware1
-
-
 class TestDispatcherFilters:
     """Тесты фильтров."""
 
@@ -304,6 +267,22 @@ class TestDispatcherContext:
 
         assert context1 is not context2
         assert len(dispatcher.contexts) == 2
+
+    def test_get_memory_context_recreates_expired_context(self):
+        """Просроченный context не должен переиспользоваться."""
+        current_time = {"value": 0.0}
+        dispatcher = Dispatcher(ttl=0.01)
+
+        with patch(
+            "maxapi.context.ttl.monotonic",
+            side_effect=lambda: current_time["value"],
+        ):
+            context1 = dispatcher._Dispatcher__get_context(12345, 67890)
+            current_time["value"] = 0.02
+            context2 = dispatcher._Dispatcher__get_context(12345, 67890)
+
+        assert context1 is not context2
+        assert len(dispatcher.contexts) == 1
 
 
 class TestDispatcherMiddlewareChain:
@@ -516,7 +495,7 @@ def _setup_for_handle(dispatcher: Dispatcher, bot: Bot) -> None:
     dispatcher.routers.append(dispatcher)
     dispatcher._prepare_handlers(bot)
     dispatcher._global_mw_chain = dispatcher.build_middleware_chain(
-        dispatcher.middlewares, dispatcher._process_event
+        dispatcher.outer_middlewares, dispatcher._process_event
     )
 
 
@@ -554,6 +533,72 @@ class TestHandlePipeline:
         """
         _setup_for_handle(dispatcher, bot)
         await dispatcher.handle(fixture_message_created)  # не должно падать
+
+    async def test_handle_uses_cached_router_entries_when_ready(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """При _ready=True _cached_router_entries строится один раз и
+        переиспользуется при повторных вызовах handle()."""
+        handled = []
+
+        @dispatcher.message_created()
+        async def _handler(event: MessageCreated):
+            handled.append(event)
+
+        _setup_for_handle(dispatcher, bot)
+        dispatcher._ready = True
+        # _prepare_handlers уже заполнил кеш; сбрасываем, чтобы
+        # покрыть ветку «кеш пуст → строится через _build_dispatch_entries()»
+        dispatcher._cached_router_entries = None
+
+        # Первый вызов строит и сохраняет список записей в кеш.
+        await dispatcher.handle(fixture_message_created)
+        cached = dispatcher._cached_router_entries
+        assert cached is not None
+
+        # Повторный вызов использует уже заполненный _cached_router_entries.
+        await dispatcher.handle(fixture_message_created)
+        assert dispatcher._cached_router_entries is cached
+
+        assert len(handled) == 2
+
+    async def test_iter_dispatch_entries_is_lazy(self, dispatcher, bot):
+        """_iter_dispatch_entries() возвращает ленивый генератор,
+        а не материализованный список."""
+        import types
+
+        _setup_for_handle(dispatcher, bot)
+
+        gen = dispatcher._iter_dispatch_entries()
+        assert isinstance(gen, types.GeneratorType)
+
+        # Генератор выдаёт кортежи (router, outer_mw, filters, base_filters)
+        entries = list(gen)
+        assert len(entries) >= 1
+        _router, outer_mw, filters, base_filters = entries[0]
+        assert isinstance(outer_mw, list)
+        assert isinstance(filters, list)
+        assert isinstance(base_filters, list)
+
+    async def test_not_ready_does_not_cache_entries(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """При _ready=False _cached_router_entries не заполняется
+        в ходе handle() — кеш остаётся None."""
+
+        @dispatcher.message_created()
+        async def _handler(event: MessageCreated):
+            pass
+
+        _setup_for_handle(dispatcher, bot)
+        # Сбрасываем кеш, выставленный _prepare_handlers
+        dispatcher._cached_router_entries = None
+        assert dispatcher._ready is False
+
+        await dispatcher.handle(fixture_message_created)
+
+        # После handle() при _ready=False кеш по-прежнему None
+        assert dispatcher._cached_router_entries is None
 
     async def test_handle_handler_state_mismatch_skips_and_returns_false(
         self, dispatcher, bot, fixture_message_created
@@ -601,7 +646,7 @@ class TestHandlePipeline:
             async def __call__(self, handler, event, data):
                 raise RuntimeError("сбой middleware")
 
-        dispatcher.middleware(FailingMiddleware())
+        dispatcher.register_outer_middleware(FailingMiddleware())
         _setup_for_handle(dispatcher, bot)
         await dispatcher.handle(fixture_message_created)  # не должно всплывать
 
@@ -1018,6 +1063,60 @@ class TestCallHandlerWithKwargs:
 
         assert received.get("answer") == 42
 
+    async def test_handler_receives_kwargs_from_middleware(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """Middleware кладёт ключ в ``data`` → handler получает его как
+        kwarg, несовместимые ключи безопасно отфильтровываются."""
+        from maxapi.filters.middleware import BaseMiddleware
+
+        received: dict = {}
+
+        class InjectingMiddleware(BaseMiddleware):
+            async def __call__(self, handler, event, data):
+                # известный handler kwarg + лишний ключ, который
+                # handler не принимает (должен быть отфильтрован)
+                data["user_role"] = "admin"
+                data["unrelated_key"] = "should_be_dropped"
+                return await handler(event, data)
+
+        @dispatcher.message_created()
+        async def _h(event: MessageCreated, user_role: str = "", **_kw):
+            # Явно фиксируем ВСЕ полученные kwargs —
+            # лишних быть не должно
+            received.update({"user_role": user_role, "extra": _kw})
+
+        dispatcher.register_inner_middleware(InjectingMiddleware())
+        _setup_for_handle(dispatcher, bot)
+        await dispatcher.handle(fixture_message_created)
+
+        # Middleware-инжекция доехала до handler
+        assert received["user_role"] == "admin"
+        # Лишние ключи не просочились
+        assert received["extra"] == {}
+
+    async def test_call_handler_filters_unknown_kwargs(self, dispatcher):
+        """call_handler не передаёт в func_event ключи, которых нет
+        в его аннотациях/func_args (защита от TypeError)."""
+        received: dict = {}
+
+        async def _func(event, known_arg: str):
+            received["known"] = known_arg
+
+        handler = Handler(
+            func_event=_func,
+            update_type=UpdateType.MESSAGE_CREATED,
+        )
+        handler.func_args = frozenset({"event", "known_arg"})
+
+        await dispatcher.call_handler(
+            handler=handler,
+            event_object="evt",
+            data={"known_arg": "ok", "junk": "ignored"},
+        )
+
+        assert received == {"known": "ok"}
+
 
 # ===========================================================================
 # _iter_routers — вложенные роутеры и защита от циклов
@@ -1163,7 +1262,7 @@ class TestRouterMiddlewareChain:
                 return await handler(event, data)
 
         router = Router(router_id="mw_router")
-        router.middlewares.append(RouterMW())
+        router.register_outer_middleware(RouterMW())
 
         @router.message_created()
         async def _h(event: MessageCreated):

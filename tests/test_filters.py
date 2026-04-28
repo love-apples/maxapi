@@ -231,3 +231,29 @@ class TestCallbackPayloadFilter:
         result = await payload_filter(event)
 
         assert result is False
+
+    def test_callback_payload_unpack_optional_empty_as_none(self):
+        """Пустые сегменты payload должны становиться None для Optional."""
+
+        class IqPayload(CallbackPayload, prefix="iq"):
+            action: str
+            timestamp: int | None = None
+            callback_storage_id: int | None = None
+
+        payload = IqPayload.unpack("iq|meter_readings_enter||")
+
+        assert payload.action == "meter_readings_enter"
+        assert payload.timestamp is None
+        assert payload.callback_storage_id is None
+
+    def test_callback_payload_unpack_required_string_keeps_empty(self):
+        """Для обязательного str пустое значение остаётся пустой строкой."""
+
+        class RequiredPayload(CallbackPayload, prefix="rq"):
+            action: str
+            required_text: str
+
+        payload = RequiredPayload.unpack("rq|do_something|")
+
+        assert payload.action == "do_something"
+        assert payload.required_text == ""

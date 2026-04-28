@@ -1,5 +1,16 @@
+from __future__ import annotations
+
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any, TypeAlias
+
+if TYPE_CHECKING:
+    from ..types.updates import UpdateUnion
+
+#: Звено middleware-цепочки или финальный обработчик события.
+HandlerCallable: TypeAlias = Callable[
+    ["UpdateUnion", dict[str, Any]],
+    Awaitable[Any],
+]
 
 
 class BaseMiddleware:
@@ -11,8 +22,8 @@ class BaseMiddleware:
 
     async def __call__(
         self,
-        handler: Callable[[Any, dict[str, Any]], Awaitable[Any]],
-        event_object: Any,
+        handler: HandlerCallable,
+        event_object: UpdateUnion,
         data: dict[str, Any],
     ) -> Any:
         """
