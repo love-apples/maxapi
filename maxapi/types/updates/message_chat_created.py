@@ -15,9 +15,9 @@ class MessageChatCreated(BaseUpdate):
 
     Attributes:
         chat: Объект чата.
-        title: Название чата.
-        message_id: ID сообщения.
-        start_payload: Payload для старта.
+        title: Название чата. Может быть None.
+        message_id: ID сообщения. Может быть None.
+        start_payload: Payload для старта. Может быть None.
     """
 
     chat: Chat  # type: ignore[assignment]

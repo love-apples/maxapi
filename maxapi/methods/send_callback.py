@@ -22,8 +22,8 @@ class SendCallback(BaseConnection):
     Attributes:
         bot: Экземпляр бота.
         callback_id: Идентификатор callback.
-        message: Сообщение для отправки.
-        notification: Текст уведомления.
+        message: Сообщение для отправки. Может быть None.
+        notification: Текст уведомления. Может быть None.
     """
 
     def __init__(

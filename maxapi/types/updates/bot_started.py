@@ -15,8 +15,8 @@ class BotStarted(BaseUpdate):
     Attributes:
         chat_id: Идентификатор чата.
         user: Пользователь (бот).
-        user_locale: Локаль пользователя.
-        payload: Дополнительные данные.
+        user_locale: Локаль пользователя. Может быть None.
+        payload: Дополнительные данные. Может быть None.
     """
 
     chat_id: int
