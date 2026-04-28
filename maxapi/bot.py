@@ -648,8 +648,10 @@ class Bot(BaseConnection):
         https://dev.max.ru/docs-api/methods/GET/chats
 
         Args:
-            count: Количество чатов (по умолчанию 50) (1-100).
-            marker: Маркер для пагинации.
+            count: Количество запрашиваемых чатов от 1 до 100
+                (по умолчанию 50).
+            marker: Указатель на следующую страницу данных.
+                Для первой страницы передайте None
 
         Returns:
             Chats: Список чатов.
@@ -862,7 +864,8 @@ class Bot(BaseConnection):
 
         Args:
             chat_id: ID чата.
-            marker: Маркер для пагинации.
+            marker: Указатель на следующую страницу данных.
+                По умолчанию None.
 
         Returns:
             GettedListAdminChat: Список администраторов.
@@ -888,7 +891,8 @@ class Bot(BaseConnection):
         Args:
             chat_id: ID чата.
             admins: Список администраторов.
-            marker: Маркер для пагинации.
+            marker: Указатель на следующую страницу данных.
+                По умолчанию None.
 
         Returns:
             AddedListAdminChat: Результат добавления.
@@ -935,10 +939,13 @@ class Bot(BaseConnection):
 
         Args:
             chat_id: ID чата.
-            user_ids: Список ID участников.
-            marker: Маркер для пагинации.
-            count: Количество участников
-                (по умолчанию 20) (1-100).
+            user_ids: Список ID пользователей, чье членство нужно
+                получить. Когда этот параметр передан, параметры count и
+                marker игнорируются.
+            marker: Указатель на следующую страницу данных.
+                По умолчанию None.
+            count: Количество участников, которых нужно вернуть.
+                От 1 до 100 (по умолчанию 20).
 
         Returns:
             GettedMembersChat: Список участников.

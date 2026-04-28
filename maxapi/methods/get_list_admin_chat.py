@@ -18,7 +18,8 @@ class GetListAdminChat(BaseConnection):
     Attributes:
         bot: Экземпляр бота.
         chat_id: Идентификатор чата.
-        marker: Маркер для пагинации. По умолчанию None.
+        marker: Указатель на следующую страницу данных.
+            По умолчанию None.
     """
 
     def __init__(
