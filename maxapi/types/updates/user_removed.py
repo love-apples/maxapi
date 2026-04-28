@@ -7,7 +7,7 @@ from .base_update import BaseUpdate
 
 class UserRemoved(BaseUpdate):
     """
-    Класс для обработки события выходе/удаления пользователя из чата.
+    Класс для обработки события выхода/удаления пользователя из чата.
 
     Attributes:
         chat_id: ID чата, где произошло событие
