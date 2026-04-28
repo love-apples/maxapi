@@ -504,6 +504,7 @@ class TestBaseConnectionUploadFallback:
 
         mock_cm = AsyncMock()
         mock_cm.__aenter__.return_value = mock_response
+        mock_cm.__aexit__.return_value = False
 
         mock_session_instance = AsyncMock()
         mock_session_instance.post = Mock(return_value=mock_cm)

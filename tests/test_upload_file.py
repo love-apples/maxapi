@@ -33,6 +33,7 @@ class TestUploadFileMimetypesFallback:
 
         mock_cm = AsyncMock()
         mock_cm.__aenter__.return_value = mock_response
+        mock_cm.__aexit__.return_value = False
 
         mock_session = AsyncMock(spec=ClientSession)
         mock_session.closed = False
@@ -61,6 +62,7 @@ class TestUploadFileMimetypesFallback:
 
         mock_cm = AsyncMock()
         mock_cm.__aenter__.return_value = mock_response
+        mock_cm.__aexit__.return_value = False
 
         mock_session = AsyncMock(spec=ClientSession)
         mock_session.closed = False
@@ -98,6 +100,7 @@ class TestUploadFileTempSession:
 
         mock_cm = AsyncMock()
         mock_cm.__aenter__.return_value = mock_response
+        mock_cm.__aexit__.return_value = False
 
         mock_temp_session = AsyncMock()
         mock_temp_session.post = Mock(return_value=mock_cm)
@@ -137,6 +140,7 @@ class TestUploadFileTempSession:
 
         mock_cm = AsyncMock()
         mock_cm.__aenter__.return_value = mock_response
+        mock_cm.__aexit__.return_value = False
 
         mock_temp_session = AsyncMock()
         mock_temp_session.post = Mock(return_value=mock_cm)
@@ -167,6 +171,7 @@ class TestUploadFileTempSession:
 
         mock_cm = AsyncMock()
         mock_cm.__aenter__.return_value = mock_response
+        mock_cm.__aexit__.return_value = False
 
         mock_session = AsyncMock(spec=ClientSession)
         mock_session.closed = False
