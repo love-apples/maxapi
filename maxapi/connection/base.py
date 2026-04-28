@@ -520,8 +520,6 @@ class BaseConnection(BotMixin):
         """
         path = Path(path)
 
-        dest = path.parent
-
         if path.exists():
             max_num = 1  # Один уже существует
             fname, ext = path.stem, path.suffix
@@ -530,6 +528,7 @@ class BaseConnection(BotMixin):
             )
 
             # Сканируем директорию
+            dest = path.parent
             for existing_path in dest.iterdir():
                 match = pattern.match(existing_path.name)
                 if match:
@@ -545,11 +544,18 @@ class BaseConnection(BotMixin):
         self,
         url: str,
         destination: Path | str,
+        filename: Path | str | None = None,
         *,
         chunk_size: int = DOWNLOAD_CHUNK_SIZE,
     ) -> Path:
         """
         Скачивает файл по URL и сохраняет на диск.
+
+        URL можно получить из payload вложения:
+        - Изображение: ``attachment.payload.url``
+        - Видео: ``attachment.urls.mp4_720`` (или другое разрешение)
+        - Аудио/Файл: ``attachment.payload.url``
+        - Стикер: ``attachment.payload.url``
 
         Метод работает не через общий ``request()``, поскольку
         ответом является бинарный поток, а не JSON.
@@ -564,11 +570,9 @@ class BaseConnection(BotMixin):
         Args:
             url: URL файла для скачивания (из payload.url вложения).
             destination: Путь к директории для сохранения файла.
-                Если путь не содержит имя файла (не имеет расширения),
+            filename: Имя файла для сохранения. Если не указано,
                 то будет использовано имя, предоставляемое сервером
                 или значение по умолчанию.
-                Если путь содержит расширение, он трактуется как
-                полное имя файла для сохранения.
             chunk_size: Размер чанка при потоковом чтении
                 (по умолчанию 64 КБ).
 
@@ -577,26 +581,32 @@ class BaseConnection(BotMixin):
 
         Raises:
             DownloadFileError: при ошибке скачивания.
+            FileExistsError, NotADirectoryError, PermissionError, OSError:
+                при ошибках файловой системы
         """
         dest = Path(destination)
+        final_path = None
 
         # Получаем ответ для определения имени файла из заголовков
         response = await self._fetch_response(url)
 
-        # Определяем конечный путь для сохранения:
-        # - если destination имеет расширение (суффикс) → это имя файла
-        # - иначе → это директория, добавляем имя из ответа
-        if dest.suffix:
-            # destination содержит имя файла с расширением
-            await aiofiles.os.makedirs(dest.parent, exist_ok=True)
-            final_path = self._check_file_exists(dest)
-        else:
-            # destination - это директория, добавляем имя файла из ответа
+        try:
             await aiofiles.os.makedirs(dest, exist_ok=True)
-            filename = self._capture_filename(response)
-            final_path = self._check_file_exists(dest / filename)
+        except (FileExistsError, NotADirectoryError, PermissionError, OSError):
+            # Если передан файл вместо директории, путь ошибочен
+            # или нет прав доступа
+            response.release()
+            raise
 
         try:
+            if filename:
+                # Выделяем только имя файла,
+                # в случае если переменная содержит путь
+                filename = Path(filename).name
+            else:
+                filename = self._capture_filename(response)
+
+            final_path = self._check_file_exists(dest / filename)
             async with aiofiles.open(final_path, "wb") as f:
                 async for chunk in self._fetch_content_stream(
                     response, chunk_size=chunk_size
@@ -604,7 +614,7 @@ class BaseConnection(BotMixin):
                     await f.write(chunk)
         except Exception:
             # При любой ошибке удаляем частично записанный файл
-            if final_path.exists():
+            if final_path and final_path.exists():
                 final_path.unlink()
             raise
 
