@@ -21,14 +21,14 @@
 """
 
 import asyncio
+import contextlib
 import logging
 
-try:
+# Опционально: загрузка .env, если установлен python-dotenv
+with contextlib.suppress(ImportError):
     from dotenv import load_dotenv
 
     load_dotenv()
-except ImportError:
-    pass
 from maxapi import Bot, Dispatcher
 from maxapi.filters.command import CommandStart
 from maxapi.types.attachments.buttons.callback_button import CallbackButton

@@ -25,16 +25,16 @@
 
 import asyncio
 import base64
+import contextlib
 import logging
 import os
 import tempfile
 
-try:
+# Опционально: загрузка .env, если установлен python-dotenv
+with contextlib.suppress(ImportError):
     from dotenv import load_dotenv
 
     load_dotenv()
-except ImportError:
-    pass
 from maxapi import Bot, Dispatcher, F
 from maxapi.enums.sender_action import SenderAction
 from maxapi.filters.command import Command, CommandStart

@@ -19,18 +19,18 @@ Middleware паттерны — пример расширенной обрабо
 """
 
 import asyncio
+import contextlib
 import logging
 import os
 import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-try:
+# Опционально: загрузка .env, если установлен python-dotenv
+with contextlib.suppress(ImportError):
     from dotenv import load_dotenv
 
     load_dotenv()
-except ImportError:
-    pass
 from maxapi import Bot, Dispatcher, F
 from maxapi.filters.command import Command, CommandStart
 from maxapi.filters.middleware import BaseMiddleware
@@ -73,10 +73,8 @@ class LoggingMiddleware(BaseMiddleware):
         # Пытаемся извлечь chat_id и user_id для лога
         chat_id, user_id = None, None
         if hasattr(event_object, "get_ids"):
-            try:
+            with contextlib.suppress(Exception):
                 chat_id, user_id = event_object.get_ids()
-            except Exception:
-                pass
 
         log.info("[LOG] %s | chat=%s user=%s", event_type, chat_id, user_id)
 

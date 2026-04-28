@@ -16,16 +16,16 @@
 """
 
 import asyncio
+import contextlib
 import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-try:
+# Опционально: загрузка .env, если установлен python-dotenv
+with contextlib.suppress(ImportError):
     from dotenv import load_dotenv
 
     load_dotenv()
-except ImportError:
-    pass
 from maxapi import Bot, Dispatcher, F
 from maxapi.dispatcher import Router
 from maxapi.enums.chat_type import ChatType

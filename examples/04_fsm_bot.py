@@ -18,14 +18,14 @@ FSM-бот — пошаговая форма регистрации на maxapi.
 """
 
 import asyncio
+import contextlib
 import logging
 
-try:
+# Опционально: загрузка .env, если установлен python-dotenv
+with contextlib.suppress(ImportError):
     from dotenv import load_dotenv
 
     load_dotenv()
-except ImportError:
-    pass
 from maxapi import Bot, Dispatcher, F
 from maxapi.context.base import BaseContext
 from maxapi.context.state_machine import State, StatesGroup

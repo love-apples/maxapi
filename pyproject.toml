@@ -28,6 +28,9 @@ Homepage = "https://github.com/love-apples/maxapi"
 [tool.setuptools]
 license-files = []
 
+[tool.setuptools.package-data]
+maxapi = ["py.typed"]
+
 [build-system]
 requires = [
     "setuptools>=82.0.0",
@@ -171,7 +174,6 @@ flake8-type-checking.runtime-evaluated-base-classes = [
     "S",
     "T20",
     "FBT",
-    "SIM105",
 ]
 "maxapi/methods/send_message.py" = [
     "C90", # TODO: требует рефакторинга
