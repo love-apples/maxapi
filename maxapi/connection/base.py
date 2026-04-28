@@ -237,11 +237,13 @@ class BaseConnection(BotMixin):
             async with session.post(url=url, data=form) as response:
                 return await response.text()
         else:
-            async with ClientSession(
-                timeout=bot.default_connection.timeout
-            ) as temp_session:
-                async with temp_session.post(url=url, data=form) as response:
-                    return await response.text()
+            async with (
+                ClientSession(
+                    timeout=bot.default_connection.timeout
+                ) as temp_session,
+                temp_session.post(url=url, data=form) as response,
+            ):
+                return await response.text()
 
     async def upload_file_buffer(
         self, filename: str, url: str, buffer: bytes, type: UploadType
@@ -288,11 +290,13 @@ class BaseConnection(BotMixin):
             async with session.post(url=url, data=form) as response:
                 return await response.text()
         else:
-            async with ClientSession(
-                timeout=bot.default_connection.timeout
-            ) as temp_session:
-                async with temp_session.post(url=url, data=form) as response:
-                    return await response.text()
+            async with (
+                ClientSession(
+                    timeout=bot.default_connection.timeout
+                ) as temp_session,
+                temp_session.post(url=url, data=form) as response,
+            ):
+                return await response.text()
 
     async def download_file(
         self,
