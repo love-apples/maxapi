@@ -931,7 +931,7 @@ class TestInternalUncoveredParts:
             async for _ in bot._fetch_content_stream(mock_response):
                 pass
 
-        mock_response.release.assert_awaited_once()
+        mock_response.release.assert_called_once()
 
     async def test_download_file_cleanup_partial_file_on_error(self, bot):
         """Проверка download_file ветки:

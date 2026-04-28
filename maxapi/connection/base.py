@@ -354,7 +354,7 @@ class BaseConnection(BotMixin):
             ) from e
 
         if not response.ok:
-            await response.release()
+            response.release()
             raise DownloadFileError(
                 f"Ошибка при скачивании: HTTP {response.status}"
             )
@@ -384,7 +384,7 @@ class BaseConnection(BotMixin):
             raise DownloadFileError("response соединение закрыто")
 
         if not response.ok:
-            await response.release()
+            response.release()
             raise DownloadFileError(
                 f"Ошибка при скачивании: HTTP {response.status}"
             )
@@ -393,7 +393,7 @@ class BaseConnection(BotMixin):
             async for chunk in response.content.iter_chunked(chunk_size):
                 yield chunk
         finally:
-            await response.release()
+            response.release()
 
     @staticmethod
     def _get_image_id(r: str) -> str | None:
