@@ -83,7 +83,7 @@ def chatid_seq_to_mid(chat_id: int, seq: int) -> str:
         )
 
     # Битовая маска гарантирует корректное hex-представление для signed int
-    # (отрицательные числа автоматически преобразуются в two"s complement)
+    # (отрицательные числа автоматически преобразуются в two's complement)
     chat_id_hex = f"{chat_id & 0xFFFFFFFFFFFFFFFF:016x}"
     seq_hex = f"{seq:016x}"
 
