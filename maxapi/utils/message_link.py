@@ -120,7 +120,8 @@ def link_to_chatid_seq(link: str) -> tuple[int, int]:
     """
     Парсит ссылку на сообщение в интерфейсе MAX и извлекает chat_id и seq.
 
-    Не обрабатываются ссылки на публичные каналы вида https://max.ru/{channel_name}/{urlsafe_base64}
+    Не обрабатываются ссылки на публичные каналы вида
+    https://max.ru/{channel_name}/{urlsafe_base64}
     Только приватные чаты и группы.
 
     Args:
