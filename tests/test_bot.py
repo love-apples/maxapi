@@ -222,8 +222,8 @@ class TestBotMethods:
             assert mock_fetch.called
 
     @pytest.mark.asyncio
-    async def test_send_none_action(self, bot):
-        """Тест вызова send_action без передачи action"""
+    async def test_send_action_without_action_param(self, bot):
+        """Тест вызова send_action без передачи action."""
         # Core Stuff
         from maxapi.methods.send_action import SendAction
 
