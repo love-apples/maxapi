@@ -237,6 +237,27 @@ class TestBotMethods:
             assert mock_fetch.called
 
     @pytest.mark.asyncio
+    async def test_send_action_with_wrong_action_type(self, bot):
+        """Тест вызова send_action с передачей неверного типа (не SenderAction, не str)."""  # noqa: E501
+        # Core Stuff
+        from maxapi.methods.send_action import SendAction
+
+        with patch.object(
+            SendAction, "fetch", new_callable=AsyncMock
+        ) as mock_fetch:
+            mock_fetch.return_value = Mock()
+
+            wrong_action = 123
+            wrong_action_type = type(wrong_action).__name__
+
+            with pytest.raises(TypeError) as exc_info:
+                await bot.send_action(chat_id=12345, action=wrong_action)
+
+            exc_message = str(exc_info.value)
+
+            assert wrong_action_type in exc_message
+
+    @pytest.mark.asyncio
     async def test_get_me_structure(self, bot):
         """Тест структуры вызова get_me."""
         # Core Stuff
