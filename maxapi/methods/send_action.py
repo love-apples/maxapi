@@ -21,7 +21,7 @@ class SendAction(BaseConnection):
         bot (Bot): Экземпляр бота для выполнения запроса.
         chat_id (Optional[int]): Идентификатор чата. Если None,
             действие не отправляется.
-        action (Optional[SenderAction]): Тип действия. По умолчанию
+        action (SenderAction | str): Тип действия. По умолчанию
             SenderAction.TYPING_ON.
     """
 
@@ -29,9 +29,25 @@ class SendAction(BaseConnection):
         self,
         bot: "Bot",
         chat_id: int | None = None,
-        action: SenderAction = SenderAction.TYPING_ON,
+        action: SenderAction | str = SenderAction.TYPING_ON,
     ):
         super().__init__()
+
+        if not isinstance(action, SenderAction):
+            if not isinstance(action, str):
+                raise TypeError(
+                    f"action должен быть SenderAction или str, "
+                    f"получено: {type(action).__name__}"
+                )
+
+            try:
+                action = SenderAction(action)
+            except ValueError as e:
+                allowed = ", ".join(item.value for item in SenderAction)
+                raise ValueError(
+                    f"Неверный action: {action!r}. Ожидается: {allowed}"
+                ) from e
+
         self.bot = bot
         self.chat_id = chat_id
         self.action = action
