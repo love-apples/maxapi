@@ -449,21 +449,22 @@ class BaseConnection(BotMixin):
         try:
             cd = response.content_disposition
             if cd and cd.filename:
-                filename = Path(cd.filename).name
+                filename = cd.filename
                 ext = Path(filename).suffix
             else:
-                name = response.url.name
-                filename = Path(name).name  # Защита от path traversal
+                filename = response.url.name
                 ext = Path(filename).suffix
-                if not ext:
-                    if response.content_type:
-                        ext = mimetypes.guess_extension(response.content_type)
-                    if ext:
+                if not ext and response.content_type:
+                    g_ext = mimetypes.guess_extension(response.content_type)
+                    if g_ext:
+                        ext = g_ext
                         filename = f"{filename}{ext}"
 
             # Сервера Max возвращают имя файла дважды закодированное. Проверяем
             if re.search(r"%[0-9A-Fa-f]{2}", filename):
                 filename = unquote(filename, encoding="utf-8")
+
+            filename = Path(filename).name  # Защита от path traversal
 
             if response.url.host == "i.oneme.ru":
                 # is_sticker
@@ -617,6 +618,8 @@ class BaseConnection(BotMixin):
             if final_path and final_path.exists():
                 final_path.unlink()
             raise
+        finally:
+            response.release()
 
         return final_path
 

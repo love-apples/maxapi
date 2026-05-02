@@ -5,7 +5,7 @@ from collections.abc import Callable
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 from aiohttp import ClientResponse
@@ -124,7 +124,7 @@ def _make_mock_response(
     """Создаёт мок aiohttp-ответа для скачивания."""
     mock_response = AsyncMock(spec_set=ClientResponse)
     mock_response.ok = ok
-    mock_response.release = AsyncMock(
+    mock_response.release = Mock(
         side_effect=lambda: setattr(mock_response, "closed", True)
     )
     mock_response.closed = closed
@@ -982,6 +982,7 @@ class TestInternalUncoveredParts:
 
         # Мокаем цепочку, чтобы дойти до try...except
         bot._fetch_response = AsyncMock()
+        bot._fetch_response.return_value = Mock()
         bot._capture_filename = MagicMock(return_value="260416_103000.bin")
 
         # Файл уже частично создан
