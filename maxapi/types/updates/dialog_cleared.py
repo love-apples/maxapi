@@ -13,9 +13,9 @@ class DialogCleared(BaseUpdate):
     Обновление, сигнализирующее об очистке диалога с ботом.
 
     Attributes:
-        chat_id (int): Идентификатор чата.
-        user (User): Пользователь (бот).
-        user_locale (Optional[str]): Локаль пользователя.
+        chat_id: Идентификатор чата.
+        user: Пользователь (бот).
+        user_locale: Локаль пользователя.
     """
 
     chat_id: int

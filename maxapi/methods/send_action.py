@@ -18,10 +18,10 @@ class SendAction(BaseConnection):
     https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/actions
 
     Attributes:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        chat_id (Optional[int]): Идентификатор чата. Если None,
+        bot: Экземпляр бота для выполнения запроса.
+        chat_id: Идентификатор чата. Если None,
             действие не отправляется.
-        action (SenderAction | str): Тип действия. По умолчанию
+        action: Тип действия. По умолчанию
             SenderAction.TYPING_ON.
     """
 

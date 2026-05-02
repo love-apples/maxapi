@@ -28,11 +28,11 @@ class Handler:
         Создаёт обработчик события.
 
         Args:
-            *args (Any): Список фильтров (MagicFilter, State, Command,
+            *args: Список фильтров (MagicFilter, State, Command,
                 BaseFilter, BaseMiddleware).
-            func_event (Callable): Функция-обработчик.
-            update_type (UpdateType): Тип обновления.
-            **kwargs (Any): Дополнительные параметры.
+            func_event: Функция-обработчик.
+            update_type: Тип обновления.
+            **kwargs: Дополнительные параметры.
         """
 
         self.func_event: Callable = func_event

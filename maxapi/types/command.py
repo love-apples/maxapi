@@ -6,8 +6,8 @@ class BotCommand(BaseModel):
     Модель команды бота для сериализации.
 
     Attributes:
-        name (str): Название команды.
-        description (Optional[str]): Описание команды. Может быть None.
+        name: Название команды.
+        description: Описание команды. Может быть None.
     """
 
     name: str

@@ -16,8 +16,8 @@ class GetPinnedMessage(BaseConnection):
     https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/pin
 
     Attributes:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        chat_id (int): Идентификатор чата.
+        bot: Экземпляр бота для выполнения запроса.
+        chat_id: Идентификатор чата.
     """
 
     def __init__(

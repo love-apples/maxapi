@@ -9,7 +9,7 @@ class Audio(Attachment):
     Вложение с типом аудио.
 
     Attributes:
-        transcription (Optional[str]): Транскрипция аудио (если есть).
+        transcription: Транскрипция аудио (если есть).
     """
 
     type: Literal[AttachmentType.AUDIO]

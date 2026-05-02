@@ -16,9 +16,10 @@ class GetListAdminChat(BaseConnection):
     https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members/admins
 
     Attributes:
-        bot (Bot): Экземпляр бота.
-        chat_id (int): Идентификатор чата.
-        marker (Optional[int]): Маркер для пагинации. По умолчанию None.
+        bot: Экземпляр бота.
+        chat_id: Идентификатор чата.
+        marker: Указатель на следующую страницу данных.
+            По умолчанию None.
     """
 
     def __init__(

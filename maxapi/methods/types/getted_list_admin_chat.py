@@ -8,8 +8,8 @@ class GettedListAdminChat(BaseModel):
     Ответ API с полученным списком администраторов чата.
 
     Attributes:
-        members (List[ChatMember]): Список участников с правами администратора.
-        marker (Optional[int]): Маркер для постраничной навигации (если есть).
+        members: Список участников с правами администратора.
+        marker: Маркер для постраничной навигации (если есть).
     """
 
     members: list[ChatMember]

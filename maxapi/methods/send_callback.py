@@ -20,10 +20,10 @@ class SendCallback(BaseConnection):
     https://dev.max.ru/docs-api/methods/POST/answers
 
     Attributes:
-        bot (Bot): Экземпляр бота.
-        callback_id (str): Идентификатор callback.
-        message (Optional[MessageForCallback]): Сообщение для отправки.
-        notification (Optional[str]): Текст уведомления.
+        bot: Экземпляр бота.
+        callback_id: Идентификатор callback.
+        message: Сообщение для отправки. Может быть None.
+        notification: Текст уведомления. Может быть None.
     """
 
     def __init__(

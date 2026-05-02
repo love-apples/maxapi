@@ -30,9 +30,9 @@ class BaseMiddleware:
         Вызывает хендлер с переданным событием и данными.
 
         Args:
-            handler (HandlerCallable): Хендлер события.
-            event_object (UpdateUnion): Событие.
-            data (dict): Дополнительные данные.
+            handler: Хендлер события.
+            event_object: Событие.
+            data: Дополнительные данные.
 
         Returns:
             Any: Результат работы хендлера.

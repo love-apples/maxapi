@@ -16,9 +16,9 @@ class RemoveAdmin(BaseConnection):
     https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-/members/admins/-userId-
 
     Attributes:
-        bot (Bot): Экземпляр бота.
-        chat_id (int): Идентификатор чата.
-        user_id (int): Идентификатор пользователя.
+        bot: Экземпляр бота.
+        chat_id: Идентификатор чата.
+        user_id: Идентификатор пользователя.
     """
 
     def __init__(self, bot: "Bot", chat_id: int, user_id: int):

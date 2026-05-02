@@ -28,9 +28,9 @@ class CallbackPayload(BaseModel):
     Базовый класс для сериализации/десериализации callback payload.
 
     Атрибуты:
-        prefix (str): Префикс для payload (используется при pack/unpack)
+        prefix: Префикс для payload (используется при pack/unpack)
             (по умолчанию название класса).
-        separator (str): Разделитель между значениями (по умолчанию '|').
+        separator: Разделитель между значениями (по умолчанию '|').
     """
 
     if TYPE_CHECKING:
@@ -86,7 +86,7 @@ class CallbackPayload(BaseModel):
         Десериализует payload из строки.
 
         Args:
-            data (str): Строка payload (из callback payload).
+            data: Строка payload (из callback payload).
 
         Raises:
             ValueError: Некорректный prefix или количество аргументов.
@@ -151,7 +151,7 @@ class CallbackPayload(BaseModel):
         Создаёт PayloadFilter для фильтрации callback-ивентов по payload.
 
         Args:
-            rule (Optional[MagicFilter]): Фильтр на payload.
+            rule: Фильтр на payload.
 
         Returns:
             PayloadFilter: Экземпляр фильтра для хэндлера.
@@ -168,8 +168,8 @@ class PayloadFilter(BaseFilter):
     def __init__(self, model: type[CallbackPayload], rule: MagicFilter | None):
         """
         Args:
-            model (Type[CallbackPayload]): Класс payload для распаковки.
-            rule (Optional[MagicFilter]): Фильтр (условие) для payload.
+            model: Класс payload для распаковки.
+            rule: Фильтр (условие) для payload.
         """
 
         self.model = model
@@ -180,7 +180,7 @@ class PayloadFilter(BaseFilter):
         Проверяет event на MessageCallback и применяет фильтр к payload.
 
         Args:
-            event (UpdateUnion): Обновление/событие.
+            event: Обновление/событие.
 
         Returns:
             dict | bool: dict с payload при совпадении, иначе False.

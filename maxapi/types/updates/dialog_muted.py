@@ -15,10 +15,10 @@ class DialogMuted(BaseUpdate):
     Обновление, сигнализирующее об отключении оповещений от бота.
 
     Attributes:
-        chat_id (int): Идентификатор чата.
-        muted_until (int): Время до включения оповещений от бота.
-        user (User): Пользователь (бот).
-        user_locale (Optional[str]): Локаль пользователя.
+        chat_id: Идентификатор чата.
+        muted_until: Время до включения оповещений от бота.
+        user: Пользователь (бот).
+        user_locale: Локаль пользователя.
     """
 
     chat_id: int

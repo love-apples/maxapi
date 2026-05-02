@@ -11,28 +11,28 @@ class DefaultConnectionProperties:
     aiohttp-клиента.
 
     Args:
-        timeout (float): Таймаут всего соединения в секундах
+        timeout: Таймаут всего соединения в секундах
             (по умолчанию 5 * 30).
-        sock_connect (int): Таймаут установки TCP-соединения в секундах
+        sock_connect: Таймаут установки TCP-соединения в секундах
             (по умолчанию 30).
-        max_retries (int): Максимальное количество повторных попыток
+        max_retries: Максимальное количество повторных попыток
             при серверных ошибках (по умолчанию 3).
-        retry_on_statuses (tuple[int, ...]): HTTP-статусы, при которых
+        retry_on_statuses: HTTP-статусы, при которых
             выполняется повторная попытка
             (по умолчанию 502, 503, 504).
-        retry_backoff_factor (float): Множитель для экспоненциальной
+        retry_backoff_factor: Множитель для экспоненциальной
             задержки между попытками в секундах
             (по умолчанию 1.0, задержки: 1с, 2с, 4с).
-        **kwargs (Any): Дополнительные параметры, которые будут
+        **kwargs: Дополнительные параметры, которые будут
             сохранены как есть.
 
     Attributes:
-        timeout (ClientTimeout): Экземпляр aiohttp.ClientTimeout
+        timeout: Экземпляр aiohttp.ClientTimeout
             с заданными параметрами.
-        max_retries (int): Максимальное количество повторных попыток.
-        retry_on_statuses (tuple[int, ...]): HTTP-статусы для retry.
-        retry_backoff_factor (float): Множитель задержки.
-        kwargs (dict): Дополнительные параметры.
+        max_retries: Максимальное количество повторных попыток.
+        retry_on_statuses: HTTP-статусы для retry.
+        retry_backoff_factor: Множитель задержки.
+        kwargs: Дополнительные параметры.
     """
 
     def __init__(
@@ -49,15 +49,15 @@ class DefaultConnectionProperties:
         Инициализация параметров соединения.
 
         Args:
-            timeout (float): Таймаут всего соединения в секундах.
-            sock_connect (int): Таймаут установки TCP-соединения
+            timeout: Таймаут всего соединения в секундах.
+            sock_connect: Таймаут установки TCP-соединения
                 в секундах.
-            max_retries (int): Максимальное количество повторных
+            max_retries: Максимальное количество повторных
                 попыток при серверных ошибках.
-            retry_on_statuses (tuple[int, ...]): HTTP-статусы
+            retry_on_statuses: HTTP-статусы
                 для retry.
-            retry_backoff_factor (float): Множитель задержки.
-            **kwargs (Any): Дополнительные параметры.
+            retry_backoff_factor: Множитель задержки.
+            **kwargs: Дополнительные параметры.
         """
         self.timeout = ClientTimeout(total=timeout, sock_connect=sock_connect)
         if max_retries < 0:

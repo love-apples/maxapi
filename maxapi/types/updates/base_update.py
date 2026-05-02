@@ -25,8 +25,8 @@ class BaseUpdate(
     Базовая модель обновления.
 
     Attributes:
-        update_type (UpdateType): Тип обновления.
-        timestamp (int): Временная метка обновления.
+        update_type: Тип обновления.
+        timestamp: Временная метка обновления.
     """
 
     update_type: UpdateType

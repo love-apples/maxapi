@@ -23,12 +23,12 @@ class ChangeInfo(BaseConnection):
     https://dev.max.ru/docs-api/methods/PATCH/me
 
     Args:
-        first_name (str, optional): Имя бота (1–64 символа).
-        last_name (str, optional): Второе имя бота (1–64 символа).
-        description (str, optional): Описание бота (1–16000 символов).
-        commands (list[BotCommand], optional): Список команд
+        first_name: Имя бота (1–64 символа).
+        last_name: Второе имя бота (1–64 символа).
+        description: Описание бота (1–16000 символов).
+        commands: Список команд
             (до 32 элементов).
-        photo (PhotoAttachmentRequestPayload, optional): Фото бота.
+        photo: Фото бота.
 
     Note:
         Метод :meth:`fetch` возвращает объект :class:`User`

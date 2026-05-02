@@ -6,9 +6,9 @@ class Subscription(BaseModel):
     Подписка для вебхука
 
     Attributes:
-        url (str): URL вебхука
-        time (int): Unix-время, когда была создана подписка
-        update_types (List[str]): Типы обновлений, на которые подписан бот
+        url: URL вебхука
+        time: Unix-время, когда была создана подписка
+        update_types: Типы обновлений, на которые подписан бот
     """
 
     url: str

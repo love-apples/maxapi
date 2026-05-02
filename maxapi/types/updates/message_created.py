@@ -14,8 +14,8 @@ class MessageCreated(BaseUpdate):
     Обновление, сигнализирующее о создании нового сообщения.
 
     Attributes:
-        message (Message): Объект сообщения.
-        user_locale (Optional[str]): Локаль пользователя.
+        message: Объект сообщения.
+        user_locale: Локаль пользователя.
     """
 
     message: Message

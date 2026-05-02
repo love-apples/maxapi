@@ -16,8 +16,8 @@ class GetMessage(BaseConnection):
     https://dev.max.ru/docs-api/methods/GET/messages/-messageId-
 
     Attributes:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        message_id (Optional[str]): ID сообщения (mid), чтобы получить
+        bot: Экземпляр бота для выполнения запроса.
+        message_id: ID сообщения (mid), чтобы получить
             одно сообщение в чате.
     """
 

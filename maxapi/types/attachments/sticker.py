@@ -9,8 +9,8 @@ class Sticker(Attachment):
     Вложение с типом стикера.
 
     Attributes:
-        width (Optional[int]): Ширина стикера в пикселях.
-        height (Optional[int]): Высота стикера в пикселях.
+        width: Ширина стикера в пикселях.
+        height: Высота стикера в пикселях.
     """
 
     type: Literal[AttachmentType.STICKER]  # pyright: ignore[reportIncompatibleVariableOverride]

@@ -16,13 +16,13 @@ class GetMembersChat(BaseConnection):
     https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members
 
     Attributes:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        chat_id (int): Идентификатор чата.
-        user_ids (Optional[List[str]]): Список ID пользователей для
+        bot: Экземпляр бота для выполнения запроса.
+        chat_id: Идентификатор чата.
+        user_ids: Список ID пользователей для
             фильтрации. По умолчанию None.
-        marker (Optional[int]): Маркер для пагинации
+        marker: Маркер для пагинации
             (начальная позиция). По умолчанию None.
-        count (Optional[int]): Максимальное количество участников
+        count: Максимальное количество участников
             для получения. По умолчанию None.
 
     """

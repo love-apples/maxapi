@@ -114,10 +114,10 @@ async def process_input_media(
     Загружает файл вложения и формирует объект AttachmentUpload.
 
     Args:
-        base_connection (BaseConnection): Базовое соединение для
+        base_connection: Базовое соединение для
             загрузки файла.
-        bot (Bot): Экземпляр бота.
-        att (InputMedia | InputMediaBuffer): Объект вложения
+        bot: Экземпляр бота.
+        att: Объект вложения
             для загрузки.
 
     Returns:

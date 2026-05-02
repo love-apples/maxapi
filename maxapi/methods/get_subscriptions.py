@@ -17,7 +17,7 @@ class GetSubscriptions(BaseConnection):
     https://dev.max.ru/docs-api/methods/GET/subscriptions
 
     Attributes:
-        bot (Bot): Экземпляр бота
+        bot: Экземпляр бота
     """
 
     def __init__(

@@ -8,7 +8,7 @@ class SendedMessage(BaseModel):
     Ответ API с отправленным сообщением.
 
     Attributes:
-        message (Message): Объект отправленного сообщения.
+        message: Объект отправленного сообщения.
     """
 
     message: Message

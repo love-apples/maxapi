@@ -91,9 +91,9 @@ def filter_attrs(obj: object, *filters: MagicT) -> bool:
     Применяет один или несколько фильтров MagicFilter к объекту.
 
     Args:
-        obj (object): Объект, к которому применяются фильтры (например,
+        obj: Объект, к которому применяются фильтры (например,
             event или message).
-        *filters (MagicFilter): Один или несколько выражений MagicFilter.
+        *filters: Один или несколько выражений MagicFilter.
 
     Returns:
         bool: True, если все фильтры возвращают True, иначе False.

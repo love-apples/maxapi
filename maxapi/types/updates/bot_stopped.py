@@ -13,10 +13,10 @@ class BotStopped(BaseUpdate):
     Обновление, сигнализирующее об остановке бота.
 
     Attributes:
-        chat_id (int): Идентификатор чата.
-        user (User): Пользователь (бот).
-        user_locale (Optional[str]): Локаль пользователя.
-        payload (Optional[str]): Дополнительные данные.
+        chat_id: Идентификатор чата.
+        user: Пользователь (бот).
+        user_locale: Локаль пользователя. Может быть None.
+        payload: Дополнительные данные. Может быть None.
     """
 
     chat_id: int

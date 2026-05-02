@@ -9,8 +9,8 @@ class File(Attachment):
     Вложение с типом файла.
 
     Attributes:
-        filename (Optional[str]): Имя файла.
-        size (Optional[int]): Размер файла в байтах.
+        filename: Имя файла.
+        size: Размер файла в байтах.
     """
 
     type: Literal[AttachmentType.FILE]
