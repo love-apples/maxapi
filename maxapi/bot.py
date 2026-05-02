@@ -410,7 +410,7 @@ class Bot(BaseConnection):
     async def send_action(
         self,
         chat_id: int | None = None,
-        action: SenderAction = SenderAction.TYPING_ON,
+        action: SenderAction | str = SenderAction.TYPING_ON,
     ) -> SendedAction:
         """
         Отправляет действие в чат (например, "печатает").
@@ -419,12 +419,11 @@ class Bot(BaseConnection):
 
         Args:
             chat_id (Optional[int]): ID чата.
-            action (SenderAction): Тип действия.
+            action (SenderAction | str): Тип действия.
 
         Returns:
             SendedAction: Результат отправки действия.
         """
-
         return await SendAction(
             bot=self, chat_id=chat_id, action=action
         ).fetch()
