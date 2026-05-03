@@ -10,31 +10,22 @@
 - Методы as_html() и as_markdown() для получения строки
 - TextFormat enum для выбора режима отображения
 
-Команды:
-    /html      — пример с HTML-разметкой
-    /markdown  — пример с Markdown-разметкой
-    /mention   — упоминание отправителя
-    /all       — все виды форматирования сразу
-
 Аналог Telegram: parse_mode=HTML / aiogram formatting helpers
 
 Запуск:
     MAX_BOT_TOKEN=your_token python 02_formatting_bot.py
 """
 
-import asyncio
 import contextlib
-import logging
+import os
 
 # Опционально: загрузка .env, если установлен python-dotenv
 with contextlib.suppress(ImportError):
     from dotenv import load_dotenv
 
     load_dotenv()
-from maxapi import Bot, Dispatcher
+from maxapi import Bot
 from maxapi.enums.parse_mode import TextFormat
-from maxapi.filters.command import Command, CommandStart
-from maxapi.types.updates.message_created import MessageCreated
 
 # Импорты билдеров форматирования
 from maxapi.utils.formatting import (
@@ -49,29 +40,10 @@ from maxapi.utils.formatting import (
     UserMention,
 )
 
-logging.basicConfig(level=logging.INFO)
-
 bot = Bot()
-dp = Dispatcher()
-
-# Текст подсказки со списком доступных команд
-HELP_TEXT = (
-    "Доступные команды:\n"
-    "/html      — пример HTML-форматирования\n"
-    "/markdown  — пример Markdown-форматирования\n"
-    "/mention   — упоминание вас\n"
-    "/all       — все элементы сразу"
-)
 
 
-@dp.message_created(CommandStart())
-async def on_start(event: MessageCreated) -> None:
-    """Приветствие с перечнем команд."""
-    await event.message.answer(HELP_TEXT)
-
-
-@dp.message_created(Command("html"))
-async def on_html(event: MessageCreated) -> None:
+def demo_html(user_id: int) -> None:
     """Пример форматирования, выведенный через as_html()."""
     # Собираем составной текст из отдельных элементов
     content = Text(
@@ -91,14 +63,14 @@ async def on_html(event: MessageCreated) -> None:
     )
 
     # Отправляем сообщение в HTML-режиме
-    await event.message.answer(
-        content.as_html(),
+    bot.send_message(
+        user_id=user_id,
+        text=content.as_html(),
         format=TextFormat.HTML,
     )
 
 
-@dp.message_created(Command("markdown"))
-async def on_markdown(event: MessageCreated) -> None:
+def demo_markdown(user_id: int) -> None:
     """Пример форматирования, выведенный через as_markdown()."""
     content = Text(
         Bold("Жирный"),
@@ -115,37 +87,32 @@ async def on_markdown(event: MessageCreated) -> None:
         ),
     )
 
-    await event.message.answer(
-        content.as_markdown(),
+    bot.send_message(
+        user_id=user_id,
+        text=content.as_markdown(),
         format=TextFormat.MARKDOWN,
     )
 
 
-@dp.message_created(Command("mention"))
-async def on_mention(event: MessageCreated) -> None:
-    """Упоминание отправителя сообщения."""
-    sender = event.message.sender
-    if sender is None:
-        await event.message.answer("Не удалось определить отправителя.")
-        return
-
+def demo_mention(user_id: int) -> None:
+    """Упоминание пользователя."""
     content = Text(
         "Привет, ",
         UserMention(
-            sender.full_name or "пользователь",
-            user_id=sender.user_id,
+            "пользователь",
+            user_id=user_id,
         ),
         "! Вы упомянуты.",
     )
 
-    await event.message.answer(
-        content.as_html(),
+    bot.send_message(
+        user_id=user_id,
+        text=content.as_html(),
         format=TextFormat.HTML,
     )
 
 
-@dp.message_created(Command("all"))
-async def on_all(event: MessageCreated) -> None:
+def demo_all(user_id: int) -> None:
     """Все доступные элементы форматирования в одном сообщении."""
     content = Text(
         Heading("Все виды форматирования"),
@@ -166,16 +133,42 @@ async def on_all(event: MessageCreated) -> None:
         Link("Ссылка на Max", url="https://max.ru"),
     )
 
-    await event.message.answer(
-        content.as_html(),
+    bot.send_message(
+        user_id=user_id,
+        text=content.as_html(),
         format=TextFormat.HTML,
     )
 
 
-async def main() -> None:
-    """Точка входа."""
-    await dp.start_polling(bot)
+def main() -> None:
+    """Демонстрация форматирования текста через Bot API."""
+    # Пример отправки форматированного сообщения пользователю.
+    # В реальном боте user_id берётся из входящего обновления (update),
+    # здесь для демонстрации читаем из переменной окружения.
+    user_id = os.environ.get("MAX_USER_ID")
+    if user_id is None:
+        print(
+            "Установите MAX_USER_ID для демонстрации отправки.\n"
+            "Пример: MAX_USER_ID=12345 MAX_BOT_TOKEN=your_token python 02_formatting_bot.py"
+        )
+        return
+
+    uid = int(user_id)
+
+    print("Отправка HTML-форматирования...")
+    demo_html(uid)
+
+    print("Отправка Markdown-форматирования...")
+    demo_markdown(uid)
+
+    print("Отправка упоминания пользователя...")
+    demo_mention(uid)
+
+    print("Отправка всех видов форматирования...")
+    demo_all(uid)
+
+    print("Готово!")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

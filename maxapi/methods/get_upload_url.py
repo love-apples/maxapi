@@ -27,7 +27,7 @@ class GetUploadURL(BaseConnection):
         self.bot = bot
         self.type = type
 
-    async def fetch(self) -> GettedUploadUrl:
+    def fetch(self) -> GettedUploadUrl:
         """
         Выполняет POST-запрос для получения URL загрузки файла.
 
@@ -43,7 +43,7 @@ class GetUploadURL(BaseConnection):
 
         params["type"] = self.type.value
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.POST,
             path=ApiPath.UPLOADS,
             model=GettedUploadUrl,

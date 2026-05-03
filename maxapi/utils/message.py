@@ -14,29 +14,29 @@ if TYPE_CHECKING:
     from ..connection.base import BaseConnection
 
 
-async def _get_upload_info(bot: Bot, upload_type: UploadType):
+def _get_upload_info(bot: Bot, upload_type: UploadType):
     try:
-        return await bot.get_upload_url(upload_type)
+        return bot.get_upload_url(upload_type)
     except MaxApiError as e:
         raise MaxUploadFileFailed(
             f"Ошибка при загрузке файла: code={e.code}, raw={e.raw}"
         ) from e
 
 
-async def _upload_input_media(
+def _upload_input_media(
     base_connection: BaseConnection,
     upload_url: str,
     att: InputMedia | InputMediaBuffer,
 ) -> str:
     if isinstance(att, InputMedia):
-        return await base_connection.upload_file(
+        return base_connection.upload_file(
             url=upload_url,
             path=att.path,
             type=att.type,
         )
 
     if isinstance(att, InputMediaBuffer):
-        return await base_connection.upload_file_buffer(
+        return base_connection.upload_file_buffer(
             filename=att.filename or str(uuid4()),
             url=upload_url,
             buffer=att.buffer,
@@ -85,7 +85,7 @@ def _extract_upload_token_from_response(
     )
 
 
-async def _resolve_attachment_token(
+def _resolve_attachment_token(
     *,
     bot: Bot,
     upload_type: UploadType,
@@ -105,7 +105,7 @@ async def _resolve_attachment_token(
     )
 
 
-async def process_input_media(
+def process_input_media(
     base_connection: BaseConnection,
     bot: Bot,
     att: InputMedia | InputMediaBuffer,
@@ -124,13 +124,13 @@ async def process_input_media(
         AttachmentUpload: Загруженное вложение с токеном.
     """
 
-    upload = await _get_upload_info(bot=bot, upload_type=att.type)
-    upload_file_response = await _upload_input_media(
+    upload = _get_upload_info(bot=bot, upload_type=att.type)
+    upload_file_response = _upload_input_media(
         base_connection=base_connection,
         upload_url=upload.url,
         att=att,
     )
-    token = await _resolve_attachment_token(
+    token = _resolve_attachment_token(
         bot=bot,
         upload_type=att.type,
         upload_token=upload.token,

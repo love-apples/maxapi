@@ -56,7 +56,7 @@ class EditChat(BaseConnection):
         self.pin = pin
         self.notify = notify
 
-    async def fetch(self) -> Chat:
+    def fetch(self) -> Chat:
         """
         Выполняет PATCH-запрос для обновления параметров чата.
 
@@ -94,7 +94,7 @@ class EditChat(BaseConnection):
         if self.notify:
             json["notify"] = self.notify
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.PATCH,
             path=ApiPath.CHATS.value + "/" + str(self.chat_id),
             model=Chat,

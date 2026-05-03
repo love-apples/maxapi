@@ -36,7 +36,7 @@ class RemoveMemberChat(BaseConnection):
         self.user_id = user_id
         self.block = block
 
-    async def fetch(self) -> RemovedMemberChat:
+    def fetch(self) -> RemovedMemberChat:
         """
         Выполняет DELETE-запрос для удаления пользователя из чата.
 
@@ -55,7 +55,7 @@ class RemoveMemberChat(BaseConnection):
         params["user_id"] = self.user_id
         params["block"] = str(self.block).lower()
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.DELETE,
             path=ApiPath.CHATS.value
             + "/"

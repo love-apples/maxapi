@@ -9,7 +9,7 @@ from ..types.updates.message_edited import MessageEdited
 class ChannelPostFilter(BaseFilter):
     """Фильтр событий сообщений из канала."""
 
-    async def __call__(self, event) -> bool:
+    def __call__(self, event) -> bool:
         if not isinstance(event, (MessageCreated, MessageEdited)):
             return False
 

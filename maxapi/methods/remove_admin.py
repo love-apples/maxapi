@@ -27,7 +27,7 @@ class RemoveAdmin(BaseConnection):
         self.chat_id = chat_id
         self.user_id = user_id
 
-    async def fetch(self) -> RemovedAdmin:
+    def fetch(self) -> RemovedAdmin:
         """
         Выполняет DELETE-запрос для отмены прав администратора в чате.
 
@@ -37,7 +37,7 @@ class RemoveAdmin(BaseConnection):
 
         bot = self._ensure_bot()
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.DELETE,
             path=ApiPath.CHATS
             + "/"

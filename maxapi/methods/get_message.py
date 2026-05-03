@@ -30,7 +30,7 @@ class GetMessage(BaseConnection):
         self.bot = bot
         self.message_id = message_id
 
-    async def fetch(self) -> Message:
+    def fetch(self) -> Message:
         """
         Выполняет GET-запрос для получения сообщения.
 
@@ -40,7 +40,7 @@ class GetMessage(BaseConnection):
 
         bot = self._ensure_bot()
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.GET,
             path=ApiPath.MESSAGES + "/" + self.message_id,
             model=Message,

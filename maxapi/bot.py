@@ -5,8 +5,6 @@ import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from aiohttp import ClientSession
-
 from .client.default import DefaultConnectionProperties
 from .connection.base import DOWNLOAD_CHUNK_SIZE, BaseConnection
 from .enums.sender_action import SenderAction
@@ -49,11 +47,9 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from datetime import datetime
 
-    from .dispatcher import Dispatcher
     from .enums.parse_mode import ParseMode, TextFormat
     from .enums.update import UpdateType
     from .enums.upload_type import UploadType
-    from .filters.command import CommandsInfo
     from .methods.types.added_admin_chat import AddedListAdminChat
     from .methods.types.added_members_chat import AddedMembersChat
     from .methods.types.deleted_bot_from_chat import DeletedBotFromChat
@@ -109,8 +105,6 @@ class Bot(BaseConnection):
         after_upload_attempts: int | None = None,
         after_upload_retry_delay: float | None = None,
         after_upload_give_up_timeout: float | None = None,
-        auto_check_subscriptions: bool = True,
-        marker_updates: int | None = None,
     ):
         """
         Инициализирует экземпляр бота.
@@ -147,10 +141,6 @@ class Bot(BaseConnection):
                 общее время ожидания готовности медиа в секундах.
                 None — без ограничения по времени, только по количеству
                 попыток (по умолчанию None).
-            auto_check_subscriptions: Проверка подписок для
-                метода start_polling.
-            marker_updates: Маркер для получения
-                обновлений.
         """
 
         super().__init__()
@@ -179,8 +169,6 @@ class Bot(BaseConnection):
             and self.after_upload_give_up_timeout <= 0
         ):
             raise ValueError("after_upload_give_up_timeout должно быть > 0")
-        self.auto_check_subscriptions = auto_check_subscriptions
-        self.commands: list[CommandsInfo] = []
 
         self.__token = token or os.environ.get("MAX_BOT_TOKEN")
         if self.__token is None:
@@ -192,7 +180,6 @@ class Bot(BaseConnection):
 
         self.params: dict[str, Any] = {}
         self.headers: dict[str, Any] = {"Authorization": self.__token}
-        self.marker_updates = marker_updates
 
         if parse_mode is not None:
             warnings.warn(
@@ -205,33 +192,10 @@ class Bot(BaseConnection):
         self.disable_link_preview = disable_link_preview
         self.auto_requests = auto_requests
 
-        self.dispatcher: Dispatcher | None = None
         self._me: User | None = None
 
     def __repr__(self) -> str:
         return "Bot(token='***')"
-
-    def set_marker_updates(self, marker_updates: int) -> None:
-        """
-        Устанавливает маркер для получения обновлений.
-
-        Args:
-            marker_updates: Маркер для получения обновлений.
-        """
-
-        self.marker_updates = marker_updates
-
-    @property
-    def handlers_commands(self) -> list[CommandsInfo]:
-        """
-        Возвращает список команд из зарегистрированных обработчиков
-        текущего инстанса.
-
-        Returns:
-            List[CommandsInfo]: Список команд
-        """
-
-        return self.commands
 
     @property
     def me(self) -> User | None:
@@ -319,34 +283,18 @@ class Bot(BaseConnection):
         )
         return self.resolve_format(format=None, parse_mode=mode)
 
-    async def close_session(self) -> None:
+    def close(self) -> None:
         """
-        Закрывает текущую сессию aiohttp.
+        Закрывает текущую сессию.
 
         Returns:
             None
         """
 
         if self.session is not None:
-            await self.session.close()
+            self.session.close()
 
-    async def ensure_session(self) -> ClientSession:
-        """
-        Возвращает активную HTTP-сессию, создавая новую при необходимости.
-
-        Returns:
-            ClientSession: Активная aiohttp-сессия.
-        """
-        if not self.session or self.session.closed:
-            self.session = ClientSession(
-                base_url=self.api_url,
-                timeout=self.default_connection.timeout,
-                headers=self.headers,
-                **self.default_connection.kwargs,
-            )
-        return self.session
-
-    async def send_message(
+    def send_message(
         self,
         chat_id: int | None = None,
         user_id: int | None = None,
@@ -390,7 +338,7 @@ class Bot(BaseConnection):
             Optional[SendedMessage]: Отправленное сообщение или ошибка.
         """
 
-        return await SendMessage(
+        return SendMessage(
             bot=self,
             chat_id=chat_id,
             user_id=user_id,
@@ -406,7 +354,7 @@ class Bot(BaseConnection):
             sleep_after_input_media=sleep_after_input_media,
         ).fetch()
 
-    async def send_action(
+    def send_action(
         self,
         chat_id: int | None = None,
         action: SenderAction | str = SenderAction.TYPING_ON,
@@ -423,11 +371,9 @@ class Bot(BaseConnection):
         Returns:
             SendedAction: Результат отправки действия.
         """
-        return await SendAction(
-            bot=self, chat_id=chat_id, action=action
-        ).fetch()
+        return SendAction(bot=self, chat_id=chat_id, action=action).fetch()
 
-    async def edit_message(
+    def edit_message(
         self,
         message_id: str,
         text: str | None = None,
@@ -466,7 +412,7 @@ class Bot(BaseConnection):
                 или ошибка.
         """
 
-        return await EditMessage(
+        return EditMessage(
             bot=self,
             message_id=message_id,
             text=text,
@@ -478,7 +424,7 @@ class Bot(BaseConnection):
             sleep_after_input_media=sleep_after_input_media,
         ).fetch()
 
-    async def delete_message(self, message_id: str) -> DeletedMessage:
+    def delete_message(self, message_id: str) -> DeletedMessage:
         """
         Удаляет сообщение.
 
@@ -491,12 +437,12 @@ class Bot(BaseConnection):
             DeletedMessage: Результат удаления.
         """
 
-        return await DeleteMessage(
+        return DeleteMessage(
             bot=self,
             message_id=message_id,
         ).fetch()
 
-    async def delete_chat(self, chat_id: int) -> DeletedChat:
+    def delete_chat(self, chat_id: int) -> DeletedChat:
         """
         Удаляет чат.
 
@@ -509,12 +455,12 @@ class Bot(BaseConnection):
             DeletedChat: Результат удаления чата.
         """
 
-        return await DeleteChat(
+        return DeleteChat(
             bot=self,
             chat_id=chat_id,
         ).fetch()
 
-    async def get_messages(
+    def get_messages(
         self,
         chat_id: int | None = None,
         message_ids: list[str] | None = None,
@@ -538,7 +484,7 @@ class Bot(BaseConnection):
             Messages: Список сообщений.
         """
 
-        return await GetMessages(
+        return GetMessages(
             bot=self,
             chat_id=chat_id,
             message_ids=message_ids,
@@ -547,7 +493,7 @@ class Bot(BaseConnection):
             count=count,
         ).fetch()
 
-    async def get_message(self, message_id: str) -> Message:
+    def get_message(self, message_id: str) -> Message:
         """
         Получает одно сообщение по ID.
 
@@ -560,9 +506,9 @@ class Bot(BaseConnection):
             Message: Объект сообщения.
         """
 
-        return await GetMessage(bot=self, message_id=message_id).fetch()
+        return GetMessage(bot=self, message_id=message_id).fetch()
 
-    async def get_me(self) -> User:
+    def get_me(self) -> User:
         """
         Получает информацию о текущем боте.
 
@@ -572,9 +518,9 @@ class Bot(BaseConnection):
             User: Объект пользователя бота.
         """
 
-        return await GetMe(self).fetch()
+        return GetMe(self).fetch()
 
-    async def get_pin_message(self, chat_id: int) -> GettedPin:
+    def get_pin_message(self, chat_id: int) -> GettedPin:
         """
         Получает закрепленное сообщение в чате.
 
@@ -587,9 +533,9 @@ class Bot(BaseConnection):
             GettedPin: Закрепленное сообщение.
         """
 
-        return await GetPinnedMessage(bot=self, chat_id=chat_id).fetch()
+        return GetPinnedMessage(bot=self, chat_id=chat_id).fetch()
 
-    async def change_info(
+    def change_info(
         self,
         first_name: str | None = None,
         last_name: str | None = None,
@@ -629,7 +575,7 @@ class Bot(BaseConnection):
             stacklevel=2,
         )
 
-        return await ChangeInfo(
+        return ChangeInfo(
             bot=self,
             first_name=first_name,
             last_name=last_name,
@@ -638,7 +584,7 @@ class Bot(BaseConnection):
             photo=photo,
         ).fetch()
 
-    async def get_chats(
+    def get_chats(
         self, count: int | None = None, marker: int | None = None
     ) -> Chats:
         """
@@ -656,9 +602,9 @@ class Bot(BaseConnection):
             Chats: Список чатов.
         """
 
-        return await GetChats(bot=self, count=count, marker=marker).fetch()
+        return GetChats(bot=self, count=count, marker=marker).fetch()
 
-    async def get_chat_by_link(self, link: str) -> Chat:
+    def get_chat_by_link(self, link: str) -> Chat:
         """
         Получает чат по ссылке.
 
@@ -671,9 +617,9 @@ class Bot(BaseConnection):
             Chat: Объект чата.
         """
 
-        return await GetChatByLink(bot=self, link=link).fetch()
+        return GetChatByLink(bot=self, link=link).fetch()
 
-    async def get_chat_by_id(self, id: int) -> Chat:
+    def get_chat_by_id(self, id: int) -> Chat:
         """
         Получает чат по ID.
 
@@ -686,9 +632,9 @@ class Bot(BaseConnection):
             Chat: Объект чата.
         """
 
-        return await GetChatById(bot=self, id=id).fetch()
+        return GetChatById(bot=self, id=id).fetch()
 
-    async def edit_chat(
+    def edit_chat(
         self,
         chat_id: int,
         icon: PhotoAttachmentRequestPayload | None = None,
@@ -713,7 +659,7 @@ class Bot(BaseConnection):
             Chat: Обновленный объект чата.
         """
 
-        return await EditChat(
+        return EditChat(
             bot=self,
             chat_id=chat_id,
             icon=icon,
@@ -722,7 +668,7 @@ class Bot(BaseConnection):
             notify=self._resolve_notify(notify=notify),
         ).fetch()
 
-    async def get_video(self, video_token: str) -> Video:
+    def get_video(self, video_token: str) -> Video:
         """
         Получает видео по токену.
 
@@ -735,9 +681,9 @@ class Bot(BaseConnection):
             Video: Объект видео.
         """
 
-        return await GetVideo(bot=self, video_token=video_token).fetch()
+        return GetVideo(bot=self, video_token=video_token).fetch()
 
-    async def send_callback(
+    def send_callback(
         self,
         callback_id: str,
         message: MessageForCallback | None = None,
@@ -757,14 +703,14 @@ class Bot(BaseConnection):
             SendedCallback: Результат отправки callback.
         """
 
-        return await SendCallback(
+        return SendCallback(
             bot=self,
             callback_id=callback_id,
             message=message,
             notification=notification,
         ).fetch()
 
-    async def pin_message(
+    def pin_message(
         self, chat_id: int, message_id: str, *, notify: bool | None = None
     ) -> PinnedMessage:
         """
@@ -781,14 +727,14 @@ class Bot(BaseConnection):
             PinnedMessage: Закрепленное сообщение.
         """
 
-        return await PinMessage(
+        return PinMessage(
             bot=self,
             chat_id=chat_id,
             message_id=message_id,
             notify=self._resolve_notify(notify=notify),
         ).fetch()
 
-    async def delete_pin_message(
+    def delete_pin_message(
         self,
         chat_id: int,
     ) -> DeletedPinMessage:
@@ -804,12 +750,12 @@ class Bot(BaseConnection):
             DeletedPinMessage: Результат удаления.
         """
 
-        return await DeletePinMessage(
+        return DeletePinMessage(
             bot=self,
             chat_id=chat_id,
         ).fetch()
 
-    async def get_me_from_chat(
+    def get_me_from_chat(
         self,
         chat_id: int,
     ) -> ChatMember:
@@ -825,12 +771,12 @@ class Bot(BaseConnection):
             ChatMember: Информация о боте в чате.
         """
 
-        return await GetMeFromChat(
+        return GetMeFromChat(
             bot=self,
             chat_id=chat_id,
         ).fetch()
 
-    async def delete_me_from_chat(
+    def delete_me_from_chat(
         self,
         chat_id: int,
     ) -> DeletedBotFromChat:
@@ -846,12 +792,12 @@ class Bot(BaseConnection):
             DeletedBotFromChat: Результат удаления.
         """
 
-        return await DeleteMeFromMessage(
+        return DeleteMeFromMessage(
             bot=self,
             chat_id=chat_id,
         ).fetch()
 
-    async def get_list_admin_chat(
+    def get_list_admin_chat(
         self,
         chat_id: int,
         marker: int | None = None,
@@ -870,13 +816,13 @@ class Bot(BaseConnection):
             GettedListAdminChat: Список администраторов.
         """
 
-        return await GetListAdminChat(
+        return GetListAdminChat(
             bot=self,
             chat_id=chat_id,
             marker=marker,
         ).fetch()
 
-    async def add_list_admin_chat(
+    def add_list_admin_chat(
         self,
         chat_id: int,
         admins: list[ChatAdmin],
@@ -897,14 +843,14 @@ class Bot(BaseConnection):
             AddedListAdminChat: Результат добавления.
         """
 
-        return await AddAdminChat(
+        return AddAdminChat(
             bot=self,
             chat_id=chat_id,
             admins=admins,
             marker=marker,
         ).fetch()
 
-    async def remove_admin(self, chat_id: int, user_id: int) -> RemovedAdmin:
+    def remove_admin(self, chat_id: int, user_id: int) -> RemovedAdmin:
         """
         Удаляет администратора из чата.
 
@@ -918,13 +864,13 @@ class Bot(BaseConnection):
             RemovedAdmin: Результат удаления.
         """
 
-        return await RemoveAdmin(
+        return RemoveAdmin(
             bot=self,
             chat_id=chat_id,
             user_id=user_id,
         ).fetch()
 
-    async def get_chat_members(
+    def get_chat_members(
         self,
         chat_id: int,
         user_ids: list[int] | None = None,
@@ -950,7 +896,7 @@ class Bot(BaseConnection):
             GettedMembersChat: Список участников.
         """
 
-        return await GetMembersChat(
+        return GetMembersChat(
             bot=self,
             chat_id=chat_id,
             user_ids=user_ids,
@@ -958,7 +904,7 @@ class Bot(BaseConnection):
             count=count,
         ).fetch()
 
-    async def get_chat_member(
+    def get_chat_member(
         self,
         chat_id: int,
         user_id: int,
@@ -976,16 +922,14 @@ class Bot(BaseConnection):
             Optional[ChatMember]: Участник.
         """
 
-        members = await self.get_chat_members(
-            chat_id=chat_id, user_ids=[user_id]
-        )
+        members = self.get_chat_members(chat_id=chat_id, user_ids=[user_id])
 
         if members.members:
             return members.members[0]
 
         return None
 
-    async def add_chat_members(
+    def add_chat_members(
         self,
         chat_id: int,
         user_ids: list[int],
@@ -1003,13 +947,13 @@ class Bot(BaseConnection):
             AddedMembersChat: Результат добавления.
         """
 
-        return await AddMembersChat(
+        return AddMembersChat(
             bot=self,
             chat_id=chat_id,
             user_ids=user_ids,
         ).fetch()
 
-    async def kick_chat_member(
+    def kick_chat_member(
         self,
         chat_id: int,
         user_id: int,
@@ -1030,14 +974,14 @@ class Bot(BaseConnection):
             RemovedMemberChat: Результат исключения.
         """
 
-        return await RemoveMemberChat(
+        return RemoveMemberChat(
             bot=self,
             chat_id=chat_id,
             user_id=user_id,
             block=block,
         ).fetch()
 
-    async def get_updates(
+    def get_updates(
         self,
         limit: int | None = None,
         timeout: int | None = None,
@@ -1053,11 +997,11 @@ class Bot(BaseConnection):
             Dict: Список обновлений.
         """
 
-        return await GetUpdates(
+        return GetUpdates(
             bot=self, limit=limit, marker=marker, types=types, timeout=timeout
         ).fetch()
 
-    async def get_upload_url(self, type: UploadType) -> GettedUploadUrl:
+    def get_upload_url(self, type: UploadType) -> GettedUploadUrl:
         """
         Получает URL для загрузки файлов.
 
@@ -1070,9 +1014,9 @@ class Bot(BaseConnection):
             GettedUploadUrl: URL для загрузки.
         """
 
-        return await GetUploadURL(bot=self, type=type).fetch()
+        return GetUploadURL(bot=self, type=type).fetch()
 
-    async def upload_media(
+    def upload_media(
         self, media: InputMedia | InputMediaBuffer
     ) -> AttachmentUpload:
         """
@@ -1088,13 +1032,13 @@ class Bot(BaseConnection):
             AttachmentUpload: Вложение типа upload с payload.token.
         """
 
-        return await process_input_media(
+        return process_input_media(
             base_connection=self,
             bot=self,
             att=media,
         )
 
-    async def download_file(
+    def download_file(
         self,
         url: str,
         destination: str | Path,
@@ -1118,13 +1062,13 @@ class Bot(BaseConnection):
         Returns:
             Path: Полный путь к скачанному файлу.
         """
-        return await super().download_file(
+        return super().download_file(
             url=url,
             destination=Path(destination),
             chunk_size=chunk_size,
         )
 
-    async def set_my_commands(self, *commands: BotCommand) -> User:
+    def set_my_commands(self, *commands: BotCommand) -> User:
         """
         Устанавливает список команд бота.
 
@@ -1143,9 +1087,9 @@ class Bot(BaseConnection):
             stacklevel=2,
         )
 
-        return await ChangeInfo(bot=self, commands=list(commands)).fetch()
+        return ChangeInfo(bot=self, commands=list(commands)).fetch()
 
-    async def get_subscriptions(self) -> GettedSubscriptions:
+    def get_subscriptions(self) -> GettedSubscriptions:
         """
         Получает список всех подписок.
 
@@ -1155,9 +1099,9 @@ class Bot(BaseConnection):
             GettedSubscriptions: Объект со списком подписок.
         """
 
-        return await GetSubscriptions(bot=self).fetch()
+        return GetSubscriptions(bot=self).fetch()
 
-    async def subscribe_webhook(
+    def subscribe_webhook(
         self,
         url: str,
         update_types: list[UpdateType] | None = None,
@@ -1177,11 +1121,11 @@ class Bot(BaseConnection):
             Subscribed: Результат подписки.
         """
 
-        return await SubscribeWebhook(
+        return SubscribeWebhook(
             bot=self, url=url, update_types=update_types, secret=secret
         ).fetch()
 
-    async def unsubscribe_webhook(
+    def unsubscribe_webhook(
         self,
         url: str,
     ) -> Unsubscribed:
@@ -1197,12 +1141,12 @@ class Bot(BaseConnection):
             Unsubscribed: Результат отписки.
         """
 
-        return await UnsubscribeWebhook(
+        return UnsubscribeWebhook(
             bot=self,
             url=url,
         ).fetch()
 
-    async def delete_webhook(self) -> None:
+    def delete_webhook(self) -> None:
         """
         Удаляет все подписки на Webhook.
 
@@ -1212,8 +1156,8 @@ class Bot(BaseConnection):
             None
         """
 
-        subs = await self.get_subscriptions()
+        subs = self.get_subscriptions()
         if subs.subscriptions:
             for sub in subs.subscriptions:
-                await self.unsubscribe_webhook(sub.url)
+                self.unsubscribe_webhook(sub.url)
                 logger_bot.info("Удалена подписка на Webhook: %s", sub.url)

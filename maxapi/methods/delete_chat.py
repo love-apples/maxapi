@@ -25,7 +25,7 @@ class DeleteChat(BaseConnection):
         self.bot = bot
         self.chat_id = chat_id
 
-    async def fetch(self) -> DeletedChat:
+    def fetch(self) -> DeletedChat:
         """
         Отправляет DELETE-запрос для удаления указанного чата.
 
@@ -35,7 +35,7 @@ class DeleteChat(BaseConnection):
 
         bot = self._ensure_bot()
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.DELETE,
             path=ApiPath.CHATS.value + "/" + str(self.chat_id),
             model=DeletedChat,

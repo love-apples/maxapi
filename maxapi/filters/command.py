@@ -119,7 +119,7 @@ class Command(BaseFilter):
 
         return command, arguments
 
-    async def __call__(
+    def __call__(
         self, event: UpdateUnion
     ) -> dict[str, list[str]] | bool:
         """
@@ -196,7 +196,7 @@ class CommandStart(Command):
             only_with_bot_username=only_with_bot_username,
         )
 
-    async def __call__(
+    def __call__(
         self, event: UpdateUnion
     ) -> dict[str, list[str]] | bool:
-        return await super().__call__(event)
+        return super().__call__(event)

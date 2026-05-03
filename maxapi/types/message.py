@@ -352,7 +352,7 @@ class Message(
 
         return self.recipient.chat_id
 
-    async def answer(
+    def answer(
         self,
         text: str | None = None,
         attachments: list[
@@ -389,7 +389,7 @@ class Message(
                 send_message бота.
         """
 
-        return await self.send(
+        return self.send(
             text=text,
             attachments=attachments,
             link=link,
@@ -400,7 +400,7 @@ class Message(
             sleep_after_input_media=sleep_after_input_media,
         )
 
-    async def reply(
+    def reply(
         self,
         text: str | None = None,
         attachments: list[
@@ -442,7 +442,7 @@ class Message(
             msg = "Невозможно ответить: chat_id отсутствует"
             raise ValueError(msg)
 
-        return await self._ensure_bot().send_message(
+        return self._ensure_bot().send_message(
             chat_id=self.recipient.chat_id,
             user_id=self.recipient.user_id,
             text=text,
@@ -455,7 +455,7 @@ class Message(
             sleep_after_input_media=sleep_after_input_media,
         )
 
-    async def forward(
+    def forward(
         self,
         chat_id: int | None,
         user_id: int | None = None,
@@ -498,7 +498,7 @@ class Message(
             msg = "Невозможно переслать: поле body отсутствует у сообщения"
             raise ValueError(msg)
 
-        return await self._ensure_bot().send_message(
+        return self._ensure_bot().send_message(
             chat_id=chat_id,
             user_id=user_id,
             attachments=attachments,
@@ -512,7 +512,7 @@ class Message(
             sleep_after_input_media=sleep_after_input_media,
         )
 
-    async def edit(
+    def edit(
         self,
         text: str | None = None,
         attachments: list[
@@ -563,7 +563,7 @@ class Message(
             msg = "Невозможно редактировать: поле body отсутствует у сообщения"
             raise ValueError(msg)
 
-        return await self._ensure_bot().edit_message(
+        return self._ensure_bot().edit_message(
             message_id=self.body.mid,
             text=text,
             attachments=attachments,
@@ -574,7 +574,7 @@ class Message(
             sleep_after_input_media=sleep_after_input_media,
         )
 
-    async def delete(self) -> DeletedMessage:
+    def delete(self) -> DeletedMessage:
         """
         Удаляет текущее сообщение.
 
@@ -586,11 +586,11 @@ class Message(
             msg = "Невозможно удалить: поле body отсутствует у сообщения"
             raise ValueError(msg)
 
-        return await self._ensure_bot().delete_message(
+        return self._ensure_bot().delete_message(
             message_id=self.body.mid,
         )
 
-    async def pin(self, *, notify: bool = True) -> PinnedMessage:
+    def pin(self, *, notify: bool = True) -> PinnedMessage:
         """
         Закрепляет текущее сообщение в чате.
 
@@ -608,13 +608,13 @@ class Message(
         if self.recipient.chat_id is None:
             raise ValueError("chat_id не может быть None")
 
-        return await self._ensure_bot().pin_message(
+        return self._ensure_bot().pin_message(
             chat_id=self.recipient.chat_id,
             message_id=self.body.mid,
             notify=notify,
         )
 
-    async def unpin(self) -> DeletedPinMessage:
+    def unpin(self) -> DeletedPinMessage:
         """
         Снимает закрепленное сообщение в чате текущего сообщения.
 
@@ -625,7 +625,7 @@ class Message(
         if self.recipient.chat_id is None:
             raise ValueError("chat_id не может быть None")
 
-        return await self._ensure_bot().delete_pin_message(
+        return self._ensure_bot().delete_pin_message(
             chat_id=self.recipient.chat_id,
         )
 

@@ -88,27 +88,27 @@ class MessageCallback(BaseUpdate):
 
         return self.message
 
-    async def ack(
+    def ack(
         self,
         notification: str | None = None,
     ) -> SendedCallback:
         """Подтвердить callback без изменения исходного сообщения."""
 
-        return await self._ensure_bot().send_callback(
+        return self._ensure_bot().send_callback(
             callback_id=self.callback.callback_id,
             message=None,
             notification=notification,
         )
 
-    async def defer(
+    def defer(
         self,
         notification: str | None = None,
     ) -> SendedCallback:
         """Семантический alias для ack()."""
 
-        return await self.ack(notification=notification)
+        return self.ack(notification=notification)
 
-    async def edit(
+    def edit(
         self,
         text: str | None = None,
         link: NewMessageLink | None = None,
@@ -132,7 +132,7 @@ class MessageCallback(BaseUpdate):
                     "исходное сообщение отсутствует"
                 )
 
-            return await self.ack(notification=notification)
+            return self.ack(notification=notification)
 
         bot = self._ensure_bot()
         message_for_callback = MessageForCallback(
@@ -143,13 +143,13 @@ class MessageCallback(BaseUpdate):
             format=bot.resolve_format(format),
         )
 
-        return await bot.send_callback(
+        return bot.send_callback(
             callback_id=self.callback.callback_id,
             message=message_for_callback,
             notification=notification,
         )
 
-    async def send(
+    def send(
         self,
         text: str | None = None,
         attachments: list[
@@ -166,7 +166,7 @@ class MessageCallback(BaseUpdate):
     ) -> SendedMessage | None:
         """Отправить новое сообщение в тот же peer, откуда пришел callback."""
 
-        return await self._require_message().send(
+        return self._require_message().send(
             text=text,
             attachments=attachments,
             link=link,
@@ -177,7 +177,7 @@ class MessageCallback(BaseUpdate):
             sleep_after_input_media=sleep_after_input_media,
         )
 
-    async def reply(
+    def reply(
         self,
         text: str | None = None,
         attachments: list[
@@ -193,7 +193,7 @@ class MessageCallback(BaseUpdate):
     ) -> SendedMessage | None:
         """Отправить reply на исходное сообщение callback."""
 
-        return await self._require_message().reply(
+        return self._require_message().reply(
             text=text,
             attachments=attachments,
             format=format,
@@ -203,22 +203,22 @@ class MessageCallback(BaseUpdate):
             sleep_after_input_media=sleep_after_input_media,
         )
 
-    async def delete(self) -> DeletedMessage:
+    def delete(self) -> DeletedMessage:
         """Удалить исходное сообщение callback."""
 
-        return await self._require_message().delete()
+        return self._require_message().delete()
 
-    async def pin(self, *, notify: bool = True) -> PinnedMessage:
+    def pin(self, *, notify: bool = True) -> PinnedMessage:
         """Закрепить исходное сообщение callback."""
 
-        return await self._require_message().pin(notify=notify)
+        return self._require_message().pin(notify=notify)
 
-    async def unpin(self) -> DeletedPinMessage:
+    def unpin(self) -> DeletedPinMessage:
         """Снять закрепление сообщения callback."""
 
-        return await self._require_message().unpin()
+        return self._require_message().unpin()
 
-    async def answer(
+    def answer(
         self,
         notification: str | None = None,
         new_text: str | None = None,
@@ -244,7 +244,7 @@ class MessageCallback(BaseUpdate):
         Returns:
             SendedCallback: Результат вызова send_callback бота.
         """
-        return await self.edit(
+        return self.edit(
             text=new_text,
             link=link,
             format=format,

@@ -32,7 +32,7 @@ class AddMembersChat(BaseConnection):
         self.chat_id = chat_id
         self.user_ids = user_ids
 
-    async def fetch(self) -> AddedMembersChat:
+    def fetch(self) -> AddedMembersChat:
         """
         Отправляет POST-запрос на добавление пользователей в чат.
 
@@ -50,7 +50,7 @@ class AddMembersChat(BaseConnection):
 
         json["user_ids"] = self.user_ids
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.POST,
             path=ApiPath.CHATS.value
             + "/"

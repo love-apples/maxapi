@@ -175,7 +175,7 @@ class PayloadFilter(BaseFilter):
         self.model = model
         self.rule = rule
 
-    async def __call__(self, event: UpdateUnion) -> dict[str, Any] | bool:
+    def __call__(self, event: UpdateUnion) -> dict[str, Any] | bool:
         """
         Проверяет event на MessageCallback и применяет фильтр к payload.
 

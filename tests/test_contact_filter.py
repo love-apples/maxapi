@@ -7,7 +7,7 @@ from maxapi.types.message import Message, MessageBody, Recipient
 from maxapi.types.updates.message_created import MessageCreated
 
 
-async def test_contact_filter_matches_message_with_contact_attachment():
+def test_contact_filter_matches_message_with_contact_attachment():
     payload = ContactAttachmentPayload(
         vcf_info=(
             "BEGIN:VCARD\r\n"
@@ -35,14 +35,14 @@ async def test_contact_filter_matches_message_with_contact_attachment():
     event = MessageCreated(message=msg, timestamp=0)
 
     flt = ContactFilter()
-    res = await flt(event)
+    res = flt(event)
     assert isinstance(res, dict)
     assert "contact" in res
     assert res["contact"].type == AttachmentType.CONTACT
     assert res["contact"].payload.vcf_info
 
 
-async def test_contact_filter_false_when_no_attachments():
+def test_contact_filter_false_when_no_attachments():
     body = MessageBody(
         mid="m1", seq=1, text="plain", attachments=[], markup=[]
     )
@@ -54,4 +54,4 @@ async def test_contact_filter_false_when_no_attachments():
     )
     event = MessageCreated(message=msg, timestamp=0)
     flt = ContactFilter()
-    assert await flt(event) is False
+    assert flt(event) is False

@@ -5,7 +5,6 @@
     python tests/get_chat_id.py
 """
 
-import asyncio
 import os
 import sys
 from pathlib import Path
@@ -27,7 +26,7 @@ except ImportError:
 from maxapi import Bot
 
 
-async def main():
+def main():
     """Получает список чатов."""
     token = os.environ.get("MAX_BOT_TOKEN")
 
@@ -37,7 +36,7 @@ async def main():
     bot = Bot(token=token)
 
     try:
-        chats = await bot.get_chats(count=10)
+        chats = bot.get_chats(count=10)
 
         if not chats.chats or len(chats.chats) == 0:
             return
@@ -45,8 +44,8 @@ async def main():
     except Exception:
         sys.exit(1)
     finally:
-        await bot.close_session()
+        bot.close_session()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

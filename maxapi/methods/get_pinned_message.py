@@ -29,7 +29,7 @@ class GetPinnedMessage(BaseConnection):
         self.bot = bot
         self.chat_id = chat_id
 
-    async def fetch(self) -> GettedPin:
+    def fetch(self) -> GettedPin:
         """
         Выполняет GET-запрос для получения закреплённого сообщения.
 
@@ -39,7 +39,7 @@ class GetPinnedMessage(BaseConnection):
 
         bot = self._ensure_bot()
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.GET,
             path=ApiPath.CHATS + "/" + str(self.chat_id) + ApiPath.PIN,
             model=GettedPin,

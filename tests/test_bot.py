@@ -1,7 +1,7 @@
 """Тесты для класса Bot."""
 
 import os
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -74,19 +74,8 @@ class TestBotInitialization:
         bot = Bot(token=mock_bot_token, after_input_media_delay=5.0)
         assert bot.after_input_media_delay == 5.0
 
-    def test_bot_init_auto_check_subscriptions(self, mock_bot_token):
-        """Тест создания бота с auto_check_subscriptions."""
-        bot = Bot(token=mock_bot_token, auto_check_subscriptions=False)
-        assert bot.auto_check_subscriptions is False
-
-
 class TestBotProperties:
     """Тесты свойств Bot."""
-
-    def test_handlers_commands_property(self, bot):
-        """Тест свойства handlers_commands."""
-        assert isinstance(bot.handlers_commands, list)
-        assert bot.handlers_commands == bot.commands
 
     def test_me_property(self, bot):
         """Тест свойства me."""
@@ -137,56 +126,47 @@ class TestBotResolveMethods:
 class TestBotSessionManagement:
     """Тесты управления сессией."""
 
-    @pytest.mark.asyncio
-    async def test_close_session(self, bot_with_session):
+    def test_close_session(self, bot_with_session):
         """Тест закрытия сессии."""
-        await bot_with_session.close_session()
+        bot_with_session.close()
         bot_with_session.session.close.assert_called_once()
 
-    @pytest.mark.asyncio
-    async def test_close_session_none(self, bot):
+    def test_close_session_none(self, bot):
         """Тест закрытия сессии, когда её нет."""
         # Не должно быть ошибки
-        await bot.close_session()
+        bot.close()
 
 
 class TestBotMethods:
     """Тесты методов Bot (моки)."""
 
-    @pytest.mark.asyncio
-    async def test_send_message_call(self, bot):
+    def test_send_message_call(self, bot):
         """Тест вызова send_message (без реального запроса)."""
         # Core Stuff
         from maxapi.methods.send_message import SendMessage
 
         with patch.object(
-            SendMessage, "fetch", new_callable=AsyncMock
-        ) as mock_fetch:
-            mock_fetch.return_value = Mock(
+            SendMessage, "fetch", return_value=Mock(
                 message=Mock(body=Mock(mid="msg_123"))
             )
-
-            await bot.send_message(chat_id=12345, text="Test message")
+        ) as mock_fetch:
+            bot.send_message(chat_id=12345, text="Test message")
 
             assert mock_fetch.called
 
-    @pytest.mark.asyncio
-    async def test_send_action_call(self, bot):
+    def test_send_action_call(self, bot):
         """Тест вызова send_action (без реального запроса)."""
         # Core Stuff
         from maxapi.methods.send_action import SendAction
 
         with patch.object(
-            SendAction, "fetch", new_callable=AsyncMock
+            SendAction, "fetch", return_value=Mock()
         ) as mock_fetch:
-            mock_fetch.return_value = Mock()
-
-            await bot.send_action(chat_id=12345, action=SenderAction.TYPING_ON)
+            bot.send_action(chat_id=12345, action=SenderAction.TYPING_ON)
 
             assert mock_fetch.called
 
-    @pytest.mark.asyncio
-    async def test_send_invalid_action_as_string(self, bot):
+    def test_send_invalid_action_as_string(self, bot):
         """Тест вызова send_action с неверными данными."""
         # Core Stuff
         from maxapi.methods.send_action import SendAction
@@ -194,84 +174,69 @@ class TestBotMethods:
         available_actions = ", ".join(action.value for action in SenderAction)
 
         with patch.object(
-            SendAction, "fetch", new_callable=AsyncMock
-        ) as mock_fetch:
-            mock_fetch.return_value = Mock()
+            SendAction, "fetch", return_value = Mock()
+        ):
 
             with pytest.raises(ValueError) as exc_info:  # noqa: PT011
-                await bot.send_action(chat_id=12345, action="fake_action")
+                bot.send_action(chat_id=12345, action="fake_action")
 
             exc_message = str(exc_info.value)
 
             assert "Неверный" in exc_message
             assert available_actions in exc_message
 
-    @pytest.mark.asyncio
-    async def test_send_valid_action_as_string(self, bot):
+    def test_send_valid_action_as_string(self, bot):
         """Тест вызова send_action с верными данными."""
         # Core Stuff
         from maxapi.methods.send_action import SendAction
 
         with patch.object(
-            SendAction, "fetch", new_callable=AsyncMock
+            SendAction, "fetch", return_value = Mock()
         ) as mock_fetch:
-            mock_fetch.return_value = Mock()
-
-            await bot.send_action(chat_id=12345, action="typing_on")
+            bot.send_action(chat_id=12345, action="typing_on")
 
             assert mock_fetch.called
 
-    @pytest.mark.asyncio
     async def test_send_action_without_action_param(self, bot):
         """Тест вызова send_action без передачи action."""
         # Core Stuff
         from maxapi.methods.send_action import SendAction
 
         with patch.object(
-            SendAction, "fetch", new_callable=AsyncMock
+            SendAction, "fetch", return_value = Mock()
         ) as mock_fetch:
-            mock_fetch.return_value = Mock()
-
             await bot.send_action(chat_id=12345)
 
             assert mock_fetch.called
 
-    @pytest.mark.asyncio
-    async def test_send_action_with_wrong_action_type(self, bot):
+    def test_send_action_with_wrong_action_type(self, bot):
         """Тест вызова send_action с передачей неверного типа (не SenderAction, не str)."""  # noqa: E501
         # Core Stuff
         from maxapi.methods.send_action import SendAction
 
         with patch.object(
-            SendAction, "fetch", new_callable=AsyncMock
-        ) as mock_fetch:
-            mock_fetch.return_value = Mock()
-
+            SendAction, "fetch", return_value = Mock()
+        ):
             wrong_action = 123
             wrong_action_type = type(wrong_action).__name__
 
             with pytest.raises(TypeError) as exc_info:
-                await bot.send_action(chat_id=12345, action=wrong_action)
+                bot.send_action(chat_id=12345, action=wrong_action)
 
             exc_message = str(exc_info.value)
 
             assert wrong_action_type in exc_message
 
-    @pytest.mark.asyncio
-    async def test_get_me_structure(self, bot):
+    def test_get_me_structure(self, bot):
         """Тест структуры вызова get_me."""
         # Core Stuff
         from maxapi.methods.get_me import GetMe
 
+        mock_user = Mock(user_id=123, username="test_bot")
         with patch.object(
-            GetMe, "fetch", new_callable=AsyncMock
+            GetMe, "fetch", return_value=mock_user
         ) as mock_fetch:
-            mock_user = Mock()
-            mock_user.user_id = 123
-            mock_user.username = "test_bot"
-            mock_fetch.return_value = mock_user
-
-            result = await bot.get_me()
+            result = bot.get_me()
 
             assert mock_fetch.called
             # Проверяем, что результат возвращен
@@ -283,43 +248,37 @@ class TestBotMethods:
 class TestBotIntegration:
     """Интеграционные тесты Bot (требуют реальный токен)."""
 
-    @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_get_me_integration(self, integration_bot):
+    def test_get_me_integration(self, integration_bot):
         """Интеграционный тест get_me."""
-        me = await integration_bot.get_me()
+        me = integration_bot.get_me()
         assert me is not None
         assert me.user_id is not None
         assert me.is_bot is True
         # _me устанавливается в Dispatcher.check_me(), но не в Bot.get_me()
         # Проверяем только что метод возвращает корректные данные
 
-    @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_get_subscriptions_integration(self, integration_bot):
+    def test_get_subscriptions_integration(self, integration_bot):
         """Интеграционный тест get_subscriptions."""
-        subs = await integration_bot.get_subscriptions()
+        subs = integration_bot.get_subscriptions()
         assert subs is not None
         assert hasattr(subs, "subscriptions")
 
-    @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_get_chats_integration(self, integration_bot):
+    def test_get_chats_integration(self, integration_bot):
         """Интеграционный тест get_chats."""
-        chats = await integration_bot.get_chats(count=5)
+        chats = integration_bot.get_chats(count=5)
         assert chats is not None
         assert hasattr(chats, "chats")
 
-    @pytest.mark.asyncio
-    async def test_close_session_cleanup(self, integration_bot):
-        """Интеграционный тест правильного закрытия сессии."""
-        # Создаем сессию
-        await integration_bot.get_me()
-        assert integration_bot.session is not None
+    def test_close_session_cleanup(self, mock_bot_token):
+        """Тест правильного закрытия сессии."""
+        bot = Bot(token=mock_bot_token)
+        # Сессия ленивая — создаётся через _get_session()
+        bot._get_session()
+        assert bot.session is not None
 
-        # Закрываем сессию
-        await integration_bot.close_session()
-        # close_session() закрывает сессию, но не устанавливает session = None
-        # Проверяем, что сессия закрыта (если еще существует)
-        if integration_bot.session:
-            assert integration_bot.session.closed
+        bot.close()
+        # После close() сессия закрыта, но объект не сбрасывается
+        assert bot.session is not None

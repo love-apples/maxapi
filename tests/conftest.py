@@ -3,11 +3,13 @@
 import os
 from contextlib import suppress
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 
-import aiohttp
 import pytest
 from faker import Faker
+from requests import Session
+
+pytest_plugins = ["tests.fixtures.updates"]
 
 # Загружаем переменные окружения из .env файла
 try:
@@ -32,11 +34,9 @@ except ImportError:
     pass
 
 # Core Stuff
-from maxapi import Bot, Dispatcher
+from maxapi import Bot
 from maxapi.client.default import DefaultConnectionProperties
 from maxapi.enums.update import UpdateType
-
-pytest_plugins = ["tests.fixtures.updates"]
 
 # Консистентность данного маппинга проверяется в тесте
 # test_fixtures_cover_all_update_union_types.
@@ -103,12 +103,10 @@ def test_chat_id_from_env():
 
 @pytest.fixture
 def mock_session():
-    """Фикстура с мок-сессией aiohttp."""
-    session = AsyncMock(spec=aiohttp.ClientSession)
+    """Фикстура с мок-сессией."""
+    session = Mock(spec=Session)
     session.base_url = "https://platform-api.max.ru"
     session.headers = {}
-    session.close = AsyncMock()
-    session.request = AsyncMock()
     return session
 
 
@@ -126,21 +124,6 @@ def bot_with_session(mock_bot_token, mock_session):
     bot = Bot(token=mock_bot_token)
     bot.session = mock_session
     return bot
-
-
-@pytest.fixture
-def dispatcher():
-    """Фикстура для создания Dispatcher."""
-    return Dispatcher()
-
-
-@pytest.fixture
-def router():
-    """Фикстура для создания Router."""
-    # Core Stuff
-    from maxapi.dispatcher import Router
-
-    return Router(router_id="test_router")
 
 
 @pytest.fixture
@@ -182,15 +165,6 @@ def sample_message_created_event():
 
 
 @pytest.fixture
-def sample_context():
-    """Фикстура для создания MemoryContext."""
-    # Core Stuff
-    from maxapi.context import MemoryContext
-
-    return MemoryContext(chat_id=12345, user_id=67890)
-
-
-@pytest.fixture
 def faker():
     """Возвращает экземпляр Faker для генерации тестовых данных."""
     return Faker()
@@ -219,7 +193,7 @@ def fake_user(faker):
 
 
 @pytest.fixture
-async def integration_bot(bot_token_from_env):
+def integration_bot(bot_token_from_env):
     """Фикстура для интеграционных тестов с реальным ботом.
 
     Использовать только при наличии реального токена.
@@ -238,7 +212,7 @@ async def integration_bot(bot_token_from_env):
         if bot.session and not bot.session.closed:
             # Игнорируем ошибки при закрытии, если event loop уже закрыт
             with suppress(Exception):
-                await bot.close_session()
+                bot.close()
 
 
 @pytest.fixture(autouse=True)

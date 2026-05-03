@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 
 import pytest
 from maxapi.enums.upload_type import UploadType
@@ -52,15 +52,14 @@ class TestExtractUploadTokenFromResponse:
 
 
 class TestProcessInputMedia:
-    @pytest.mark.anyio
-    async def test_process_input_media_for_file_buffer(self):
+    def test_process_input_media_for_file_buffer(self):
         base_connection = Mock()
-        base_connection.upload_file_buffer = AsyncMock(
+        base_connection.upload_file_buffer = Mock(
             return_value='{"token":"buffer-file-token"}'
         )
 
         bot = Mock()
-        bot.get_upload_url = AsyncMock(
+        bot.get_upload_url = Mock(
             return_value=SimpleNamespace(
                 url="https://upload.local",
                 token=None,
@@ -74,7 +73,7 @@ class TestProcessInputMedia:
             type=UploadType.FILE,
         )
 
-        uploaded = await process_input_media(
+        uploaded = process_input_media(
             base_connection=base_connection,
             bot=bot,
             att=media,
@@ -82,18 +81,17 @@ class TestProcessInputMedia:
 
         assert uploaded.type == UploadType.FILE
         assert uploaded.payload.token == "buffer-file-token"
-        bot.get_upload_url.assert_awaited_once_with(UploadType.FILE)
-        base_connection.upload_file_buffer.assert_awaited_once()
+        bot.get_upload_url.assert_called_once_with(UploadType.FILE)
+        base_connection.upload_file_buffer.assert_called_once()
 
-    @pytest.mark.anyio
-    async def test_process_input_media_video_raises_without_upload_token(self):
+    def test_process_input_media_video_raises_without_upload_token(self):
         base_connection = Mock()
-        base_connection.upload_file_buffer = AsyncMock(
+        base_connection.upload_file_buffer = Mock(
             return_value='{"ignored":"for-video"}'
         )
 
         bot = Mock()
-        bot.get_upload_url = AsyncMock(
+        bot.get_upload_url = Mock(
             return_value=SimpleNamespace(
                 url="https://upload.local",
                 token=None,
@@ -109,7 +107,7 @@ class TestProcessInputMedia:
             MaxUploadFileFailed,
             match="token не был получен",
         ):
-            await process_input_media(
+            process_input_media(
                 base_connection=base_connection,
                 bot=bot,
                 att=media,

@@ -25,7 +25,7 @@ class DummyBot:
             return parse_mode
         return self.parse_mode
 
-    async def send_callback(
+    def send_callback(
         self,
         callback_id: str,
         message: MessageForCallback,
@@ -60,7 +60,7 @@ def test_get_ids_with_no_message(cb_obj):
     assert ids[1] == 42
 
 
-async def test_answer_with_no_message_raises_on_change(cb_obj):
+def test_answer_with_no_message_raises_on_change(cb_obj):
     mc = MessageCallback(
         message=None,
         user_locale=None,
@@ -72,10 +72,10 @@ async def test_answer_with_no_message_raises_on_change(cb_obj):
     mc.bot = bot
 
     with pytest.raises(ValueError, match="исходное сообщение отсутствует"):
-        await mc.answer(notification="n", new_text="text")
+        mc.answer(notification="n", new_text="text")
 
 
-async def test_answer_with_no_message_notification_only(cb_obj):
+def test_answer_with_no_message_notification_only(cb_obj):
     mc = MessageCallback(
         message=None,
         user_locale=None,
@@ -86,14 +86,14 @@ async def test_answer_with_no_message_notification_only(cb_obj):
     bot = DummyBot()
     mc.bot = bot
 
-    res = await mc.answer(notification="n")
+    res = mc.answer(notification="n")
     assert res == {"ok": True}
     assert bot.last["callback_id"] == "cb1"
     assert bot.last["message"] is None
     assert bot.last["notification"] == "n"
 
 
-async def test_answer_uses_bot_default_parse_mode(cb_obj):
+def test_answer_uses_bot_default_parse_mode(cb_obj):
     """Если format не передан явно, берётся parse_mode из бота."""
     from maxapi.enums.chat_type import ChatType
     from maxapi.types.message import Message, MessageBody, Recipient
@@ -112,13 +112,13 @@ async def test_answer_uses_bot_default_parse_mode(cb_obj):
     bot = DummyBot(parse_mode=ParseMode.MARKDOWN)
     mc.bot = bot
 
-    await mc.answer(new_text="world")
+    mc.answer(new_text="world")
 
     assert bot.last["message"] is not None
     assert bot.last["message"].format == ParseMode.MARKDOWN
 
 
-async def test_answer_explicit_format_overrides_bot_default(cb_obj):
+def test_answer_explicit_format_overrides_bot_default(cb_obj):
     """Явно переданный format перекрывает parse_mode бота."""
     from maxapi.enums.chat_type import ChatType
     from maxapi.types.message import Message, MessageBody, Recipient
@@ -137,6 +137,6 @@ async def test_answer_explicit_format_overrides_bot_default(cb_obj):
     bot = DummyBot(parse_mode=ParseMode.MARKDOWN)
     mc.bot = bot
 
-    await mc.answer(new_text="world", format=ParseMode.HTML)
+    mc.answer(new_text="world", format=ParseMode.HTML)
 
     assert bot.last["message"].format == ParseMode.HTML

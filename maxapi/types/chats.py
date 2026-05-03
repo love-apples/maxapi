@@ -26,7 +26,7 @@ from ..utils.time import from_ms, to_ms
 from .users import User
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
+    from collections.abc import Callable, Iterator, Sequence
 
     from ..bot import Bot
     from ..methods.types.added_admin_chat import AddedListAdminChat
@@ -55,22 +55,21 @@ class Icon(BaseModel):
     url: str
 
 
-async def _walk_member_pages(
+def _walk_member_pages(
     fetch_page: Callable[
         [int | None],
-        Awaitable[GettedMembersChat | GettedListAdminChat],
+        GettedMembersChat | GettedListAdminChat,
     ],
-) -> AsyncIterator[ChatMember]:
+) -> Iterator[ChatMember]:
     """Итерировать по paginated ответам и защищаться от цикла marker."""
 
     seen_markers: set[int] = set()
     marker: int | None = None
 
     while True:
-        page = await fetch_page(marker)
+        page = fetch_page(marker)
 
-        for member in page.members:
-            yield member
+        yield from page.members
 
         next_marker = page.marker
         if next_marker is None:
@@ -92,67 +91,64 @@ class ChatMembersManager(BotMixin):
         self.bot = bot
         self.chat_id = chat_id
 
-    async def list(
+    def list(
         self,
         *,
         user_ids: list[int] | None = None,
         marker: int | None = None,
         count: int | None = None,
     ) -> GettedMembersChat:
-        return await self._ensure_bot().get_chat_members(
+        return self._ensure_bot().get_chat_members(
             chat_id=self.chat_id,
             user_ids=user_ids,
             marker=marker,
             count=count,
         )
 
-    async def get(self, user_id: int) -> ChatMember | None:
-        return await self._ensure_bot().get_chat_member(
+    def get(self, user_id: int) -> ChatMember | None:
+        return self._ensure_bot().get_chat_member(
             chat_id=self.chat_id,
             user_id=user_id,
         )
 
-    async def add(self, user_ids: Sequence[int]) -> AddedMembersChat:
-        return await self._ensure_bot().add_chat_members(
+    def add(self, user_ids: Sequence[int]) -> AddedMembersChat:
+        return self._ensure_bot().add_chat_members(
             chat_id=self.chat_id,
             user_ids=list(user_ids),
         )
 
-    async def kick(
+    def kick(
         self,
         user_id: int,
         *,
         block: bool = False,
     ) -> RemovedMemberChat:
-        return await self._ensure_bot().kick_chat_member(
+        return self._ensure_bot().kick_chat_member(
             chat_id=self.chat_id,
             user_id=user_id,
             block=block,
         )
 
-    async def me(self) -> ChatMember:
-        return await self._ensure_bot().get_me_from_chat(self.chat_id)
+    def me(self) -> ChatMember:
+        return self._ensure_bot().get_me_from_chat(self.chat_id)
 
-    async def iter_all(
+    def iter_all(
         self,
         *,
         count: int = 100,
-    ) -> AsyncIterator[ChatMember]:
+    ) -> Iterator[ChatMember]:
         """Итерировать по всем участникам чата через пагинацию."""
 
-        async for member in _walk_member_pages(
-            lambda marker: self.list(marker=marker, count=count)
-        ):
-            yield member
+        yield from _walk_member_pages(lambda marker: self.list(marker=marker, count=count))
 
-    async def list_all(
+    def list_all(
         self,
         *,
         count: int = 100,
     ) -> builtins.list[ChatMember]:
         """Получить всех участников чата списком."""
 
-        return [member async for member in self.iter_all(count=count)]
+        return list(self.iter_all(count=count))
 
 
 class ChatAdminsManager(BotMixin):
@@ -162,46 +158,43 @@ class ChatAdminsManager(BotMixin):
         self.bot = bot
         self.chat_id = chat_id
 
-    async def list(
+    def list(
         self,
         *,
         marker: int | None = None,
     ) -> GettedListAdminChat:
-        return await self._ensure_bot().get_list_admin_chat(
+        return self._ensure_bot().get_list_admin_chat(
             self.chat_id,
             marker=marker,
         )
 
-    async def add(
+    def add(
         self,
         admins: Sequence[ChatAdmin],
         *,
         marker: int | None = None,
     ) -> AddedListAdminChat:
-        return await self._ensure_bot().add_list_admin_chat(
+        return self._ensure_bot().add_list_admin_chat(
             chat_id=self.chat_id,
             admins=list(admins),
             marker=marker,
         )
 
-    async def remove(self, user_id: int) -> RemovedAdmin:
-        return await self._ensure_bot().remove_admin(
+    def remove(self, user_id: int) -> RemovedAdmin:
+        return self._ensure_bot().remove_admin(
             chat_id=self.chat_id,
             user_id=user_id,
         )
 
-    async def iter_all(self) -> AsyncIterator[ChatMember]:
+    def iter_all(self) -> Iterator[ChatMember]:
         """Итерировать по всем администраторам чата через пагинацию."""
 
-        async for member in _walk_member_pages(
-            lambda marker: self.list(marker=marker)
-        ):
-            yield member
+        yield from _walk_member_pages(lambda marker: self.list(marker=marker))
 
-    async def list_all(self) -> builtins.list[ChatMember]:
+    def list_all(self) -> builtins.list[ChatMember]:
         """Получить всех администраторов чата списком."""
 
-        return [member async for member in self.iter_all()]
+        return list(self.iter_all())
 
 
 class Chat(
@@ -326,7 +319,7 @@ class Chat(
             return None
         return {key: to_ms(dt) for key, dt in value.items()}
 
-    async def edit(
+    def edit(
         self,
         *,
         icon: PhotoAttachmentRequestPayload | None = None,
@@ -338,7 +331,7 @@ class Chat(
 
         pin_message_id = None if pin is None else self._resolve_message_id(pin)
 
-        return await self._ensure_bot().edit_chat(
+        return self._ensure_bot().edit_chat(
             chat_id=self.chat_id,
             icon=icon,
             title=title,
@@ -346,7 +339,7 @@ class Chat(
             notify=notify,
         )
 
-    async def rename(
+    def rename(
         self,
         title: str,
         *,
@@ -354,9 +347,9 @@ class Chat(
     ) -> Chat:
         """Переименовать чат."""
 
-        return await self.edit(title=title, notify=notify)
+        return self.edit(title=title, notify=notify)
 
-    async def set_title(
+    def set_title(
         self,
         title: str,
         *,
@@ -364,9 +357,9 @@ class Chat(
     ) -> Chat:
         """Alias для rename() с более явной семантикой."""
 
-        return await self.rename(title, notify=notify)
+        return self.rename(title, notify=notify)
 
-    async def set_icon(
+    def set_icon(
         self,
         icon: PhotoAttachmentRequestPayload,
         *,
@@ -374,15 +367,15 @@ class Chat(
     ) -> Chat:
         """Alias для edit(icon=...)."""
 
-        return await self.edit(icon=icon, notify=notify)
+        return self.edit(icon=icon, notify=notify)
 
-    async def fetch_pinned_message(self) -> Message | None:
+    def fetch_pinned_message(self) -> Message | None:
         """Получить актуально закрепленное сообщение."""
 
-        result = await self._ensure_bot().get_pin_message(self.chat_id)
+        result = self._ensure_bot().get_pin_message(self.chat_id)
         return result.message
 
-    async def pin(
+    def pin(
         self,
         message: Message | str,
         *,
@@ -390,18 +383,18 @@ class Chat(
     ) -> PinnedMessage:
         """Закрепить сообщение по объекту Message или message_id."""
 
-        return await self._ensure_bot().pin_message(
+        return self._ensure_bot().pin_message(
             chat_id=self.chat_id,
             message_id=self._resolve_message_id(message),
             notify=notify,
         )
 
-    async def unpin(self) -> DeletedPinMessage:
+    def unpin(self) -> DeletedPinMessage:
         """Снять закрепленное сообщение."""
 
-        return await self._ensure_bot().delete_pin_message(self.chat_id)
+        return self._ensure_bot().delete_pin_message(self.chat_id)
 
-    async def history(
+    def history(
         self,
         *,
         message_ids: list[str] | None = None,
@@ -411,7 +404,7 @@ class Chat(
     ) -> Messages:
         """Получить историю сообщений текущего чата."""
 
-        return await self._ensure_bot().get_messages(
+        return self._ensure_bot().get_messages(
             chat_id=self.chat_id,
             message_ids=message_ids,
             from_time=from_time,
@@ -419,15 +412,15 @@ class Chat(
             count=count,
         )
 
-    async def leave(self) -> DeletedBotFromChat:
+    def leave(self) -> DeletedBotFromChat:
         """Удалить бота из текущего чата."""
 
-        return await self._ensure_bot().delete_me_from_chat(self.chat_id)
+        return self._ensure_bot().delete_me_from_chat(self.chat_id)
 
-    async def delete(self) -> DeletedChat:
+    def delete(self) -> DeletedChat:
         """Удалить текущий чат."""
 
-        return await self._ensure_bot().delete_chat(self.chat_id)
+        return self._ensure_bot().delete_chat(self.chat_id)
 
     model_config = ConfigDict(
         arbitrary_types_allowed=True,

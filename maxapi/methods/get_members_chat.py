@@ -45,7 +45,7 @@ class GetMembersChat(BaseConnection):
         self.marker = marker
         self.count = count
 
-    async def fetch(self) -> GettedMembersChat:
+    def fetch(self) -> GettedMembersChat:
         """
         Выполняет GET-запрос для получения участников чата с
         опциональной фильтрацией.
@@ -71,7 +71,7 @@ class GetMembersChat(BaseConnection):
         if self.count:
             params["count"] = self.count
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.GET,
             path=ApiPath.CHATS.value
             + "/"

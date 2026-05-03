@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import asyncio
+import threading
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 from .bot_mixin import BotMixin
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Callable
 
     from typing_extensions import Self
 
@@ -22,9 +22,8 @@ _UNSET = object()
 class FetchableMixin:
     """Миксин для объектов, которые уже содержат все данные."""
 
-    async def fetch(self) -> Self:
+    def fetch(self) -> Self:
         """Вернуть текущий объект без дополнительных запросов."""
-
         return self
 
 
@@ -35,7 +34,7 @@ class LazyRef(BotMixin, Generic[ResolvedValue]):
         self,
         *,
         bot: Bot,
-        fetcher: Callable[[], Awaitable[ResolvedValue | None]],
+        fetcher: Callable[[], ResolvedValue | None],
         setter: Callable[[ResolvedValue | None], None],
         description: str,
     ) -> None:
@@ -44,15 +43,14 @@ class LazyRef(BotMixin, Generic[ResolvedValue]):
         self._setter = setter
         self._description = description
         self._resolved: ResolvedValue | None | object = _UNSET
-        self._fetch_lock = asyncio.Lock()
+        self._lock = threading.Lock()
 
-    async def fetch(self) -> ResolvedValue | None:
+    def fetch(self) -> ResolvedValue | None:
         """Загрузить значение и закешировать результат."""
-
         if self._resolved is _UNSET:
-            async with self._fetch_lock:
+            with self._lock:
                 if self._resolved is _UNSET:
-                    value = await self._fetcher()
+                    value = self._fetcher()
                     self._resolved = value
                     self._setter(value)
 
@@ -65,10 +63,7 @@ class LazyRef(BotMixin, Generic[ResolvedValue]):
 
     def __getattr__(self, name: str) -> Any:
         if self._resolved is _UNSET:
-            msg = (
-                f"{self._description} еще не загружен. "
-                "Вызовите await ref.fetch()."
-            )
+            msg = f"{self._description} еще не загружен. Вызовите ref.fetch()."
             raise AttributeError(msg)
 
         return getattr(self._resolved, name)
@@ -104,7 +99,7 @@ class FromUserRef(LazyRef["User | ChatMember | Chat"]):
         self,
         *,
         bot: Bot,
-        fetcher: Callable[[], Awaitable[User | ChatMember | Chat | None]],
+        fetcher: Callable[[], User | ChatMember | Chat | None],
         setter: Callable[[User | ChatMember | Chat | None], None],
         chat_id: int | None = None,
         user_id: int | None = None,

@@ -32,7 +32,7 @@ class UnsubscribeWebhook(BaseConnection):
         self.bot = bot
         self.url = url
 
-    async def fetch(self) -> Unsubscribed:
+    def fetch(self) -> Unsubscribed:
         """
         Отправляет запрос на подписку бота на получение обновлений
         через WebHook.
@@ -47,7 +47,7 @@ class UnsubscribeWebhook(BaseConnection):
 
         params["url"] = self.url
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.DELETE,
             path=ApiPath.SUBSCRIPTIONS,
             model=Unsubscribed,

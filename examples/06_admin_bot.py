@@ -2,13 +2,13 @@
 Бот-администратор чата — пример управления сообщениями и участниками.
 
 Демонстрирует:
-- /pin   — закрепление сообщения (reply) через bot.pin_message()
-- /delete — удаление сообщения (reply) через message.delete()
-- /edit   — редактирование последнего сообщения бота через bot.edit_message()
-- /info   — получение информации о чате через bot.get_chat_by_id()
-- /members — список участников через bot.get_chat_members()
-- Обработку chat_title_changed (смена названия чата)
-- Обработку user_added / user_removed (приветствие / прощание)
+- bot.send_message() — отправка сообщений
+- bot.pin_message() — закрепление сообщения
+- bot.delete_message() — удаление сообщения
+- bot.edit_message() — редактирование сообщения
+- bot.get_chat_by_id() — получение информации о чате
+- bot.get_chat_members() — список участников чата
+- bot.send_action() — индикатор «печатает...»
 
 Аналог Telegram: pin_chat_message, delete_message, edit_message_text
 
@@ -16,219 +16,123 @@
     MAX_BOT_TOKEN=your_token python 06_admin_bot.py
 """
 
-import asyncio
 import contextlib
 import logging
+import os
 
 # Опционально: загрузка .env, если установлен python-dotenv
 with contextlib.suppress(ImportError):
     from dotenv import load_dotenv
 
     load_dotenv()
-from maxapi import Bot, Dispatcher
+from maxapi import Bot
 from maxapi.enums.sender_action import SenderAction
-from maxapi.filters.command import Command, CommandStart
-from maxapi.types.updates.bot_started import BotStarted
-from maxapi.types.updates.chat_title_changed import ChatTitleChanged
-from maxapi.types.updates.message_created import MessageCreated
-from maxapi.types.updates.user_added import UserAdded
-from maxapi.types.updates.user_removed import UserRemoved
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 bot = Bot()
-dp = Dispatcher()
-
-# Хранилище последнего message_id бота по chat_id (для /edit)
-last_bot_message: dict[int, str] = {}
 
 
-@dp.bot_started()
-async def on_start(event: BotStarted) -> None:
-    """Приветствие при старте в личном диалоге."""
-    await bot.send_message(
-        user_id=event.user.user_id,
+def main() -> None:
+    """Демонстрация административных методов Bot API."""
+    # В реальном боте chat_id/user_id берётся из входящего обновления (update),
+    # здесь для демонстрации читаем из переменных окружения.
+    chat_id = os.environ.get("MAX_CHAT_ID")
+    user_id = os.environ.get("MAX_USER_ID")
+
+    if chat_id is None and user_id is None:
+        print(
+            "Установите MAX_CHAT_ID или MAX_USER_ID для демонстрации.\n"
+            "Пример:\n"
+            "  MAX_CHAT_ID=chat123 MAX_BOT_TOKEN=your_token python 06_admin_bot.py\n"
+            "  MAX_USER_ID=12345 MAX_BOT_TOKEN=your_token python 06_admin_bot.py"
+        )
+        return
+
+    # ── 1. Отправка приветственного сообщения ────────────────────────────
+    target_id = int(chat_id) if chat_id else int(user_id)
+    print("Отправка приветственного сообщения...")
+    sent = bot.send_message(
+        chat_id=int(chat_id) if chat_id else None,
+        user_id=int(user_id) if user_id else None,
         text=(
             "Привет! Я бот-администратор.\n"
-            "Команды:\n"
-            "/pin — закрепить (reply)\n"
-            "/delete — удалить (reply)\n"
-            "/edit — редактировать моё последнее сообщение\n"
-            "/info — информация о чате\n"
-            "/members — список участников"
+            "Демонстрация административных команд:"
         ),
     )
 
-
-@dp.message_created(CommandStart())
-async def on_cmd_start(event: MessageCreated) -> None:
-    """Обработка команды /start."""
-    await event.message.answer(
-        "Готов к работе! Используй команды для управления чатом."
-    )
-
-
-@dp.message_created(Command("pin"))
-async def on_pin(event: MessageCreated) -> None:
-    """Закрепить сообщение, на которое ответили командой /pin."""
-    linked = event.message.link
-    if linked is None:
-        await event.message.answer(
-            "Ответьте командой /pin на то сообщение, которое нужно закрепить."
-        )
+    if not sent or not sent.message or not sent.message.body:
+        print("Не удалось отправить сообщение.")
         return
 
-    chat_id = event.message.recipient.chat_id
-    if chat_id is None:
-        return
+    mid = sent.message.body.mid
+    print(f"Сообщение отправлено, message_id: {mid}")
 
-    await bot.send_action(chat_id=chat_id, action=SenderAction.TYPING_ON)
-
+    # ── 2. Редактирование сообщения ───────────────────────────────────────
+    print("Редактирование сообщения...")
     try:
-        await bot.pin_message(chat_id=chat_id, message_id=linked.message.mid)
-        await event.message.answer("Сообщение закреплено.")
-    except Exception as exc:
-        logger.exception(exc)
-        await event.message.answer("Не удалось закрепить.")
-
-
-@dp.message_created(Command("delete"))
-async def on_delete(event: MessageCreated) -> None:
-    """Удалить сообщение, на которое ответили командой /delete."""
-    linked = event.message.link
-    if linked is None:
-        await event.message.answer(
-            "Ответьте командой /delete на сообщение, которое нужно удалить."
-        )
-        return
-
-    try:
-        await bot.delete_message(message_id=linked.message.mid)
-        await event.message.answer("Сообщение удалено.")
-    except Exception as exc:
-        logger.exception(exc)
-        await event.message.answer("Не удалось удалить.")
-
-
-@dp.message_created(Command("edit"))
-async def on_edit(event: MessageCreated) -> None:
-    """Редактировать последнее сообщение бота в этом чате."""
-    chat_id = event.message.recipient.chat_id
-    if chat_id is None:
-        return
-
-    mid = last_bot_message.get(chat_id)
-    if mid is None:
-        sent = await event.message.answer(
-            "Это сообщение будет отредактировано командой /edit."
-        )
-        if sent and sent.message and sent.message.body:
-            last_bot_message[chat_id] = sent.message.body.mid
-        return
-
-    try:
-        await bot.edit_message(
+        bot.edit_message(
             message_id=mid,
-            text=(
-                "[Отредактировано] Исходный текст был изменён администратором."
-            ),
+            text="[Отредактировано] Исходный текст был изменён администратором.",
         )
-        await event.message.answer("Сообщение отредактировано.")
+        print("Сообщение отредактировано.")
     except Exception as exc:
         logger.exception(exc)
-        await event.message.answer("Не удалось отредактировать.")
+        print("Не удалось отредактировать.")
 
+    # ── 3. Закрепление сообщения ──────────────────────────────────────────
+    if chat_id:
+        print("Закрепление сообщения...")
+        try:
+            bot.send_action(chat_id=int(chat_id), action=SenderAction.TYPING_ON)
+            bot.pin_message(chat_id=int(chat_id), message_id=mid)
+            print("Сообщение закреплено.")
+        except Exception as exc:
+            logger.exception(exc)
+            print("Не удалось закрепить.")
 
-@dp.message_created(Command("info"))
-async def on_info(event: MessageCreated) -> None:
-    """Получить информацию о текущем чате."""
-    chat_id = event.message.recipient.chat_id
-    if chat_id is None:
-        await event.message.answer("Эта команда работает только в чатах.")
-        return
+        # ── 4. Получение информации о чате ─────────────────────────────────
+        print("Получение информации о чате...")
+        try:
+            chat = bot.get_chat_by_id(id=int(chat_id))
+            text = (
+                f"Чат: {chat.title or '(без названия)'}\n"
+                f"ID: {chat.chat_id}\n"
+                f"Тип: {chat.type}\n"
+                f"Участников: {chat.participants_count or '-'}"
+            )
+            print(text)
+        except Exception as exc:
+            logger.exception(exc)
+            print("Ошибка получения информации.")
 
-    await bot.send_action(chat_id=chat_id, action=SenderAction.TYPING_ON)
+        # ── 5. Получение списка участников ─────────────────────────────────
+        print("Получение списка участников...")
+        try:
+            result = bot.get_chat_members(chat_id=int(chat_id), count=10)
+            members = result.members or []
+            if members:
+                for m in members:
+                    name = m.full_name or f"id:{m.user_id}"
+                    print(f"  - {name}")
+            else:
+                print("Список участников пуст.")
+        except Exception as exc:
+            logger.exception(exc)
+            print("Ошибка получения участников.")
 
+    # ── 6. Удаление сообщения ─────────────────────────────────────────────
+    print("Удаление сообщения...")
     try:
-        chat = await bot.get_chat_by_id(id=chat_id)
-        text = (
-            f"Чат: {chat.title or '(без названия)'}\n"
-            f"ID: {chat.chat_id}\n"
-            f"Тип: {chat.type}\n"
-            f"Участников: {chat.participants_count or '—'}"
-        )
-        await event.message.answer(text)
+        bot.delete_message(message_id=mid)
+        print("Сообщение удалено.")
     except Exception as exc:
         logger.exception(exc)
-        await event.message.answer("Ошибка получения информации.")
+        print("Не удалось удалить.")
 
-
-@dp.message_created(Command("members"))
-async def on_members(event: MessageCreated) -> None:
-    """Показать список участников чата (первые 10)."""
-    chat_id = event.message.recipient.chat_id
-    if chat_id is None:
-        await event.message.answer("Команда работает только в чатах.")
-        return
-
-    await bot.send_action(chat_id=chat_id, action=SenderAction.TYPING_ON)
-
-    try:
-        result = await bot.get_chat_members(chat_id=chat_id, count=10)
-        members = result.members or []
-        if not members:
-            await event.message.answer("Список участников пуст.")
-            return
-
-        lines = []
-        for m in members:
-            name = m.full_name or f"id:{m.user_id}"
-            lines.append(f"• {name}")
-
-        await event.message.answer("Участники чата:\n" + "\n".join(lines))
-    except Exception as exc:
-        logger.exception(exc)
-        await event.message.answer("Ошибка получения участников.")
-
-
-@dp.chat_title_changed()
-async def on_title_changed(event: ChatTitleChanged) -> None:
-    """Уведомление при изменении названия чата."""
-    changer = event.user.full_name or f"id:{event.user.user_id}"
-    await bot.send_message(
-        chat_id=event.chat_id,
-        text=(
-            f"Название чата изменено на «{event.title}» "
-            f"пользователем {changer}."
-        ),
-    )
-
-
-@dp.user_added()
-async def on_user_added(event: UserAdded) -> None:
-    """Приветствие нового участника чата."""
-    name = event.user.full_name or f"id:{event.user.user_id}"
-    await bot.send_message(
-        chat_id=event.chat_id,
-        text=f"Добро пожаловать в чат, {name}!",
-    )
-
-
-@dp.user_removed()
-async def on_user_removed(event: UserRemoved) -> None:
-    """Прощание при выходе участника из чата."""
-    name = event.user.full_name or f"id:{event.user.user_id}"
-    await bot.send_message(
-        chat_id=event.chat_id,
-        text=f"{name} покинул чат. До свидания!",
-    )
-
-
-async def main() -> None:
-    """Точка входа."""
-    await dp.start_polling(bot)
+    print("Готово!")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

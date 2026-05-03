@@ -27,7 +27,7 @@ class GetSubscriptions(BaseConnection):
         super().__init__()
         self.bot = bot
 
-    async def fetch(self) -> GettedSubscriptions:
+    def fetch(self) -> GettedSubscriptions:
         """
         Отправляет запрос на получение списка всех подписок.
 
@@ -37,7 +37,7 @@ class GetSubscriptions(BaseConnection):
 
         bot = self._ensure_bot()
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.GET,
             path=ApiPath.SUBSCRIPTIONS,
             model=GettedSubscriptions,

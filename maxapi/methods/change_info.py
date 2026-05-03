@@ -77,7 +77,7 @@ class ChangeInfo(BaseConnection):
         self.commands = commands
         self.photo = photo
 
-    async def fetch(self) -> User:
+    def fetch(self) -> User:
         """
         Отправляет запрос на изменение информации о боте.
 
@@ -102,7 +102,7 @@ class ChangeInfo(BaseConnection):
         if self.photo:
             json["photo"] = self.photo.model_dump()
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.PATCH,
             path=ApiPath.ME,
             model=User,
