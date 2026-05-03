@@ -296,7 +296,7 @@ class BaseConnection(BotMixin):
             else:
                 mime_type = f"{type.value}/*"
                 ext = ""
-        except (OSError, ValueError):
+        except (OSError, ValueError, AttributeError):
             mime_type = f"{type.value}/*"
             ext = ""
 
