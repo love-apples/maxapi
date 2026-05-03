@@ -1,4 +1,3 @@
-import asyncio
 import time
 import warnings
 from typing import TYPE_CHECKING, Any, cast
@@ -100,7 +99,7 @@ class SendMessage(BaseConnection):
         self.disable_link_preview = disable_link_preview
         self.sleep_after_input_media = sleep_after_input_media
 
-    async def fetch(self) -> SendedMessage | None:
+    def fetch(self) -> SendedMessage | None:
         """
         Отправляет сообщение с вложениями (если есть),
         с обработкой задержки готовности вложений.
@@ -137,7 +136,7 @@ class SendMessage(BaseConnection):
                 if isinstance(att, (InputMedia, InputMediaBuffer)):
                     has_input_media = True
 
-                    input_media = await process_input_media(
+                    input_media = process_input_media(
                         base_connection=self, bot=bot, att=att
                     )
                     json["attachments"].append(input_media.model_dump())
@@ -158,7 +157,7 @@ class SendMessage(BaseConnection):
             json["format"] = self.format
 
         if has_input_media and self.sleep_after_input_media:
-            await asyncio.sleep(bot.after_input_media_delay)
+            time.sleep(bot.after_input_media_delay)
 
         attempts = bot.after_upload_attempts
         retry_delay = bot.after_upload_retry_delay
@@ -168,7 +167,7 @@ class SendMessage(BaseConnection):
         start_time = time.monotonic()
         for attempt in range(attempts):
             try:
-                response = await super().request(
+                response = super().request(
                     method=HTTPMethod.POST,
                     path=ApiPath.MESSAGES,
                     model=SendedMessage,
@@ -196,7 +195,7 @@ class SendMessage(BaseConnection):
                         f" попытка {attempt + 1},"
                         f" жду {retry_delay} секунды"
                     )
-                    await asyncio.sleep(retry_delay)
+                    time.sleep(retry_delay)
                     continue
                 else:
                     raise e

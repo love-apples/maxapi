@@ -1,7 +1,5 @@
 from typing import Any
 
-from aiohttp import ClientTimeout
-
 DEFAULT_RETRY_STATUSES: tuple[int, ...] = (502, 503, 504)
 
 
@@ -11,10 +9,7 @@ class DefaultConnectionProperties:
     aiohttp-клиента.
 
     Args:
-        timeout: Таймаут всего соединения в секундах
-            (по умолчанию 5 * 30).
-        sock_connect: Таймаут установки TCP-соединения в секундах
-            (по умолчанию 30).
+        timeout: Таймаут запроса в секундах (по умолчанию 150).
         max_retries: Максимальное количество повторных попыток
             при серверных ошибках (по умолчанию 3).
         retry_on_statuses: HTTP-статусы, при которых
@@ -37,8 +32,7 @@ class DefaultConnectionProperties:
 
     def __init__(
         self,
-        timeout: float = 5 * 30,
-        sock_connect: int = 30,
+        timeout: float = 150,
         *,
         max_retries: int = 3,
         retry_on_statuses: tuple[int, ...] = DEFAULT_RETRY_STATUSES,
@@ -50,8 +44,6 @@ class DefaultConnectionProperties:
 
         Args:
             timeout: Таймаут всего соединения в секундах.
-            sock_connect: Таймаут установки TCP-соединения
-                в секундах.
             max_retries: Максимальное количество повторных
                 попыток при серверных ошибках.
             retry_on_statuses: HTTP-статусы
@@ -59,7 +51,7 @@ class DefaultConnectionProperties:
             retry_backoff_factor: Множитель задержки.
             **kwargs: Дополнительные параметры.
         """
-        self.timeout = ClientTimeout(total=timeout, sock_connect=sock_connect)
+        self.timeout = timeout
         if max_retries < 0:
             raise ValueError("max_retries должен быть >= 0")
         self.max_retries = max_retries

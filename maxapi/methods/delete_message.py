@@ -32,7 +32,7 @@ class DeleteMessage(BaseConnection):
         self.bot = bot
         self.message_id = message_id
 
-    async def fetch(self) -> DeletedMessage:
+    def fetch(self) -> DeletedMessage:
         """
         Выполняет DELETE-запрос для удаления сообщения.
 
@@ -48,7 +48,7 @@ class DeleteMessage(BaseConnection):
 
         params["message_id"] = self.message_id
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.DELETE,
             path=ApiPath.MESSAGES,
             model=DeletedMessage,

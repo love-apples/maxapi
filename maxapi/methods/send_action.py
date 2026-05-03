@@ -52,7 +52,7 @@ class SendAction(BaseConnection):
         self.chat_id = chat_id
         self.action = action
 
-    async def fetch(self) -> SendedAction:
+    def fetch(self) -> SendedAction:
         """
         Выполняет POST-запрос для отправки действия в указанный чат.
 
@@ -66,7 +66,7 @@ class SendAction(BaseConnection):
 
         json["action"] = self.action.value
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.POST,
             path=ApiPath.CHATS + "/" + str(self.chat_id) + ApiPath.ACTIONS,
             model=SendedAction,

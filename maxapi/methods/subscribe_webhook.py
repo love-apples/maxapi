@@ -58,7 +58,7 @@ class SubscribeWebhook(BaseConnection):
         self.update_types = update_types
         self.secret = secret
 
-    async def fetch(self) -> Subscribed:
+    def fetch(self) -> Subscribed:
         """
         Отправляет запрос на подписку бота на получение обновлений
         через WebHook.
@@ -79,7 +79,7 @@ class SubscribeWebhook(BaseConnection):
         if self.secret:
             json["secret"] = self.secret
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.POST,
             path=ApiPath.SUBSCRIPTIONS,
             model=Subscribed,

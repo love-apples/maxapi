@@ -65,7 +65,7 @@ def _can_resolve_chat(event: UpdateUnion) -> bool:
     return not isinstance(event, (DialogRemoved, BotRemoved))
 
 
-async def _resolve_chat(event: UpdateUnion, bot: Bot) -> None:
+def _resolve_chat(event: UpdateUnion, bot: Bot) -> None:
     """Загружает объект чата для события."""
 
     if not _can_resolve_chat(event):
@@ -73,7 +73,7 @@ async def _resolve_chat(event: UpdateUnion, bot: Bot) -> None:
 
     chat_id = _extract_chat_id(event)
     if chat_id is not None:
-        event.chat = await bot.get_chat_by_id(chat_id)
+        event.chat = bot.get_chat_by_id(chat_id)
 
 
 def _resolve_from_user_from_payload(event: UpdateUnion) -> Any | None:
@@ -91,7 +91,7 @@ def _resolve_from_user_from_payload(event: UpdateUnion) -> Any | None:
     return None
 
 
-async def _resolve_from_user(event: UpdateUnion, bot: Bot) -> None:
+def _resolve_from_user(event: UpdateUnion, bot: Bot) -> None:
     """Определяет отправителя события."""
 
     payload_from_user = _resolve_from_user_from_payload(event)
@@ -102,7 +102,7 @@ async def _resolve_from_user(event: UpdateUnion, bot: Bot) -> None:
     if isinstance(event, MessageRemoved):
         if event.chat and event.chat.type == ChatType.CHAT:
             try:
-                event.from_user = await bot.get_chat_member(
+                event.from_user = bot.get_chat_member(
                     chat_id=event.chat_id, user_id=event.user_id
                 )
             except MaxApiError as exc:
@@ -122,7 +122,7 @@ async def _resolve_from_user(event: UpdateUnion, bot: Bot) -> None:
 
     elif isinstance(event, UserRemoved) and event.admin_id:
         try:
-            event.from_user = await bot.get_chat_member(
+            event.from_user = bot.get_chat_member(
                 chat_id=event.chat_id,
                 user_id=event.admin_id,
             )
@@ -146,17 +146,17 @@ def _inject_bot(event: UpdateUnion, bot: Bot) -> None:
     bind_bot(event, bot)
 
 
-async def _fetch_from_user_for_message_removed(
+def _fetch_from_user_for_message_removed(
     event: MessageRemoved, bot: Bot
 ) -> Any | None:
     """Разрешить from_user для MessageRemoved по требованию."""
 
-    chat = await event.fetch_chat()
+    chat = event.fetch_chat()
     if chat is None:
         return None
 
     if chat.type == ChatType.CHAT:
-        return await bot.get_chat_member(
+        return bot.get_chat_member(
             chat_id=event.chat_id,
             user_id=event.user_id,
         )
@@ -230,7 +230,7 @@ def _attach_lazy_refs(event: UpdateUnion, bot: Bot) -> None:
             event.from_user = from_user
 
 
-async def enrich_event(event_object: UpdateUnion, bot: Bot) -> UpdateUnion:
+def enrich_event(event_object: UpdateUnion, bot: Bot) -> UpdateUnion:
     """
     Дополняет объект события данными чата, пользователя и ссылкой на бота.
 
@@ -248,7 +248,7 @@ async def enrich_event(event_object: UpdateUnion, bot: Bot) -> UpdateUnion:
         _attach_lazy_refs(event_object, bot)
         return event_object
 
-    await _resolve_chat(event_object, bot)
-    await _resolve_from_user(event_object, bot)
+    _resolve_chat(event_object, bot)
+    _resolve_from_user(event_object, bot)
 
     return event_object

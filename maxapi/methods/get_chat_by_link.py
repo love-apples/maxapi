@@ -31,7 +31,7 @@ class GetChatByLink(BaseConnection):
         if not self.link:
             raise ValueError(f"link не соответствует {self.PATTERN_LINK!r}")
 
-    async def fetch(self) -> Chat:
+    def fetch(self) -> Chat:
         """
         Выполняет GET-запрос для получения данных чата по ссылке.
 
@@ -41,7 +41,7 @@ class GetChatByLink(BaseConnection):
 
         bot = self._ensure_bot()
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.GET,
             path=ApiPath.CHATS.value + "/" + self.link[-1],
             model=Chat,

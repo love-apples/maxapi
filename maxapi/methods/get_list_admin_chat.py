@@ -33,7 +33,7 @@ class GetListAdminChat(BaseConnection):
         self.chat_id = chat_id
         self.marker = marker
 
-    async def fetch(self) -> GettedListAdminChat:
+    def fetch(self) -> GettedListAdminChat:
         """
         Выполняет GET-запрос для получения списка администраторов
         указанного чата.
@@ -49,7 +49,7 @@ class GetListAdminChat(BaseConnection):
         if self.marker is not None:
             params["marker"] = self.marker
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.GET,
             path=ApiPath.CHATS.value
             + "/"

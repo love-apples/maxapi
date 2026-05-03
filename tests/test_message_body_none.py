@@ -16,36 +16,36 @@ def make_message_with_no_body(recipient):
     return Message(sender=user, recipient=recipient, timestamp=1, body=None)
 
 
-async def test_reply_raises_when_body_none(recipient):
+def test_reply_raises_when_body_none(recipient):
     msg = make_message_with_no_body(recipient)
 
     with pytest.raises(ValueError, match="поле body отсутствует"):
-        await msg.reply()
+        msg.reply()
 
 
-async def test_forward_raises_when_body_none(recipient):
+def test_forward_raises_when_body_none(recipient):
     msg = make_message_with_no_body(recipient)
 
     with pytest.raises(ValueError, match="поле body отсутствует"):
-        await msg.forward(chat_id=3)
+        msg.forward(chat_id=3)
 
 
-async def test_edit_raises_when_body_none(recipient):
+def test_edit_raises_when_body_none(recipient):
     msg = make_message_with_no_body(recipient)
 
     with pytest.raises(ValueError, match="поле body отсутствует"):
-        await msg.edit(text="x")
+        msg.edit(text="x")
 
 
-async def test_delete_raises_when_body_none(recipient):
+def test_delete_raises_when_body_none(recipient):
     msg = make_message_with_no_body(recipient)
 
     with pytest.raises(ValueError, match="поле body отсутствует"):
-        await msg.delete()
+        msg.delete()
 
 
-async def test_pin_raises_when_body_none(recipient):
+def test_pin_raises_when_body_none(recipient):
     msg = make_message_with_no_body(recipient)
 
     with pytest.raises(ValueError, match="поле body отсутствует"):
-        await msg.pin()
+        msg.pin()

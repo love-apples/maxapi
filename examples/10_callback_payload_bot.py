@@ -5,11 +5,9 @@
 - Определение классов CallbackPayload с prefix
 - Упаковку payload через .pack() и распаковку через .unpack()
 - Фильтрацию callback-событий через MyPayload.filter()
-- Получение типизированного объекта payload в хендлере
-- Каталог товаров: категории → товары → детали товара
-- Кнопку «Назад» с сохранением контекста навигации
-- event.answer() для подтверждения callback (убирает «часики»)
-- SenderAction перед отображением «тяжёлых» экранов
+- Каталог товаров: категории -> товары -> детали товара
+- InlineKeyboardBuilder для построения навигации
+- bot.send_message() для отправки сообщений с клавиатурой
 
 Аналог Telegram: aiogram CallbackData с prefix
 
@@ -17,29 +15,21 @@
     MAX_BOT_TOKEN=your_token python 10_callback_payload_bot.py
 """
 
-import asyncio
 import contextlib
-import logging
+import os
 
 # Опционально: загрузка .env, если установлен python-dotenv
 with contextlib.suppress(ImportError):
     from dotenv import load_dotenv
 
     load_dotenv()
-from maxapi import Bot, Dispatcher, F
+from maxapi import Bot
 from maxapi.enums.sender_action import SenderAction
 from maxapi.filters.callback_payload import CallbackPayload
-from maxapi.filters.command import CommandStart
 from maxapi.types.attachments.buttons.callback_button import CallbackButton
-from maxapi.types.updates.bot_started import BotStarted
-from maxapi.types.updates.message_callback import MessageCallback
-from maxapi.types.updates.message_created import MessageCreated
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
-logging.basicConfig(level=logging.INFO)
-
 bot = Bot()
-dp = Dispatcher()
 
 # ---------------------------------------------------------------------------
 # Данные каталога
@@ -147,148 +137,83 @@ def build_detail_keyboard(category_id: str, item_id: str) -> list:
 
 
 # ---------------------------------------------------------------------------
-# Хендлеры команд
+# Демонстрация
 # ---------------------------------------------------------------------------
 
 
-@dp.bot_started()
-async def on_bot_started(event: BotStarted) -> None:
-    """Приветствие и вход в каталог."""
-    await bot.send_message(
-        user_id=event.user.user_id,
-        text=(
-            "Добро пожаловать в магазин! "
-            "Напишите /start для открытия каталога."
-        ),
-    )
+def main() -> None:
+    """Демонстрация типизированных callback payloads через Bot API."""
+    # В реальном боте user_id берётся из входящего обновления (update),
+    # здесь для демонстрации читаем из переменной окружения.
+    user_id = os.environ.get("MAX_USER_ID")
+    if user_id is None:
+        print(
+            "Установите MAX_USER_ID для демонстрации отправки.\n"
+            "Пример: MAX_USER_ID=12345 MAX_BOT_TOKEN=your_token python 10_callback_payload_bot.py"
+        )
+        return
 
+    uid = int(user_id)
 
-@dp.message_created(CommandStart())
-async def on_start(event: MessageCreated) -> None:
-    """Показать главное меню каталога."""
-    await event.message.answer(
+    # ── 1. Демонстрация упаковки payload ─────────────────────────────────
+    print("=== Демонстрация CallbackPayload ===\n")
+
+    # Упаковка payload
+    cat_payload = CategoryPayload(category_id="1")
+    packed = cat_payload.pack()
+    print(f"CategoryPayload(category_id='1').pack() = '{packed}'")
+
+    # Распаковка payload
+    unpacked = CategoryPayload.unpack(packed)
+    print(f"CategoryPayload.unpack('{packed}') = {unpacked}")
+    print(f"  category_id = {unpacked.category_id}")
+
+    # ── 2. Отправка каталога с inline-клавиатурой ────────────────────────
+    print("\nОтправка каталога категорий...")
+    bot.send_action(chat_id=uid, action=SenderAction.TYPING_ON)
+
+    sent = bot.send_message(
+        user_id=uid,
         text="Выберите категорию:",
         attachments=build_categories_keyboard(),
     )
+    if sent and sent.message and sent.message.body:
+        mid = sent.message.body.mid
+        print(f"Каталог отправлен, message_id: {mid}")
 
+        # ── 3. Редактирование — показ товаров категории ──────────────────
+        category_id = "1"
+        cat_name = CATEGORIES[category_id]
+        print(f"\nРедактирование — список товаров категории «{cat_name}»...")
+        bot.edit_message(
+            message_id=mid,
+            text=f"Категория: {cat_name}\nВыберите товар:",
+            attachments=build_items_keyboard(category_id),
+        )
 
-# ---------------------------------------------------------------------------
-# Хендлеры callback: выбор категории
-# ---------------------------------------------------------------------------
+        # ── 4. Редактирование — карточка товара ──────────────────────────
+        item_id = "101"
+        item_name = ITEMS[category_id][item_id]
+        price = PRICES[item_id]
+        print(f"\nРедактирование — карточка товара «{item_name}»...")
+        bot.edit_message(
+            message_id=mid,
+            text=f"Товар: {item_name}\nЦена: {price}",
+            attachments=build_detail_keyboard(category_id, item_id),
+        )
 
+        # ── 5. Возврат к категориям ──────────────────────────────────────
+        print("\nВозврат к списку категорий...")
+        bot.edit_message(
+            message_id=mid,
+            text="Выберите категорию:",
+            attachments=build_categories_keyboard(),
+        )
+    else:
+        print("Не удалось получить message_id для демонстрации навигации.")
 
-@dp.message_callback(CategoryPayload.filter())
-async def on_category(
-    event: MessageCallback, payload: CategoryPayload
-) -> None:
-    """Пользователь выбрал категорию — показываем список товаров."""
-    # Подтверждаем callback, чтобы убрать «часики» на кнопке
-    await event.answer()
-
-    cat_name = CATEGORIES.get(payload.category_id, "Неизвестная категория")
-
-    chat_id = event.message.recipient.chat_id if event.message else None
-    if chat_id:
-        await bot.send_action(chat_id=chat_id, action=SenderAction.TYPING_ON)
-
-    await bot.send_message(
-        chat_id=event.message.recipient.chat_id if event.message else None,
-        user_id=event.callback.user.user_id,
-        text=f"Категория: {cat_name}\nВыберите товар:",
-        attachments=build_items_keyboard(payload.category_id),
-    )
-
-
-# ---------------------------------------------------------------------------
-# Хендлеры callback: выбор товара
-# ---------------------------------------------------------------------------
-
-
-@dp.message_callback(ItemPayload.filter())
-async def on_item(event: MessageCallback, payload: ItemPayload) -> None:
-    """Пользователь выбрал товар — показываем карточку с кнопками."""
-    await event.answer()
-
-    items = ITEMS.get(payload.category_id, {})
-    item_name = items.get(payload.item_id, "Неизвестный товар")
-    price = PRICES.get(payload.item_id, "цена не указана")
-
-    chat_id = event.message.recipient.chat_id if event.message else None
-    if chat_id:
-        await bot.send_action(chat_id=chat_id, action=SenderAction.TYPING_ON)
-
-    await bot.send_message(
-        chat_id=chat_id,
-        user_id=event.callback.user.user_id,
-        text=f"Товар: {item_name}\nЦена: {price}",
-        attachments=build_detail_keyboard(
-            payload.category_id, payload.item_id
-        ),
-    )
-
-
-# ---------------------------------------------------------------------------
-# Хендлеры callback: детали товара (кнопка «Купить»)
-# ---------------------------------------------------------------------------
-
-
-@dp.message_callback(BuyPayload.filter())
-async def on_detail(event: MessageCallback, payload: BuyPayload) -> None:
-    """Обработка нажатия «Купить»."""
-    items_all = ITEMS.get(payload.category_id, {})
-    item_name = items_all.get(payload.item_id, "товар")
-    # Уведомление появляется поверх экрана (всплывающее)
-    await event.answer(notification=f"Заказ на «{item_name}» оформлен!")
-
-
-# ---------------------------------------------------------------------------
-# Хендлеры callback: кнопки «Назад»
-# ---------------------------------------------------------------------------
-
-
-@dp.message_callback(BackToCategoriesPayload.filter())
-async def on_back_to_categories(event: MessageCallback) -> None:
-    """Возврат к списку категорий."""
-    await event.answer()
-    await bot.send_message(
-        chat_id=event.message.recipient.chat_id if event.message else None,
-        user_id=event.callback.user.user_id,
-        text="Выберите категорию:",
-        attachments=build_categories_keyboard(),
-    )
-
-
-@dp.message_callback(BackToItemsPayload.filter())
-async def on_back_to_items(
-    event: MessageCallback, payload: BackToItemsPayload
-) -> None:
-    """Возврат к списку товаров категории."""
-    await event.answer()
-
-    cat_name = CATEGORIES.get(payload.category_id, "Категория")
-    await bot.send_message(
-        chat_id=event.message.recipient.chat_id if event.message else None,
-        user_id=event.callback.user.user_id,
-        text=f"Категория: {cat_name}\nВыберите товар:",
-        attachments=build_items_keyboard(payload.category_id),
-    )
-
-
-# ---------------------------------------------------------------------------
-# Обработка неизвестных callback (fallback)
-# ---------------------------------------------------------------------------
-
-
-@dp.message_callback(F.callback.payload)
-async def on_unknown_callback(event: MessageCallback) -> None:
-    """Неизвестный payload — сообщаем пользователю."""
-    await event.answer(notification="Действие не поддерживается.")
-
-
-async def main() -> None:
-    """Точка входа."""
-    await dp.start_polling(bot)
+    print("\nГотово!")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

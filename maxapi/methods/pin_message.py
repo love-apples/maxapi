@@ -38,7 +38,7 @@ class PinMessage(BaseConnection):
         self.message_id = message_id
         self.notify = notify
 
-    async def fetch(self) -> PinnedMessage:
+    def fetch(self) -> PinnedMessage:
         """
         Выполняет PUT-запрос для закрепления сообщения в чате.
 
@@ -55,7 +55,7 @@ class PinMessage(BaseConnection):
         json["message_id"] = self.message_id
         json["notify"] = self.notify
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.PUT,
             path=ApiPath.CHATS + "/" + str(self.chat_id) + ApiPath.PIN,
             model=PinnedMessage,

@@ -1,6 +1,6 @@
 """Тесты configurable retry для attachment.not.ready (media upload)."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from maxapi import Bot
@@ -136,12 +136,11 @@ class TestSendMessageMediaRetry:
             after_upload_attempts=3,
             after_upload_retry_delay=0.01,
         )
-        session = AsyncMock()
+        session = MagicMock()
         bot.session = session
         return bot
 
-    @pytest.mark.asyncio
-    async def test_retry_on_attachment_not_ready(self, bot_custom_retry):
+    def test_retry_on_attachment_not_ready(self, bot_custom_retry):
         """Retry при attachment.not.ready и успех."""
         send = SendMessage(
             bot=bot_custom_retry,
@@ -156,22 +155,20 @@ class TestSendMessageMediaRetry:
             patch.object(
                 BaseConnection,
                 "request",
-                new_callable=AsyncMock,
                 side_effect=[
                     _make_attachment_not_ready_error(),
                     success_response,
                 ],
             ) as mock_request,
-            patch("maxapi.methods.send_message.asyncio.sleep") as mock_sleep,
+            patch("maxapi.methods.send_message.time.sleep") as mock_sleep,
         ):
-            result = await send.fetch()
+            result = send.fetch()
 
         assert result == success_response
         assert mock_request.call_count == 2
         mock_sleep.assert_called_once_with(0.01)
 
-    @pytest.mark.asyncio
-    async def test_retry_exhausted_raises_runtime_error(
+    def test_retry_exhausted_raises_runtime_error(
         self, bot_custom_retry
     ):
         """Исчерпание попыток бросает RuntimeError."""
@@ -185,18 +182,16 @@ class TestSendMessageMediaRetry:
             patch.object(
                 BaseConnection,
                 "request",
-                new_callable=AsyncMock,
                 side_effect=_make_attachment_not_ready_error(),
             ) as mock_request,
-            patch("maxapi.methods.send_message.asyncio.sleep"),
+            patch("maxapi.methods.send_message.time.sleep"),
             pytest.raises(RuntimeError, match="отправить"),
         ):
-            await send.fetch()
+            send.fetch()
 
         assert mock_request.call_count == 3
 
-    @pytest.mark.asyncio
-    async def test_other_api_error_not_retried(self, bot_custom_retry):
+    def test_other_api_error_not_retried(self, bot_custom_retry):
         """Другие MaxApiError не ретраятся."""
         send = SendMessage(
             bot=bot_custom_retry,
@@ -208,24 +203,22 @@ class TestSendMessageMediaRetry:
             patch.object(
                 BaseConnection,
                 "request",
-                new_callable=AsyncMock,
                 side_effect=_make_other_api_error(),
             ) as mock_request,
             pytest.raises(MaxApiError),
         ):
-            await send.fetch()
+            send.fetch()
 
         assert mock_request.call_count == 1
 
-    @pytest.mark.asyncio
-    async def test_uses_bot_retry_delay(self, mock_bot_token):
+    def test_uses_bot_retry_delay(self, mock_bot_token):
         """Использует задержку из bot.after_upload_retry_delay."""
         bot = Bot(
             token=mock_bot_token,
             after_upload_attempts=2,
             after_upload_retry_delay=7.5,
         )
-        bot.session = AsyncMock()
+        bot.session = MagicMock()
 
         send = SendMessage(bot=bot, chat_id=123, text="test")
 
@@ -234,33 +227,31 @@ class TestSendMessageMediaRetry:
 
         sleep_calls = []
 
-        async def mock_sleep(delay):
+        def mock_sleep(delay):
             sleep_calls.append(delay)
 
         with (
             patch.object(
                 BaseConnection,
                 "request",
-                new_callable=AsyncMock,
                 side_effect=[
                     _make_attachment_not_ready_error(),
                     success_response,
                 ],
             ),
             patch(
-                "maxapi.methods.send_message.asyncio.sleep",
+                "maxapi.methods.send_message.time.sleep",
                 side_effect=mock_sleep,
             ),
         ):
-            await send.fetch()
+            send.fetch()
 
         assert sleep_calls == [7.5]
 
-    @pytest.mark.asyncio
-    async def test_default_bot_uses_5_attempts(self, mock_bot_token):
+    def test_default_bot_uses_5_attempts(self, mock_bot_token):
         """Бот с дефолтами использует 5 попыток."""
         bot = Bot(token=mock_bot_token)
-        bot.session = AsyncMock()
+        bot.session = MagicMock()
 
         send = SendMessage(bot=bot, chat_id=123, text="test")
 
@@ -268,13 +259,12 @@ class TestSendMessageMediaRetry:
             patch.object(
                 BaseConnection,
                 "request",
-                new_callable=AsyncMock,
                 side_effect=_make_attachment_not_ready_error(),
             ) as mock_request,
-            patch("maxapi.methods.send_message.asyncio.sleep"),
+            patch("maxapi.methods.send_message.time.sleep"),
             pytest.raises(RuntimeError),
         ):
-            await send.fetch()
+            send.fetch()
 
         assert mock_request.call_count == 5
 
@@ -290,12 +280,11 @@ class TestEditMessageMediaRetry:
             after_upload_attempts=3,
             after_upload_retry_delay=0.01,
         )
-        session = AsyncMock()
+        session = MagicMock()
         bot.session = session
         return bot
 
-    @pytest.mark.asyncio
-    async def test_retry_on_attachment_not_ready(self, bot_custom_retry):
+    def test_retry_on_attachment_not_ready(self, bot_custom_retry):
         """Retry при attachment.not.ready и успех."""
         edit = EditMessage(
             bot=bot_custom_retry,
@@ -310,22 +299,20 @@ class TestEditMessageMediaRetry:
             patch.object(
                 BaseConnection,
                 "request",
-                new_callable=AsyncMock,
                 side_effect=[
                     _make_attachment_not_ready_error(),
                     success_response,
                 ],
             ) as mock_request,
-            patch("maxapi.methods.edit_message.asyncio.sleep") as mock_sleep,
+            patch("maxapi.methods.edit_message.time.sleep") as mock_sleep,
         ):
-            result = await edit.fetch()
+            result = edit.fetch()
 
         assert result == success_response
         assert mock_request.call_count == 2
         mock_sleep.assert_called_once_with(0.01)
 
-    @pytest.mark.asyncio
-    async def test_retry_exhausted_raises_runtime_error(
+    def test_retry_exhausted_raises_runtime_error(
         self, bot_custom_retry
     ):
         """Исчерпание попыток бросает RuntimeError."""
@@ -339,18 +326,16 @@ class TestEditMessageMediaRetry:
             patch.object(
                 BaseConnection,
                 "request",
-                new_callable=AsyncMock,
                 side_effect=_make_attachment_not_ready_error(),
             ) as mock_request,
-            patch("maxapi.methods.edit_message.asyncio.sleep"),
+            patch("maxapi.methods.edit_message.time.sleep"),
             pytest.raises(RuntimeError, match="отредактировать"),
         ):
-            await edit.fetch()
+            edit.fetch()
 
         assert mock_request.call_count == 3
 
-    @pytest.mark.asyncio
-    async def test_other_api_error_not_retried(self, bot_custom_retry):
+    def test_other_api_error_not_retried(self, bot_custom_retry):
         """Другие MaxApiError не ретраятся."""
         edit = EditMessage(
             bot=bot_custom_retry,
@@ -362,24 +347,22 @@ class TestEditMessageMediaRetry:
             patch.object(
                 BaseConnection,
                 "request",
-                new_callable=AsyncMock,
                 side_effect=_make_other_api_error(),
             ) as mock_request,
             pytest.raises(MaxApiError),
         ):
-            await edit.fetch()
+            edit.fetch()
 
         assert mock_request.call_count == 1
 
-    @pytest.mark.asyncio
-    async def test_uses_bot_retry_delay(self, mock_bot_token):
+    def test_uses_bot_retry_delay(self, mock_bot_token):
         """Использует задержку из bot.after_upload_retry_delay."""
         bot = Bot(
             token=mock_bot_token,
             after_upload_attempts=2,
             after_upload_retry_delay=5.0,
         )
-        bot.session = AsyncMock()
+        bot.session = MagicMock()
 
         edit = EditMessage(bot=bot, message_id="mid.123", text="updated")
 
@@ -388,25 +371,24 @@ class TestEditMessageMediaRetry:
 
         sleep_calls = []
 
-        async def mock_sleep(delay):
+        def mock_sleep(delay):
             sleep_calls.append(delay)
 
         with (
             patch.object(
                 BaseConnection,
                 "request",
-                new_callable=AsyncMock,
                 side_effect=[
                     _make_attachment_not_ready_error(),
                     success_response,
                 ],
             ),
             patch(
-                "maxapi.methods.edit_message.asyncio.sleep",
+                "maxapi.methods.edit_message.time.sleep",
                 side_effect=mock_sleep,
             ),
         ):
-            await edit.fetch()
+            edit.fetch()
 
         assert sleep_calls == [5.0]
 
@@ -414,15 +396,14 @@ class TestEditMessageMediaRetry:
 class TestSendMessageGiveUpTimeout:
     """Тесты give_up_timeout в send_message."""
 
-    @pytest.mark.asyncio
-    async def test_give_up_timeout_none_no_effect(self, mock_bot_token):
+    def test_give_up_timeout_none_no_effect(self, mock_bot_token):
         """give_up_timeout=None не влияет на существующее поведение."""
         bot = Bot(
             token=mock_bot_token,
             after_upload_attempts=3,
             after_upload_retry_delay=0.01,
         )
-        bot.session = AsyncMock()
+        bot.session = MagicMock()
         assert bot.after_upload_give_up_timeout is None
 
         send = SendMessage(bot=bot, chat_id=123, text="test")
@@ -433,22 +414,20 @@ class TestSendMessageGiveUpTimeout:
             patch.object(
                 BaseConnection,
                 "request",
-                new_callable=AsyncMock,
                 side_effect=[
                     _make_attachment_not_ready_error(),
                     _make_attachment_not_ready_error(),
                     success_response,
                 ],
             ) as mock_request,
-            patch("maxapi.methods.send_message.asyncio.sleep"),
+            patch("maxapi.methods.send_message.time.sleep"),
         ):
-            result = await send.fetch()
+            result = send.fetch()
 
         assert result == success_response
         assert mock_request.call_count == 3
 
-    @pytest.mark.asyncio
-    async def test_give_up_timeout_triggers(self, mock_bot_token):
+    def test_give_up_timeout_triggers(self, mock_bot_token):
         """give_up_timeout срабатывает при превышении времени."""
         bot = Bot(
             token=mock_bot_token,
@@ -456,7 +435,7 @@ class TestSendMessageGiveUpTimeout:
             after_upload_retry_delay=2.0,
             after_upload_give_up_timeout=3.0,
         )
-        bot.session = AsyncMock()
+        bot.session = MagicMock()
 
         send = SendMessage(bot=bot, chat_id=123, text="test")
 
@@ -473,20 +452,18 @@ class TestSendMessageGiveUpTimeout:
             patch.object(
                 BaseConnection,
                 "request",
-                new_callable=AsyncMock,
                 side_effect=_make_attachment_not_ready_error(),
             ),
-            patch("maxapi.methods.send_message.asyncio.sleep"),
+            patch("maxapi.methods.send_message.time.sleep"),
             patch(
                 "maxapi.methods.send_message.time.monotonic",
                 side_effect=fake_monotonic,
             ),
             pytest.raises(RuntimeError, match="Превышено максимальное время"),
         ):
-            await send.fetch()
+            send.fetch()
 
-    @pytest.mark.asyncio
-    async def test_give_up_timeout_allows_if_under_limit(self, mock_bot_token):
+    def test_give_up_timeout_allows_if_under_limit(self, mock_bot_token):
         """give_up_timeout не срабатывает, если время не превышено."""
         bot = Bot(
             token=mock_bot_token,
@@ -494,7 +471,7 @@ class TestSendMessageGiveUpTimeout:
             after_upload_retry_delay=1.0,
             after_upload_give_up_timeout=10.0,
         )
-        bot.session = AsyncMock()
+        bot.session = MagicMock()
 
         send = SendMessage(bot=bot, chat_id=123, text="test")
 
@@ -513,19 +490,18 @@ class TestSendMessageGiveUpTimeout:
             patch.object(
                 BaseConnection,
                 "request",
-                new_callable=AsyncMock,
                 side_effect=[
                     _make_attachment_not_ready_error(),
                     success_response,
                 ],
             ),
-            patch("maxapi.methods.send_message.asyncio.sleep"),
+            patch("maxapi.methods.send_message.time.sleep"),
             patch(
                 "maxapi.methods.send_message.time.monotonic",
                 side_effect=fake_monotonic,
             ),
         ):
-            result = await send.fetch()
+            result = send.fetch()
 
         assert result == success_response
 
@@ -533,15 +509,14 @@ class TestSendMessageGiveUpTimeout:
 class TestEditMessageGiveUpTimeout:
     """Тесты give_up_timeout в edit_message."""
 
-    @pytest.mark.asyncio
-    async def test_give_up_timeout_none_no_effect(self, mock_bot_token):
+    def test_give_up_timeout_none_no_effect(self, mock_bot_token):
         """give_up_timeout=None не влияет на существующее поведение."""
         bot = Bot(
             token=mock_bot_token,
             after_upload_attempts=3,
             after_upload_retry_delay=0.01,
         )
-        bot.session = AsyncMock()
+        bot.session = MagicMock()
         assert bot.after_upload_give_up_timeout is None
 
         edit = EditMessage(bot=bot, message_id="mid.123", text="updated")
@@ -552,22 +527,20 @@ class TestEditMessageGiveUpTimeout:
             patch.object(
                 BaseConnection,
                 "request",
-                new_callable=AsyncMock,
                 side_effect=[
                     _make_attachment_not_ready_error(),
                     _make_attachment_not_ready_error(),
                     success_response,
                 ],
             ) as mock_request,
-            patch("maxapi.methods.edit_message.asyncio.sleep"),
+            patch("maxapi.methods.edit_message.time.sleep"),
         ):
-            result = await edit.fetch()
+            result = edit.fetch()
 
         assert result == success_response
         assert mock_request.call_count == 3
 
-    @pytest.mark.asyncio
-    async def test_give_up_timeout_triggers(self, mock_bot_token):
+    def test_give_up_timeout_triggers(self, mock_bot_token):
         """give_up_timeout срабатывает при превышении времени."""
         bot = Bot(
             token=mock_bot_token,
@@ -575,7 +548,7 @@ class TestEditMessageGiveUpTimeout:
             after_upload_retry_delay=2.0,
             after_upload_give_up_timeout=3.0,
         )
-        bot.session = AsyncMock()
+        bot.session = MagicMock()
 
         edit = EditMessage(bot=bot, message_id="mid.123", text="updated")
 
@@ -591,20 +564,18 @@ class TestEditMessageGiveUpTimeout:
             patch.object(
                 BaseConnection,
                 "request",
-                new_callable=AsyncMock,
                 side_effect=_make_attachment_not_ready_error(),
             ),
-            patch("maxapi.methods.edit_message.asyncio.sleep"),
+            patch("maxapi.methods.edit_message.time.sleep"),
             patch(
                 "maxapi.methods.edit_message.time.monotonic",
                 side_effect=fake_monotonic,
             ),
             pytest.raises(RuntimeError, match="Превышено максимальное время"),
         ):
-            await edit.fetch()
+            edit.fetch()
 
-    @pytest.mark.asyncio
-    async def test_give_up_timeout_allows_if_under_limit(self, mock_bot_token):
+    def test_give_up_timeout_allows_if_under_limit(self, mock_bot_token):
         """give_up_timeout не срабатывает, если время не превышено."""
         bot = Bot(
             token=mock_bot_token,
@@ -612,7 +583,7 @@ class TestEditMessageGiveUpTimeout:
             after_upload_retry_delay=1.0,
             after_upload_give_up_timeout=10.0,
         )
-        bot.session = AsyncMock()
+        bot.session = MagicMock()
 
         edit = EditMessage(bot=bot, message_id="mid.123", text="updated")
 
@@ -630,19 +601,18 @@ class TestEditMessageGiveUpTimeout:
             patch.object(
                 BaseConnection,
                 "request",
-                new_callable=AsyncMock,
                 side_effect=[
                     _make_attachment_not_ready_error(),
                     success_response,
                 ],
             ),
-            patch("maxapi.methods.edit_message.asyncio.sleep"),
+            patch("maxapi.methods.edit_message.time.sleep"),
             patch(
                 "maxapi.methods.edit_message.time.monotonic",
                 side_effect=fake_monotonic,
             ),
         ):
-            result = await edit.fetch()
+            result = edit.fetch()
 
         assert result == success_response
 

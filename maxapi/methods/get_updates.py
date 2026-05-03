@@ -52,7 +52,7 @@ class GetUpdates(BaseConnection):
         self.marker = marker
         self.types = types
 
-    async def fetch(self) -> dict[str, Any]:
+    def fetch(self) -> dict[str, Any]:
         """
         Выполняет GET-запрос к API для получения новых событий.
 
@@ -72,7 +72,7 @@ class GetUpdates(BaseConnection):
         if self.types:
             params["types"] = ",".join(self.types)
 
-        event_json = await super().request(
+        event_json = super().request(
             method=HTTPMethod.GET,
             path=ApiPath.UPDATES,
             model=None,

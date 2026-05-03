@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class Contact(BaseFilter):
     """Фильтр событий сообщений с вложением-контактом."""
 
-    async def __call__(
+    def __call__(
         self, event: UpdateUnion
     ) -> bool | dict[str, ContactAttachment]:
         if not isinstance(event, (MessageCreated, MessageEdited)):

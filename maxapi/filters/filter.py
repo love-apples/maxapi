@@ -17,5 +17,5 @@ class BaseFilter:
         __call__(event): Асинхронная проверка события на соответствие фильтру.
     """
 
-    async def __call__(self, event: UpdateUnion) -> bool | dict:
+    def __call__(self, event: UpdateUnion) -> bool | dict:
         return True

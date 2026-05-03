@@ -2,18 +2,17 @@
 
 Covers:
 - utils/updates.py: MaxApiError / MaxConnection in _resolve_from_user
-- dispatcher.py: _ready flag prevents double init (idempotency)
 - methods/subscribe_webhook.py: warns on http:// URL
 - filters/command.py: case-insensitive command match path
 - methods/get_chats.py: marker=0 handled via `is not None`
 - methods/get_members_chat.py: marker=0 handled via `is not None`
-- connection/base.py: temp ClientSession branch + mimetypes.guess_type
+- connection/base.py: temp Session branch + mimetypes.guess_type
 """
 
 from __future__ import annotations
 
 import warnings
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from maxapi.enums.chat_type import ChatType
@@ -62,7 +61,7 @@ def _make_user_removed_event(chat_id: int = 111, admin_id: int = 333):
 class TestResolveFromUserErrorHandling:
     """Exception-handling paths in _resolve_from_user (PR #92 additions)."""
 
-    async def test_message_removed_max_api_error_logs_and_continues(
+    def test_message_removed_max_api_error_logs_and_continues(
         self, bot, fixture_message_removed
     ):
         """MaxApiError in get_chat_member for MessageRemoved is caught, logged,
@@ -72,15 +71,15 @@ class TestResolveFromUserErrorHandling:
         fixture_message_removed.from_user = None
 
         error = MaxApiError(code=404, raw={"message": "not found"})
-        bot.get_chat_member = AsyncMock(side_effect=error)
+        bot.get_chat_member = Mock(side_effect=error)
 
         with patch("maxapi.utils.updates.logger") as mock_logger:
-            await _resolve_from_user(fixture_message_removed, bot)
+            _resolve_from_user(fixture_message_removed, bot)
 
         mock_logger.warning.assert_called_once()
         assert fixture_message_removed.from_user is None
 
-    async def test_message_removed_max_connection_logs_and_continues(
+    def test_message_removed_max_connection_logs_and_continues(
         self, bot, fixture_message_removed
     ):
         """MaxConnection in get_chat_member for MessageRemoved is caught."""
@@ -88,15 +87,15 @@ class TestResolveFromUserErrorHandling:
         fixture_message_removed.chat = fake_chat
         fixture_message_removed.from_user = None
 
-        bot.get_chat_member = AsyncMock(side_effect=MaxConnection("timeout"))
+        bot.get_chat_member = Mock(side_effect=MaxConnection("timeout"))
 
         with patch("maxapi.utils.updates.logger") as mock_logger:
-            await _resolve_from_user(fixture_message_removed, bot)
+            _resolve_from_user(fixture_message_removed, bot)
 
         mock_logger.warning.assert_called_once()
         assert fixture_message_removed.from_user is None
 
-    async def test_user_removed_max_api_error_logs_and_continues(
+    def test_user_removed_max_api_error_logs_and_continues(
         self, bot, fixture_user_removed
     ):
         """MaxApiError in get_chat_member for UserRemoved is caught."""
@@ -104,71 +103,28 @@ class TestResolveFromUserErrorHandling:
         fixture_user_removed.from_user = None
 
         error = MaxApiError(code=403, raw={"message": "forbidden"})
-        bot.get_chat_member = AsyncMock(side_effect=error)
+        bot.get_chat_member = Mock(side_effect=error)
 
         with patch("maxapi.utils.updates.logger") as mock_logger:
-            await _resolve_from_user(fixture_user_removed, bot)
+            _resolve_from_user(fixture_user_removed, bot)
 
         mock_logger.warning.assert_called_once()
         assert fixture_user_removed.from_user is None
 
-    async def test_user_removed_max_connection_logs_and_continues(
+    def test_user_removed_max_connection_logs_and_continues(
         self, bot, fixture_user_removed
     ):
         """MaxConnection in get_chat_member for UserRemoved is caught."""
         fixture_user_removed.admin_id = 9999
         fixture_user_removed.from_user = None
 
-        bot.get_chat_member = AsyncMock(side_effect=MaxConnection("no conn"))
+        bot.get_chat_member = Mock(side_effect=MaxConnection("no conn"))
 
         with patch("maxapi.utils.updates.logger") as mock_logger:
-            await _resolve_from_user(fixture_user_removed, bot)
+            _resolve_from_user(fixture_user_removed, bot)
 
         mock_logger.warning.assert_called_once()
         assert fixture_user_removed.from_user is None
-
-
-# ===========================================================================
-# dispatcher.py — _ready flag idempotency (1 line: early return)
-# ===========================================================================
-
-
-class TestDispatcherReadyIdempotency:
-    """__ready() must short-circuit if _ready is already True."""
-
-    async def test_double_startup_only_inits_once(self, dispatcher, bot):
-        """Calling startup() twice must not call check_me/prepare twice."""
-        dispatcher.check_me = AsyncMock()
-        dispatcher._prepare_handlers = Mock()
-
-        await dispatcher.startup(bot)
-        await dispatcher.startup(bot)
-
-        # Should be called exactly once, not twice
-        dispatcher.check_me.assert_called_once()
-        dispatcher._prepare_handlers.assert_called_once_with(bot)
-
-    async def test_ready_flag_set_after_startup(self, dispatcher, bot):
-        """After startup(), _ready must be True."""
-        dispatcher.check_me = AsyncMock()
-        dispatcher._prepare_handlers = Mock()
-
-        assert dispatcher._ready is False
-        await dispatcher.startup(bot)
-        assert dispatcher._ready is True
-
-    async def test_ready_direct_call_skips_second_entry(self, dispatcher, bot):
-        """Direct __ready call when _ready=True returns immediately."""
-        dispatcher.check_me = AsyncMock()
-        dispatcher._prepare_handlers = Mock()
-
-        # First call initialises
-        await dispatcher._Dispatcher__ready(bot)
-        dispatcher.check_me.assert_called_once()
-
-        # Second call is a no-op
-        await dispatcher._Dispatcher__ready(bot)
-        dispatcher.check_me.assert_called_once()  # still only once
 
 
 # ===========================================================================
@@ -195,61 +151,6 @@ class TestSubscribeWebhookHttpWarning:
             # Should not raise
             SubscribeWebhook(bot=bot, url="https://example.com/hook")
 
-
-# ===========================================================================
-# webhook/base.py — missing-secret warning (BaseMaxWebhook.__init__)
-# ===========================================================================
-
-
-class _DummyBot:
-    """Stand-in for Bot in webhook init tests (no network calls)."""
-
-
-class TestBaseMaxWebhookSecretWarning:
-    """BaseMaxWebhook logs a warning when secret is empty/None.
-
-    The check uses `if not self.secret:` so it must fire for both
-    ``None`` and empty string ``""`` and stay silent for any
-    non-empty secret.
-    """
-
-    _WARN_FRAGMENT = "без secret"
-
-    def _make_webhook(self, secret):
-        from maxapi import Dispatcher
-        from maxapi.webhook.aiohttp import AiohttpMaxWebhook
-
-        return AiohttpMaxWebhook(
-            dp=Dispatcher(), bot=_DummyBot(), secret=secret
-        )
-
-    def test_secret_none_logs_warning(self, caplog):
-        """secret=None should produce the missing-secret warning."""
-        import logging
-
-        with caplog.at_level(logging.WARNING):
-            self._make_webhook(secret=None)
-        assert any(self._WARN_FRAGMENT in r.message for r in caplog.records)
-
-    def test_secret_empty_string_logs_warning(self, caplog):
-        """secret='' is also unsafe and must trigger the warning."""
-        import logging
-
-        with caplog.at_level(logging.WARNING):
-            self._make_webhook(secret="")
-        assert any(self._WARN_FRAGMENT in r.message for r in caplog.records)
-
-    def test_secret_non_empty_no_warning(self, caplog):
-        """A real secret must keep the log clean."""
-        import logging
-
-        with caplog.at_level(logging.WARNING):
-            self._make_webhook(secret="my-secret")
-        assert not any(
-            self._WARN_FRAGMENT in r.message for r in caplog.records
-        )
-
-
 # ===========================================================================
 # filters/command.py — case-insensitive match path (1 line)
 # ===========================================================================
@@ -258,7 +159,7 @@ class TestBaseMaxWebhookSecretWarning:
 class TestCommandFilterCaseInsensitive:
     """Case-insensitive command matching (check_case=False, default)."""
 
-    async def test_uppercase_input_matches_lowercase_command(self):
+    def test_uppercase_input_matches_lowercase_command(self):
         """'/START' matches Command('start') when check_case=False."""
         from maxapi.types.message import Message, MessageBody
 
@@ -278,13 +179,13 @@ class TestCommandFilterCaseInsensitive:
         mock_bot.me = Mock(username=None)
         event._ensure_bot = Mock(return_value=mock_bot)
 
-        result = await cmd(event)
+        result = cmd(event)
 
         assert result is not False
         assert isinstance(result, dict)
         assert "args" in result
 
-    async def test_mixed_case_command_text_matches(self):
+    def test_mixed_case_command_text_matches(self):
         """/Help matches Command('help', check_case=False)."""
         from maxapi.types.message import Message, MessageBody
         from maxapi.types.updates.message_created import MessageCreated
@@ -302,11 +203,11 @@ class TestCommandFilterCaseInsensitive:
         mock_bot.me = Mock(username=None)
         event._ensure_bot = Mock(return_value=mock_bot)
 
-        result = await cmd(event)
+        result = cmd(event)
 
         assert result is not False
 
-    async def test_case_sensitive_mismatch_returns_false(self):
+    def test_case_sensitive_mismatch_returns_false(self):
         """With check_case=True, '/START' does NOT match Command('start')."""
         from maxapi.types.message import Message, MessageBody
         from maxapi.types.updates.message_created import MessageCreated
@@ -324,7 +225,7 @@ class TestCommandFilterCaseInsensitive:
         mock_bot.me = Mock(username=None)
         event._ensure_bot = Mock(return_value=mock_bot)
 
-        result = await cmd(event)
+        result = cmd(event)
 
         assert result is False
 
@@ -473,19 +374,19 @@ class TestGetListAdminChatMarkerIsNotNone:
 
 
 # ===========================================================================
-# connection/base.py — temp ClientSession + mimetypes (2 lines)
+# connection/base.py — temp Session + mimetypes (2 lines)
 # ===========================================================================
 
 
 class TestBaseConnectionUploadFallback:
-    """upload_file / upload_file_buffer используют временный ClientSession,
+    """upload_file / upload_file_buffer используют временный Session,
     когда сессия отсутствует.
     """
 
-    async def test_upload_file_uses_temp_session_when_session_is_none(
+    def test_upload_file_uses_temp_session_when_session_is_none(
         self, bot, tmp_path
     ):
-        """upload_file откатывается к новому ClientSession,
+        """upload_file откатывается к новому Session,
         когда bot.session=None.
         """
         from maxapi.connection.base import BaseConnection
@@ -499,25 +400,26 @@ class TestBaseConnectionUploadFallback:
         conn.bot = bot
         bot.session = None  # force the else-branch
 
-        mock_response = AsyncMock()
-        mock_response.text = AsyncMock(return_value='{"token":"abc"}')
+        mock_response = Mock()
+        mock_response.text = '{"token":"abc"}'
 
-        mock_cm = AsyncMock()
-        mock_cm.__aenter__.return_value = mock_response
-        mock_cm.__aexit__.return_value = False
 
-        mock_session_instance = AsyncMock()
+        mock_cm = Mock()
+        mock_cm.__enter__.return_value = mock_response
+        mock_cm.__exit__.return_value = False
+
+        mock_session_instance = Mock()
         mock_session_instance.post = Mock(return_value=mock_cm)
-        mock_session_instance.__aenter__ = AsyncMock(
+        mock_session_instance.__enter__ = Mock(
             return_value=mock_session_instance
         )
-        mock_session_instance.__aexit__ = AsyncMock(return_value=False)
+        mock_session_instance.__exit__ = Mock(return_value=False)
 
         with patch(
-            "maxapi.connection.base.ClientSession",
+            "maxapi.connection.base.Session",
             return_value=mock_session_instance,
         ):
-            result = await conn.upload_file(
+            result = conn.upload_file(
                 url="https://upload.example.com",
                 path=str(test_file),
                 type=UploadType.VIDEO,
@@ -526,7 +428,7 @@ class TestBaseConnectionUploadFallback:
         assert result == '{"token":"abc"}'
         mock_session_instance.post.assert_called_once()
 
-    async def test_upload_file_buffer_mimetypes_guess_extension(
+    def test_upload_file_buffer_mimetypes_guess_extension(
         self, bot, tmp_path
     ):
         """upload_file_buffer вызывает mimetypes.guess_extension
@@ -540,15 +442,17 @@ class TestBaseConnectionUploadFallback:
 
         some_buffer = b"\x00" * 32
 
-        mock_response = AsyncMock()
-        mock_response.text = AsyncMock(return_value='{"token":"xyz"}')
-        mock_cm_buf = AsyncMock()
-        mock_cm_buf.__aenter__.return_value = mock_response
-        mock_cm_buf.__aexit__.return_value = False
+        mock_response = Mock()
+        mock_response.text = '{"token":"xyz"}'
+        mock_cm_buf = Mock()
+        mock_cm_buf.__enter__.return_value = mock_response
+        mock_cm_buf.__exit__.return_value = False
 
-        bot.session = MagicMock()
-        bot.session.closed = False
-        bot.session.post = Mock(return_value=mock_cm_buf)
+        # Устанавливаем сессию на экземпляр BaseConnection (conn),
+        # а не на бота, так как _get_session() проверяет self.session
+        conn.session = MagicMock()
+        conn.session.closed = False
+        conn.session.post = Mock(return_value=mock_cm_buf)
 
         # Подменяем puremagic, чтобы вернуть распознаваемый MIME-матч,
         # и mimetypes.guess_extension — чтобы вернуть реальное расширение.
@@ -568,7 +472,7 @@ class TestBaseConnectionUploadFallback:
             mock_pm.return_value = [fake_match]
             mock_ge.return_value = ".png"
 
-            result = await conn.upload_file_buffer(
+            result = conn.upload_file_buffer(
                 filename="image",
                 url="https://upload.example.com",
                 buffer=some_buffer,
@@ -593,19 +497,19 @@ class TestBaseConnectionUploadFallback:
 
         some_buffer = b"\x00" * 32
 
-        mock_response = AsyncMock()
-        mock_response.text = AsyncMock(return_value='{"token":"buf"}')
+        mock_response = Mock()
+        mock_response.text = '{"token":"buf"}'
 
-        mock_cm = AsyncMock()
-        mock_cm.__aenter__.return_value = mock_response
-        mock_cm.__aexit__.return_value = False
+        mock_cm = Mock()
+        mock_cm.__enter__.return_value = mock_response
+        mock_cm.__exit__.return_value = False
 
-        mock_session_instance = AsyncMock()
+        mock_session_instance = Mock()
         mock_session_instance.post = Mock(return_value=mock_cm)
-        mock_session_instance.__aenter__ = AsyncMock(
+        mock_session_instance.__enter__ = Mock(
             return_value=mock_session_instance
         )
-        mock_session_instance.__aexit__ = AsyncMock(return_value=False)
+        mock_session_instance.__exit__ = Mock(return_value=False)
 
         with patch(
             "maxapi.connection.base.ClientSession",

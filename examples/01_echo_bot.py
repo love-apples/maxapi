@@ -5,12 +5,10 @@
 а на любое текстовое сообщение — его же текстом.
 
 Демонстрирует:
-- Создание Bot и Dispatcher
-- Обработку /start через CommandStart
-- Обработку BotStarted (кнопка «Начать»)
-- Эхо текстовых сообщений с фильтром F.message.body.text
-- SenderAction.TYPING_ON — индикатор «печатает...»
-- Запуск через dp.start_polling(bot)
+- Создание Bot
+- Отправку сообщений через bot.send_message()
+- Индикатор «печатает...» через SenderAction.TYPING_ON
+- Получение информации о боте через bot.get_my_info()
 
 Аналог Telegram: python-telegram-bot EchoBot example.
 
@@ -18,74 +16,58 @@
     MAX_BOT_TOKEN=your_token python 01_echo_bot.py
 """
 
-import asyncio
 import contextlib
-import logging
+import os
 
 # Опционально: загрузка .env, если установлен python-dotenv
 with contextlib.suppress(ImportError):
     from dotenv import load_dotenv
 
     load_dotenv()
-from maxapi import Bot, Dispatcher, F
+from maxapi import Bot
 from maxapi.enums.sender_action import SenderAction
-from maxapi.filters.command import CommandStart
-from maxapi.types.updates.bot_started import BotStarted
-from maxapi.types.updates.message_created import MessageCreated
-
-logging.basicConfig(level=logging.INFO)
 
 # Токен читается автоматически из переменной окружения MAX_BOT_TOKEN
 bot = Bot()
-dp = Dispatcher()
 
 
-@dp.bot_started()
-async def on_bot_started(event: BotStarted) -> None:
-    """Пользователь нажал кнопку «Начать» в диалоге с ботом."""
-    await bot.send_message(
-        user_id=event.user.user_id,
+def main() -> None:
+    """Демонстрация прямого использования Bot API."""
+    # Получаем информацию о боте
+    info = bot.get_my_info()
+    print(f"Бот: {info.name} (ID: {info.user_id})")
+
+    # Пример отправки сообщения пользователю по ID.
+    # В реальном боте user_id берётся из входящего обновления (update),
+    # здесь для демонстрации читаем из переменной окружения.
+    user_id = os.environ.get("MAX_USER_ID")
+    if user_id is None:
+        print(
+            "Установите MAX_USER_ID для демонстрации отправки.\n"
+            "Пример: MAX_USER_ID=12345 MAX_BOT_TOKEN=your_token python 01_echo_bot.py"
+        )
+        return
+
+    # Отправляем приветствие
+    bot.send_message(
+        user_id=int(user_id),
         text="Привет! Я эхо-бот. Напиши мне что-нибудь, и я повторю.",
     )
 
-
-@dp.message_created(CommandStart())
-async def on_start(event: MessageCreated) -> None:
-    """Обработка команды /start."""
-    await event.message.answer(
-        "Привет! Я эхо-бот. Отправь мне любое сообщение."
+    # Показываем индикатор набора текста
+    bot.send_action(
+        chat_id=int(user_id),
+        action=SenderAction.TYPING_ON,
     )
 
-
-@dp.message_created(F.message.body.text)
-async def on_text(event: MessageCreated) -> None:
-    """Эхо — повторяем текст пользователя.
-
-    Перед ответом показываем индикатор «печатает...», чтобы бот
-    выглядел живым даже при мгновенном ответе.
-    """
-    chat_id = event.message.recipient.chat_id
-
-    # Показываем индикатор набора текста
-    if chat_id is not None:
-        await bot.send_action(
-            chat_id=chat_id,
-            action=SenderAction.TYPING_ON,
-        )
-
-    # Защита от None: body и text уже проверены фильтром F.message.body.text,
-    # но явная проверка делает намерение очевидным
-    text = event.message.body.text if event.message.body else None
-    if not text:
-        return
-
-    await event.message.answer(text)
-
-
-async def main() -> None:
-    """Точка входа — запускаем long-polling."""
-    await dp.start_polling(bot)
+    # «Эхо» — отправляем текст обратно
+    echo_text = "Привет от эхо-бота!"
+    bot.send_message(
+        user_id=int(user_id),
+        text=echo_text,
+    )
+    print(f"Отправлено эхо: {echo_text}")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

@@ -63,7 +63,7 @@ class BaseUpdate(
 
         return chat_id
 
-    async def _fetch_field(self, field_name: str) -> Any | None:
+    def _fetch_field(self, field_name: str) -> Any | None:
         """Явно получить поле события, если в нем лежит lazy ref."""
 
         try:
@@ -76,16 +76,16 @@ class BaseUpdate(
             return None
 
         if isinstance(value, LazyRef):
-            return await value.fetch()
+            return value.fetch()
 
         return value
 
-    async def fetch_chat(self) -> Chat | None:
+    def fetch_chat(self) -> Chat | None:
         """Явно получить chat для события, если доступен lazy fetch."""
 
-        return await self._fetch_field("chat")
+        return self._fetch_field("chat")
 
-    async def fetch_from_user(self) -> User | ChatMember | Chat | None:
+    def fetch_from_user(self) -> User | ChatMember | Chat | None:
         """Явно получить from_user для события, если доступен lazy fetch."""
 
-        return await self._fetch_field("from_user")
+        return self._fetch_field("from_user")

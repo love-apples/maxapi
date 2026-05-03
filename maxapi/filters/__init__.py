@@ -5,7 +5,9 @@ from typing import Any
 
 from magic_filter import MagicFilter, MagicT
 
+from .callback_payload import CallbackPayload
 from .channel_post import ChannelPostFilter
+from .command import Command, CommandStart
 from .contact import Contact, ContactFilter
 from .filter import BaseFilter
 
@@ -78,7 +80,10 @@ F = _SafeMagicFilter()
 
 __all__ = [
     "BaseFilter",
+    "CallbackPayload",
     "ChannelPostFilter",
+    "Command",
+    "CommandStart",
     "Contact",
     "ContactFilter",
     "F",

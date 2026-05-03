@@ -36,7 +36,7 @@ class GetChats(BaseConnection):
         self.count = count
         self.marker = marker
 
-    async def fetch(self) -> Chats:
+    def fetch(self) -> Chats:
         """
         Выполняет GET-запрос для получения списка чатов.
 
@@ -54,7 +54,7 @@ class GetChats(BaseConnection):
         if self.marker is not None:
             params["marker"] = self.marker
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.GET,
             path=ApiPath.CHATS,
             model=Chats,

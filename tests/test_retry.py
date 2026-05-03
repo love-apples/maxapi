@@ -1,9 +1,8 @@
 """Тесты retry-механизма для серверных ошибок (502, 503, 504)."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-from aiohttp import ClientConnectionError
 from maxapi import Bot
 from maxapi.client.default import (
     DEFAULT_RETRY_STATUSES,
@@ -16,16 +15,16 @@ from maxapi.exceptions.max import (
     MaxApiError,
     MaxConnection,
 )
+from requests import ConnectionError
 
 
 def _make_response(status, *, ok=None, json_data=None):
-    """Создаёт мок aiohttp-ответа с async-методами."""
+    """Создаёт мок ответа."""
     resp = MagicMock()
-    resp.status = status
+    resp.status_code = status
     resp.ok = ok if ok is not None else (200 <= status < 300)
-    resp.read = AsyncMock()
     if json_data is not None:
-        resp.json = AsyncMock(return_value=json_data)
+        resp.json.return_value = json_data
     return resp
 
 
@@ -80,26 +79,26 @@ class TestRetryOnServerErrors:
             token=mock_bot_token,
             default_connection=conn,
         )
-        session = AsyncMock()
+        session = MagicMock()
         session.closed = False
         bot.session = session
         return bot
 
-    @pytest.mark.asyncio
-    async def test_retry_on_502(self, bot_with_retry):
+    def test_retry_on_502(self, bot_with_retry):
         """Retry при 502 и успех на второй попытке."""
         error = _make_response(502)
         success = _make_response(200, json_data={"success": True})
 
-        bot_with_retry.session.request = AsyncMock(
+        bot_with_retry.session.request = MagicMock(
             side_effect=[error, success]
         )
 
         base = BaseConnection()
         base.bot = bot_with_retry
+        base.session = bot_with_retry.session
 
-        with patch("asyncio.sleep", new_callable=AsyncMock):
-            result = await base.request(
+        with patch("time.sleep"):
+            result = base.request(
                 method=HTTPMethod.GET,
                 path="/test",
                 is_return_raw=True,
@@ -108,21 +107,21 @@ class TestRetryOnServerErrors:
         assert result == {"success": True}
         assert bot_with_retry.session.request.call_count == 2
 
-    @pytest.mark.asyncio
-    async def test_retry_on_503(self, bot_with_retry):
+    def test_retry_on_503(self, bot_with_retry):
         """Retry при 503 и успех на третьей попытке."""
         error = _make_response(503)
         success = _make_response(200, json_data={"ok": True})
 
-        bot_with_retry.session.request = AsyncMock(
+        bot_with_retry.session.request = MagicMock(
             side_effect=[error, error, success]
         )
 
         base = BaseConnection()
         base.bot = bot_with_retry
+        base.session = bot_with_retry.session
 
-        with patch("asyncio.sleep", new_callable=AsyncMock):
-            result = await base.request(
+        with patch("time.sleep"):
+            result = base.request(
                 method=HTTPMethod.GET,
                 path="/test",
                 is_return_raw=True,
@@ -131,21 +130,21 @@ class TestRetryOnServerErrors:
         assert result == {"ok": True}
         assert bot_with_retry.session.request.call_count == 3
 
-    @pytest.mark.asyncio
-    async def test_retry_exhausted_raises_error(self, bot_with_retry):
+    def test_retry_exhausted_raises_error(self, bot_with_retry):
         """Исчерпание попыток бросает MaxApiError."""
         error = _make_response(502, json_data={"error": "Bad Gateway"})
 
-        bot_with_retry.session.request = AsyncMock(return_value=error)
+        bot_with_retry.session.request = MagicMock(return_value=error)
 
         base = BaseConnection()
         base.bot = bot_with_retry
+        base.session = bot_with_retry.session
 
         with (
-            patch("asyncio.sleep", new_callable=AsyncMock),
+            patch("time.sleep"),
             pytest.raises(MaxApiError) as exc_info,
         ):
-            await base.request(
+            base.request(
                 method=HTTPMethod.GET,
                 path="/test",
                 is_return_raw=True,
@@ -155,18 +154,18 @@ class TestRetryOnServerErrors:
         # 1 original + 3 retries = 4 попытки
         assert bot_with_retry.session.request.call_count == 4
 
-    @pytest.mark.asyncio
-    async def test_no_retry_on_400(self, bot_with_retry):
+    def test_no_retry_on_400(self, bot_with_retry):
         """400 не вызывает retry."""
         error = _make_response(400, json_data={"error": "Bad Request"})
 
-        bot_with_retry.session.request = AsyncMock(return_value=error)
+        bot_with_retry.session.request = MagicMock(return_value=error)
 
         base = BaseConnection()
         base.bot = bot_with_retry
+        base.session = bot_with_retry.session
 
         with pytest.raises(MaxApiError) as exc_info:
-            await base.request(
+            base.request(
                 method=HTTPMethod.GET,
                 path="/test",
                 is_return_raw=True,
@@ -175,18 +174,18 @@ class TestRetryOnServerErrors:
         assert exc_info.value.code == 400
         assert bot_with_retry.session.request.call_count == 1
 
-    @pytest.mark.asyncio
-    async def test_no_retry_on_401(self, bot_with_retry):
+    def test_no_retry_on_401(self, bot_with_retry):
         """401 не вызывает retry, бросает InvalidToken."""
         error = _make_response(401)
 
-        bot_with_retry.session.request = AsyncMock(return_value=error)
+        bot_with_retry.session.request = MagicMock(return_value=error)
 
         base = BaseConnection()
         base.bot = bot_with_retry
+        base.session = bot_with_retry.session
 
         with pytest.raises(InvalidToken):
-            await base.request(
+            base.request(
                 method=HTTPMethod.GET,
                 path="/test",
                 is_return_raw=True,
@@ -194,8 +193,7 @@ class TestRetryOnServerErrors:
 
         assert bot_with_retry.session.request.call_count == 1
 
-    @pytest.mark.asyncio
-    async def test_retry_disabled(self, mock_bot_token):
+    def test_retry_disabled(self, mock_bot_token):
         """max_retries=0 отключает retry."""
         conn = DefaultConnectionProperties(
             max_retries=0,
@@ -208,16 +206,17 @@ class TestRetryOnServerErrors:
 
         error = _make_response(502, json_data={"error": "Bad Gateway"})
 
-        session = AsyncMock()
-        session.request = AsyncMock(return_value=error)
+        session = MagicMock()
+        session.request = MagicMock(return_value=error)
         session.closed = False
         bot.session = session
 
         base = BaseConnection()
         base.bot = bot
+        base.session = session
 
         with pytest.raises(MaxApiError) as exc_info:
-            await base.request(
+            base.request(
                 method=HTTPMethod.GET,
                 path="/test",
                 is_return_raw=True,
@@ -240,28 +239,28 @@ class TestRetryOnConnectionErrors:
             token=mock_bot_token,
             default_connection=conn,
         )
-        session = AsyncMock()
+        session = MagicMock()
         session.closed = False
         bot.session = session
         return bot
 
-    @pytest.mark.asyncio
-    async def test_retry_on_connection_error(self, bot_with_retry):
-        """Retry при ClientConnectionError."""
+    def test_retry_on_connection_error(self, bot_with_retry):
+        """Retry при ConnectionError."""
         success = _make_response(200, json_data={"ok": True})
 
-        bot_with_retry.session.request = AsyncMock(
+        bot_with_retry.session.request = MagicMock(
             side_effect=[
-                ClientConnectionError("Connection refused"),
+                ConnectionError("Connection refused"),
                 success,
             ]
         )
 
         base = BaseConnection()
         base.bot = bot_with_retry
+        base.session = bot_with_retry.session
 
-        with patch("asyncio.sleep", new_callable=AsyncMock):
-            result = await base.request(
+        with patch("time.sleep"):
+            result = base.request(
                 method=HTTPMethod.GET,
                 path="/test",
                 is_return_raw=True,
@@ -270,21 +269,21 @@ class TestRetryOnConnectionErrors:
         assert result == {"ok": True}
         assert bot_with_retry.session.request.call_count == 2
 
-    @pytest.mark.asyncio
-    async def test_connection_error_exhausted(self, bot_with_retry):
+    def test_connection_error_exhausted(self, bot_with_retry):
         """Исчерпание попыток при ConnectionError."""
-        bot_with_retry.session.request = AsyncMock(
-            side_effect=ClientConnectionError("Connection refused")
+        bot_with_retry.session.request = MagicMock(
+            side_effect=ConnectionError("Connection refused")
         )
 
         base = BaseConnection()
         base.bot = bot_with_retry
+        base.session = bot_with_retry.session
 
         with (
-            patch("asyncio.sleep", new_callable=AsyncMock),
+            patch("time.sleep"),
             pytest.raises(MaxConnection),
         ):
-            await base.request(
+            base.request(
                 method=HTTPMethod.GET,
                 path="/test",
                 is_return_raw=True,
@@ -297,8 +296,7 @@ class TestRetryOnConnectionErrors:
 class TestRetryBackoff:
     """Тесты экспоненциальной задержки через backoff."""
 
-    @pytest.mark.asyncio
-    async def test_exponential_backoff_delays(self, mock_bot_token):
+    def test_exponential_backoff_delays(self, mock_bot_token):
         """Проверка что backoff вызывается нужное количество раз."""
         conn = DefaultConnectionProperties(
             max_retries=3,
@@ -311,22 +309,23 @@ class TestRetryBackoff:
 
         error = _make_response(502, json_data={"error": "Bad Gateway"})
 
-        session = AsyncMock()
-        session.request = AsyncMock(return_value=error)
+        session = MagicMock()
+        session.request = MagicMock(return_value=error)
         session.closed = False
         bot.session = session
 
         base = BaseConnection()
         base.bot = bot
+        base.session = session
 
         sleep_calls = []
-        original_sleep = AsyncMock(side_effect=lambda d: sleep_calls.append(d))
+        original_sleep = MagicMock(side_effect=lambda d: sleep_calls.append(d))
 
         with (
-            patch("asyncio.sleep", original_sleep),
+            patch("time.sleep", original_sleep),
             pytest.raises(MaxApiError),
         ):
-            await base.request(
+            base.request(
                 method=HTTPMethod.GET,
                 path="/test",
                 is_return_raw=True,
@@ -336,8 +335,7 @@ class TestRetryBackoff:
         assert len(sleep_calls) == 3
         assert all(d > 0 for d in sleep_calls)
 
-    @pytest.mark.asyncio
-    async def test_custom_backoff_factor(self, mock_bot_token):
+    def test_custom_backoff_factor(self, mock_bot_token):
         """Проверка пользовательского backoff_factor."""
         conn = DefaultConnectionProperties(
             max_retries=2,
@@ -350,22 +348,23 @@ class TestRetryBackoff:
 
         error = _make_response(503, json_data={"error": "Service Unavailable"})
 
-        session = AsyncMock()
-        session.request = AsyncMock(return_value=error)
+        session = MagicMock()
+        session.request = MagicMock(return_value=error)
         session.closed = False
         bot.session = session
 
         base = BaseConnection()
         base.bot = bot
+        base.session = session
 
         sleep_calls = []
-        original_sleep = AsyncMock(side_effect=lambda d: sleep_calls.append(d))
+        original_sleep = MagicMock(side_effect=lambda d: sleep_calls.append(d))
 
         with (
-            patch("asyncio.sleep", original_sleep),
+            patch("time.sleep", original_sleep),
             pytest.raises(MaxApiError),
         ):
-            await base.request(
+            base.request(
                 method=HTTPMethod.GET,
                 path="/test",
                 is_return_raw=True,
@@ -379,8 +378,7 @@ class TestRetryBackoff:
 class TestRetryWithCustomStatuses:
     """Тесты retry с пользовательскими статусами."""
 
-    @pytest.mark.asyncio
-    async def test_custom_retry_statuses(self, mock_bot_token):
+    def test_custom_retry_statuses(self, mock_bot_token):
         """Retry с пользовательским набором статусов."""
         conn = DefaultConnectionProperties(
             max_retries=1,
@@ -395,16 +393,17 @@ class TestRetryWithCustomStatuses:
         error = _make_response(429)
         success = _make_response(200, json_data={"ok": True})
 
-        session = AsyncMock()
-        session.request = AsyncMock(side_effect=[error, success])
+        session = MagicMock()
+        session.request = MagicMock(side_effect=[error, success])
         session.closed = False
         bot.session = session
 
         base = BaseConnection()
         base.bot = bot
+        base.session = session
 
-        with patch("asyncio.sleep", new_callable=AsyncMock):
-            result = await base.request(
+        with patch("time.sleep"):
+            result = base.request(
                 method=HTTPMethod.GET,
                 path="/test",
                 is_return_raw=True,
@@ -413,8 +412,7 @@ class TestRetryWithCustomStatuses:
         assert result == {"ok": True}
         assert session.request.call_count == 2
 
-    @pytest.mark.asyncio
-    async def test_502_not_retried_when_excluded(self, mock_bot_token):
+    def test_502_not_retried_when_excluded(self, mock_bot_token):
         """502 не ретраится, если убрана из retry_on_statuses."""
         conn = DefaultConnectionProperties(
             max_retries=3,
@@ -428,16 +426,17 @@ class TestRetryWithCustomStatuses:
 
         error = _make_response(502, json_data={"error": "Bad Gateway"})
 
-        session = AsyncMock()
-        session.request = AsyncMock(return_value=error)
+        session = MagicMock()
+        session.request = MagicMock(return_value=error)
         session.closed = False
         bot.session = session
 
         base = BaseConnection()
         base.bot = bot
+        base.session = session
 
         with pytest.raises(MaxApiError) as exc_info:
-            await base.request(
+            base.request(
                 method=HTTPMethod.GET,
                 path="/test",
                 is_return_raw=True,
@@ -450,8 +449,7 @@ class TestRetryWithCustomStatuses:
 class TestRetryResponseBodyConsumed:
     """Тесты корректного освобождения ресурсов при retry."""
 
-    @pytest.mark.asyncio
-    async def test_response_body_consumed_on_retry(self, mock_bot_token):
+    def test_response_body_consumed_on_retry(self, mock_bot_token):
         """Тело ответа читается перед retry для освобождения
         соединения."""
         conn = DefaultConnectionProperties(
@@ -466,19 +464,18 @@ class TestRetryResponseBodyConsumed:
         error = _make_response(502)
         success = _make_response(200, json_data={"ok": True})
 
-        session = AsyncMock()
-        session.request = AsyncMock(side_effect=[error, success])
+        session = MagicMock()
+        session.request = MagicMock(side_effect=[error, success])
         session.closed = False
         bot.session = session
 
         base = BaseConnection()
         base.bot = bot
+        base.session = session
 
-        with patch("asyncio.sleep", new_callable=AsyncMock):
-            await base.request(
+        with patch("time.sleep"):
+            base.request(
                 method=HTTPMethod.GET,
                 path="/test",
                 is_return_raw=True,
             )
-
-        error.read.assert_awaited_once()

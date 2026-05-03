@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-import asyncio
 import mimetypes
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import aiofiles
-import aiofiles.os
 import backoff
 import puremagic
-from aiohttp import ClientConnectionError, ClientSession, FormData
+from requests import Response, Session
+from requests.exceptions import ConnectionError
 
 from ..enums.api_path import ApiPath
-from ..enums.update import UpdateType
 from ..exceptions.download_file import DownloadFileError
 from ..exceptions.max import InvalidToken, MaxApiError, MaxConnection
 from ..loggers import logger_bot
@@ -20,7 +17,6 @@ from ..types.bot_mixin import BotMixin
 from ..utils.runtime import bind_bot
 
 if TYPE_CHECKING:
-    from backoff.types import Details
     from pydantic import BaseModel
 
     from ..bot import Bot
@@ -39,16 +35,11 @@ class _RetryableServerError(Exception):
         super().__init__(f"Server error {status}")
 
 
-def _on_backoff(details: Details) -> None:
-    """Логирование при retry.
-
-    ``exception`` отсутствует в ``backoff.types.Details``, но реально
-    присутствует в рантайме для ``on_exception``-хендлеров — это
-    недоработка в типах самой библиотеки backoff.
-    """
+def _on_backoff(details: dict) -> None:
+    """Логирование при retry."""
     wait = details["wait"]
     tries = details["tries"]
-    exc = details["exception"]  # type: ignore[typeddict-item,assignment]
+    exc = details.get("exception")
     if isinstance(exc, _RetryableServerError):
         logger_bot.warning(
             "Серверная ошибка %d, попытка %d, жду %.1fс",
@@ -56,7 +47,7 @@ def _on_backoff(details: Details) -> None:
             tries,
             wait,
         )
-    elif isinstance(exc, ClientConnectionError):
+    elif isinstance(exc, ConnectionError):
         logger_bot.warning(
             "Ошибка соединения (%s), попытка %d, жду %.1fс",
             exc,
@@ -84,12 +75,12 @@ class BaseConnection(BotMixin):
 
         Атрибуты:
             bot: Экземпляр бота.
-            session: aiohttp-сессия.
+            session: requests-сессия.
             after_input_media_delay: Задержка после ввода медиа.
         """
 
         self.bot: Bot | None = None
-        self.session: ClientSession | None = None
+        self.session: Session | None = None
         self.after_input_media_delay: float = self.AFTER_MEDIA_INPUT_DELAY
         self.api_url = self.API_URL
 
@@ -103,7 +94,13 @@ class BaseConnection(BotMixin):
 
         self.api_url = url
 
-    async def request(
+    def _get_session(self) -> Session:
+        """Возвращает активную HTTP-сессию, создавая при необходимости."""
+        if self.session is None:
+            self.session = Session()
+        return self.session
+
+    def request(
         self,
         method: HTTPMethod,
         path: ApiPath | str,
@@ -144,57 +141,44 @@ class BaseConnection(BotMixin):
         retry_statuses = conn.retry_on_statuses
 
         url = path.value if isinstance(path, ApiPath) else path
+        full_url = self.api_url + url
+
+        kwargs.setdefault("timeout", conn.timeout)
+        kwargs.setdefault("headers", bot.headers)
 
         @backoff.on_exception(
             backoff.expo,
-            (ClientConnectionError, _RetryableServerError),
+            (ConnectionError, _RetryableServerError),
             max_tries=conn.max_retries + 1,
             factor=conn.retry_backoff_factor,
             on_backoff=_on_backoff,
         )
-        async def _do_request() -> Any:
-            session = await bot.ensure_session()
-            resp = await session.request(
+        def _do_request() -> Response:
+            resp = self._get_session().request(
                 method=method.value,
-                url=url,
+                url=full_url,
                 **kwargs,
             )
 
-            if resp.status == 401:
-                await session.close()
+            if resp.status_code == 401:
                 raise InvalidToken("Неверный токен!")
 
-            if resp.status in retry_statuses:
-                await resp.read()
-                raise _RetryableServerError(resp.status)
+            if resp.status_code in retry_statuses:
+                raise _RetryableServerError(resp.status_code)
 
             return resp
 
         try:
-            response = await _do_request()
-        except ClientConnectionError as e:
+            response = _do_request()
+        except ConnectionError as e:
             raise MaxConnection(f"Ошибка при отправке запроса: {e}") from e
         except _RetryableServerError as e:
             raise MaxApiError(code=e.status, raw={"error": str(e)}) from e
 
+        raw = response.json()
+
         if not response.ok:
-            raw = await response.json()
-            if bot.dispatcher:
-                asyncio.create_task(
-                    bot.dispatcher.handle_raw_response(
-                        UpdateType.RAW_API_RESPONSE, raw
-                    )
-                )
-            raise MaxApiError(code=response.status, raw=raw)
-
-        raw = await response.json()
-
-        if bot.dispatcher:
-            asyncio.create_task(
-                bot.dispatcher.handle_raw_response(
-                    UpdateType.RAW_API_RESPONSE, raw
-                )
-            )
+            raise MaxApiError(code=response.status_code, raw=raw)
 
         if is_return_raw:
             return raw
@@ -203,7 +187,7 @@ class BaseConnection(BotMixin):
 
         return bind_bot(model, bot)
 
-    async def upload_file(self, url: str, path: str, type: UploadType) -> str:
+    def upload_file(self, url: str, path: str, type: UploadType) -> str:
         """
         Загружает файл на сервер.
 
@@ -216,36 +200,23 @@ class BaseConnection(BotMixin):
             str: Сырой .text() ответ от сервера.
         """
 
-        async with aiofiles.open(path, "rb") as f:
-            file_data = await f.read()
+        with open(path, "rb") as f:
+            file_data = f.read()
 
         path_object = Path(path)
         basename = path_object.name
-
-        form = FormData(quote_fields=False)
-        form.add_field(
-            name="data",
-            value=file_data,
-            filename=basename,
-            content_type=mimetypes.guess_type(path)[0] or f"{type.value}/*",
-        )
+        mime_type = mimetypes.guess_type(path)[0] or f"{type.value}/*"
 
         bot = self._ensure_bot()
 
-        session = bot.session
-        if session is not None and not session.closed:
-            async with session.post(url=url, data=form) as response:
-                return await response.text()
-        else:
-            async with (
-                ClientSession(
-                    timeout=bot.default_connection.timeout
-                ) as temp_session,
-                temp_session.post(url=url, data=form) as response,
-            ):
-                return await response.text()
+        response = self._get_session().post(
+            url=url,
+            files={"data": (basename, file_data, mime_type)},
+            headers=bot.headers,
+        )
+        return response.text
 
-    async def upload_file_buffer(
+    def upload_file_buffer(
         self, filename: str, url: str, buffer: bytes, type: UploadType
     ) -> str:
         """
@@ -275,30 +246,16 @@ class BaseConnection(BotMixin):
 
         basename = f"{filename}{ext}"
 
-        form = FormData(quote_fields=False)
-        form.add_field(
-            name="data",
-            value=buffer,
-            filename=basename,
-            content_type=mime_type,
-        )
-
         bot = self._ensure_bot()
 
-        session = bot.session
-        if session is not None and not session.closed:
-            async with session.post(url=url, data=form) as response:
-                return await response.text()
-        else:
-            async with (
-                ClientSession(
-                    timeout=bot.default_connection.timeout
-                ) as temp_session,
-                temp_session.post(url=url, data=form) as response,
-            ):
-                return await response.text()
+        response = self._get_session().post(
+            url=url,
+            files={"data": (basename, buffer, mime_type)},
+            headers=bot.headers,
+        )
+        return response.text
 
-    async def download_file(
+    def download_file(
         self,
         url: str,
         destination: Path | str,
@@ -328,22 +285,20 @@ class BaseConnection(BotMixin):
 
         @backoff.on_exception(
             backoff.expo,
-            (ClientConnectionError, _RetryableServerError),
+            (ConnectionError, _RetryableServerError),
             max_tries=conn.max_retries + 1,
             factor=conn.retry_backoff_factor,
             on_backoff=_on_backoff,
         )
-        async def _do_download() -> Any:
-            session = await bot.ensure_session()
-            resp = await session.request("GET", url)
-            if resp.status in conn.retry_on_statuses:
-                await resp.read()
-                raise _RetryableServerError(resp.status)
+        def _do_download() -> Response:
+            resp = self._get_session().get(url)
+            if resp.status_code in conn.retry_on_statuses:
+                raise _RetryableServerError(resp.status_code)
             return resp
 
         try:
-            response = await _do_download()
-        except ClientConnectionError as e:
+            response = _do_download()
+        except ConnectionError as e:
             raise DownloadFileError(f"Ошибка при скачивании файла: {e}") from e
         except _RetryableServerError as e:
             raise DownloadFileError(
@@ -352,25 +307,38 @@ class BaseConnection(BotMixin):
 
         if not response.ok:
             raise DownloadFileError(
-                f"Ошибка при скачивании файла: HTTP {response.status}"
+                f"Ошибка при скачивании файла: HTTP {response.status_code}"
             )
 
-        cd = response.content_disposition
-        if cd and cd.filename:
-            filename = Path(cd.filename).name
+        cd = response.headers.get("Content-Disposition")
+        if cd:
+            parts = [p.strip() for p in cd.split(";")]
+            for part in parts:
+                if part.startswith("filename="):
+                    filename = Path(part.split("=", 1)[1].strip('"')).name
+                    break
+            else:
+                ext = (
+                    mimetypes.guess_extension(
+                        response.headers.get("Content-Type", "")
+                    )
+                    or ""
+                )
+                filename = f"file{ext}"
         else:
-            ext = mimetypes.guess_extension(response.content_type or "") or ""
+            ext = (
+                mimetypes.guess_extension(
+                    response.headers.get("Content-Type", "")
+                )
+                or ""
+            )
             filename = f"file{ext}"
 
         dest = Path(destination)
-        await aiofiles.os.makedirs(destination, exist_ok=True)
-        path = dest / filename
+        dest.mkdir(parents=True, exist_ok=True)
+        file_path = dest / filename
 
-        try:
-            async with aiofiles.open(path, "wb") as f:
-                async for chunk in response.content.iter_chunked(chunk_size):
-                    await f.write(chunk)
-        finally:
-            await response.release()
+        with open(file_path, "wb") as f:
+            f.writelines(response.iter_content(chunk_size=chunk_size))
 
-        return path
+        return file_path

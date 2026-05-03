@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, call, patch
+from unittest.mock import Mock, call, patch
 
 from maxapi.methods.types.getted_updates import (
     get_update_model,
@@ -7,7 +7,7 @@ from maxapi.methods.types.getted_updates import (
 )
 
 
-async def test_process_update_request_calls_get_update_model_and_returns_list(
+def test_process_update_request_calls_get_update_model_and_returns_list(
     bot,
 ):
     events = {
@@ -21,22 +21,23 @@ async def test_process_update_request_calls_get_update_model_and_returns_list(
     result1 = object()
     result2 = object()
 
-    async_mock = AsyncMock(side_effect=[result1, result2])
+    mock_updates = Mock(side_effect=[result1, result2])
 
     with patch(
-        "maxapi.methods.types.getted_updates.get_update_model", async_mock
+        "maxapi.methods.types.getted_updates.get_update_model",
+        mock_updates,
     ):
-        res = await process_update_request(events, bot)
+        res = process_update_request(events, bot)
 
     assert res == [result1, result2]
-    assert async_mock.call_count == 2
-    assert async_mock.call_args_list == [
+    assert mock_updates.call_count == 2
+    assert mock_updates.call_args_list == [
         call(events["updates"][0], bot),
         call(events["updates"][1], bot),
     ]
 
 
-async def test_process_update_request_logs_and_skips_unknown_updates(
+def test_process_update_request_logs_and_skips_unknown_updates(
     bot, caplog
 ):
     """При неизвестном update_type функция должна залогировать
@@ -45,15 +46,14 @@ async def test_process_update_request_logs_and_skips_unknown_updates(
     events = {"updates": [{"update_type": "unknown_type"}]}
 
     # Патчим get_update_model, чтобы он возвращал None
-    async_mock = AsyncMock(return_value=None)
-
     with patch(
-        "maxapi.methods.types.getted_updates.get_update_model", async_mock
+        "maxapi.methods.types.getted_updates.get_update_model",
+        return_value=None,
     ):
         caplog.clear()
         caplog.set_level("WARNING")
 
-        res = await process_update_request(events, bot)
+        res = process_update_request(events, bot)
 
     # Должен вернуть пустой список (все события пропущены)
     assert res == []
@@ -63,7 +63,7 @@ async def test_process_update_request_logs_and_skips_unknown_updates(
     assert any("неизвестный тип обновления" in msg.lower() for msg in logged)
 
 
-async def test_process_update_request_builds_model_from_event(bot, update):
+def test_process_update_request_builds_model_from_event(bot, update):
     """Для каждой фикстуры обновления проверяет, что
     `process_update_request` строит корректную модель.
 
@@ -78,7 +78,7 @@ async def test_process_update_request_builds_model_from_event(bot, update):
     # Убеждаемся, что поле update_type — enum
     event_dict["update_type"] = update.update_type
 
-    res = await process_update_request({"updates": [event_dict]}, bot)
+    res = process_update_request({"updates": [event_dict]}, bot)
 
     assert isinstance(res, list)
     assert len(res) == 1
@@ -89,7 +89,7 @@ async def test_process_update_request_builds_model_from_event(bot, update):
     assert res_obj.update_type == update.update_type
 
 
-async def test_process_update_webhook_builds_model_from_event(bot, update):
+def test_process_update_webhook_builds_model_from_event(bot, update):
     """Для каждой фикстуры обновления проверяет, что
     `process_update_webhook` строит корректную модель.
 
@@ -103,18 +103,18 @@ async def test_process_update_webhook_builds_model_from_event(bot, update):
     # Убеждаемся, что поле update_type — enum
     event_json["update_type"] = update.update_type
 
-    res_obj = await process_update_webhook(event_json, bot)
+    res_obj = process_update_webhook(event_json, bot)
 
     # Класс и тип обновления должны совпадать с фикстурой
     assert isinstance(res_obj, update.__class__)
     assert res_obj.update_type == update.update_type
 
 
-async def test_get_update_model_returns_none_for_unknown_type(bot):
+def test_get_update_model_returns_none_for_unknown_type(bot):
     """Проверяет, что get_update_model возвращает None при
     неизвестном значении update_type (новая логика).
     """
     event = {"update_type": "unknown_type"}
 
-    res = await get_update_model(event, bot)
+    res = get_update_model(event, bot)
     assert res is None

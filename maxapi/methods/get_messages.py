@@ -46,7 +46,7 @@ class GetMessages(BaseConnection):
         self.to_time = to_time
         self.count = count
 
-    async def fetch(self) -> Messages:
+    def fetch(self) -> Messages:
         """
         Выполняет GET-запрос для получения сообщений с учётом
         параметров фильтрации.
@@ -81,7 +81,7 @@ class GetMessages(BaseConnection):
 
         params["count"] = self.count
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.GET,
             path=ApiPath.MESSAGES,
             model=Messages,

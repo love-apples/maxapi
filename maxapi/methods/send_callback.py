@@ -39,7 +39,7 @@ class SendCallback(BaseConnection):
         self.message = message
         self.notification = notification
 
-    async def fetch(self) -> SendedCallback:
+    def fetch(self) -> SendedCallback:
         """
         Выполняет POST-запрос для отправки callback-ответа.
 
@@ -62,7 +62,7 @@ class SendCallback(BaseConnection):
         if self.notification:
             json["notification"] = self.notification
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.POST,
             path=ApiPath.ANSWERS,
             model=SendedCallback,

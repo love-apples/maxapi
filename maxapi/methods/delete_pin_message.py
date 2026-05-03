@@ -30,7 +30,7 @@ class DeletePinMessage(BaseConnection):
         self.bot = bot
         self.chat_id = chat_id
 
-    async def fetch(self) -> DeletedPinMessage:
+    def fetch(self) -> DeletedPinMessage:
         """
         Выполняет DELETE-запрос для удаления закреплённого сообщения.
 
@@ -41,7 +41,7 @@ class DeletePinMessage(BaseConnection):
 
         bot = self._ensure_bot()
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.DELETE,
             path=ApiPath.CHATS + "/" + str(self.chat_id) + ApiPath.PIN,
             model=DeletedPinMessage,

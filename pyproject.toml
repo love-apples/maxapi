@@ -14,12 +14,11 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-    "aiohttp>=3.13,<4",
-    "backoff>=2.0,<3",
-    "magic_filter>=1.0.0,<2",
+    "requests>=2.31.0,<3",
+    "backoff>=1.10.0,<1.11.0",
     "pydantic>=2,<3",
-    "aiofiles>=24.1,<26",
     "puremagic>=1.30,<2",
+    "magic-filter>=1.0.12,<2",
 ]
 
 [project.urls]
@@ -41,28 +40,12 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 include = ["maxapi*", "wiki*", "examples*"]
 
-[project.optional-dependencies]
-webhook = [
-    "fastapi>=0.103.0,<1",
-    "uvicorn>=0.15.0,<1",
-]
-fastapi = [
-    "fastapi>=0.103.0,<1",
-    "uvicorn>=0.15.0,<1",
-]
-litestar = [
-    "litestar>=2.0.0,<3",
-    "uvicorn>=0.15.0,<1",
-]
-
 [dependency-groups]
 dev = [
     "pytest>=9.0",
-    "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.0.0",
     "ruff>=0.15",
     "mypy>=1.19.1",
-    "types-aiofiles>=25.1.0",
     "pre-commit>=4.0",
     "coverage>=7.13",
     "mkdocs>=1.6.1,<2.0.0",
@@ -71,11 +54,7 @@ dev = [
     "pymdown-extensions>=10.21",
     "python-dotenv>=1.2.1",
     "Faker>=40.4.0",
-    "httpx>=0.28.1,<1",
-    "fastapi>=0.103.0,<1",
-    "uvicorn>=0.15.0,<1",
-    "litestar>=2.0.0,<3",
-    "aresponses>=3.0.0,<4",
+    "responses>=0.25.0",
 ]
 
 [tool.uv]
@@ -93,9 +72,6 @@ check_untyped_defs = true
 [tool.pytest.ini_options]
 # Путь к тестам
 testpaths = ["tests"]
-
-# Автоматический режим для asyncio
-asyncio_mode = "auto"
 
 # Параметры запуска
 addopts = "-ra --strict-markers -v -W ignore::pytest.PytestUnraisableExceptionWarning"

@@ -7,30 +7,25 @@
 - LinkButton — кнопка-ссылка
 - RequestContactButton — запрос контакта пользователя
 - RequestGeoLocationButton — запрос геолокации
-- Обработку MessageCallback
-- event.answer() — обязательный acknowledgement колбэка
-- Редактирование сообщения с новой клавиатурой через edit_message
-- Удаление клавиатуры
-- Навигацию кнопкой «Назад»
+- Отправку клавиатуры через bot.send_message()
+- Редактирование сообщения через bot.edit_message()
+- Удаление клавиатуры через пустой список attachments
 
-Аналог Telegram: InlineKeyboardMarkup, CallbackQueryHandler /
-    aiogram InlineKeyboardBuilder
+Аналог Telegram: InlineKeyboardMarkup, aiogram InlineKeyboardBuilder
 
 Запуск:
     MAX_BOT_TOKEN=your_token python 03_keyboard_bot.py
 """
 
-import asyncio
 import contextlib
-import logging
+import os
 
 # Опционально: загрузка .env, если установлен python-dotenv
 with contextlib.suppress(ImportError):
     from dotenv import load_dotenv
 
     load_dotenv()
-from maxapi import Bot, Dispatcher
-from maxapi.filters.command import CommandStart
+from maxapi import Bot
 from maxapi.types.attachments.buttons.callback_button import CallbackButton
 from maxapi.types.attachments.buttons.link_button import LinkButton
 from maxapi.types.attachments.buttons.request_contact import (
@@ -39,14 +34,9 @@ from maxapi.types.attachments.buttons.request_contact import (
 from maxapi.types.attachments.buttons.request_geo_location_button import (
     RequestGeoLocationButton,
 )
-from maxapi.types.updates.message_callback import MessageCallback
-from maxapi.types.updates.message_created import MessageCreated
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
-logging.basicConfig(level=logging.INFO)
-
 bot = Bot()
-dp = Dispatcher()
 
 # ── Константы payload для callback-кнопок ──────────────────────────────────
 CB_MENU = "menu"
@@ -95,75 +85,62 @@ def build_geo_keyboard() -> InlineKeyboardBuilder:
     return kb
 
 
-@dp.message_created(CommandStart())
-async def on_start(event: MessageCreated) -> None:
-    """Отправляем главное меню при команде /start."""
-    await event.message.answer(
+def main() -> None:
+    """Демонстрация клавиатур через Bot API."""
+    # Пример отправки клавиатуры пользователю.
+    # В реальном боте user_id берётся из входящего обновления (update),
+    # здесь для демонстрации читаем из переменной окружения.
+    user_id = os.environ.get("MAX_USER_ID")
+    if user_id is None:
+        print(
+            "Установите MAX_USER_ID для демонстрации отправки.\n"
+            "Пример: MAX_USER_ID=12345 MAX_BOT_TOKEN=your_token python 03_keyboard_bot.py"
+        )
+        return
+
+    uid = int(user_id)
+
+    # 1. Отправляем сообщение с главным меню
+    print("Отправка главного меню с inline-клавиатурой...")
+    sent = bot.send_message(
+        user_id=uid,
         text="Выберите действие:",
         attachments=[build_main_keyboard().as_markup()],
     )
 
+    # 2. Получаем message_id отправленного сообщения для редактирования
+    if sent and sent.message and sent.message.body:
+        mid = sent.message.body.mid
+        print(f"Сообщение отправлено, message_id: {mid}")
 
-@dp.message_callback()
-async def on_callback(event: MessageCallback) -> None:
-    """Централизованный обработчик всех callback-нажатий.
-
-    Важно: каждый callback ОБЯЗАТЕЛЬНО подтверждается через event.answer(),
-    иначе кнопка будет «крутиться» у пользователя.
-    """
-    # Достаём payload; защита от None
-    payload = event.callback.payload if event.callback else None
-    if payload is None:
-        await event.answer()
-        return
-
-    if event.message is None:
-        await event.answer()
-        return
-
-    if payload == CB_INFO:
-        await event.message.edit(
+        # 3. Пример редактирования сообщения — заменяем на экран информации
+        print("Редактирование сообщения — экран информации...")
+        bot.edit_message(
+            message_id=mid,
             text="Это бот-пример из документации maxapi.\nВерсия: 1.0.0",
             attachments=[build_info_keyboard().as_markup()],
         )
 
-    elif payload == CB_CONTACT:
-        await event.message.edit(
-            text="Нажмите кнопку, чтобы поделиться контактом:",
-            attachments=[build_contact_keyboard().as_markup()],
-        )
-
-    elif payload == CB_GEO:
-        await event.message.edit(
-            text="Нажмите кнопку, чтобы поделиться геолокацией:",
-            attachments=[build_geo_keyboard().as_markup()],
-        )
-
-    elif payload in (CB_BACK, CB_MENU):
-        # Возврат к главному меню
-        await event.message.edit(
+        # 4. Возврат к главному меню
+        print("Возврат к главному меню...")
+        bot.edit_message(
+            message_id=mid,
             text="Выберите действие:",
             attachments=[build_main_keyboard().as_markup()],
         )
 
-    elif payload == CB_CLOSE:
-        # Убираем клавиатуру, оставляем текст.
-        # Важно: attachments=None в Message.edit() трактуется как
-        # «не менять» и сохраняет существующие вложения. Чтобы
-        # действительно удалить клавиатуру — передаём пустой список.
-        await event.message.edit(
-            text="Клавиатура убрана. Напишите /start для повтора.",
+        # 5. Пример удаления клавиатуры — передаём пустой список attachments
+        print("Удаление клавиатуры...")
+        bot.edit_message(
+            message_id=mid,
+            text="Клавиатура убрана.",
             attachments=[],
         )
+    else:
+        print("Не удалось получить message_id для демонстрации редактирования.")
 
-    # Обязательный ack — без него UI покажет ошибку
-    await event.answer()
-
-
-async def main() -> None:
-    """Точка входа."""
-    await dp.start_polling(bot)
+    print("Готово!")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

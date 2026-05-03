@@ -37,7 +37,7 @@ class AddAdminChat(BaseConnection):
         self.admins = admins
         self.marker = marker
 
-    async def fetch(self) -> AddedListAdminChat:
+    def fetch(self) -> AddedListAdminChat:
         """
         Выполняет HTTP POST запрос для добавления администраторов в чат.
 
@@ -56,7 +56,7 @@ class AddAdminChat(BaseConnection):
         json["admins"] = [admin.model_dump() for admin in self.admins]
         json["marker"] = self.marker
 
-        response = await super().request(
+        response = super().request(
             method=HTTPMethod.POST,
             path=ApiPath.CHATS.value
             + "/"

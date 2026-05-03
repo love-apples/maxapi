@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def get_update_model(event: dict, bot: "Bot") -> UpdateUnion | None:
+def get_update_model(event: dict, bot: "Bot") -> UpdateUnion | None:
     """Конвертировать словарь с событием в модель обновления."""
     try:
         event_object = UpdateUnionAdapter.validate_python(event)
@@ -24,10 +24,10 @@ async def get_update_model(event: dict, bot: "Bot") -> UpdateUnion | None:
         # в вызывающем коде и не ломать процесс получения обновлений
         return None
 
-    return await enrich_event(event_object=event_object, bot=bot)
+    return enrich_event(event_object=event_object, bot=bot)
 
 
-async def process_update_request(
+def process_update_request(
     events: dict[str, Any],
     bot: "Bot",
 ) -> list[UpdateUnion]:
@@ -35,7 +35,7 @@ async def process_update_request(
     events_models = []
 
     for event in events["updates"]:
-        event_model = await get_update_model(event, bot)
+        event_model = get_update_model(event, bot)
         if event_model is None:
             update_type = event["update_type"]
             logger.warning(
@@ -48,7 +48,7 @@ async def process_update_request(
     return events_models
 
 
-async def process_update_webhook(
+def process_update_webhook(
     event_json: dict[str, Any], bot: "Bot"
 ) -> UpdateUnion | None:
-    return await get_update_model(bot=bot, event=event_json)
+    return get_update_model(bot=bot, event=event_json)
