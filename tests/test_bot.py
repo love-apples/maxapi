@@ -74,6 +74,7 @@ class TestBotInitialization:
         bot = Bot(token=mock_bot_token, after_input_media_delay=5.0)
         assert bot.after_input_media_delay == 5.0
 
+
 class TestBotProperties:
     """Тесты свойств Bot."""
 
@@ -146,9 +147,9 @@ class TestBotMethods:
         from maxapi.methods.send_message import SendMessage
 
         with patch.object(
-            SendMessage, "fetch", return_value=Mock(
-                message=Mock(body=Mock(mid="msg_123"))
-            )
+            SendMessage,
+            "fetch",
+            return_value=Mock(message=Mock(body=Mock(mid="msg_123"))),
         ) as mock_fetch:
             bot.send_message(chat_id=12345, text="Test message")
 
@@ -173,10 +174,7 @@ class TestBotMethods:
 
         available_actions = ", ".join(action.value for action in SenderAction)
 
-        with patch.object(
-            SendAction, "fetch", return_value = Mock()
-        ):
-
+        with patch.object(SendAction, "fetch", return_value=Mock()):
             with pytest.raises(ValueError) as exc_info:  # noqa: PT011
                 bot.send_action(chat_id=12345, action="fake_action")
 
@@ -191,21 +189,21 @@ class TestBotMethods:
         from maxapi.methods.send_action import SendAction
 
         with patch.object(
-            SendAction, "fetch", return_value = Mock()
+            SendAction, "fetch", return_value=Mock()
         ) as mock_fetch:
             bot.send_action(chat_id=12345, action="typing_on")
 
             assert mock_fetch.called
 
-    async def test_send_action_without_action_param(self, bot):
+    def test_send_action_without_action_param(self, bot):
         """Тест вызова send_action без передачи action."""
         # Core Stuff
         from maxapi.methods.send_action import SendAction
 
         with patch.object(
-            SendAction, "fetch", return_value = Mock()
+            SendAction, "fetch", return_value=Mock()
         ) as mock_fetch:
-            await bot.send_action(chat_id=12345)
+            bot.send_action(chat_id=12345)
 
             assert mock_fetch.called
 
@@ -214,9 +212,7 @@ class TestBotMethods:
         # Core Stuff
         from maxapi.methods.send_action import SendAction
 
-        with patch.object(
-            SendAction, "fetch", return_value = Mock()
-        ):
+        with patch.object(SendAction, "fetch", return_value=Mock()):
             wrong_action = 123
             wrong_action_type = type(wrong_action).__name__
 

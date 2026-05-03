@@ -269,7 +269,7 @@ class TestNoFalsePositiveAndWithBaseFilter:
         """BaseFilter() & F.x не вызывает UserWarning."""
 
         class AlwaysTrue(BaseFilter):
-            async def __call__(self, event):
+            def __call__(self, event):
                 return True
 
         with warnings.catch_warnings():
@@ -350,7 +350,7 @@ class TestNoFalsePositiveWithBaseFilter:
         """BaseFilter() | F.x не вызывает UserWarning."""
 
         class AlwaysTrue(BaseFilter):
-            async def __call__(self, event):
+            def __call__(self, event):
                 return True
 
         with warnings.catch_warnings():

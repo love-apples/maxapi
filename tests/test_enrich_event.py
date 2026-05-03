@@ -39,9 +39,7 @@ def _make_chat(chat_type: ChatType = ChatType.CHAT):
 class TestResolveChat:
     """Юнит-тесты для _resolve_chat."""
 
-    def test_bot_removed_never_fetches_chat(
-        self, bot, fixture_bot_removed
-    ):
+    def test_bot_removed_never_fetches_chat(self, bot, fixture_bot_removed):
         """
         BotRemoved всегда пропускает загрузку чата,
         независимо от is_channel.
@@ -76,9 +74,7 @@ class TestResolveChat:
 
         _resolve_chat(fixture_bot_started, bot)
 
-        bot.get_chat_by_id.assert_called_once_with(
-            fixture_bot_started.chat_id
-        )
+        bot.get_chat_by_id.assert_called_once_with(fixture_bot_started.chat_id)
         assert fixture_bot_started.chat is fake_chat
 
     def test_message_created_falls_back_to_recipient_chat_id(
@@ -150,18 +146,14 @@ class TestResolveChat:
 class TestResolveFromUser:
     """Юнит-тесты для _resolve_from_user."""
 
-    def test_message_created_sets_sender(
-        self, bot, fixture_message_created
-    ):
+    def test_message_created_sets_sender(self, bot, fixture_message_created):
         _resolve_from_user(fixture_message_created, bot)
         assert (
             fixture_message_created.from_user
             is fixture_message_created.message.sender
         )
 
-    def test_message_edited_sets_sender(
-        self, bot, fixture_message_edited
-    ):
+    def test_message_edited_sets_sender(self, bot, fixture_message_edited):
         _resolve_from_user(fixture_message_edited, bot)
         assert (
             fixture_message_edited.from_user
@@ -586,9 +578,7 @@ class TestEnrichEvent:
         assert result.chat is None
         assert result.from_user is fixture_bot_removed.user
 
-    def test_full_pipeline_message_created(
-        self, bot, fixture_message_created
-    ):
+    def test_full_pipeline_message_created(self, bot, fixture_message_created):
         """Пайплайн: chat, from_user и bot выставляются для MessageCreated."""
         fake_chat = _make_chat(ChatType.DIALOG)
         bot.get_chat_by_id = MagicMock(return_value=fake_chat)
@@ -611,9 +601,7 @@ class TestEnrichEvent:
         assert result.from_user is fixture_bot_removed.user
         assert result.bot is bot
 
-    def test_full_pipeline_dialog_removed(
-        self, bot, fixture_dialog_removed
-    ):
+    def test_full_pipeline_dialog_removed(self, bot, fixture_dialog_removed):
         """DialogRemoved: chat=None, from_user=user."""
         bot.get_chat_by_id = MagicMock()
 
@@ -660,9 +648,7 @@ class TestEnrichEvent:
             "fixture_dialog_unmuted",
         ],
     )
-    def test_full_pipeline_common_events(
-        self, request, bot, fixture_name
-    ):
+    def test_full_pipeline_common_events(self, request, bot, fixture_name):
         """Все 'обычные' события: chat загружается, from_user = user."""
         event = request.getfixturevalue(fixture_name)
         fake_chat = _make_chat()

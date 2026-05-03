@@ -151,6 +151,7 @@ class TestSubscribeWebhookHttpWarning:
             # Should not raise
             SubscribeWebhook(bot=bot, url="https://example.com/hook")
 
+
 # ===========================================================================
 # filters/command.py — case-insensitive match path (1 line)
 # ===========================================================================
@@ -403,13 +404,8 @@ class TestBaseConnectionUploadFallback:
         mock_response = Mock()
         mock_response.text = '{"token":"abc"}'
 
-
-        mock_cm = Mock()
-        mock_cm.__enter__.return_value = mock_response
-        mock_cm.__exit__.return_value = False
-
         mock_session_instance = Mock()
-        mock_session_instance.post = Mock(return_value=mock_cm)
+        mock_session_instance.post = Mock(return_value=mock_response)
         mock_session_instance.__enter__ = Mock(
             return_value=mock_session_instance
         )
@@ -428,9 +424,7 @@ class TestBaseConnectionUploadFallback:
         assert result == '{"token":"abc"}'
         mock_session_instance.post.assert_called_once()
 
-    def test_upload_file_buffer_mimetypes_guess_extension(
-        self, bot, tmp_path
-    ):
+    def test_upload_file_buffer_mimetypes_guess_extension(self, bot, tmp_path):
         """upload_file_buffer вызывает mimetypes.guess_extension
         для известного MIME-типа.
         """
@@ -444,15 +438,11 @@ class TestBaseConnectionUploadFallback:
 
         mock_response = Mock()
         mock_response.text = '{"token":"xyz"}'
-        mock_cm_buf = Mock()
-        mock_cm_buf.__enter__.return_value = mock_response
-        mock_cm_buf.__exit__.return_value = False
 
         # Устанавливаем сессию на экземпляр BaseConnection (conn),
         # а не на бота, так как _get_session() проверяет self.session
         conn.session = MagicMock()
-        conn.session.closed = False
-        conn.session.post = Mock(return_value=mock_cm_buf)
+        conn.session.post = Mock(return_value=mock_response)
 
         # Подменяем puremagic, чтобы вернуть распознаваемый MIME-матч,
         # и mimetypes.guess_extension — чтобы вернуть реальное расширение.
@@ -483,7 +473,7 @@ class TestBaseConnectionUploadFallback:
         mock_ge.assert_called_once_with("image/png")
         assert result == '{"token":"xyz"}'
 
-    async def test_upload_file_buffer_uses_temp_session_when_session_is_none(
+    def test_upload_file_buffer_uses_temp_session_when_session_is_none(
         self, bot
     ):
         """upload_file_buffer falls back to a new ClientSession
@@ -500,22 +490,18 @@ class TestBaseConnectionUploadFallback:
         mock_response = Mock()
         mock_response.text = '{"token":"buf"}'
 
-        mock_cm = Mock()
-        mock_cm.__enter__.return_value = mock_response
-        mock_cm.__exit__.return_value = False
-
         mock_session_instance = Mock()
-        mock_session_instance.post = Mock(return_value=mock_cm)
+        mock_session_instance.post = Mock(return_value=mock_response)
         mock_session_instance.__enter__ = Mock(
             return_value=mock_session_instance
         )
         mock_session_instance.__exit__ = Mock(return_value=False)
 
         with patch(
-            "maxapi.connection.base.ClientSession",
+            "maxapi.connection.base.Session",
             return_value=mock_session_instance,
         ):
-            result = await conn.upload_file_buffer(
+            result = conn.upload_file_buffer(
                 filename="clip",
                 url="https://upload.example.com",
                 buffer=some_buffer,
@@ -524,4 +510,3 @@ class TestBaseConnectionUploadFallback:
 
         assert result == '{"token":"buf"}'
         mock_session_instance.post.assert_called_once()
-        mock_cm.__aenter__.assert_called_once()

@@ -168,9 +168,7 @@ class TestSendMessageMediaRetry:
         assert mock_request.call_count == 2
         mock_sleep.assert_called_once_with(0.01)
 
-    def test_retry_exhausted_raises_runtime_error(
-        self, bot_custom_retry
-    ):
+    def test_retry_exhausted_raises_runtime_error(self, bot_custom_retry):
         """Исчерпание попыток бросает RuntimeError."""
         send = SendMessage(
             bot=bot_custom_retry,
@@ -312,9 +310,7 @@ class TestEditMessageMediaRetry:
         assert mock_request.call_count == 2
         mock_sleep.assert_called_once_with(0.01)
 
-    def test_retry_exhausted_raises_runtime_error(
-        self, bot_custom_retry
-    ):
+    def test_retry_exhausted_raises_runtime_error(self, bot_custom_retry):
         """Исчерпание попыток бросает RuntimeError."""
         edit = EditMessage(
             bot=bot_custom_retry,

@@ -36,14 +36,10 @@ class ShortcutBot:
         self.kick_chat_member = Mock(return_value={"kind": "kick"})
         self.get_me_from_chat = Mock(return_value={"kind": "me"})
         self.get_list_admin_chat = Mock(return_value={"kind": "admins"})
-        self.add_list_admin_chat = Mock(
-            return_value={"kind": "add_admins"}
-        )
+        self.add_list_admin_chat = Mock(return_value={"kind": "add_admins"})
         self.remove_admin = Mock(return_value={"kind": "remove_admin"})
         self.send_callback = Mock(return_value={"kind": "callback"})
-        self.delete_message = Mock(
-            return_value={"kind": "delete_message"}
-        )
+        self.delete_message = Mock(return_value={"kind": "delete_message"})
         self.resolve_format = Mock(
             side_effect=lambda format, parse_mode=None: (
                 format if format is not None else parse_mode

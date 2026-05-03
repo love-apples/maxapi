@@ -139,7 +139,9 @@ class ChatMembersManager(BotMixin):
     ) -> Iterator[ChatMember]:
         """Итерировать по всем участникам чата через пагинацию."""
 
-        yield from _walk_member_pages(lambda marker: self.list(marker=marker, count=count))
+        yield from _walk_member_pages(
+            lambda marker: self.list(marker=marker, count=count)
+        )
 
     def list_all(
         self,
