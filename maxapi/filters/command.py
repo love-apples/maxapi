@@ -119,9 +119,7 @@ class Command(BaseFilter):
 
         return command, arguments
 
-    def __call__(
-        self, event: UpdateUnion
-    ) -> dict[str, list[str]] | bool:
+    def __call__(self, event: UpdateUnion) -> dict[str, list[str]] | bool:
         """
         Проверяет, соответствует ли сообщение заданной(ым) команде(ам).
 
@@ -196,7 +194,5 @@ class CommandStart(Command):
             only_with_bot_username=only_with_bot_username,
         )
 
-    def __call__(
-        self, event: UpdateUnion
-    ) -> dict[str, list[str]] | bool:
+    def __call__(self, event: UpdateUnion) -> dict[str, list[str]] | bool:
         return super().__call__(event)

@@ -85,7 +85,9 @@ def main() -> None:
     if chat_id:
         print("Закрепление сообщения...")
         try:
-            bot.send_action(chat_id=int(chat_id), action=SenderAction.TYPING_ON)
+            bot.send_action(
+                chat_id=int(chat_id), action=SenderAction.TYPING_ON
+            )
             bot.pin_message(chat_id=int(chat_id), message_id=mid)
             print("Сообщение закреплено.")
         except Exception as exc:

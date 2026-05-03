@@ -111,9 +111,7 @@ class TestMessageIntegration:
         assert message.message is not None
         assert message.message.body.mid is not None
 
-    def test_send_message_with_formatting(
-        self, integration_bot, test_chat_id
-    ):
+    def test_send_message_with_formatting(self, integration_bot, test_chat_id):
         """Тест отправки сообщения с форматированием."""
         if not test_chat_id:
             pytest.skip("Не удалось получить test_chat_id")
