@@ -579,10 +579,13 @@ class TestDownloadFile:
         assert result == tmp_dir / "server_file.txt"
         assert result.read_bytes() == b"".join(chunks)
 
-    async def test_download_file_filename_with_path(
+    async def test_download_file__filename_with_path__dest_with_filename(
         self, bot, tmp_dir, mock_session
     ):
-        """Проверка: filename содержит путь"""
+        """Проверка:
+        - filename содержит путь
+        - destination содержит имя файла
+        """
         chunks = [b"binary"]
         url = "https://example.com/data"
         mock_response = _make_mock_response(
@@ -599,31 +602,20 @@ class TestDownloadFile:
             filename=destination / "filename.pdf",  # содержит путь
         )
 
-        # Файл должен быть сохранён внутри директории с переданным
+        # Файл должен быть сохранён внутри директории с переданным именем
         assert result == destination / "filename.pdf"
         assert result.read_bytes() == b"".join(chunks)
 
-    async def test_download_file_destination_with_filname(
-        self, bot, tmp_dir, mock_session
-    ):
-        """Проверка: destination содержит имя файла"""
-        chunks = [b"binary"]
-        url = "https://example.com/data"
-        mock_response = _make_mock_response(
-            url=url,
-            cd_filename="data.bin",
-            chunks=chunks,
-        )
-        mock_session.request = AsyncMock(return_value=mock_response)
-
-        destination = tmp_dir / "downloads"
+        mock_response.closed = False
         result = await bot.download_file(
             url=url,
-            destination=destination,
-            filename=destination / "filename.pdf",
+            destination=destination / "othername.jpg",  # содержит имя файла
+            filename="filename.pdf",
         )
 
-        # Файл должен быть сохранён внутри директории с переданным
+        # Файл должен быть сохранён внутри директории с переданным именем
+        # FIXME провал:
+        # Сохраняет в downloads/othername.jpg/filename.pdf
         assert result == destination / "filename.pdf"
         assert result.read_bytes() == b"".join(chunks)
 
