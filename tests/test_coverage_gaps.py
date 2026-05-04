@@ -553,11 +553,6 @@ class TestBaseConnectionUploadFallback:
         # Подменяем puremagic, чтобы вернуть распознаваемый MIME-матч,
         # и mimetypes.guess_extension — чтобы вернуть реальное расширение.
         fake_match = MagicMock()
-
-        def _fake_getitem(self_m, idx):
-            return "image/png" if idx == 1 else "mocked"
-
-        fake_match.__getitem__ = _fake_getitem
         type(fake_match).mime_type = PropertyMock(return_value="image/png")
 
         with (
