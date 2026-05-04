@@ -4,13 +4,14 @@ import warnings
 from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
+from ..enums.attachment import AttachmentType
 from ..enums.api_path import ApiPath
 from ..enums.http_method import HTTPMethod
 from ..enums.parse_mode import ParseMode, TextFormat
 from ..exceptions.max import MaxApiError
 from ..loggers import logger_bot
 from ..types.attachments import Attachments
-from ..types.attachments.attachment import Attachment
+from ..types.attachments.attachment import Attachment, ButtonsPayload
 from ..types.attachments.upload import AttachmentUpload
 from ..types.input_media import InputMedia, InputMediaBuffer
 from ..types.message import NewMessageLink
@@ -136,8 +137,8 @@ class SendMessage(BaseConnection):
             for att in self.attachments:
                 if (
                     isinstance(att, Attachment)
-                    and str(att.type) == "inline_keyboard"
-                    and hasattr(att.payload, "buttons")
+                    and att.type == AttachmentType.INLINE_KEYBOARD
+                    and isinstance(att.payload, ButtonsPayload)
                     and not any(att.payload.buttons)
                 ):
                     continue
