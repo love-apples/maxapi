@@ -4,8 +4,8 @@ import warnings
 from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
-from ..enums.attachment import AttachmentType
 from ..enums.api_path import ApiPath
+from ..enums.attachment import AttachmentType
 from ..enums.http_method import HTTPMethod
 from ..enums.parse_mode import ParseMode, TextFormat
 from ..exceptions.max import MaxApiError
