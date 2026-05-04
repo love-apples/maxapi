@@ -90,7 +90,7 @@ class InlineKeyboardBuilder:
         Собрать клавиатуру в объект для отправки.
 
         Returns:
-            Attachment: Объект вложения с типом INLINE_KEYBOARD.
+            AttachmentButton: Объект вложения с типом INLINE_KEYBOARD.
         """
 
         return AttachmentButton(
