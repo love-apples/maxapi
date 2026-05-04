@@ -142,7 +142,7 @@ def _make_mock_response(
     if url is not None:
         mock_response.url = URL(url)
     else:
-        mock_response.url = None
+        mock_response.url = URL()
 
     if chunks is not None:
         mock_response.content.iter_chunked = MagicMock(
@@ -214,40 +214,42 @@ class TestDownloadFile:
     async def test_download_file_path_as_str(self, bot, tmp_dir, mock_session):
         """Скачивание файла с корректным Content-Disposition."""
         chunks = [b"chunk1", b"chunk2", b"chunk3"]
-        url = REAL_URL_LINKS["file"]["url"]
+        url_case = REAL_URL_LINKS["file"]
+
         mock_response = _make_mock_response(
-            url=url,
+            url=url_case["url"],
             chunks=chunks,
-            cd_filename=REAL_URL_LINKS["file"]["cd_filename"],
+            cd_filename=url_case["cd_filename"],
         )
         mock_session.request = AsyncMock(return_value=mock_response)
 
         result = await bot.download_file(
-            url=url,
+            url=url_case["url"],
             destination=str(tmp_dir),
         )
 
-        assert result == tmp_dir / REAL_URL_LINKS["file"]["cd_filename"]
+        assert result == tmp_dir / url_case["expected"]
         assert result.read_bytes() == b"".join(chunks)
 
     async def test_download_file_success(self, bot, tmp_dir, mock_session):
         """Скачивание файла с корректным Content-Disposition."""
         chunks = [b"chunk1", b"chunk2", b"chunk3"]
+        url_case = REAL_URL_LINKS["file"]
 
         mock_response = _make_mock_response(
-            url=REAL_URL_LINKS["file"]["url"],
+            url=url_case["url"],
             content_type=REAL_URL_LINKS["file"]["content_type"],
-            cd_filename=REAL_URL_LINKS["file"]["cd_filename"],
+            cd_filename=url_case["cd_filename"],
             chunks=chunks,
         )
         mock_session.request = AsyncMock(return_value=mock_response)
 
         result = await bot.download_file(
-            url=REAL_URL_LINKS["file"]["url"],
+            url=url_case["url"],
             destination=tmp_dir,
         )
 
-        assert result == tmp_dir / REAL_URL_LINKS["file"]["cd_filename"]
+        assert result == tmp_dir / url_case["expected"]
         assert result.read_bytes() == b"".join(chunks)
 
     async def test_download_file_no_content_disposition(
@@ -580,7 +582,7 @@ class TestDownloadFile:
     async def test_download_file_filename_with_path(
         self, bot, tmp_dir, mock_session
     ):
-        """Проверка: файл соержить путь"""
+        """Проверка: filename содержит путь"""
         chunks = [b"binary"]
         url = "https://example.com/data"
         mock_response = _make_mock_response(
@@ -594,17 +596,17 @@ class TestDownloadFile:
         result = await bot.download_file(
             url=url,
             destination=destination,
-            filename=destination / "filename.pdf",
+            filename=destination / "filename.pdf",  # содержит путь
         )
 
-        # Файл должен быть сохранён внутри директории с именем от сервера
+        # Файл должен быть сохранён внутри директории с переданным
         assert result == destination / "filename.pdf"
         assert result.read_bytes() == b"".join(chunks)
 
     async def test_download_file_destination_with_filname(
         self, bot, tmp_dir, mock_session
     ):
-        """Проверка: файл соержить путь"""
+        """Проверка: destination содержит имя файла"""
         chunks = [b"binary"]
         url = "https://example.com/data"
         mock_response = _make_mock_response(
@@ -621,7 +623,7 @@ class TestDownloadFile:
             filename=destination / "filename.pdf",
         )
 
-        # Файл должен быть сохранён внутри директории с именем от сервера
+        # Файл должен быть сохранён внутри директории с переданным
         assert result == destination / "filename.pdf"
         assert result.read_bytes() == b"".join(chunks)
 
@@ -899,7 +901,10 @@ class TestDownloadFileAsBytes:
         """Покрытие: is_image=True, ext='', fallback на .webp"""
         # 1. Случай с изображением
         url = "https://i.oneme.ru/"  # Нет имени файла в URL
-        mock_response = _make_mock_response(url=url, content_type=None)  # type: ignore # Нет заголовка и content_type
+        mock_response = _make_mock_response(
+            url=url,
+            content_type=None,  # type: ignore # Нет заголовка и content_type
+        )
 
         filename = bot._capture_filename(mock_response)
 
