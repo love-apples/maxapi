@@ -13,7 +13,7 @@ Covers:
 from __future__ import annotations
 
 import warnings
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock, patch
 
 import pytest
 from maxapi.enums.chat_type import ChatType
@@ -558,6 +558,7 @@ class TestBaseConnectionUploadFallback:
             return "image/png" if idx == 1 else "mocked"
 
         fake_match.__getitem__ = _fake_getitem
+        type(fake_match).mime_type = PropertyMock(return_value="image/png")
 
         with (
             patch("maxapi.connection.base.puremagic.magic_string") as mock_pm,
