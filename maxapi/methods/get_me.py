@@ -18,7 +18,7 @@ class GetMe(BaseConnection):
     https://dev.max.ru/docs-api/methods/GET/me
 
     Args:
-        bot (Bot): Экземпляр бота для выполнения запроса.
+        bot: Экземпляр бота для выполнения запроса.
     """
 
     def __init__(self, bot: "Bot"):

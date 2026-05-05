@@ -92,7 +92,7 @@ class TestIterRouters:
         dp = Dispatcher()
         router = Router("r")
         mw = TrackingMiddleware("mw", [])
-        router.middleware(mw)
+        router.register_outer_middleware(mw)
         dp.include_routers(router)
 
         results = {r: mws for r, mws, *_ in dp._iter_routers(dp.routers)}
@@ -107,7 +107,9 @@ class TestIterRouters:
         router.filter(f)
         dp.include_routers(router)
 
-        results = {r: bfs for r, _, __, bfs in dp._iter_routers(dp.routers)}
+        results = {
+            r: bfs for r, _, __, ___, bfs in dp._iter_routers(dp.routers)
+        }
 
         assert results[router] == [f]
 
@@ -119,8 +121,8 @@ class TestIterRouters:
 
         mw_p = TrackingMiddleware("p", [])
         mw_c = TrackingMiddleware("c", [])
-        parent.middleware(mw_p)
-        child.middleware(mw_c)
+        parent.register_outer_middleware(mw_p)
+        child.register_outer_middleware(mw_c)
         parent.include_routers(child)
         dp.include_routers(parent)
 
@@ -141,7 +143,9 @@ class TestIterRouters:
         parent.include_routers(child)
         dp.include_routers(parent)
 
-        results = {r: bfs for r, _, __, bfs in dp._iter_routers(dp.routers)}
+        results = {
+            r: bfs for r, _, __, ___, bfs in dp._iter_routers(dp.routers)
+        }
 
         assert results[child] == [bf_p, bf_c]
 
@@ -157,9 +161,9 @@ class TestIterRouters:
         mw1 = TrackingMiddleware("1", [])
         mw2 = TrackingMiddleware("2", [])
         mw3 = TrackingMiddleware("3", [])
-        r1.middleware(mw1)
-        r2.middleware(mw2)
-        r3.middleware(mw3)
+        r1.register_outer_middleware(mw1)
+        r2.register_outer_middleware(mw2)
+        r3.register_outer_middleware(mw3)
 
         r2.include_routers(r3)
         r1.include_routers(r2)
@@ -191,7 +195,9 @@ class TestIterRouters:
         r1.include_routers(r2)
         dp.include_routers(r1)
 
-        results = {r: bfs for r, _, __, bfs in dp._iter_routers(dp.routers)}
+        results = {
+            r: bfs for r, _, __, ___, bfs in dp._iter_routers(dp.routers)
+        }
 
         assert results[r3] == [bf1, bf2, bf3]
 
@@ -202,7 +208,7 @@ class TestIterRouters:
         """
         dp = Dispatcher()
         mw = TrackingMiddleware("dp", [])
-        dp.middleware(mw)
+        dp.register_outer_middleware(mw)
         dp.routers.append(dp)
 
         results = {r: mws for r, mws, *_ in dp._iter_routers(dp.routers)}
@@ -233,7 +239,7 @@ class TestIterRouters:
         r_b = Router("b")
 
         mw_a = TrackingMiddleware("a", [])
-        r_a.middleware(mw_a)
+        r_a.register_outer_middleware(mw_a)
         dp.include_routers(r_a, r_b)
 
         results = {r: mws for r, mws, *_ in dp._iter_routers(dp.routers)}
@@ -443,7 +449,7 @@ class TestNestedMiddlewareInheritance:
         child = Router("child")
         log = []
 
-        parent.middleware(TrackingMiddleware("parent", log))
+        parent.register_outer_middleware(TrackingMiddleware("parent", log))
 
         @child.message_created()
         async def handler(event):
@@ -469,8 +475,8 @@ class TestNestedMiddlewareInheritance:
         child = Router("child")
         log = []
 
-        parent.middleware(TrackingMiddleware("parent", log))
-        child.middleware(TrackingMiddleware("child", log))
+        parent.register_outer_middleware(TrackingMiddleware("parent", log))
+        child.register_outer_middleware(TrackingMiddleware("child", log))
 
         @child.message_created()
         async def handler(event):
@@ -503,9 +509,9 @@ class TestNestedMiddlewareInheritance:
         r3 = Router("r3")
         log = []
 
-        r1.middleware(TrackingMiddleware("r1", log))
-        r2.middleware(TrackingMiddleware("r2", log))
-        r3.middleware(TrackingMiddleware("r3", log))
+        r1.register_outer_middleware(TrackingMiddleware("r1", log))
+        r2.register_outer_middleware(TrackingMiddleware("r2", log))
+        r3.register_outer_middleware(TrackingMiddleware("r3", log))
 
         @r3.message_created()
         async def handler(event):
@@ -540,7 +546,7 @@ class TestNestedMiddlewareInheritance:
         router_b = Router("b")
         log = []
 
-        router_a.middleware(BlockingMiddleware(log))
+        router_a.register_outer_middleware(BlockingMiddleware(log))
 
         @router_b.message_created()
         async def handler(event):
@@ -964,3 +970,362 @@ class TestNestedMagicFilterInheritance:
         await dp.handle(sample_message_created_event)
 
         assert called == []
+
+
+@pytest.mark.asyncio
+class TestInnerMiddleware:
+    """
+    Тесты для register_inner_middleware на уровнях Dispatcher и Router.
+
+    Inner middleware встраивается в handler.mw_chain при _prepare_handlers(),
+    поэтому все тесты вызывают dp._prepare_handlers(bot) перед handle().
+    """
+
+    async def test_global_inner_called_when_handler_matches(
+        self, bot, sample_message_created_event
+    ):
+        """
+        Глобальный inner вызывается, когда handler сработал.
+        """
+        dp = Dispatcher()
+        log = []
+
+        dp.register_inner_middleware(TrackingMiddleware("global_inner", log))
+
+        @dp.message_created()
+        async def handler(event):
+            log.append("handler")
+
+        dp.routers.append(dp)
+        dp._prepare_handlers(bot)
+        await dp.handle(sample_message_created_event)
+
+        assert log == ["global_inner:before", "handler", "global_inner:after"]
+
+    async def test_global_inner_not_called_when_no_handler_matches(
+        self, bot, sample_message_created_event
+    ):
+        """
+        Глобальный inner НЕ вызывается, если ни один handler не прошёл
+        фильтры.
+        """
+        dp = Dispatcher()
+        log = []
+
+        dp.register_inner_middleware(TrackingMiddleware("global_inner", log))
+
+        @dp.message_created(BlockFilter())
+        async def handler(event):
+            log.append("handler")
+
+        dp.routers.append(dp)
+        dp._prepare_handlers(bot)
+        await dp.handle(sample_message_created_event)
+
+        assert log == []
+
+    async def test_router_inner_called_when_router_handler_matches(
+        self, bot, sample_message_created_event
+    ):
+        """
+        Router inner вызывается только если сработал handler этого роутера.
+        """
+        dp = Dispatcher()
+        admin_router = Router("admin")
+        log = []
+
+        admin_router.register_inner_middleware(
+            TrackingMiddleware("admin_inner", log)
+        )
+
+        @admin_router.message_created()
+        async def handler(event):
+            log.append("handler")
+
+        dp.include_routers(admin_router)
+        dp.routers.append(dp)
+        dp._prepare_handlers(bot)
+        await dp.handle(sample_message_created_event)
+
+        assert log == [
+            "admin_inner:before",
+            "handler",
+            "admin_inner:after",
+        ]
+
+    async def test_router_inner_not_called_when_handler_filter_blocks(
+        self, bot, sample_message_created_event
+    ):
+        """
+        Router inner НЕ вызывается, если фильтр handler заблокировал событие.
+        """
+        dp = Dispatcher()
+        admin_router = Router("admin")
+        fallback_router = Router("fallback")
+        log = []
+
+        admin_router.register_inner_middleware(
+            TrackingMiddleware("admin_inner", log)
+        )
+
+        @admin_router.message_created(BlockFilter())
+        async def admin_handler(event):
+            log.append("admin_handler")
+
+        @fallback_router.message_created()
+        async def fallback_handler(event):
+            log.append("fallback_handler")
+
+        dp.include_routers(admin_router, fallback_router)
+        dp.routers.append(dp)
+        dp._prepare_handlers(bot)
+        await dp.handle(sample_message_created_event)
+
+        # admin_inner НЕ должен сработать — handler заблокирован фильтром
+        assert "admin_inner:before" not in log
+        assert "fallback_handler" in log
+
+    async def test_router_inner_not_called_for_sibling_router_handler(
+        self, bot, sample_message_created_event
+    ):
+        """
+        Router inner одного роутера не вызывается, когда сработал handler
+        соседнего роутера.
+        """
+        dp = Dispatcher()
+        router_a = Router("a")
+        router_b = Router("b")
+        log = []
+
+        router_a.register_inner_middleware(TrackingMiddleware("a_inner", log))
+
+        # Только у router_b есть handler
+        @router_b.message_created()
+        async def handler(event):
+            log.append("b_handler")
+
+        dp.include_routers(router_a, router_b)
+        dp.routers.append(dp)
+        dp._prepare_handlers(bot)
+        await dp.handle(sample_message_created_event)
+
+        # a_inner не должен сработать
+        assert log == ["b_handler"]
+
+    async def test_global_inner_and_router_inner_order(
+        self, bot, sample_message_created_event
+    ):
+        """
+        Глобальный inner оборачивает router inner, который оборачивает
+        handler-mw: порядок global_inner → router_inner → handler.
+        """
+        dp = Dispatcher()
+        router = Router("r")
+        log = []
+
+        dp.register_inner_middleware(TrackingMiddleware("global_inner", log))
+        router.register_inner_middleware(
+            TrackingMiddleware("router_inner", log)
+        )
+
+        @router.message_created()
+        async def handler(event):
+            log.append("handler")
+
+        dp.include_routers(router)
+        dp.routers.append(dp)
+        dp._prepare_handlers(bot)
+        await dp.handle(sample_message_created_event)
+
+        assert log == [
+            "global_inner:before",
+            "router_inner:before",
+            "handler",
+            "router_inner:after",
+            "global_inner:after",
+        ]
+
+    async def test_child_inherits_parent_router_inner(
+        self, bot, sample_message_created_event
+    ):
+        """
+        Inner middleware родительского роутера применяется к handler дочернего.
+        """
+        dp = Dispatcher()
+        parent = Router("parent")
+        child = Router("child")
+        log = []
+
+        parent.register_inner_middleware(
+            TrackingMiddleware("parent_inner", log)
+        )
+
+        @child.message_created()
+        async def handler(event):
+            log.append("handler")
+
+        parent.include_routers(child)
+        dp.include_routers(parent)
+        dp.routers.append(dp)
+        dp._prepare_handlers(bot)
+        await dp.handle(sample_message_created_event)
+
+        assert log == [
+            "parent_inner:before",
+            "handler",
+            "parent_inner:after",
+        ]
+
+    async def test_child_router_inner_not_applied_to_parent_handler(
+        self, bot, sample_message_created_event
+    ):
+        """
+        Inner middleware дочернего роутера НЕ применяется к handler родителя.
+        """
+        dp = Dispatcher()
+        parent = Router("parent")
+        child = Router("child")
+        log = []
+
+        child.register_inner_middleware(TrackingMiddleware("child_inner", log))
+
+        @parent.message_created()
+        async def handler(event):
+            log.append("parent_handler")
+
+        parent.include_routers(child)
+        dp.include_routers(parent)
+        dp.routers.append(dp)
+        dp._prepare_handlers(bot)
+        await dp.handle(sample_message_created_event)
+
+        # child_inner не должен сработать для parent_handler
+        assert log == ["parent_handler"]
+
+    async def test_outer_called_before_inner(
+        self, bot, sample_message_created_event
+    ):
+        """
+        Router outer вызывается до проверки фильтров, inner — только после
+        того, как handler прошёл фильтры. Оба вызываются при совпадении.
+        """
+        dp = Dispatcher()
+        router = Router("r")
+        log = []
+
+        router.register_outer_middleware(TrackingMiddleware("outer", log))
+        router.register_inner_middleware(TrackingMiddleware("inner", log))
+
+        @router.message_created()
+        async def handler(event):
+            log.append("handler")
+
+        dp.include_routers(router)
+        dp.routers.append(dp)
+        dp._prepare_handlers(bot)
+        await dp.handle(sample_message_created_event)
+
+        assert log == [
+            "outer:before",
+            "inner:before",
+            "handler",
+            "inner:after",
+            "outer:after",
+        ]
+
+    async def test_outer_called_even_when_filter_blocks(
+        self, bot, sample_message_created_event
+    ):
+        """
+        Router outer вызывается даже если filter заблокировал handler.
+        Inner при этом НЕ вызывается.
+        """
+        dp = Dispatcher()
+        router_blocked = Router("blocked")
+        router_fallback = Router("fallback")
+        log = []
+
+        router_blocked.register_outer_middleware(
+            TrackingMiddleware("outer", log)
+        )
+        router_blocked.register_inner_middleware(
+            TrackingMiddleware("inner", log)
+        )
+
+        @router_blocked.message_created(BlockFilter())
+        async def blocked_handler(event):
+            log.append("blocked_handler")
+
+        @router_fallback.message_created()
+        async def fallback_handler(event):
+            log.append("fallback_handler")
+
+        dp.include_routers(router_blocked, router_fallback)
+        dp.routers.append(dp)
+        dp._prepare_handlers(bot)
+        await dp.handle(sample_message_created_event)
+
+        assert "outer:before" in log
+        assert "inner:before" not in log
+        assert "fallback_handler" in log
+
+    async def test_deprecated_middleware_method_acts_as_outer(
+        self, bot, sample_message_created_event
+    ):
+        """
+        Устаревший dp.middleware() ведёт себя как outer —
+        поведение не изменилось (вызывается до проверки фильтров handler).
+        """
+        import warnings
+
+        dp = Dispatcher()
+        log = []
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            dp.middleware(TrackingMiddleware("old_outer", log))
+
+        @dp.message_created(BlockFilter())
+        async def blocked_handler(event):
+            log.append("blocked_handler")
+
+        dp.routers.append(dp)
+        dp._prepare_handlers(bot)
+        await dp.handle(sample_message_created_event)
+
+        # global outer вызывается для каждого события
+        assert "old_outer:before" in log
+        assert "blocked_handler" not in log
+
+    async def test_register_outer_middleware_append_order(self):
+        """
+        register_outer_middleware добавляет middleware в конец списка
+        (append) — register order = execution order.
+        Это отличается от исторического outer_middleware(), который
+        делал insert(0, ...).
+        """
+        dp = Dispatcher()
+        mw1 = TrackingMiddleware("mw1", [])
+        mw2 = TrackingMiddleware("mw2", [])
+
+        dp.register_outer_middleware(mw1)
+        dp.register_outer_middleware(mw2)
+
+        # mw1 зарегистрирован первым — он первый в списке (append)
+        assert dp.outer_middlewares[0] is mw1
+        assert dp.outer_middlewares[1] is mw2
+
+    async def test_register_inner_middleware_append_order(self):
+        """
+        register_inner_middleware добавляет middleware в конец списка
+        (append), то есть первый зарегистрированный — самый внешний.
+        """
+        dp = Dispatcher()
+        mw1 = TrackingMiddleware("mw1", [])
+        mw2 = TrackingMiddleware("mw2", [])
+
+        dp.register_inner_middleware(mw1)
+        dp.register_inner_middleware(mw2)
+
+        assert dp.inner_middlewares[0] is mw1
+        assert dp.inner_middlewares[1] is mw2

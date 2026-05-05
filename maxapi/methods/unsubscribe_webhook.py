@@ -19,8 +19,8 @@ class UnsubscribeWebhook(BaseConnection):
     https://dev.max.ru/docs-api/methods/DELETE/subscriptions
 
     Attributes:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        url (str): URL, который нужно удалить из подписок на WebHook
+        bot: Экземпляр бота для выполнения запроса.
+        url: URL, который нужно удалить из подписок на WebHook
     """
 
     def __init__(

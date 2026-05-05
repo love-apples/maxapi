@@ -16,8 +16,8 @@ class GetChatById(BaseConnection):
     https://dev.max.ru/docs-api/methods/GET/chats/-chatId-
 
     Attributes:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        id (int): Идентификатор чата.
+        bot: Экземпляр бота для выполнения запроса.
+        id: Идентификатор чата.
     """
 
     def __init__(self, bot: "Bot", id: int):

@@ -9,8 +9,8 @@ class Location(Attachment):
     Вложение с типом геолокации.
 
     Attributes:
-        latitude (Optional[float]): Широта.
-        longitude (Optional[float]): Долгота.
+        latitude: Широта.
+        longitude: Долгота.
     """
 
     type: Literal[AttachmentType.LOCATION]  # pyright: ignore[reportIncompatibleVariableOverride]

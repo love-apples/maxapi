@@ -23,13 +23,13 @@ class EditChat(BaseConnection):
     https://dev.max.ru/docs-api/methods/PATCH/chats/-chatId-
 
     Attributes:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        chat_id (int): Идентификатор чата для редактирования.
-        icon (PhotoAttachmentRequestPayload, optional): Новый значок
+        bot: Экземпляр бота для выполнения запроса.
+        chat_id: Идентификатор чата для редактирования.
+        icon: Новый значок
             (иконка) чата.
-        title (str, optional): Новое название чата.
-        pin (str, optional): Идентификатор закреплённого сообщения.
-        notify (bool, optional): Включение или отключение уведомлений
+        title: Новое название чата.
+        pin: Идентификатор закреплённого сообщения.
+        notify: Включение или отключение уведомлений
             (по умолчанию True).
     """
 

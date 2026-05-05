@@ -11,9 +11,9 @@ class PhotoAttachmentRequestPayload(BaseModel):
     Полезная нагрузка для запроса фото-вложения.
 
     Attributes:
-        url (Optional[str]): URL изображения.
-        token (Optional[str]): Токен доступа к изображению.
-        photos (Optional[str]): Дополнительные данные о фотографиях.
+        url: URL изображения.
+        token: Токен доступа к изображению.
+        photos: Дополнительные данные о фотографиях.
     """
 
     url: str | None = None
@@ -26,7 +26,7 @@ class Image(Attachment):
     Вложение с типом изображения.
 
     Attributes:
-        type (Literal['image']): Тип вложения, всегда 'image'.
+        type: Тип вложения, всегда 'image'.
     """
 
     type: Literal[AttachmentType.IMAGE]  # pyright: ignore[reportIncompatibleVariableOverride]

@@ -6,7 +6,7 @@ from magic_filter import MagicFilter
 from ..context.state_machine import State
 from ..enums.update import UpdateType
 from ..filters.filter import BaseFilter
-from ..filters.middleware import BaseMiddleware
+from ..filters.middleware import BaseMiddleware, HandlerCallable
 from ..loggers import logger_dp
 
 
@@ -28,11 +28,11 @@ class Handler:
         Создаёт обработчик события.
 
         Args:
-            *args (Any): Список фильтров (MagicFilter, State, Command,
+            *args: Список фильтров (MagicFilter, State, Command,
                 BaseFilter, BaseMiddleware).
-            func_event (Callable): Функция-обработчик.
-            update_type (UpdateType): Тип обновления.
-            **kwargs (Any): Дополнительные параметры.
+            func_event: Функция-обработчик.
+            update_type: Тип обновления.
+            **kwargs: Дополнительные параметры.
         """
 
         self.func_event: Callable = func_event
@@ -50,7 +50,7 @@ class Handler:
         self.middlewares: list[BaseMiddleware] = []
 
         self.func_args: frozenset[str] | None = None
-        self.mw_chain: Callable | None = None
+        self.mw_chain: HandlerCallable | None = None
 
         for arg in args:
             if isinstance(arg, MagicFilter):

@@ -22,6 +22,7 @@ from ..utils.formatting import (
     Underline,
     UserMention,
 )
+from ..utils.message_link import build_message_link
 from .users import User
 
 if TYPE_CHECKING:
@@ -42,9 +43,9 @@ class MarkupElement(BaseModel):
     Модель элемента разметки текста.
 
     Attributes:
-        type (TextStyle): Тип разметки.
-        from_ (int): Начальная позиция разметки в тексте.
-        length (int): Длина разметки.
+        type: Тип разметки.
+        from_: Начальная позиция разметки в тексте.
+        length: Длина разметки.
     """
 
     type: TextStyle
@@ -61,7 +62,7 @@ class MarkupLink(MarkupElement):
     Модель разметки ссылки.
 
     Attributes:
-        url (Optional[str]): URL ссылки. Может быть None.
+        url: URL ссылки. Может быть None.
     """
 
     type: Literal[TextStyle.LINK] = TextStyle.LINK
@@ -73,8 +74,8 @@ class MarkupUserMention(MarkupElement):
     Модель разметки упоминания пользователя.
 
     Attributes:
-        user_id (Optional[int]): Идентификатор пользователя. Может быть None.
-        user_link (Optional[str]): Ссылка на пользователя. Может быть None.
+        user_id: Идентификатор пользователя. Может быть None.
+        user_link: Ссылка на пользователя. Может быть None.
     """
 
     type: Literal[TextStyle.USER_MENTION] = TextStyle.USER_MENTION
@@ -87,9 +88,9 @@ class Recipient(BaseModel):
     Модель получателя сообщения.
 
     Attributes:
-        user_id (Optional[int]): Идентификатор пользователя. Может быть None.
-        chat_id (Optional[int]): Идентификатор чата. Может быть None.
-        chat_type (ChatType): Тип получателя (диалог или чат).
+        user_id: Идентификатор пользователя. Может быть None.
+        chat_id: Идентификатор чата. Может быть None.
+        chat_type: Тип получателя (диалог или чат).
     """
 
     user_id: int | None = None
@@ -102,14 +103,11 @@ class MessageBody(BaseModel):
     Модель тела сообщения.
 
     Attributes:
-        mid (str): Уникальный идентификатор сообщения.
-        seq (int): Порядковый номер сообщения.
-        text (str): Текст сообщения. Может быть None.
-        attachments (Optional[List[Union[AttachmentButton, Audio, Video,
-            File, Image, Sticker, Share]]]):
-            Список вложений. По умолчанию пустой.
-        markup (Optional[List[Union[MarkupLink, MarkupUserMention,
-            MarkupElement]]]): Список элементов разметки. По умолчанию пустой.
+        mid: Уникальный идентификатор сообщения.
+        seq: Порядковый номер сообщения.
+        text: Текст сообщения. Может быть None.
+        attachments: Список вложений. По умолчанию пустой список.
+        markup: Список элементов разметки. По умолчанию пустой список.
     """
 
     mid: str
@@ -275,7 +273,7 @@ class MessageStat(BaseModel):
     Модель статистики сообщения.
 
     Attributes:
-        views (int): Количество просмотров сообщения.
+        views: Количество просмотров сообщения.
     """
 
     views: int
@@ -286,12 +284,12 @@ class LinkedMessage(BaseModel):
     Модель связанного сообщения.
 
     Attributes:
-        type (MessageLinkType): Тип связи.
-        sender (Optional[User]): Отправитель связанного сообщения,
+        type: Тип связи.
+        sender: Отправитель связанного сообщения,
             может быть None, если связанное сообщение отправлено каналом
             https://github.com/love-apples/maxapi/issues/11.
-        chat_id (Optional[int]): Идентификатор чата. Может быть None.
-        message (MessageBody): Тело связанного сообщения.
+        chat_id: Идентификатор чата. Может быть None.
+        message: Тело связанного сообщения.
     """
 
     type: MessageLinkType
@@ -310,27 +308,32 @@ class Message(
     Модель сообщения.
 
     Attributes:
-        sender (Optional[User]): Отправитель сообщения, может быть None,
+        sender: Отправитель сообщения, может быть None,
             если сообщение отправлено каналом
             https://github.com/love-apples/maxapi/discussions/14.
-        recipient (Recipient): Получатель сообщения.
-        timestamp (int): Временная метка сообщения.
-        link (Optional[LinkedMessage]): Связанное сообщение. Может быть None.
-        body (Optional[MessageBody]): Содержимое сообщения.
-            Текст + вложения. Может быть null, если сообщение содержит
+        recipient: Получатель сообщения.
+        timestamp: Временная метка сообщения.
+        link: Связанное сообщение. Может быть None.
+        body: Содержимое сообщения.
+            Текст + вложения. Может быть None, если сообщение содержит
             только пересланное сообщение
-        stat (Optional[MessageStat]): Статистика сообщения. Может быть None.
-        url (Optional[str]): URL сообщения. Может быть None.
-        bot (Optional[Bot]): Объект бота, исключается из сериализации.
+        stat: Статистика сообщения. Может быть None.
+        url: URL сообщения. Может быть None.
+        bot: Объект бота, исключается из сериализации.
     """
 
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
     sender: User | None = None
     recipient: Recipient
     timestamp: int
     link: LinkedMessage | None = None
     body: MessageBody | None = None
     stat: MessageStat | None = None
-    url: str | None = None
+    url_api: str | None = Field(
+        # Поле для хранения сырого url из ответа API
+        alias="url",
+        default=None,
+    )
     bot: Any | None = Field(  # pyright: ignore[reportRedeclaration]
         default=None, exclude=True
     )
@@ -368,19 +371,17 @@ class Message(
         Отправляет сообщение (автозаполнение chat_id, user_id).
 
         Args:
-            text (str, optional): Текст ответа. Может быть None.
-            attachments (List[Attachment | InputMedia | InputMediaBuffer
-                | AttachmentUpload], optional): Список вложений.
+            text: Текст ответа. Может быть None.
+            attachments: Список вложений. Может быть None.
+            link: Связь с другим сообщением.
                 Может быть None.
-            link (NewMessageLink, optional): Связь с другим сообщением.
+            format: Режим форматирования текста.
                 Может быть None.
-            format (TextFormat, optional): Режим форматирования текста.
+            parse_mode: Режим форматирования текста.
                 Может быть None.
-            parse_mode (ParseMode, optional): Режим форматирования текста.
-                Может быть None.
-            notify (bool): Флаг отправки уведомления. По умолчанию True.
-            disable_link_preview (bool, optional): Флаг генерации превью.
-            sleep_after_input_media (bool, optional): Флаг задержки
+            notify: Флаг отправки уведомления. По умолчанию True.
+            disable_link_preview: Флаг генерации превью.
+            sleep_after_input_media: Флаг задержки
                 после отправки вложений типа InputMedia. По умолчанию True.
 
         Returns:
@@ -417,17 +418,16 @@ class Message(
         Отправляет ответное сообщение (автозаполнение chat_id, user_id, link).
 
         Args:
-            text (str, optional): Текст ответа. Может быть None.
-            attachments (List[Attachment | InputMedia | InputMediaBuffer
-                | AttachmentUpload], optional): Список вложений.
+            text: Текст ответа. Может быть None.
+            attachments: Список вложений. Может быть None.
+            notify: Флаг отправки уведомления. По умолчанию True.
+            format: Режим форматирования текста.
                 Может быть None.
-            notify (bool): Флаг отправки уведомления. По умолчанию True.
-            format (TextFormat, optional): Режим форматирования текста.
+            parse_mode: Режим форматирования текста.
                 Может быть None.
-            parse_mode (ParseMode, optional): Режим форматирования текста.
-                Может быть None.
-            disable_link_preview (bool, optional): Флаг генерации превью.
-            sleep_after_input_media: Optional[bool] = True,
+            disable_link_preview: Флаг генерации превью.
+            sleep_after_input_media: Флаг задержки
+                после отправки вложений типа InputMedia. По умолчанию True.
 
         Returns:
             Optional[SendedMessage]: Результат выполнения метода
@@ -475,20 +475,19 @@ class Message(
         (автозаполнение link)
 
         Args:
-            chat_id (int): ID чата для отправки (обязателен, если не
+            chat_id: ID чата для отправки (обязателен, если не
                 указан user_id)
-            user_id (int): ID пользователя для отправки (обязателен,
+            user_id: ID пользователя для отправки (обязателен,
                 если не указан chat_id). По умолчанию None
-            attachments (List[Attachment | InputMedia | InputMediaBuffer
-                | AttachmentUpload], optional): Список вложений.
-                Может быть None.
-            notify (bool): Флаг отправки уведомления. По умолчанию True.
-            format (TextFormat, optional): Режим форматирования
+            attachments: Список вложений. Может быть None.
+            notify: Флаг отправки уведомления. По умолчанию True.
+            format: Режим форматирования
                 текста. Может быть None.
-            parse_mode (ParseMode, optional): Режим форматирования
+            parse_mode: Режим форматирования
                 текста. Может быть None.
-            disable_link_preview (bool, optional): Флаг генерации превью.
-            sleep_after_input_media: Optional[bool] = True,
+            disable_link_preview: Флаг генерации превью.
+            sleep_after_input_media: Флаг задержки
+                после отправки вложений типа InputMedia. По умолчанию True.
 
         Returns:
             Optional[SendedMessage]: Результат выполнения метода
@@ -532,17 +531,16 @@ class Message(
         Редактирует текущее сообщение.
 
         Args:
-            text (str, optional): Новый текст сообщения. Может быть None.
-            attachments (List[Attachment | InputMedia | InputMediaBuffer |
-                AttachmentUpload], optional): Новые вложения. Может быть None.
-            link (NewMessageLink, optional): Новая связь с сообщением.
+            text: Новый текст сообщения. Может быть None.
+            attachments: Новые вложения. Может быть None.
+            link: Новая связь с сообщением.
                 Может быть None.
-            format (TextFormat, optional): Режим форматирования текста.
+            format: Режим форматирования текста.
                 Может быть None.
-            parse_mode (ParseMode, optional): Режим форматирования текста.
+            parse_mode: Режим форматирования текста.
                 Может быть None.
-            notify (bool): Флаг отправки уведомления. По умолчанию True.
-            sleep_after_input_media (bool, optional): Флаг задержки
+            notify: Флаг отправки уведомления. По умолчанию True.
+            sleep_after_input_media: Флаг задержки
                 после отправки вложений типа InputMedia. По умолчанию True.
         Returns:
             Optional[EditedMessage]: Результат выполнения метода
@@ -597,7 +595,7 @@ class Message(
         Закрепляет текущее сообщение в чате.
 
         Args:
-            notify (bool): Флаг отправки уведомления. По умолчанию True.
+            notify: Флаг отправки уведомления. По умолчанию True.
 
         Returns:
             PinnedMessage: Результат выполнения метода pin_message бота.
@@ -631,14 +629,33 @@ class Message(
             chat_id=self.recipient.chat_id,
         )
 
+    @property
+    def url(self) -> str | None:
+        """
+        Прямая ссылка на сообщение в интерфейсе MAX
+
+        Returns:
+            str: Ссылка на сообщение в формате
+                - Для диалогов и групповых чатов:
+                  https://max.ru/c/{chat_id}/{seq_b64}
+                - Постов в канале:
+                  https://max.ru/{channel_name}/{seq_b64}
+            None: Если объект Message не содержит в себе body
+        """
+        if self.url_api:
+            return self.url_api
+        elif self.body:
+            return build_message_link(self.body.mid)
+        return None
+
 
 class Messages(BaseModel):
     """
     Модель списка сообщений.
 
     Attributes:
-        messages (List[Message]): Список сообщений.
-        bot (Optional[Bot]): Объект бота, исключается из сериализации.
+        messages: Список сообщений.
+        bot: Объект бота, исключается из сериализации.
     """
 
     messages: list[Message]
@@ -655,8 +672,8 @@ class NewMessageLink(BaseModel):
     Модель ссылки на новое сообщение.
 
     Attributes:
-        type (MessageLinkType): Тип связи.
-        mid (str): Идентификатор сообщения.
+        type: Тип связи.
+        mid: Идентификатор сообщения.
     """
 
     type: MessageLinkType

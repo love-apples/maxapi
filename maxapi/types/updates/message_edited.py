@@ -15,7 +15,7 @@ class MessageEdited(BaseUpdate):
     Обновление, сигнализирующее об изменении сообщения.
 
     Attributes:
-        message (Message): Объект измененного сообщения.
+        message: Объект измененного сообщения.
     """
 
     message: Message

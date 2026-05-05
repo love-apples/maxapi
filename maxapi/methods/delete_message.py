@@ -16,8 +16,8 @@ class DeleteMessage(BaseConnection):
     https://dev.max.ru/docs-api/methods/DELETE/messages
 
     Attributes:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        message_id (str): Идентификатор сообщения, которое нужно удалить.
+        bot: Экземпляр бота для выполнения запроса.
+        message_id: Идентификатор сообщения, которое нужно удалить.
     """
 
     def __init__(

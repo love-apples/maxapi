@@ -121,22 +121,6 @@ class TestDispatcherConfig:
         dp.filter(mock_filter)
         assert mock_filter in dp.base_filters
 
-    def test_middleware_appends(self, dp):
-        """Dispatcher.middleware добавляет middleware в конец списка."""
-        mw1 = Mock()
-        mw2 = Mock()
-        dp.middleware(mw1)
-        dp.middleware(mw2)
-        assert dp.middlewares == [mw1, mw2]
-
-    def test_outer_middleware_prepends(self, dp):
-        """Dispatcher.outer_middleware добавляет middleware в начало."""
-        mw1 = Mock()
-        mw2 = Mock()
-        dp.middleware(mw1)
-        dp.outer_middleware(mw2)
-        assert dp.middlewares[0] is mw2
-
     def test_include_routers(self, dp):
         """Dispatcher.include_routers добавляет роутеры в список."""
         r1 = Router(router_id="r1")

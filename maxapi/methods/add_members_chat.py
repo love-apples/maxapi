@@ -16,9 +16,9 @@ class AddMembersChat(BaseConnection):
     https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members
 
     Attributes:
-        bot (Bot): Экземпляр бота, через который выполняется запрос.
-        chat_id (int): Идентификатор целевого чата.
-        user_ids (List[int]): Список ID пользователей для добавления в чат.
+        bot: Экземпляр бота, через который выполняется запрос.
+        chat_id: Идентификатор целевого чата.
+        user_ids: Список ID пользователей для добавления в чат.
     """
 
     def __init__(

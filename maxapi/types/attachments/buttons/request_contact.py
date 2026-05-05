@@ -9,7 +9,7 @@ class RequestContactButton(Button):
     Кнопка с контактом
 
     Attributes:
-        text (str): Текст кнопки
+        text: Текст кнопки
     """
 
     type: Literal[ButtonType.REQUEST_CONTACT] = ButtonType.REQUEST_CONTACT

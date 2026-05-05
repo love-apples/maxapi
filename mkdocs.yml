@@ -226,6 +226,7 @@ nav:
       - Message_edited: types/updates/message_edited.md
       - Message_removed: types/updates/message_removed.md
       - Overview: types/updates/index.md
+      - BaseUpdate: types/updates/base_update.md
       - Update: types/updates/update.md
       - User_added: types/updates/user_added.md
       - User_removed: types/updates/user_removed.md

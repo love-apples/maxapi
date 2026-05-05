@@ -30,13 +30,11 @@ class MessageForCallback(BaseModel):
     Модель сообщения для ответа на callback-запрос.
 
     Attributes:
-        text (Optional[str]): Текст сообщения.
-        attachments (Optional[List[Union[AttachmentButton, Audio, Video,
-            File, Image, Sticker, Share]]]):
-            Список вложений.
-        link (Optional[NewMessageLink]): Связь с другим сообщением.
-        notify (Optional[bool]): Отправлять ли уведомление.
-        format (Optional[ParseMode]): Режим разбора текста.
+        text: Текст сообщения.
+        attachments: Список вложений. По умолчанию пустой список.
+        link: Связь с другим сообщением.
+        notify: Отправлять ли уведомление.
+        format: Режим разбора текста.
     """
 
     text: str | None = None
@@ -51,11 +49,11 @@ class MessageCallback(BaseUpdate):
     Обновление с callback-событием сообщения.
 
     Attributes:
-        message (Optional[Message]): Изначальное сообщение, содержащее
-            встроенную клавиатуру. Может быть null, если оно было
+        message: Изначальное сообщение, содержащее
+            встроенную клавиатуру. Может быть None, если оно было
             удалено к моменту, когда бот получил это обновление.
-        user_locale (Optional[str]): Локаль пользователя.
-        callback (Callback): Объект callback.
+        user_locale: Локаль пользователя.
+        callback: Объект callback.
     """
 
     message: Message | None = None
@@ -231,15 +229,15 @@ class MessageCallback(BaseUpdate):
         raise_if_not_exists: bool = True,
     ) -> SendedCallback:
         """
-        Отправляет ответ на callback с возможностью изменить текст,
-        вложения и параметры уведомления.
+        Отправляет ответ на callback с возможностью изменить текст
+        и параметры уведомления.
 
         Args:
-            notification (str): Текст уведомления.
-            new_text (Optional[str]): Новый текст сообщения.
-            link (Optional[NewMessageLink]): Связь с другим сообщением.
-            notify (bool): Отправлять ли уведомление.
-            format (Optional[ParseMode]): Режим разбора текста.
+            notification: Текст уведомления.
+            new_text: Новый текст сообщения.
+            link: Связь с другим сообщением.
+            notify: Отправлять ли уведомление.
+            format: Режим разбора текста.
             raise_if_not_exists: Выдавать ошибку при отсутствии сообщения,
                 если пытаются изменить его содержимое (new_text/link/format).
 

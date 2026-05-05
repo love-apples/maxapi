@@ -30,18 +30,18 @@ class EditMessage(BaseConnection):
     https://dev.max.ru/docs-api/methods/PUT/messages
 
     Attributes:
-        bot (Bot): Экземпляр бота для выполнения запроса.
-        message_id (str): Идентификатор сообщения для редактирования.
-        text (Optional[str]): Новый текст сообщения.
-        attachments (List[Attachment | InputMedia | InputMediaBuffer] | None):
+        bot: Экземпляр бота для выполнения запроса.
+        message_id: Идентификатор сообщения для редактирования.
+        text: Новый текст сообщения.
+        attachments:
             Список вложений для сообщения.
-        link (Optional[NewMessageLink]): Связь с другим сообщением
+        link: Связь с другим сообщением
             (например, ответ или пересылка).
-        notify (Optional[bool]): Отправлять ли уведомление о сообщении.
+        notify: Отправлять ли уведомление о сообщении.
             По умолчанию True.
-        format (Optional[TextFormat]): Формат разметки текста
+        format: Формат разметки текста
             (например, Markdown, HTML).
-        parse_mode (Optional[ParseMode]): Устаревший формат разметки текста
+        parse_mode: Устаревший формат разметки текста
             (например, Markdown, HTML).
     """
 

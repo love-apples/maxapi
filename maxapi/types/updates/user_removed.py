@@ -7,21 +7,20 @@ from .base_update import BaseUpdate
 
 class UserRemoved(BaseUpdate):
     """
-    Класс для обработки события выходе/удаления пользователя из чата.
+    Класс для обработки события выхода/удаления пользователя из чата.
 
     Attributes:
-        admin_id (Optional[int]): Идентификатор администратора,
-            удалившего пользователя. None при выходе из чата самим
-            пользователем.
-        chat_id (int): Идентификатор чата. Может быть None.
-        user (User): Объект пользователя, удаленного из чата.
-        is_channel (bool): Указывает, был ли пользователь удален
-            из канала или нет
+        chat_id: ID чата, где произошло событие
+        user: Пользователь, удалённый из чата
+        admin_id: Администратор, который удалил пользователя из чата.
+            Может быть None, если пользователь покинул чат сам
+        is_channel: Указывает, был ли пользователь удалён из канала или
+            нет
     """
 
-    admin_id: int | None = None
     chat_id: int
     user: User
+    admin_id: int | None = None
     is_channel: bool
     update_type: Literal[UpdateType.USER_REMOVED] = UpdateType.USER_REMOVED
 

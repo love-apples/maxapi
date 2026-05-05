@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from types import UnionType
 from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
+    Union,
+    get_args,
+    get_origin,
 )
 
 from pydantic import BaseModel
@@ -24,9 +28,9 @@ class CallbackPayload(BaseModel):
     Базовый класс для сериализации/десериализации callback payload.
 
     Атрибуты:
-        prefix (str): Префикс для payload (используется при pack/unpack)
+        prefix: Префикс для payload (используется при pack/unpack)
             (по умолчанию название класса).
-        separator (str): Разделитель между значениями (по умолчанию '|').
+        separator: Разделитель между значениями (по умолчанию '|').
     """
 
     if TYPE_CHECKING:
@@ -82,7 +86,7 @@ class CallbackPayload(BaseModel):
         Десериализует payload из строки.
 
         Args:
-            data (str): Строка payload (из callback payload).
+            data: Строка payload (из callback payload).
 
         Raises:
             ValueError: Некорректный prefix или количество аргументов.
@@ -104,9 +108,26 @@ class CallbackPayload(BaseModel):
                 f"получено {len(parts) - 1}"
             )
 
-        kwargs = dict(zip(field_names, parts[1:], strict=True))
+        kwargs: dict[str, Any] = {}
+        for field_name, raw_value in zip(field_names, parts[1:], strict=True):
+            if raw_value == "" and cls._is_nullable_field(field_name):
+                kwargs[field_name] = None
+            else:
+                kwargs[field_name] = raw_value
+
         # noinspection PyArgumentList
         return cls(**kwargs)
+
+    @classmethod
+    def _is_nullable_field(cls, field_name: str) -> bool:
+        field = cls.model_fields[field_name]
+        annotation = field.annotation
+        origin = get_origin(annotation)
+
+        if origin in (Union, UnionType):
+            return type(None) in get_args(annotation)
+
+        return False
 
     @classmethod
     def attrs(cls) -> list[str]:
@@ -130,7 +151,7 @@ class CallbackPayload(BaseModel):
         Создаёт PayloadFilter для фильтрации callback-ивентов по payload.
 
         Args:
-            rule (Optional[MagicFilter]): Фильтр на payload.
+            rule: Фильтр на payload.
 
         Returns:
             PayloadFilter: Экземпляр фильтра для хэндлера.
@@ -147,8 +168,8 @@ class PayloadFilter(BaseFilter):
     def __init__(self, model: type[CallbackPayload], rule: MagicFilter | None):
         """
         Args:
-            model (Type[CallbackPayload]): Класс payload для распаковки.
-            rule (Optional[MagicFilter]): Фильтр (условие) для payload.
+            model: Класс payload для распаковки.
+            rule: Фильтр (условие) для payload.
         """
 
         self.model = model
@@ -159,7 +180,7 @@ class PayloadFilter(BaseFilter):
         Проверяет event на MessageCallback и применяет фильтр к payload.
 
         Args:
-            event (UpdateUnion): Обновление/событие.
+            event: Обновление/событие.
 
         Returns:
             dict | bool: dict с payload при совпадении, иначе False.

@@ -235,8 +235,8 @@ async def enrich_event(event_object: UpdateUnion, bot: Bot) -> UpdateUnion:
     Дополняет объект события данными чата, пользователя и ссылкой на бота.
 
     Args:
-        event_object (UpdateUnion): Событие, которое нужно дополнить.
-        bot (Bot): Экземпляр бота.
+        event_object: Событие, которое нужно дополнить.
+        bot: Экземпляр бота.
 
     Returns:
         UpdateUnion: Обновлённый объект события.
