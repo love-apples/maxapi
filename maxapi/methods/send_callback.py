@@ -6,6 +6,10 @@ from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
 from ..enums.http_method import HTTPMethod
 from ..methods.types.sended_callback import SendedCallback
+from ..types.attachments.attachment import Attachment
+from ..types.attachments.upload import AttachmentUpload
+from ..types.input_media import InputMedia, InputMediaBuffer
+from ..utils.message import process_input_media
 
 if TYPE_CHECKING:
     from ..bot import Bot
@@ -58,7 +62,33 @@ class SendCallback(BaseConnection):
         json: dict[str, Any] = {}
 
         if self.message:
-            json["message"] = self.message.model_dump()
+            message_json = self.message.model_dump(
+                exclude={"attachments"},
+                exclude_none=True,
+            )
+            message_json["attachments"] = []
+
+            if self.message.attachments:
+                for att in self.message.attachments:
+                    if isinstance(att, (InputMedia, InputMediaBuffer)):
+                        input_media = await process_input_media(
+                            base_connection=self,
+                            bot=bot,
+                            att=att,
+                        )
+                        message_json["attachments"].append(
+                            input_media.model_dump()
+                        )
+                    elif isinstance(att, Attachment) and isinstance(
+                        att.payload, AttachmentUpload
+                    ):
+                        message_json["attachments"].append(
+                            att.payload.model_dump()
+                        )
+                    else:
+                        message_json["attachments"].append(att.model_dump())
+
+            json["message"] = message_json
         if self.notification:
             json["notification"] = self.notification
 

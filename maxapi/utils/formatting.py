@@ -199,6 +199,15 @@ class Heading(_Styled):
     _md_close = ""
 
 
+class Highlighted(_Styled):
+    """Выделенный текст: ``<mark>`` / ``^^...^^``."""
+
+    _html_open = "<mark>"
+    _html_close = "</mark>"
+    _md_open = "^^"
+    _md_close = "^^"
+
+
 class Blockquote(_Styled):
     """Цитата: ``<blockquote>`` / ``> ...``."""
 

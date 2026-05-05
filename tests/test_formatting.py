@@ -169,7 +169,7 @@ def test_all_styles_in_body():
         (TextStyle.UNDERLINE, "++", "ins"),
         (TextStyle.STRIKETHROUGH, "~~", "s"),
         (TextStyle.MONOSPACED, "`", "code"),
-        (TextStyle.BLOCKQUOTE, "> ", "blockquote"),
+        (TextStyle.QUOTE, "> ", "blockquote"),
     ]
     for style, md, html in styles:
         data = {
@@ -179,9 +179,7 @@ def test_all_styles_in_body():
             "markup": [{"from": 0, "length": 3, "type": style}],
         }
         body = MessageBody(**data)
-        expected_md = (
-            f"{md}txt{md}" if style != TextStyle.BLOCKQUOTE else "> txt"
-        )
+        expected_md = f"{md}txt{md}" if style != TextStyle.QUOTE else "> txt"
         assert body.html_text == f"<{html}>txt</{html}>"
         assert body.md_text == expected_md
 
@@ -203,7 +201,7 @@ def test_blockquote_in_body():
         "mid": "t",
         "seq": 1,
         "text": "Quote",
-        "markup": [{"from": 0, "length": 5, "type": TextStyle.BLOCKQUOTE}],
+        "markup": [{"from": 0, "length": 5, "type": TextStyle.QUOTE}],
     }
     body = MessageBody(**data)
     assert body.md_text == "> Quote"
@@ -216,7 +214,7 @@ def test_blockquote_wraps_heading_in_body():
         "seq": 1,
         "text": "Title",
         "markup": [
-            {"from": 0, "length": 5, "type": TextStyle.BLOCKQUOTE},
+            {"from": 0, "length": 5, "type": TextStyle.QUOTE},
             {"from": 0, "length": 5, "type": TextStyle.HEADING},
         ],
     }
@@ -231,7 +229,7 @@ def test_blockquote_wraps_strong_in_body():
         "seq": 1,
         "text": "Quote",
         "markup": [
-            {"from": 0, "length": 5, "type": TextStyle.BLOCKQUOTE},
+            {"from": 0, "length": 5, "type": TextStyle.QUOTE},
             {"from": 0, "length": 5, "type": TextStyle.STRONG},
         ],
     }

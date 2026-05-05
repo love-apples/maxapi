@@ -9,19 +9,24 @@ from pydantic import BaseModel, Field
 from ...enums.parse_mode import ParseMode
 from ...enums.update import UpdateType
 from ...types.attachments import Attachments
+from ...types.attachments.attachment import (
+    Attachment,
+    AttachmentPayload,
+    AttachmentUpload,
+)
 from ...types.callback import Callback  # noqa: TC001
 from ...types.message import Message, NewMessageLink
 from .base_update import BaseUpdate
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from ...enums.parse_mode import TextFormat
     from ...methods.types.deleted_message import DeletedMessage
     from ...methods.types.deleted_pin_message import DeletedPinMessage
     from ...methods.types.pinned_message import PinnedMessage
     from ...methods.types.sended_callback import SendedCallback
     from ...methods.types.sended_message import SendedMessage
-    from ...types.attachments.attachment import Attachment
-    from ...types.attachments.upload import AttachmentUpload
     from ...types.input_media import InputMedia, InputMediaBuffer
 
 
@@ -38,7 +43,9 @@ class MessageForCallback(BaseModel):
     """
 
     text: str | None = None
-    attachments: list[Attachments] | None = Field(default_factory=list)  # type: ignore
+    attachments: list[Attachment | AttachmentPayload | Attachments] | None = (
+        Field(default_factory=list)
+    )
     link: NewMessageLink | None = None
     notify: bool | None = True
     format: ParseMode | None = None
@@ -111,6 +118,10 @@ class MessageCallback(BaseUpdate):
     async def edit(
         self,
         text: str | None = None,
+        attachments: Sequence[
+            Attachment | AttachmentPayload | AttachmentUpload | Attachments
+        ]
+        | None = None,
         link: NewMessageLink | None = None,
         format: ParseMode | None = None,
         *,
@@ -135,9 +146,17 @@ class MessageCallback(BaseUpdate):
             return await self.ack(notification=notification)
 
         bot = self._ensure_bot()
+        resolved_attachments: Sequence[
+            Attachment | AttachmentPayload | Attachments
+        ]
+        if attachments is None:
+            resolved_attachments = original_body.attachments or []
+        else:
+            resolved_attachments = attachments
+
         message_for_callback = MessageForCallback(
             text=text,
-            attachments=original_body.attachments or [],
+            attachments=list(resolved_attachments),
             link=link,
             notify=notify,
             format=bot.resolve_format(format),
@@ -222,6 +241,7 @@ class MessageCallback(BaseUpdate):
         self,
         notification: str | None = None,
         new_text: str | None = None,
+        attachments: Sequence[Attachment] | None = None,
         link: NewMessageLink | None = None,
         format: ParseMode | None = None,
         *,
@@ -246,6 +266,7 @@ class MessageCallback(BaseUpdate):
         """
         return await self.edit(
             text=new_text,
+            attachments=attachments,
             link=link,
             format=format,
             notification=notification,

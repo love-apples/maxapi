@@ -1,4 +1,3 @@
-from collections import Counter
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, cast
 
@@ -77,9 +76,8 @@ class EditChat(BaseConnection):
 
         if self.icon:
             dump = self.icon.model_dump()
-            counter = Counter(dump.values())
 
-            if None not in counter or not counter[None] == 2:
+            if sum(value is not None for value in dump.values()) != 1:
                 raise MaxIconParamsException(
                     "Все атрибуты модели Icon являются взаимоисключающими | "
                     "https://dev.max.ru/docs-api/methods/PATCH/chats/-chatId-"
@@ -91,7 +89,7 @@ class EditChat(BaseConnection):
             json["title"] = self.title
         if self.pin:
             json["pin"] = self.pin
-        if self.notify:
+        if self.notify is not None:
             json["notify"] = self.notify
 
         response = await super().request(

@@ -15,6 +15,7 @@ from ..utils.formatting import (
     Bold,
     Code,
     Heading,
+    Highlighted,
     Italic,
     Link,
     Strikethrough,
@@ -184,13 +185,14 @@ class MessageBody(BaseModel):
             return len(text)
 
         order = {
-            TextStyle.BLOCKQUOTE: 0,
+            TextStyle.QUOTE: 0,
             TextStyle.STRONG: 1,
             TextStyle.EMPHASIZED: 2,
             TextStyle.UNDERLINE: 3,
             TextStyle.STRIKETHROUGH: 4,
             TextStyle.MONOSPACED: 5,
-            TextStyle.HEADING: 6,
+            TextStyle.HIGHLIGHTED: 6,
+            TextStyle.HEADING: 7,
             TextStyle.LINK: 8,
             TextStyle.USER_MENTION: 9,
         }
@@ -233,7 +235,8 @@ class MessageBody(BaseModel):
             TextStyle.STRIKETHROUGH: Strikethrough,
             TextStyle.MONOSPACED: Code,
             TextStyle.HEADING: Heading,
-            TextStyle.BLOCKQUOTE: Blockquote,
+            TextStyle.HIGHLIGHTED: Highlighted,
+            TextStyle.QUOTE: Blockquote,
         }
 
         def wrap_chunk(
