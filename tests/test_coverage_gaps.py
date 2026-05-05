@@ -492,6 +492,7 @@ class TestBaseConnectionUploadFallback:
 
         mock_response = AsyncMock()
         mock_response.text = AsyncMock(return_value='{"token":"xyz"}')
+
         bot.session = MagicMock()
         bot.session.closed = False
         bot.session.post = AsyncMock(return_value=mock_response)
@@ -499,17 +500,11 @@ class TestBaseConnectionUploadFallback:
         # Подменяем puremagic, чтобы вернуть распознаваемый MIME-матч,
         # и mimetypes.guess_extension — чтобы вернуть реальное расширение.
         fake_match = MagicMock()
-
-        def _fake_getitem(self_m, idx):
-            return "image/png" if idx == 1 else "mocked"
-
-        fake_match.__getitem__ = _fake_getitem
+        fake_match.mime_type = "image/png"
 
         with (
             patch("maxapi.connection.base.puremagic.magic_string") as mock_pm,
-            patch(
-                "maxapi.connection.base.mimetypes.guess_extension"
-            ) as mock_ge,
+            patch("maxapi.connection.base.mimetypes.guess_extension") as mock_ge,  # noqa: E501
         ):
             mock_pm.return_value = [fake_match]
             mock_ge.return_value = ".png"
@@ -521,6 +516,7 @@ class TestBaseConnectionUploadFallback:
                 type=UploadType.IMAGE,
             )
 
-        # guess_extension was called (the covered line)
-        mock_ge.assert_called_once_with("image/png")
+            # guess_extension was called — покрываем нужную строку
+            mock_ge.assert_called_once_with("image/png")
+
         assert result == '{"token":"xyz"}'
