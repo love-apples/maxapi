@@ -190,7 +190,7 @@ class TestUploadFileTempSession:
             )
 
             mock_cs_cls.assert_not_called()
-            mock_session.post.assert_awaited_once()
+            mock_session.post.assert_called_once()
 
 
 def assert_invalid_type_error(exc_info, invalid_value: str) -> None:

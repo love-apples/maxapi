@@ -526,12 +526,12 @@ class TestBaseConnectionUploadFallback:
         assert result == '{"token":"abc"}'
         mock_session_instance.post.assert_called_once()
 
-    async def test_upload_file_buffer_mimetypes_guess_extension(
-        self, bot, tmp_path
-    ):
+    async def test_upload_file_buffer_mimetypes_guess_extension(bot):
         """upload_file_buffer вызывает mimetypes.guess_extension
         для известного MIME-типа.
         """
+        from unittest.mock import AsyncMock, MagicMock, patch
+
         from maxapi.connection.base import BaseConnection
         from maxapi.enums.upload_type import UploadType
 
@@ -540,21 +540,25 @@ class TestBaseConnectionUploadFallback:
 
         some_buffer = b"\x00" * 32
 
-        mock_response = AsyncMock()
+        mock_response = MagicMock()
         mock_response.text = AsyncMock(return_value='{"token":"xyz"}')
+
+        mock_context = AsyncMock()
+        mock_context.__aenter__.return_value = mock_response
+        mock_context.__aexit__.return_value = None
 
         bot.session = MagicMock()
         bot.session.closed = False
-        bot.session.post = Mock(return_value=mock_cm_buf)
+        bot.session.post = MagicMock(return_value=mock_context)
 
-        # Подменяем puremagic, чтобы вернуть распознаваемый MIME-матч,
-        # и mimetypes.guess_extension — чтобы вернуть реальное расширение.
         fake_match = MagicMock()
         fake_match.mime_type = "image/png"
 
         with (
             patch("maxapi.connection.base.puremagic.magic_string") as mock_pm,
-            patch("maxapi.connection.base.mimetypes.guess_extension") as mock_ge,  # noqa: E501
+            patch(
+                "maxapi.connection.base.mimetypes.guess_extension"
+            ) as mock_ge,
         ):
             mock_pm.return_value = [fake_match]
             mock_ge.return_value = ".png"
@@ -566,7 +570,6 @@ class TestBaseConnectionUploadFallback:
                 type=UploadType.IMAGE,
             )
 
-            # guess_extension was called — покрываем нужную строку
             mock_ge.assert_called_once_with("image/png")
 
         assert result == '{"token":"xyz"}'
