@@ -333,10 +333,15 @@ class Dispatcher(BotMixin):
         key = (chat_id, user_id)
         ctx = self.contexts.get(key)
         if ctx is not None:
-            # Перемещаем в конец, чтобы LRU-вытеснение удаляло
-            # самые давно неиспользованные контексты
-            self.contexts.move_to_end(key)
-            return ctx
+            if ctx.is_ttl_expired():
+                logger_dp.debug("Истёк TTL контекста %s", key)
+                del self.contexts[key]
+            else:
+                ctx.touch_ttl()
+                # Перемещаем в конец, чтобы LRU-вытеснение удаляло
+                # самые давно неиспользованные контексты
+                self.contexts.move_to_end(key)
+                return ctx
 
         if len(self.contexts) >= CONTEXTS_MAX_SIZE:
             evicted_key = next(iter(self.contexts))
@@ -348,6 +353,7 @@ class Dispatcher(BotMixin):
             self.contexts.popitem(last=False)
 
         new_ctx = self.storage(chat_id, user_id, **self.storage_kwargs)
+        new_ctx.touch_ttl()
         self.contexts[key] = new_ctx
         return new_ctx
 

@@ -42,6 +42,33 @@ async def age_handler(event: MessageCreated, context: MemoryContext):
 - `set_data(data)` — полностью заменить данные
 - `clear()` — очистить контекст и сбросить состояние
 
+## TTL для контекста
+
+Для автоматической очистки неактивных контекстов можно передать `ttl`
+в секундах. TTL продлевается при каждом чтении или изменении контекста.
+Если время истекло, `state` и `data` будут лениво сброшены при следующем
+обращении.
+
+```python
+from maxapi import Dispatcher
+from maxapi.context import MemoryContext
+
+dp = Dispatcher(storage=MemoryContext, ttl=1800)
+```
+
+Тот же параметр можно использовать и для `RedisContext`:
+
+```python
+from maxapi.context import RedisContext
+
+dp = Dispatcher(
+    storage=RedisContext,
+    redis_client=redis_client,
+    key_prefix="my_bot",
+    ttl=1800,
+)
+```
+
 ## StatesGroup
 
 Группа состояний для FSM:

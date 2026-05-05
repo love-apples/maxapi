@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from ...enums.update import UpdateType
 from ...types.bot_mixin import BotMixin
 from ...types.fetchable import LazyRef
+from ...types.shortcuts import ChatActionShortcutMixin, PeerShortcutMixin
 
 if TYPE_CHECKING:
     from ...bot import Bot
@@ -14,7 +15,12 @@ if TYPE_CHECKING:
     from ...types.users import User
 
 
-class BaseUpdate(BaseModel, BotMixin):
+class BaseUpdate(
+    BaseModel,
+    BotMixin,
+    PeerShortcutMixin,
+    ChatActionShortcutMixin,
+):
     """
     Базовая модель обновления.
 
@@ -38,6 +44,24 @@ class BaseUpdate(BaseModel, BotMixin):
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
     )
+
+    def _resolve_send_target(self) -> tuple[int | None, int | None]:
+        get_ids = getattr(self, "get_ids", None)
+        if not callable(get_ids):
+            raise NotImplementedError(
+                f"{self.__class__.__name__} не реализует get_ids()"
+            )
+
+        return get_ids()
+
+    def _resolve_action_chat_id(self) -> int:
+        chat_id, _user_id = self._resolve_send_target()
+        if chat_id is None:
+            raise ValueError(
+                "Невозможно отправить action: chat_id отсутствует"
+            )
+
+        return chat_id
 
     async def _fetch_field(self, field_name: str) -> Any | None:
         """Явно получить поле события, если в нем лежит lazy ref."""

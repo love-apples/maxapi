@@ -32,7 +32,7 @@ from maxapi.enums.chat_type import ChatType
 
 router = Router()
 router.filter(...)  # Базовые фильтры
-router.filters.append(F.chat.type == ChatType.PRIVATE)  # MagicFilter
+router.filters.append(F.chat.type == ChatType.DIALOG)  # Личный диалог
 ```
 
 ## Middleware для роутера
