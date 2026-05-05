@@ -234,15 +234,13 @@ class BaseConnection(BotMixin):
 
         session = bot.session
         if session is not None and not session.closed:
-            async with session.post(url=url, data=form) as response:
-                return await response.text()
+            response = await session.post(url=url, data=form)
+            return await response.text()
         else:
-            async with (
-                ClientSession(
-                    timeout=bot.default_connection.timeout
-                ) as temp_session,
-                temp_session.post(url=url, data=form) as response,
-            ):
+            async with ClientSession(
+                timeout=bot.default_connection.timeout
+            ) as temp_session:
+                response = await temp_session.post(url=url, data=form)
                 return await response.text()
 
     async def upload_file_buffer(
@@ -287,15 +285,13 @@ class BaseConnection(BotMixin):
 
         session = bot.session
         if session is not None and not session.closed:
-            async with session.post(url=url, data=form) as response:
-                return await response.text()
+            response = await session.post(url=url, data=form)
+            return await response.text()
         else:
-            async with (
-                ClientSession(
-                    timeout=bot.default_connection.timeout
-                ) as temp_session,
-                temp_session.post(url=url, data=form) as response,
-            ):
+            async with ClientSession(
+                timeout=bot.default_connection.timeout
+            ) as temp_session:
+                response = await temp_session.post(url=url, data=form)
                 return await response.text()
 
     async def download_file(

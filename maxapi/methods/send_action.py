@@ -29,25 +29,9 @@ class SendAction(BaseConnection):
         self,
         bot: "Bot",
         chat_id: int | None = None,
-        action: SenderAction | str = SenderAction.TYPING_ON,
+        action: SenderAction = SenderAction.TYPING_ON,
     ):
         super().__init__()
-
-        if not isinstance(action, SenderAction):
-            if not isinstance(action, str):
-                raise TypeError(
-                    f"action должен быть SenderAction или str, "
-                    f"получено: {type(action).__name__}"
-                )
-
-            try:
-                action = SenderAction(action)
-            except ValueError as e:
-                allowed = ", ".join(item.value for item in SenderAction)
-                raise ValueError(
-                    f"Неверный action: {action!r}. Ожидается: {allowed}"
-                ) from e
-
         self.bot = bot
         self.chat_id = chat_id
         self.action = action

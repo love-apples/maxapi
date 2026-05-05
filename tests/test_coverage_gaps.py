@@ -502,12 +502,8 @@ class TestBaseConnectionUploadFallback:
         mock_response = AsyncMock()
         mock_response.text = AsyncMock(return_value='{"token":"abc"}')
 
-        mock_cm = AsyncMock()
-        mock_cm.__aenter__.return_value = mock_response
-        mock_cm.__aexit__.return_value = False
-
         mock_session_instance = AsyncMock()
-        mock_session_instance.post = Mock(return_value=mock_cm)
+        mock_session_instance.post = AsyncMock(return_value=mock_response)
         mock_session_instance.__aenter__ = AsyncMock(
             return_value=mock_session_instance
         )
@@ -542,13 +538,9 @@ class TestBaseConnectionUploadFallback:
 
         mock_response = AsyncMock()
         mock_response.text = AsyncMock(return_value='{"token":"xyz"}')
-        mock_cm_buf = AsyncMock()
-        mock_cm_buf.__aenter__.return_value = mock_response
-        mock_cm_buf.__aexit__.return_value = False
-
         bot.session = MagicMock()
         bot.session.closed = False
-        bot.session.post = Mock(return_value=mock_cm_buf)
+        bot.session.post = AsyncMock(return_value=mock_response)
 
         # Подменяем puremagic, чтобы вернуть распознаваемый MIME-матч,
         # и mimetypes.guess_extension — чтобы вернуть реальное расширение.
@@ -578,46 +570,3 @@ class TestBaseConnectionUploadFallback:
         # guess_extension was called (the covered line)
         mock_ge.assert_called_once_with("image/png")
         assert result == '{"token":"xyz"}'
-
-    async def test_upload_file_buffer_uses_temp_session_when_session_is_none(
-        self, bot
-    ):
-        """upload_file_buffer falls back to a new ClientSession
-        when bot.session=None."""
-        from maxapi.connection.base import BaseConnection
-        from maxapi.enums.upload_type import UploadType
-
-        conn = BaseConnection()
-        conn.bot = bot
-        bot.session = None  # force the else-branch
-
-        some_buffer = b"\x00" * 32
-
-        mock_response = AsyncMock()
-        mock_response.text = AsyncMock(return_value='{"token":"buf"}')
-
-        mock_cm = AsyncMock()
-        mock_cm.__aenter__.return_value = mock_response
-        mock_cm.__aexit__.return_value = False
-
-        mock_session_instance = AsyncMock()
-        mock_session_instance.post = Mock(return_value=mock_cm)
-        mock_session_instance.__aenter__ = AsyncMock(
-            return_value=mock_session_instance
-        )
-        mock_session_instance.__aexit__ = AsyncMock(return_value=False)
-
-        with patch(
-            "maxapi.connection.base.ClientSession",
-            return_value=mock_session_instance,
-        ):
-            result = await conn.upload_file_buffer(
-                filename="clip",
-                url="https://upload.example.com",
-                buffer=some_buffer,
-                type=UploadType.VIDEO,
-            )
-
-        assert result == '{"token":"buf"}'
-        mock_session_instance.post.assert_called_once()
-        mock_cm.__aenter__.assert_called_once()

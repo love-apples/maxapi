@@ -62,8 +62,8 @@ class ShareAttachmentPayload(BaseModel):
         token: Токен доступа.
     """
 
-    url: str
-    token: str
+    url: str | None = None
+    token: str | None = None
 
 
 class ContactAttachmentPayload(BaseModel):
@@ -75,14 +75,15 @@ class ContactAttachmentPayload(BaseModel):
         max_info: Дополнительная информация о пользователе.
     """
 
-    vcf_info: str = ""  # для корректного определения
+    vcf_info: str | None = ""
+    hash: str | None = None
     max_info: User | None = None
 
     @property
     def vcf(self) -> VcfInfo:
         """Доступ к данным из `vcf_info`."""
 
-        return parse_vcf_info(self.vcf_info)
+        return parse_vcf_info(self.vcf_info or "")
 
 
 class ButtonsPayload(BaseModel):
@@ -103,6 +104,17 @@ class ButtonsPayload(BaseModel):
         )
 
 
+AttachmentPayload = (
+    AttachmentUpload
+    | PhotoAttachmentPayload
+    | OtherAttachmentPayload
+    | ShareAttachmentPayload
+    | ButtonsPayload
+    | ContactAttachmentPayload
+    | StickerAttachmentPayload
+)
+
+
 class Attachment(BaseModel):
     """
     Универсальный класс вложения с типом и полезной нагрузкой.
@@ -114,16 +126,7 @@ class Attachment(BaseModel):
     """
 
     type: AttachmentType
-    payload: (
-        AttachmentUpload
-        | PhotoAttachmentPayload
-        | OtherAttachmentPayload
-        | ShareAttachmentPayload
-        | ButtonsPayload
-        | ContactAttachmentPayload
-        | StickerAttachmentPayload
-        | None
-    ) = None
+    payload: AttachmentPayload | None = None
     bot: Any | None = Field(default=None, exclude=True)
 
     if TYPE_CHECKING:

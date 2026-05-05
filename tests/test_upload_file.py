@@ -31,13 +31,9 @@ class TestUploadFileMimetypesFallback:
         mock_response = AsyncMock()
         mock_response.text = AsyncMock(return_value='{"token":"t"}')
 
-        mock_cm = AsyncMock()
-        mock_cm.__aenter__.return_value = mock_response
-        mock_cm.__aexit__.return_value = False
-
         mock_session = AsyncMock(spec=ClientSession)
         mock_session.closed = False
-        mock_session.post = Mock(return_value=mock_cm)
+        mock_session.post = AsyncMock(return_value=mock_response)
 
         conn, _bot = _make_connection_with_bot(session=mock_session)
 
@@ -47,7 +43,7 @@ class TestUploadFileMimetypesFallback:
             type=UploadType.IMAGE,
         )
 
-        mock_session.post.assert_called_once()
+        mock_session.post.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_unknown_extension_falls_back_to_type_wildcard(
@@ -60,13 +56,9 @@ class TestUploadFileMimetypesFallback:
         mock_response = AsyncMock()
         mock_response.text = AsyncMock(return_value='{"token":"t"}')
 
-        mock_cm = AsyncMock()
-        mock_cm.__aenter__.return_value = mock_response
-        mock_cm.__aexit__.return_value = False
-
         mock_session = AsyncMock(spec=ClientSession)
         mock_session.closed = False
-        mock_session.post = Mock(return_value=mock_cm)
+        mock_session.post = AsyncMock(return_value=mock_response)
 
         conn, _bot = _make_connection_with_bot(session=mock_session)
 
@@ -80,7 +72,7 @@ class TestUploadFileMimetypesFallback:
                 type=UploadType.FILE,
             )
 
-        mock_session.post.assert_called_once()
+        mock_session.post.assert_awaited_once()
 
 
 class TestUploadFileTempSession:
@@ -98,12 +90,8 @@ class TestUploadFileTempSession:
         conn, bot = _make_connection_with_bot(session=None)
         expected_timeout = bot.default_connection.timeout
 
-        mock_cm = AsyncMock()
-        mock_cm.__aenter__.return_value = mock_response
-        mock_cm.__aexit__.return_value = False
-
         mock_temp_session = AsyncMock()
-        mock_temp_session.post = Mock(return_value=mock_cm)
+        mock_temp_session.post = AsyncMock(return_value=mock_response)
 
         with patch(
             "maxapi.connection.base.ClientSession",
@@ -119,7 +107,7 @@ class TestUploadFileTempSession:
             )
 
             mock_cs_cls.assert_called_once_with(timeout=expected_timeout)
-            mock_temp_session.post.assert_called_once()
+            mock_temp_session.post.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_temp_session_with_timeout_when_session_closed(
@@ -138,12 +126,8 @@ class TestUploadFileTempSession:
         conn, bot = _make_connection_with_bot(session=closed_session)
         expected_timeout = bot.default_connection.timeout
 
-        mock_cm = AsyncMock()
-        mock_cm.__aenter__.return_value = mock_response
-        mock_cm.__aexit__.return_value = False
-
         mock_temp_session = AsyncMock()
-        mock_temp_session.post = Mock(return_value=mock_cm)
+        mock_temp_session.post = AsyncMock(return_value=mock_response)
 
         with patch(
             "maxapi.connection.base.ClientSession",
@@ -169,13 +153,9 @@ class TestUploadFileTempSession:
         mock_response = AsyncMock()
         mock_response.text = AsyncMock(return_value='{"token":"t"}')
 
-        mock_cm = AsyncMock()
-        mock_cm.__aenter__.return_value = mock_response
-        mock_cm.__aexit__.return_value = False
-
         mock_session = AsyncMock(spec=ClientSession)
         mock_session.closed = False
-        mock_session.post = Mock(return_value=mock_cm)
+        mock_session.post = AsyncMock(return_value=mock_response)
 
         conn, _bot = _make_connection_with_bot(session=mock_session)
 
@@ -189,4 +169,4 @@ class TestUploadFileTempSession:
             )
 
             mock_cs_cls.assert_not_called()
-            mock_session.post.assert_called_once()
+            mock_session.post.assert_awaited_once()

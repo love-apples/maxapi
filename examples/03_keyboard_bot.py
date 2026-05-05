@@ -122,41 +122,45 @@ async def on_callback(event: MessageCallback) -> None:
         return
 
     if payload == CB_INFO:
-        await event.message.edit(
+        await event.edit(
             text="Это бот-пример из документации maxapi.\nВерсия: 1.0.0",
             attachments=[build_info_keyboard().as_markup()],
         )
+        return
 
     elif payload == CB_CONTACT:
-        await event.message.edit(
+        await event.edit(
             text="Нажмите кнопку, чтобы поделиться контактом:",
             attachments=[build_contact_keyboard().as_markup()],
         )
+        return
 
     elif payload == CB_GEO:
-        await event.message.edit(
+        await event.edit(
             text="Нажмите кнопку, чтобы поделиться геолокацией:",
             attachments=[build_geo_keyboard().as_markup()],
         )
+        return
 
     elif payload in (CB_BACK, CB_MENU):
         # Возврат к главному меню
-        await event.message.edit(
+        await event.edit(
             text="Выберите действие:",
             attachments=[build_main_keyboard().as_markup()],
         )
+        return
 
     elif payload == CB_CLOSE:
         # Убираем клавиатуру, оставляем текст.
-        # Важно: attachments=None в Message.edit() трактуется как
-        # «не менять» и сохраняет существующие вложения. Чтобы
-        # действительно удалить клавиатуру — передаём пустой список.
-        await event.message.edit(
+        # Для callback-ответа пустой список attachments действительно
+        # очищает клавиатуру.
+        await event.edit(
             text="Клавиатура убрана. Напишите /start для повтора.",
             attachments=[],
         )
+        return
 
-    # Обязательный ack — без него UI покажет ошибку
+    # Для веток выше callback уже подтверждён через event.edit().
     await event.answer()
 
 

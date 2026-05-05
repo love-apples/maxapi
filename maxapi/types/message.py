@@ -15,6 +15,7 @@ from ..utils.formatting import (
     Bold,
     Code,
     Heading,
+    Highlighted,
     Italic,
     Link,
     Strikethrough,
@@ -22,7 +23,6 @@ from ..utils.formatting import (
     Underline,
     UserMention,
 )
-from ..utils.message_link import build_message_link
 from .users import User
 
 if TYPE_CHECKING:
@@ -185,13 +185,14 @@ class MessageBody(BaseModel):
             return len(text)
 
         order = {
-            TextStyle.BLOCKQUOTE: 0,
+            TextStyle.QUOTE: 0,
             TextStyle.STRONG: 1,
             TextStyle.EMPHASIZED: 2,
             TextStyle.UNDERLINE: 3,
             TextStyle.STRIKETHROUGH: 4,
             TextStyle.MONOSPACED: 5,
-            TextStyle.HEADING: 6,
+            TextStyle.HIGHLIGHTED: 6,
+            TextStyle.HEADING: 7,
             TextStyle.LINK: 8,
             TextStyle.USER_MENTION: 9,
         }
@@ -234,7 +235,8 @@ class MessageBody(BaseModel):
             TextStyle.STRIKETHROUGH: Strikethrough,
             TextStyle.MONOSPACED: Code,
             TextStyle.HEADING: Heading,
-            TextStyle.BLOCKQUOTE: Blockquote,
+            TextStyle.HIGHLIGHTED: Highlighted,
+            TextStyle.QUOTE: Blockquote,
         }
 
         def wrap_chunk(
@@ -322,18 +324,13 @@ class Message(
         bot: Объект бота, исключается из сериализации.
     """
 
-    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
     sender: User | None = None
     recipient: Recipient
     timestamp: int
     link: LinkedMessage | None = None
     body: MessageBody | None = None
     stat: MessageStat | None = None
-    url_api: str | None = Field(
-        # Поле для хранения сырого url из ответа API
-        alias="url",
-        default=None,
-    )
+    url: str | None = None
     bot: Any | None = Field(  # pyright: ignore[reportRedeclaration]
         default=None, exclude=True
     )
@@ -628,25 +625,6 @@ class Message(
         return await self._ensure_bot().delete_pin_message(
             chat_id=self.recipient.chat_id,
         )
-
-    @property
-    def url(self) -> str | None:
-        """
-        Прямая ссылка на сообщение в интерфейсе MAX
-
-        Returns:
-            str: Ссылка на сообщение в формате
-                - Для диалогов и групповых чатов:
-                  https://max.ru/c/{chat_id}/{seq_b64}
-                - Постов в канале:
-                  https://max.ru/{channel_name}/{seq_b64}
-            None: Если объект Message не содержит в себе body
-        """
-        if self.url_api:
-            return self.url_api
-        elif self.body:
-            return build_message_link(self.body.mid)
-        return None
 
 
 class Messages(BaseModel):
