@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..enums.attachment import AttachmentType
-from ..types.attachments.attachment import Attachment, ButtonsPayload
+from ..types.attachments.attachment import ButtonsPayload
+from ..types.attachments.buttons.attachment_button import AttachmentButton
 
 if TYPE_CHECKING:
     from ..types.attachments.buttons import InlineButtonUnion
@@ -84,15 +85,15 @@ class InlineKeyboardBuilder:
         self.payload = new_payload
         return self
 
-    def as_markup(self) -> Attachment:
+    def as_markup(self) -> AttachmentButton:
         """
         Собрать клавиатуру в объект для отправки.
 
         Returns:
-            Attachment: Объект вложения с типом INLINE_KEYBOARD.
+            AttachmentButton: Объект вложения с типом INLINE_KEYBOARD.
         """
 
-        return Attachment(
+        return AttachmentButton(
             type=AttachmentType.INLINE_KEYBOARD,
             payload=ButtonsPayload(buttons=self.payload),
-        )  # type: ignore
+        )
