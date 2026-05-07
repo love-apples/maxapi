@@ -4,16 +4,11 @@ __all__ = ["Message", "MessageCallback", "MessageForCallback"]
 
 from typing import TYPE_CHECKING, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ...enums.parse_mode import ParseMode
 from ...enums.update import UpdateType
-from ...types.attachments import Attachments
-from ...types.attachments.attachment import (
-    Attachment,
-    AttachmentPayload,
-    AttachmentUpload,
-)
+from ...types.attachments import AttachmentInput
 from ...types.callback import Callback  # noqa: TC001
 from ...types.message import Message, NewMessageLink
 from .base_update import BaseUpdate
@@ -27,7 +22,6 @@ if TYPE_CHECKING:
     from ...methods.types.pinned_message import PinnedMessage
     from ...methods.types.sended_callback import SendedCallback
     from ...methods.types.sended_message import SendedMessage
-    from ...types.input_media import InputMedia, InputMediaBuffer
 
 
 class MessageForCallback(BaseModel):
@@ -43,9 +37,9 @@ class MessageForCallback(BaseModel):
     """
 
     text: str | None = None
-    attachments: list[Attachment | AttachmentPayload | Attachments] | None = (
-        Field(default_factory=list)
-    )
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    attachments: list[AttachmentInput] | None = Field(default_factory=list)
     link: NewMessageLink | None = None
     notify: bool | None = True
     format: ParseMode | None = None
@@ -118,10 +112,7 @@ class MessageCallback(BaseUpdate):
     async def edit(
         self,
         text: str | None = None,
-        attachments: Sequence[
-            Attachment | AttachmentPayload | AttachmentUpload | Attachments
-        ]
-        | None = None,
+        attachments: Sequence[AttachmentInput] | None = None,
         link: NewMessageLink | None = None,
         format: ParseMode | None = None,
         *,
@@ -146,9 +137,7 @@ class MessageCallback(BaseUpdate):
             return await self.ack(notification=notification)
 
         bot = self._ensure_bot()
-        resolved_attachments: Sequence[
-            Attachment | AttachmentPayload | Attachments
-        ]
+        resolved_attachments: Sequence[AttachmentInput]
         if attachments is None:
             resolved_attachments = original_body.attachments or []
         else:
@@ -171,10 +160,7 @@ class MessageCallback(BaseUpdate):
     async def send(
         self,
         text: str | None = None,
-        attachments: list[
-            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
-        ]
-        | None = None,
+        attachments: list[AttachmentInput] | None = None,
         link: NewMessageLink | None = None,
         format: TextFormat | None = None,
         parse_mode: ParseMode | None = None,
@@ -199,10 +185,7 @@ class MessageCallback(BaseUpdate):
     async def reply(
         self,
         text: str | None = None,
-        attachments: list[
-            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
-        ]
-        | None = None,
+        attachments: list[AttachmentInput] | None = None,
         format: TextFormat | None = None,
         parse_mode: ParseMode | None = None,
         *,
@@ -241,7 +224,7 @@ class MessageCallback(BaseUpdate):
         self,
         notification: str | None = None,
         new_text: str | None = None,
-        attachments: Sequence[Attachment] | None = None,
+        attachments: Sequence[AttachmentInput] | None = None,
         link: NewMessageLink | None = None,
         format: ParseMode | None = None,
         *,

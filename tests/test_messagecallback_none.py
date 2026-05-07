@@ -1,6 +1,7 @@
 import pytest
 from maxapi.enums.parse_mode import ParseMode
 from maxapi.enums.update import UpdateType
+from maxapi.types.attachments.attachment import ButtonsPayload
 from maxapi.types.attachments.buttons.callback_button import CallbackButton
 from maxapi.types.callback import Callback
 from maxapi.types.updates.message_callback import (
@@ -9,6 +10,7 @@ from maxapi.types.updates.message_callback import (
 )
 from maxapi.types.users import User
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
+from pydantic import ValidationError
 
 
 class DummyBot:
@@ -93,6 +95,14 @@ async def test_answer_with_no_message_notification_only(cb_obj):
     assert bot.last["callback_id"] == "cb1"
     assert bot.last["message"] is None
     assert bot.last["notification"] == "n"
+
+
+def test_message_for_callback_rejects_bare_payload_attachment():
+    with pytest.raises(ValidationError):
+        MessageForCallback(
+            text="updated",
+            attachments=[ButtonsPayload(buttons=[])],  # type: ignore[list-item]
+        )
 
 
 async def test_answer_uses_bot_default_parse_mode(cb_obj):
