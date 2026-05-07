@@ -1,7 +1,7 @@
 from typing import Literal
 
 from ....enums.attachment import AttachmentType
-from ..attachment import Attachment
+from ..attachment import Attachment, ButtonsPayload
 
 
 class AttachmentButton(Attachment):
@@ -14,3 +14,4 @@ class AttachmentButton(Attachment):
     """
 
     type: Literal[AttachmentType.INLINE_KEYBOARD]
+    payload: ButtonsPayload
