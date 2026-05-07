@@ -23,6 +23,7 @@ from ..utils.formatting import (
     Underline,
     UserMention,
 )
+from ..utils.message_link import build_message_link
 from .users import User
 
 if TYPE_CHECKING:
@@ -186,6 +187,7 @@ class MessageBody(BaseModel):
 
         order = {
             TextStyle.QUOTE: 0,
+            TextStyle.BLOCKQUOTE: 0,
             TextStyle.STRONG: 1,
             TextStyle.EMPHASIZED: 2,
             TextStyle.UNDERLINE: 3,
@@ -237,6 +239,7 @@ class MessageBody(BaseModel):
             TextStyle.HEADING: Heading,
             TextStyle.HIGHLIGHTED: Highlighted,
             TextStyle.QUOTE: Blockquote,
+            TextStyle.BLOCKQUOTE: Blockquote,
         }
 
         def wrap_chunk(
@@ -324,19 +327,39 @@ class Message(
         bot: Объект бота, исключается из сериализации.
     """
 
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
+
     sender: User | None = None
     recipient: Recipient
     timestamp: int
     link: LinkedMessage | None = None
     body: MessageBody | None = None
     stat: MessageStat | None = None
-    url: str | None = None
+    url_api: str | None = Field(
+        # Поле для хранения сырого url из ответа API.
+        alias="url",
+        default=None,
+    )
     bot: Any | None = Field(  # pyright: ignore[reportRedeclaration]
         default=None, exclude=True
     )
 
     if TYPE_CHECKING:
         bot: Bot | None  # type: ignore
+
+    @property
+    def url(self) -> str | None:
+        """
+        Прямая ссылка на сообщение в интерфейсе MAX.
+
+        Для каналов возвращается ссылка, полученная от API. Для диалогов и
+        групповых чатов ссылка строится из ``body.mid``.
+        """
+        if self.url_api:
+            return self.url_api
+        if self.body:
+            return build_message_link(self.body.mid)
+        return None
 
     def _resolve_send_target(self) -> tuple[int | None, int | None]:
         return self.recipient.chat_id, self.recipient.user_id

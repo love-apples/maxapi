@@ -170,6 +170,7 @@ def test_all_styles_in_body():
         (TextStyle.STRIKETHROUGH, "~~", "s"),
         (TextStyle.MONOSPACED, "`", "code"),
         (TextStyle.QUOTE, "> ", "blockquote"),
+        (TextStyle.BLOCKQUOTE, "> ", "blockquote"),
     ]
     for style, md, html in styles:
         data = {
@@ -179,7 +180,11 @@ def test_all_styles_in_body():
             "markup": [{"from": 0, "length": 3, "type": style}],
         }
         body = MessageBody(**data)
-        expected_md = f"{md}txt{md}" if style != TextStyle.QUOTE else "> txt"
+        expected_md = (
+            "> txt"
+            if style in (TextStyle.QUOTE, TextStyle.BLOCKQUOTE)
+            else f"{md}txt{md}"
+        )
         assert body.html_text == f"<{html}>txt</{html}>"
         assert body.md_text == expected_md
 
@@ -202,6 +207,18 @@ def test_blockquote_in_body():
         "seq": 1,
         "text": "Quote",
         "markup": [{"from": 0, "length": 5, "type": TextStyle.QUOTE}],
+    }
+    body = MessageBody(**data)
+    assert body.md_text == "> Quote"
+    assert body.html_text == "<blockquote>Quote</blockquote>"
+
+
+def test_legacy_blockquote_in_body():
+    data = {
+        "mid": "t",
+        "seq": 1,
+        "text": "Quote",
+        "markup": [{"from": 0, "length": 5, "type": TextStyle.BLOCKQUOTE}],
     }
     body = MessageBody(**data)
     assert body.md_text == "> Quote"

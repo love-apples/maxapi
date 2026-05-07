@@ -21,3 +21,4 @@ class TextStyle(StrEnum):
     HEADING = auto()
     HIGHLIGHTED = auto()
     QUOTE = auto()
+    BLOCKQUOTE = auto()

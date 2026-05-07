@@ -80,8 +80,9 @@ class TestRetryOnServerErrors:
             token=mock_bot_token,
             default_connection=conn,
         )
-        session = AsyncMock()
+        session = MagicMock()
         session.closed = False
+        session.close = AsyncMock()
         bot.session = session
         return bot
 
@@ -208,7 +209,7 @@ class TestRetryOnServerErrors:
 
         error = _make_response(502, json_data={"error": "Bad Gateway"})
 
-        session = AsyncMock()
+        session = MagicMock()
         session.request = AsyncMock(return_value=error)
         session.closed = False
         bot.session = session
@@ -240,7 +241,7 @@ class TestRetryOnConnectionErrors:
             token=mock_bot_token,
             default_connection=conn,
         )
-        session = AsyncMock()
+        session = MagicMock()
         session.closed = False
         bot.session = session
         return bot
@@ -311,7 +312,7 @@ class TestRetryBackoff:
 
         error = _make_response(502, json_data={"error": "Bad Gateway"})
 
-        session = AsyncMock()
+        session = MagicMock()
         session.request = AsyncMock(return_value=error)
         session.closed = False
         bot.session = session
@@ -350,7 +351,7 @@ class TestRetryBackoff:
 
         error = _make_response(503, json_data={"error": "Service Unavailable"})
 
-        session = AsyncMock()
+        session = MagicMock()
         session.request = AsyncMock(return_value=error)
         session.closed = False
         bot.session = session
@@ -395,7 +396,7 @@ class TestRetryWithCustomStatuses:
         error = _make_response(429)
         success = _make_response(200, json_data={"ok": True})
 
-        session = AsyncMock()
+        session = MagicMock()
         session.request = AsyncMock(side_effect=[error, success])
         session.closed = False
         bot.session = session
@@ -428,7 +429,7 @@ class TestRetryWithCustomStatuses:
 
         error = _make_response(502, json_data={"error": "Bad Gateway"})
 
-        session = AsyncMock()
+        session = MagicMock()
         session.request = AsyncMock(return_value=error)
         session.closed = False
         bot.session = session
@@ -466,7 +467,7 @@ class TestRetryResponseBodyConsumed:
         error = _make_response(502)
         success = _make_response(200, json_data={"ok": True})
 
-        session = AsyncMock()
+        session = MagicMock()
         session.request = AsyncMock(side_effect=[error, success])
         session.closed = False
         bot.session = session

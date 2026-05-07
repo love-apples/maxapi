@@ -83,6 +83,7 @@ def test_user_and_chat_admin_keep_swagger_compat_fields():
         }
     )
 
+    assert user.first_name == "Alice"
     assert admin.alias == "owner"
 
 
