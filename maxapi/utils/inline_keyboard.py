@@ -96,4 +96,4 @@ class InlineKeyboardBuilder:
         return AttachmentButton(
             type=AttachmentType.INLINE_KEYBOARD,
             payload=ButtonsPayload(buttons=self.payload),
-        )
+        )  # type: ignore[call-arg]
