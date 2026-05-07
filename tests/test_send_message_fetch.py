@@ -1,13 +1,11 @@
 from unittest.mock import AsyncMock, Mock, patch
 
-import pytest
 from maxapi.connection.base import BaseConnection
 from maxapi.methods.send_message import SendMessage
 from maxapi.types.attachments.buttons.callback_button import CallbackButton
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
 
-@pytest.mark.asyncio
 async def test_send_message_fetch_skips_empty_inline_keyboard(bot):
     method = SendMessage(
         bot=bot,

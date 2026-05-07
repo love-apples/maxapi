@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
-from ..enums.attachment import AttachmentType
 from ..enums.http_method import HTTPMethod
 from ..enums.parse_mode import ParseMode, TextFormat
 from ..exceptions.max import MaxApiError
 from ..loggers import logger_bot
 from ..types.attachments import Attachments
-from ..types.attachments.attachment import Attachment, ButtonsPayload
+from ..types.attachments.attachment import Attachment
+from ..types.attachments.buttons.attachment_button import AttachmentButton
 from ..types.attachments.upload import AttachmentUpload
 from ..types.input_media import InputMedia, InputMediaBuffer
 from ..types.message import NewMessageLink
@@ -135,11 +135,8 @@ class SendMessage(BaseConnection):
 
         if self.attachments:
             for att in self.attachments:
-                if (
-                    isinstance(att, Attachment)
-                    and att.type == AttachmentType.INLINE_KEYBOARD
-                    and isinstance(att.payload, ButtonsPayload)
-                    and not any(att.payload.buttons)
+                if isinstance(att, AttachmentButton) and not any(
+                    att.payload.buttons
                 ):
                     continue
 
