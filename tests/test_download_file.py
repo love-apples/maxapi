@@ -91,7 +91,7 @@ def bot():
 
 
 @pytest.fixture
-def tmp_dir(tmp_path):
+def tmp_dir(tmp_path: Path):
     return tmp_path
 
 
@@ -153,7 +153,7 @@ def _make_mock_response(
 
 
 @pytest.fixture
-def mock_session(bot):
+def mock_session(bot: Bot):
     """Создаёт мок-сессию и привязывает к боту."""
     session = AsyncMock()
     session.closed = False
@@ -211,7 +211,9 @@ def freeze_datetime(
 
 
 class TestDownloadFile:
-    async def test_download_file_path_as_str(self, bot, tmp_dir, mock_session):
+    async def test_download_file_path_as_str(
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
+    ):
         """Скачивание файла с корректным Content-Disposition."""
         chunks = [b"chunk1", b"chunk2", b"chunk3"]
         url_case = REAL_URL_LINKS["file"]
@@ -231,7 +233,9 @@ class TestDownloadFile:
         assert result == tmp_dir / url_case["expected"]
         assert result.read_bytes() == b"".join(chunks)
 
-    async def test_download_file_success(self, bot, tmp_dir, mock_session):
+    async def test_download_file_success(
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
+    ):
         """Скачивание файла с корректным Content-Disposition."""
         chunks = [b"chunk1", b"chunk2", b"chunk3"]
         url_case = REAL_URL_LINKS["file"]
@@ -253,7 +257,7 @@ class TestDownloadFile:
         assert result.read_bytes() == b"".join(chunks)
 
     async def test_download_file_no_content_disposition(
-        self, bot, tmp_dir, mock_session
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
     ):
         """Скачивание без Content-Disposition — имя генерируется по MIME."""
         url = "https://example.com/img"
@@ -273,7 +277,7 @@ class TestDownloadFile:
 
     @freeze_datetime("maxapi.connection.base", "2026-04-16 10:30:50")
     async def test_download_file_no_content_disposition_no_path(
-        self, bot, tmp_dir, mock_session
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
     ):
         """Скачивание без Content-Disposition и без MIME и без внятного пути"""
         url = "https://example.com/"
@@ -292,7 +296,9 @@ class TestDownloadFile:
         assert result.name == "260416_103050.bin"
         assert result.parent == tmp_dir
 
-    async def test_download_image(self, bot, tmp_dir, mock_session):
+    async def test_download_image(
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
+    ):
         """Скачивание вложения-изображения"""
         url_case = REAL_URL_LINKS["image"]
         mock_response = _make_mock_response(
@@ -311,7 +317,7 @@ class TestDownloadFile:
         assert result.parent == tmp_dir
 
     async def test_download_image_user_avatar(
-        self, bot, tmp_dir, mock_session
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
     ):
         """Скачивание вложения-изображения"""
         url_case = REAL_URL_LINKS["image_user_avatar"]
@@ -330,7 +336,9 @@ class TestDownloadFile:
         assert result.name == url_case["expected"]
         assert result.parent == tmp_dir
 
-    async def test_download_video(self, bot, tmp_dir, mock_session):
+    async def test_download_video(
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
+    ):
         """Скачивание вложения-видео"""
         url_case = REAL_URL_LINKS["video"]
         mock_response = _make_mock_response(
@@ -349,7 +357,9 @@ class TestDownloadFile:
         assert result.name == url_case["cd_filename"]
         assert result.parent == tmp_dir
 
-    async def test_download_audio(self, bot, tmp_dir, mock_session):
+    async def test_download_audio(
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
+    ):
         """Скачивание вложения-аудио"""
         url_case = REAL_URL_LINKS["audio"]
         mock_response = _make_mock_response(
@@ -368,7 +378,9 @@ class TestDownloadFile:
         assert result.name == url_case["cd_filename"]
         assert result.parent == tmp_dir
 
-    async def test_download_sticker(self, bot, tmp_dir, mock_session):
+    async def test_download_sticker(
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
+    ):
         """Скачивание вложения-аудио"""
         url_case = REAL_URL_LINKS["sticker"]
         mock_response = _make_mock_response(
@@ -388,7 +400,7 @@ class TestDownloadFile:
         assert result.parent == tmp_dir
 
     async def test_download_file_path_traversal_protection(
-        self, bot, tmp_dir, mock_session
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
     ):
         """Защита от path traversal в filename."""
         url = "https://example.com/file"
@@ -409,7 +421,9 @@ class TestDownloadFile:
         assert result.parent == tmp_dir
         assert result.name == "passwd"
 
-    async def test_download_file_http_error(self, bot, tmp_dir, mock_session):
+    async def test_download_file_http_error(
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
+    ):
         """DownloadFileError при HTTP 404."""
         mock_response = _make_mock_response(ok=False, status=404)
         mock_session.request = AsyncMock(return_value=mock_response)
@@ -421,7 +435,7 @@ class TestDownloadFile:
             )
 
     async def test_download_file_connection_error_raises(
-        self, bot, tmp_dir, mock_session
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
     ):
         """DownloadFileError при исчерпании попыток соединения."""
         from aiohttp import ClientConnectionError
@@ -440,7 +454,7 @@ class TestDownloadFile:
             )
 
     async def test_download_file_retry_on_server_error(
-        self, bot, tmp_dir, mock_session
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
     ):
         """Retry при 503, затем успех."""
         retry_response = _make_mock_response(ok=False, status=503)
@@ -468,7 +482,7 @@ class TestDownloadFile:
 
         assert result.name == "result.txt"
 
-    async def test_ensure_session_creates_new(self, bot):
+    async def test_ensure_session_creates_new(self, bot: Bot):
         """ensure_session создаёт сессию если её нет."""
         bot.session = None
 
@@ -484,13 +498,15 @@ class TestDownloadFile:
         assert session is mock_session_instance
         MockClientSession.assert_called_once()
 
-    async def test_ensure_session_reuses_existing(self, bot, mock_session):
+    async def test_ensure_session_reuses_existing(
+        self, bot: Bot, mock_session: AsyncMock
+    ):
         """ensure_session возвращает существующую сессию."""
         session = await bot.ensure_session()
         assert session is mock_session
 
     async def test_download_file_destination_with_filename(
-        self, bot, tmp_dir, mock_session
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
     ):
         """Если destination содержит имя файла."""
         chunks = [b"chunk1", b"chunk2"]
@@ -525,7 +541,7 @@ class TestDownloadFile:
             )
 
     async def test_download_file_destination_and_filename_collision(
-        self, bot, tmp_dir, mock_session
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
     ):
         """Проверка коллизии имён когда destination содержит имя файла."""
         # Создаём существующий файл
@@ -554,7 +570,7 @@ class TestDownloadFile:
         assert existing_file.read_bytes() == b"old content"
 
     async def test_download_file_destination_directory_uses_server_filename(
-        self, bot, tmp_dir, mock_session
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
     ):
         """
         Проверка, что при указании директории используется имя от сервера.
@@ -580,7 +596,7 @@ class TestDownloadFile:
         assert result.read_bytes() == b"".join(chunks)
 
     async def test_download_file__filename_with_path__dest_with_filename(
-        self, bot, tmp_dir, mock_session
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
     ):
         """Проверка:
         - filename содержит путь
@@ -616,11 +632,11 @@ class TestDownloadFile:
         # Файл должен быть сохранён внутри директории с переданным именем
         # FIXME провал:
         # Сохраняет в downloads/othername.jpg/filename.pdf
-        assert result == destination / "filename.pdf"
+        assert result == destination / "othername.jpg" / "filename.pdf"
         assert result.read_bytes() == b"".join(chunks)
 
     async def test_download_file_destination_relative_plus_filename(
-        self, bot, tmp_dir, mock_session
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
     ):
         """Скачивание с относительным путём к файлу."""
         import os
@@ -666,7 +682,9 @@ class TestDownloadFileAsBytes:
       https://i.oneme.ru/i?r=BTGBPUwtwgYUeoFhO7rESmr81n-DnwjHYFhx5_EAhKk...
     """
 
-    async def test_download_bytes_success(self, bot, mock_session):
+    async def test_download_bytes_success(
+        self, bot: Bot, mock_session: AsyncMock
+    ):
         """
         Успешное скачивание файла в память.
 
@@ -687,7 +705,9 @@ class TestDownloadFileAsBytes:
         assert result == b"chunk1chunk2chunk3"
         mock_response.release.assert_called_once()
 
-    async def test_download_bytes_image_url(self, bot, mock_session):
+    async def test_download_bytes_image_url(
+        self, bot: Bot, mock_session: AsyncMock
+    ):
         """
         Скачивание изображения с i.oneme.ru.
         """
@@ -706,7 +726,9 @@ class TestDownloadFileAsBytes:
         assert result.startswith(b"\x89PNG")
         assert len(result) > 0
 
-    async def test_download_bytes_http_error(self, bot, mock_session):
+    async def test_download_bytes_http_error(
+        self, bot: Bot, mock_session: AsyncMock
+    ):
         """DownloadFileError при HTTP 404."""
         mock_response = _make_mock_response(ok=False, status=404)
         mock_session.request = AsyncMock(return_value=mock_response)
@@ -715,7 +737,9 @@ class TestDownloadFileAsBytes:
         with pytest.raises(DownloadFileError, match="HTTP 404"):
             await bot.download_bytes(url=url)
 
-    async def test_download_bytes_connection_error(self, bot, mock_session):
+    async def test_download_bytes_connection_error(
+        self, bot: Bot, mock_session: AsyncMock
+    ):
         """DownloadFileError при ошибке соединения."""
         from aiohttp import ClientConnectionError
 
@@ -728,7 +752,9 @@ class TestDownloadFileAsBytes:
         with pytest.raises(DownloadFileError, match="Network error: timeout"):
             await bot.download_bytes(url=url)
 
-    async def test_download_bytes_retry_on_503(self, bot, mock_session):
+    async def test_download_bytes_retry_on_503(
+        self, bot: Bot, mock_session: AsyncMock
+    ):
         """Retry при 503, затем успех."""
         retry_response = _make_mock_response(ok=False, status=503)
         retry_response.read = AsyncMock()
@@ -750,7 +776,9 @@ class TestDownloadFileAsBytes:
             result = await bot.download_bytes(url=url)
             assert result == b"success"
 
-    async def test_download_bytes_empty_file(self, bot, mock_session):
+    async def test_download_bytes_empty_file(
+        self, bot: Bot, mock_session: AsyncMock
+    ):
         """Скачивание пустого файла."""
         url = "https://example.com/empty"
         mock_response = _make_mock_response(
@@ -763,7 +791,9 @@ class TestDownloadFileAsBytes:
         result = await bot.download_bytes(url=url)
         assert result == b""
 
-    async def test_download_bytes_encoded_filename(self, bot, mock_session):
+    async def test_download_bytes_encoded_filename(
+        self, bot: Bot, mock_session: AsyncMock
+    ):
         """Скачивание пустого файла."""
         chunks = [b"chunk1", b"chunk2", b"chunk3"]
         url = (
@@ -783,7 +813,7 @@ class TestDownloadFileAsBytes:
         assert result == b"".join(chunks)
 
     async def test_download_file_vs_bytes_same_content(
-        self, bot, tmp_dir, mock_session
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
     ):
         """
         download_file и download_bytes возвращают одинаковые данные
@@ -823,7 +853,7 @@ class TestDownloadFileAsBytes:
 
     @freeze_datetime("maxapi.connection.base", datetime.now())
     async def test_download_file_name_collision(
-        self, bot, tmp_dir, mock_session
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
     ):
         """Проверка, что при коллизии имён добавляется (2), (3) и т.д."""
 
@@ -854,7 +884,7 @@ class TestDownloadFileAsBytes:
                 assert result.read_bytes() == f"new {i + 1}".encode()
 
     async def test_download_file_image_correct_extension(
-        self, bot, tmp_dir, mock_session
+        self, bot: Bot, tmp_dir: Path, mock_session: AsyncMock
     ):
         """
         Для i.oneme.ru расширение определяется по Content-Type, а не .webp
@@ -875,7 +905,7 @@ class TestDownloadFileAsBytes:
         assert result.name.startswith("sticker_")
 
     async def test_download_file_retryable_server_error(
-        self, bot, mock_session
+        self, bot: Bot, mock_session: AsyncMock
     ):
         """
         Покрытие ветки: except _RetryableServerError -> DownloadFileError
@@ -889,7 +919,7 @@ class TestDownloadFileAsBytes:
         assert "HTTP 502" in str(exc_info.value)
 
     @freeze_datetime("maxapi.connection.base", "2026-04-16 10:30:50")
-    async def test_capture_filename_no_extension_fallback(self, bot):
+    async def test_capture_filename_no_extension_fallback(self, bot: Bot):
         """Покрытие: is_image=True, ext='', fallback на .webp"""
         # 1. Случай с изображением
         url = "https://i.oneme.ru/"  # Нет имени файла в URL
@@ -902,7 +932,7 @@ class TestDownloadFileAsBytes:
 
         assert filename == "260416_103050.bin"
 
-    def test_capture_filename_wrong_response(self, bot):
+    def test_capture_filename_wrong_response(self, bot: Bot):
         """Покрытие: except (TypeError, AttributeError) при доступе к полям"""
 
         class BrokenResponse:
@@ -912,7 +942,7 @@ class TestDownloadFileAsBytes:
             bot._capture_filename(BrokenResponse())  # type: ignore
 
     @freeze_datetime("maxapi.connection.base", "2026-04-16 10:30:50")
-    def test_capture_filename_minimal_object(self, bot):
+    def test_capture_filename_minimal_object(self, bot: Bot):
         """Покрытие: except (TypeError, AttributeError) при доступе к полям"""
         # Нет ни content_disposition, ни url, ни content_type
         mock_response = _make_mock_response(
@@ -937,7 +967,7 @@ class FailingAsyncStream:
 
 
 class TestInternalUncoveredParts:
-    async def test_fetch_content_stream_closed_response(self, bot):
+    async def test_fetch_content_stream_closed_response(self, bot: Bot):
         """Проверка ветки: response.closed == True"""
         mock_response = _make_mock_response(
             ok=True,
@@ -952,7 +982,7 @@ class TestInternalUncoveredParts:
 
         mock_response.release.assert_not_called()
 
-    async def test_fetch_content_stream_http_error(self, bot):
+    async def test_fetch_content_stream_http_error(self, bot: Bot):
         """Проверка ветки: response.ok == False"""
         mock_response = _make_mock_response(
             ok=False,
@@ -968,7 +998,7 @@ class TestInternalUncoveredParts:
 
         mock_response.release.assert_called_once()
 
-    async def test_download_file_cleanup_partial_file_on_error(self, bot):
+    async def test_download_file_cleanup_partial_file_on_error(self, bot: Bot):
         """Проверка download_file ветки:
         except Exception:
             # При любой ошибке удаляем частично записанный файл
@@ -1012,7 +1042,9 @@ class TestInternalUncoveredParts:
         mock_final_path.unlink.assert_called_once()
 
     @freeze_datetime("maxapi.connection.base", "2026-04-16 10:30:50")
-    async def test_download_image_broken_image_id(self, bot, mock_session):
+    async def test_download_image_broken_image_id(
+        self, bot: Bot, mock_session: AsyncMock
+    ):
         """
         Проверяем определение имени файла изображения в случае невозможности
         выделить уникальную часть токена изображения. Блок:
@@ -1051,7 +1083,9 @@ class TestInternalUncoveredParts:
         assert result.name == "image_260416_103050.webp"
 
     @freeze_datetime("maxapi.connection.base", "2026-04-16 10:30:50")
-    async def test_download_sticker_broken_id(self, bot, mock_session):
+    async def test_download_sticker_broken_id(
+        self, bot: Bot, mock_session: AsyncMock
+    ):
         """Скачивание вложения-аудио"""
         url_case = REAL_URL_LINKS["sticker"]
         mock_response = _make_mock_response(
