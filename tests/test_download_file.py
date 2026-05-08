@@ -604,12 +604,16 @@ class TestDownloadFile:
         """
         chunks = [b"binary"]
         url = "https://example.com/data"
-        mock_response = _make_mock_response(
-            url=url,
-            cd_filename="data.bin",
-            chunks=chunks,
-        )
-        mock_session.request = AsyncMock(return_value=mock_response)
+
+        def mock_response(*args, **kwargs):
+            "Генерирует новый объект response для каждого request"
+            return _make_mock_response(
+                url=url,
+                cd_filename="data.bin",
+                chunks=chunks,
+            )
+
+        mock_session.request = AsyncMock(side_effect=mock_response)
 
         destination = tmp_dir / "downloads"
         result = await bot.download_file(
@@ -622,7 +626,6 @@ class TestDownloadFile:
         assert result == destination / "filename.pdf"
         assert result.read_bytes() == b"".join(chunks)
 
-        mock_response.closed = False
         result = await bot.download_file(
             url=url,
             destination=destination / "othername.jpg",  # содержит имя файла
@@ -630,7 +633,6 @@ class TestDownloadFile:
         )
 
         # Файл должен быть сохранён внутри директории с переданным именем
-        # FIXME провал:
         # Сохраняет в downloads/othername.jpg/filename.pdf
         assert result == destination / "othername.jpg" / "filename.pdf"
         assert result.read_bytes() == b"".join(chunks)
