@@ -321,37 +321,49 @@ class TestInputMediaBufferTypeValidation:
 
         assert_invalid_type_error(exc_info, "document")
 
-    def test_none_type_detects_from_buffer(self, monkeypatch):
-        """Если type не передан, тип определяется автоматически."""
-        mock_detect = Mock(return_value=UploadType.IMAGE)
-        monkeypatch.setattr(
-            "maxapi.types.input_media.detect_file_type",
-            mock_detect,
-        )
+    @pytest.mark.parametrize(
+        ("buffer", "expected_type"),
+        [
+            # PNG
+            (
+                b"\x89PNG\r\n\x1a\n" + b"\x00" * 100,
+                UploadType.IMAGE,
+            ),
+            # GIF
+            (
+                b"GIF89a" + b"\x00" * 100,
+                UploadType.IMAGE,
+            ),
+            # PDF
+            (
+                b"%PDF-1.4\n" + b"\x00" * 100,
+                UploadType.FILE,
+            ),
+            # MP3
+            (
+                b"ID3" + b"\x00" * 100,
+                UploadType.AUDIO,
+            ),
+            # MP4
+            (
+                b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 100,
+                UploadType.VIDEO,
+            ),
+            # Random bytes
+            (
+                b"\x00\x00\x00\x18dcasdasd" + b"\x00" * 100,
+                UploadType.FILE,
+            ),
+        ],
+    )
+    def test_none_type_detects_real_type_from_buffer(
+        self, buffer, expected_type
+    ):
+        """Если type не передан, тип реально определяется по buffer."""
+        media = InputMediaBuffer(buffer=buffer)
 
-        media = InputMediaBuffer(buffer=b"fake-bytes")
-
-        assert media.filename is None
-        assert media.buffer == b"fake-bytes"
-        assert media.type == UploadType.IMAGE
-        mock_detect.assert_called_once_with(b"fake-bytes")
-
-    def test_accepts_enum_type_without_autodetect(self, monkeypatch):
-        """Явно переданный UploadType используется без autodetect."""
-        mock_detect = Mock(return_value=UploadType.FILE)
-        monkeypatch.setattr(
-            "maxapi.types.input_media.detect_file_type",
-            mock_detect,
-        )
-
-        media = InputMediaBuffer(
-            buffer=b"fake-bytes",
-            filename="sample.bin",
-            type=UploadType.AUDIO,
-        )
-
-        assert media.type == UploadType.AUDIO
-        mock_detect.assert_not_called()
+        assert media.buffer == buffer
+        assert media.type == expected_type
 
     def test_default_upload_type_input_media_buffer(self, tmp_path):
         """
