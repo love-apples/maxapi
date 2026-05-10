@@ -245,22 +245,62 @@ class TestInputMediaTypeValidation:
 
         assert_invalid_type_error(exc_info, "document")
 
-    def test_none_type_detects_from_file(self, tmp_path, monkeypatch):
-        """Если type не передан, тип определяется автоматически."""
-        test_file = tmp_path / "sample.bin"
-        test_file.write_bytes(b"fake-data")
+    @pytest.mark.parametrize(
+        ("buffer", "filename", "expected_type"),
+        [
+            # PNG
+            (
+                b"\x89PNG\r\n\x1a\n" + b"\x00" * 100,
+                "test.png",
+                UploadType.IMAGE,
+            ),
+            # GIF
+            (
+                b"GIF89a" + b"\x00" * 100,
+                "test.gif",
+                UploadType.IMAGE,
+            ),
+            # PDF
+            (
+                b"%PDF-1.4\n" + b"\x00" * 100,
+                "test.pdf",
+                UploadType.FILE,
+            ),
+            # MP3
+            (
+                b"ID3" + b"\x00" * 100,
+                "test.mp3",
+                UploadType.AUDIO,
+            ),
+            # MP4
+            (
+                b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 100,
+                "test.mp4",
+                UploadType.VIDEO,
+            ),
+            # Random bytes
+            (
+                b"\x00\x00\x00\x18dcasdasd" + b"\x00" * 100,
+                "test.bin",
+                UploadType.FILE,
+            ),
+        ],
+    )
+    def test_none_type_detects_real_type_from_path(
+        self,
+        tmp_path,
+        buffer,
+        filename,
+        expected_type,
+    ):
+        """Если type не передан, тип реально определяется по path."""
+        file_path = tmp_path / filename
+        file_path.write_bytes(buffer)
 
-        mock_detect = Mock(return_value=UploadType.VIDEO)
-        monkeypatch.setattr(
-            "maxapi.types.input_media.detect_file_type",
-            mock_detect,
-        )
+        media = InputMedia(path=str(file_path))
 
-        media = InputMedia(path=str(test_file))
-
-        assert media.path == str(test_file)
-        assert media.type == UploadType.VIDEO
-        mock_detect.assert_called_once()
+        assert media.path == str(file_path)
+        assert media.type == expected_type
 
     def test_accepts_enum_type_without_autodetect(self, tmp_path, monkeypatch):
         """Явно переданный UploadType используется без autodetect."""
