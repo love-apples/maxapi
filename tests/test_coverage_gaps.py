@@ -526,7 +526,7 @@ class TestBaseConnectionUploadFallback:
         assert result == '{"token":"abc"}'
         mock_session_instance.post.assert_called_once()
 
-    async def test_upload_file_buffer_mimetypes_guess_extension(bot):
+    async def test_upload_file_buffer_mimetypes_guess_extension(self, bot):
         """upload_file_buffer вызывает mimetypes.guess_extension
         для известного MIME-типа.
         """
