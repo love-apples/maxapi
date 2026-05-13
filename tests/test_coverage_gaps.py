@@ -526,12 +526,12 @@ class TestBaseConnectionUploadFallback:
         assert result == '{"token":"abc"}'
         mock_session_instance.post.assert_called_once()
 
-    async def test_upload_file_buffer_mimetypes_guess_extension(
-        self, bot, tmp_path
-    ):
+    async def test_upload_file_buffer_mimetypes_guess_extension(self, bot):
         """upload_file_buffer вызывает mimetypes.guess_extension
         для известного MIME-типа.
         """
+        from unittest.mock import AsyncMock, MagicMock, patch
+
         from maxapi.connection.base import BaseConnection
         from maxapi.enums.upload_type import UploadType
 
@@ -540,24 +540,19 @@ class TestBaseConnectionUploadFallback:
 
         some_buffer = b"\x00" * 32
 
-        mock_response = AsyncMock()
+        mock_response = MagicMock()
         mock_response.text = AsyncMock(return_value='{"token":"xyz"}')
-        mock_cm_buf = AsyncMock()
-        mock_cm_buf.__aenter__.return_value = mock_response
-        mock_cm_buf.__aexit__.return_value = False
+
+        mock_context = AsyncMock()
+        mock_context.__aenter__.return_value = mock_response
+        mock_context.__aexit__.return_value = None
 
         bot.session = MagicMock()
         bot.session.closed = False
-        bot.session.post = Mock(return_value=mock_cm_buf)
+        bot.session.post = MagicMock(return_value=mock_context)
 
-        # Подменяем puremagic, чтобы вернуть распознаваемый MIME-матч,
-        # и mimetypes.guess_extension — чтобы вернуть реальное расширение.
         fake_match = MagicMock()
-
-        def _fake_getitem(self_m, idx):
-            return "image/png" if idx == 1 else "mocked"
-
-        fake_match.__getitem__ = _fake_getitem
+        fake_match.mime_type = "image/png"
 
         with (
             patch("maxapi.connection.base.puremagic.magic_string") as mock_pm,
@@ -575,8 +570,8 @@ class TestBaseConnectionUploadFallback:
                 type=UploadType.IMAGE,
             )
 
-        # guess_extension was called (the covered line)
-        mock_ge.assert_called_once_with("image/png")
+            mock_ge.assert_called_once_with("image/png")
+
         assert result == '{"token":"xyz"}'
 
     async def test_upload_file_buffer_uses_temp_session_when_session_is_none(
