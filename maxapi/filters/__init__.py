@@ -8,6 +8,7 @@ from magic_filter import MagicFilter, MagicT
 from .channel_post import ChannelPostFilter
 from .contact import Contact, ContactFilter
 from .filter import BaseFilter
+from .state import StateFilter
 
 _WRONG_OR_HINT = (
     "Возможная ошибка приоритета операторов: значение {value!r} стоит "
@@ -82,6 +83,7 @@ __all__ = [
     "Contact",
     "ContactFilter",
     "F",
+    "StateFilter",
     "filter_attrs",
 ]
 

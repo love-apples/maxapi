@@ -1,9 +1,10 @@
 from collections.abc import Callable
+from inspect import isclass
 from typing import Any
 
 from magic_filter import MagicFilter
 
-from ..context.state_machine import State
+from ..context.state_machine import State, StatesGroup
 from ..enums.update import UpdateType
 from ..filters.filter import BaseFilter
 from ..filters.middleware import BaseMiddleware, HandlerCallable
@@ -41,7 +42,7 @@ class Handler:
         self.base_filters: list[BaseFilter] = []
 
         states_kwargs = kwargs.pop("states", [])
-        self.states: list[State | None]
+        self.states: list[Any]
         if isinstance(states_kwargs, (list, tuple, set)):
             self.states = list(states_kwargs)
         else:
@@ -55,7 +56,12 @@ class Handler:
         for arg in args:
             if isinstance(arg, MagicFilter):
                 self.filters.append(arg)
-            elif isinstance(arg, State) or arg is None:
+            elif (
+                isinstance(arg, State)
+                or arg is None
+                or (isclass(arg) and issubclass(arg, StatesGroup))
+                or isinstance(arg, StatesGroup)
+            ):
                 self.states.append(arg)
             elif isinstance(arg, BaseMiddleware):
                 self.middlewares.append(arg)

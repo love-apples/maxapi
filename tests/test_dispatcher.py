@@ -12,6 +12,7 @@ from maxapi.enums.update import UpdateType
 from maxapi.filters import F
 from maxapi.filters.command import Command, CommandsInfo
 from maxapi.filters.handler import Handler
+from maxapi.filters.state import StateFilter
 from maxapi.types.updates.bot_started import BotStarted
 from maxapi.types.updates.message_created import MessageCreated
 
@@ -387,6 +388,106 @@ class TestDispatcherAsync:
 
         assert result is None
 
+    async def test_process_base_filters_passes_context_and_raw_state(
+        self, dispatcher, sample_message_created_event, sample_context
+    ):
+        """BaseFilter получает context/raw_state только если объявил их."""
+        from maxapi.filters.filter import BaseFilter
+
+        received: dict = {}
+
+        class ContextFilter(BaseFilter):
+            async def __call__(
+                self, event, context=None, raw_state=None
+            ):
+                received["event"] = event
+                received["context"] = context
+                received["raw_state"] = raw_state
+                return True
+
+        result = await dispatcher.process_base_filters(
+            sample_message_created_event,
+            [ContextFilter()],
+            data={"context": sample_context, "raw_state": "Form:name"},
+        )
+
+        assert result == {}
+        assert received == {
+            "event": sample_message_created_event,
+            "context": sample_context,
+            "raw_state": "Form:name",
+        }
+
+    async def test_process_base_filters_chains_returned_data(
+        self, dispatcher, sample_message_created_event
+    ):
+        """dict от одного BaseFilter доступен следующему фильтру."""
+        from maxapi.filters.filter import BaseFilter
+
+        class FirstFilter(BaseFilter):
+            async def __call__(self, event):
+                return {"answer": 42}
+
+        class SecondFilter(BaseFilter):
+            async def __call__(self, event, answer: int | None = None):
+                return {"seen_answer": answer}
+
+        result = await dispatcher.process_base_filters(
+            sample_message_created_event,
+            [FirstFilter(), SecondFilter()],
+        )
+
+        assert result == {"answer": 42, "seen_answer": 42}
+
+    async def test_process_base_filters_keeps_event_only_filters_compatible(
+        self, dispatcher, sample_message_created_event, sample_context
+    ):
+        """Старые фильтры с __call__(event) не получают лишние kwargs."""
+        from maxapi.filters.filter import BaseFilter
+
+        received = []
+
+        class OldStyleFilter(BaseFilter):
+            async def __call__(self, event):
+                received.append(event)
+                return True
+
+        result = await dispatcher.process_base_filters(
+            sample_message_created_event,
+            [OldStyleFilter()],
+            data={"context": sample_context, "raw_state": "state"},
+        )
+
+        assert result == {}
+        assert received == [sample_message_created_event]
+
+    async def test_process_base_filters_does_not_duplicate_event_kwarg(
+        self, dispatcher, sample_message_created_event
+    ):
+        """Фильтр с **kwargs не получает event вторым keyword-аргументом."""
+        from maxapi.filters.filter import BaseFilter
+
+        received = []
+
+        class FirstFilter(BaseFilter):
+            async def __call__(self, event):
+                return {"event": "shadowed", "payload": 42}
+
+        class KwargsFilter(BaseFilter):
+            async def __call__(self, event, **kwargs):
+                received.append((event, kwargs))
+                return True
+
+        result = await dispatcher.process_base_filters(
+            sample_message_created_event,
+            [FirstFilter(), KwargsFilter()],
+        )
+
+        assert result == {"event": "shadowed", "payload": 42}
+        assert received == [
+            (sample_message_created_event, {"payload": 42})
+        ]
+
 
 class TestDispatcherSubscriptions:
     async def test_check_subscriptions_no_subscriptions(
@@ -620,6 +721,78 @@ class TestHandlePipeline:
 
         _setup_for_handle(dispatcher, bot)
         await dispatcher.handle(fixture_message_created)  # не должно падать
+
+    async def test_handle_dispatches_with_legacy_state_arg(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """Старый синтаксис @dp.message_created(Form.name) работает."""
+        from maxapi.context.state_machine import State, StatesGroup
+
+        class Form(StatesGroup):
+            name = State()
+
+        handled = []
+        context = dispatcher._Dispatcher__get_context(
+            *fixture_message_created.get_ids()
+        )
+        await context.set_state(Form.name)
+
+        @dispatcher.message_created(Form.name)
+        async def _handler(event: MessageCreated):
+            handled.append(event)
+
+        _setup_for_handle(dispatcher, bot)
+        await dispatcher.handle(fixture_message_created)
+
+        assert handled == [fixture_message_created]
+
+    async def test_handle_dispatches_with_states_kwarg(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """states=[...] остаётся совместимым API."""
+        from maxapi.context.state_machine import State, StatesGroup
+
+        class Form(StatesGroup):
+            name = State()
+
+        handled = []
+        context = dispatcher._Dispatcher__get_context(
+            *fixture_message_created.get_ids()
+        )
+        await context.set_state(Form.name)
+
+        @dispatcher.message_created(states=[Form.name])
+        async def _handler(event: MessageCreated):
+            handled.append(event)
+
+        _setup_for_handle(dispatcher, bot)
+        await dispatcher.handle(fixture_message_created)
+
+        assert handled == [fixture_message_created]
+
+    async def test_handle_dispatches_with_state_filter(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """Новый StateFilter работает как обычный BaseFilter."""
+        from maxapi.context.state_machine import State, StatesGroup
+
+        class Form(StatesGroup):
+            name = State()
+
+        handled = []
+        context = dispatcher._Dispatcher__get_context(
+            *fixture_message_created.get_ids()
+        )
+        await context.set_state(Form.name)
+
+        @dispatcher.message_created(StateFilter(Form.name))
+        async def _handler(event: MessageCreated, raw_state):
+            handled.append((event, raw_state))
+
+        _setup_for_handle(dispatcher, bot)
+        await dispatcher.handle(fixture_message_created)
+
+        assert handled == [(fixture_message_created, Form.name)]
 
     async def test_handle_catches_handler_exception(
         self, dispatcher, bot, fixture_message_created

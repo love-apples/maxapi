@@ -18,6 +18,7 @@ from .exceptions.dispatcher import HandlerException, MiddlewareException
 from .exceptions.max import InvalidToken, MaxApiError, MaxConnection
 from .filters import filter_attrs
 from .filters.handler import Handler
+from .filters.state import StateFilter
 from .loggers import logger_dp
 from .methods.types.getted_updates import process_update_request
 from .types.bot_mixin import BotMixin
@@ -534,8 +535,67 @@ class Dispatcher(BotMixin):
         await handler.func_event(event_object)
 
     @staticmethod
+    def _resolve_filter_kwargs(
+        base_filter: BaseFilter, data: dict[str, Any]
+    ) -> dict[str, Any]:
+        """
+        Подбирает kwargs для BaseFilter по сигнатуре ``__call__``.
+        """
+        try:
+            signature = inspect.signature(base_filter.__call__)
+        except (TypeError, ValueError):
+            return {}
+
+        params = list(signature.parameters.values())
+        event_arg_name: str | None = None
+        for param in params:
+            if param.kind in (
+                inspect.Parameter.POSITIONAL_ONLY,
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            ):
+                event_arg_name = param.name
+                break
+
+        if any(
+            param.kind is inspect.Parameter.VAR_KEYWORD for param in params
+        ):
+            return {
+                key: value
+                for key, value in data.items()
+                if key != event_arg_name
+            }
+
+        kwargs: dict[str, Any] = {}
+        event_param_skipped = False
+
+        for param in params:
+            if param.kind is inspect.Parameter.VAR_POSITIONAL:
+                continue
+
+            if not event_param_skipped and param.kind in (
+                inspect.Parameter.POSITIONAL_ONLY,
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            ):
+                event_param_skipped = True
+                continue
+
+            if (
+                param.kind
+                in (
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    inspect.Parameter.KEYWORD_ONLY,
+                )
+                and param.name in data
+            ):
+                kwargs[param.name] = data[param.name]
+
+        return kwargs
+
+    @staticmethod
     async def process_base_filters(
-        event: UpdateUnion, filters: list[BaseFilter]
+        event: UpdateUnion,
+        filters: list[BaseFilter],
+        data: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         """
         Асинхронно применяет фильтры к событию.
@@ -549,18 +609,21 @@ class Dispatcher(BotMixin):
                 если фильтр не прошёл.
         """
 
-        data: dict[str, Any] = {}
+        available_data: dict[str, Any] = dict(data or {})
+        filter_data: dict[str, Any] = {}
 
         for _filter in filters:
-            result = await _filter(event)
+            kwargs = Dispatcher._resolve_filter_kwargs(_filter, available_data)
+            result = await _filter(event, **kwargs)
 
             if isinstance(result, dict):
-                data.update(result)
+                filter_data.update(result)
+                available_data.update(result)
 
             elif not result:
                 return None
 
-        return data
+        return filter_data
 
     def _iter_routers(
         self,
@@ -737,6 +800,7 @@ class Dispatcher(BotMixin):
         event: UpdateUnion,
         filters: list[MagicFilter],
         base_filters: list[BaseFilter],
+        data: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         """
         Проверяет накопленные фильтры роутера для события.
@@ -755,7 +819,7 @@ class Dispatcher(BotMixin):
 
         if base_filters:
             return await self.process_base_filters(
-                event=event, filters=base_filters
+                event=event, filters=base_filters, data=data
             )
 
         return {}
@@ -789,6 +853,7 @@ class Dispatcher(BotMixin):
         handler: Handler,
         event: UpdateUnion,
         current_state: Any | None,
+        data: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         """
         Проверяет, подходит ли обработчик для события (фильтры, состояние).
@@ -802,14 +867,33 @@ class Dispatcher(BotMixin):
             dict[str, Any] | None: Словарь с данными или None,
                 если не подходит.
         """
-        if handler.states and current_state not in handler.states:
-            return None
+        check_data = dict(data or {})
+        check_data.setdefault("raw_state", current_state)
 
-        return await self._check_router_filters(
+        handler_data: dict[str, Any] = {}
+
+        if handler.states:
+            state_result = await self.process_base_filters(
+                event=event,
+                filters=[StateFilter(handler.states)],
+                data=check_data,
+            )
+            if state_result is None:
+                return None
+            handler_data.update(state_result)
+            check_data.update(state_result)
+
+        filter_result = await self._check_router_filters(
             event=event,
             filters=handler.filters,
             base_filters=handler.base_filters,
+            data=check_data,
         )
+        if filter_result is None:
+            return None
+
+        handler_data.update(filter_result)
+        return handler_data
 
     async def _execute_handler(
         self,
@@ -909,6 +993,7 @@ class Dispatcher(BotMixin):
                 handler=handler,
                 event=event,
                 current_state=current_state,
+                data=data,
             )
             if handler_match_result is None:
                 continue
@@ -1047,6 +1132,7 @@ class Dispatcher(BotMixin):
                 event=event_object,
                 filters=router_filters,
                 base_filters=router_base_filters,
+                data=data,
             )
             if router_filter_result is None:
                 continue
@@ -1113,6 +1199,7 @@ class Dispatcher(BotMixin):
         """
         memory_context = data["_memory_context"]
         data["context"] = memory_context
+        data["raw_state"] = data["_current_state"]
 
         router_id, is_handled = await self._iter_and_dispatch_routers(
             event_object=event_object,
@@ -1147,6 +1234,7 @@ class Dispatcher(BotMixin):
 
             kwargs: dict[str, Any] = {
                 "context": memory_context,
+                "raw_state": current_state,
                 "_memory_context": memory_context,
                 "_current_state": current_state,
                 "_process_info": process_info,

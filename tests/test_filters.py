@@ -8,6 +8,7 @@ import pytest
 from maxapi.filters.callback_payload import CallbackPayload
 from maxapi.filters.command import Command
 from maxapi.filters.filter import BaseFilter
+from maxapi.filters.state import StateFilter
 from maxapi.types.updates.message_created import MessageCreated
 
 
@@ -63,6 +64,411 @@ class TestBaseFilter:
         result = await filter_obj(sample_message_created_event)
         assert isinstance(result, dict)
         assert result["test_key"] == "test_value"
+
+
+class TestStateFilter:
+    """Тесты фильтра FSM-состояний."""
+
+    @pytest.fixture
+    def form(self):
+        from maxapi.context.state_machine import State, StatesGroup
+
+        class Form(StatesGroup):
+            name = State()
+            age = State()
+
+        return Form
+
+    def test_state_filter_requires_state(self):
+        """StateFilter без состояний не имеет смысла."""
+        with pytest.raises(
+            ValueError, match="Нужно передать хотя бы одно состояние"
+        ):
+            StateFilter()
+
+        with pytest.raises(
+            ValueError, match=r'StateFilter\("\*"\).*StateFilter\(None\)'
+        ):
+            StateFilter([])
+
+    @pytest.mark.asyncio
+    async def test_state_filter_matches_state_object(
+        self, sample_message_created_event, form
+    ):
+        """StateFilter совпадает по State-объекту и строке из storage."""
+        assert (
+            await StateFilter(form.name)(
+                sample_message_created_event,
+                raw_state=form.name,
+            )
+            is True
+        )
+        assert (
+            await StateFilter(form.name)(
+                sample_message_created_event,
+                raw_state="Form:name",
+            )
+            is True
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_matches_string_and_none(
+        self, sample_message_created_event, form
+    ):
+        """Поддерживаются строковые состояния и отсутствие состояния."""
+        assert (
+            await StateFilter("Form:name")(
+                sample_message_created_event,
+                raw_state=form.name,
+            )
+            is True
+        )
+        assert (
+            await StateFilter(None)(
+                sample_message_created_event,
+                raw_state=None,
+            )
+            is True
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_matches_default_state_object(
+        self, sample_message_created_event
+    ):
+        """Как в aiogram: пустой State() совпадает с raw_state=None."""
+        from maxapi.context.state_machine import State
+
+        assert (
+            await StateFilter(State())(
+                sample_message_created_event,
+                raw_state=None,
+            )
+            is True
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_matches_wildcard(
+        self, sample_message_created_event, form
+    ):
+        """'*' работает как aiogram wildcard для любого raw_state."""
+        assert (
+            await StateFilter("*")(
+                sample_message_created_event,
+                raw_state=form.age,
+            )
+            is True
+        )
+        assert (
+            await StateFilter("*")(
+                sample_message_created_event,
+                raw_state=None,
+            )
+            is True
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_matches_state_object_wildcard(
+        self, sample_message_created_event, form
+    ):
+        """State со значением '*' тоже работает как wildcard aiogram."""
+        from maxapi.context.state_machine import State
+
+        any_state = State()
+        any_state.name = "*"
+
+        assert (
+            await StateFilter(any_state)(
+                sample_message_created_event,
+                raw_state=form.age,
+            )
+            is True
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_matches_states_group(
+        self, sample_message_created_event, form
+    ):
+        """StatesGroup раскрывается в список состояний группы."""
+        assert (
+            await StateFilter(form)(
+                sample_message_created_event,
+                raw_state=form.age,
+            )
+            is True
+        )
+        assert (
+            await StateFilter(form())(
+                sample_message_created_event,
+                raw_state=form.name,
+            )
+            is True
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_matches_nested_states_group(
+        self, sample_message_created_event
+    ):
+        """Вложенные StatesGroup матчятся как в aiogram."""
+        from maxapi.context.state_machine import State, StatesGroup
+
+        class Form(StatesGroup):
+            class Nested(StatesGroup):
+                step = State()
+
+        assert (
+            await StateFilter(Form)(
+                sample_message_created_event,
+                raw_state=Form.Nested.step,
+            )
+            is True
+        )
+        assert (
+            await StateFilter(Form)(
+                sample_message_created_event,
+                raw_state="Form.Nested:step",
+            )
+            is True
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_matches_inherited_states_group(
+        self, sample_message_created_event
+    ):
+        """StatesGroup включает состояния базовых групп."""
+        from maxapi.context.state_machine import State, StatesGroup
+
+        class BaseForm(StatesGroup):
+            name = State()
+
+        class Form(BaseForm):
+            age = State()
+
+        assert (
+            await StateFilter(Form)(
+                sample_message_created_event,
+                raw_state=BaseForm.name,
+            )
+            is True
+        )
+        assert (
+            await StateFilter(Form)(
+                sample_message_created_event,
+                raw_state=Form.age,
+            )
+            is True
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_matches_inherited_nested_states_group_alias(
+        self, sample_message_created_event
+    ):
+        """Наследник сохраняет строковые aliases вложенных базовых групп."""
+        from maxapi.context.state_machine import State, StatesGroup
+
+        class BaseForm(StatesGroup):
+            class Nested(StatesGroup):
+                step = State()
+
+        class Form(BaseForm):
+            age = State()
+
+        assert (
+            await StateFilter(Form)(
+                sample_message_created_event,
+                raw_state="BaseForm.Nested:step",
+            )
+            is True
+        )
+        assert (
+            await StateFilter(Form)(
+                sample_message_created_event,
+                raw_state="Form.Nested:step",
+            )
+            is True
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_accepts_single_iterable(
+        self, sample_message_created_event, form
+    ):
+        """Один iterable со state-значениями разворачивается."""
+        assert (
+            await StateFilter([form.name, form.age])(
+                sample_message_created_event,
+                raw_state=form.age,
+            )
+            is True
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_keeps_mixed_iterable_and_positional_states(
+        self, sample_message_created_event, form
+    ):
+        """Iterable не должен съедать следующие позиционные состояния."""
+        assert (
+            await StateFilter([form.name], form.age)(
+                sample_message_created_event,
+                raw_state=form.name,
+            )
+            is True
+        )
+        assert (
+            await StateFilter([form.name], form.age)(
+                sample_message_created_event,
+                raw_state=form.age,
+            )
+            is True
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_accepts_multiple_positional_states(
+        self, sample_message_created_event, form
+    ):
+        """Несколько позиционных состояний работают как в aiogram."""
+        assert (
+            await StateFilter(form.name, form.age)(
+                sample_message_created_event,
+                raw_state=form.age,
+            )
+            is True
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_returns_false_on_mismatch(
+        self, sample_message_created_event, form
+    ):
+        """Несовпадающее состояние блокирует фильтр."""
+        assert (
+            await StateFilter(form.name)(
+                sample_message_created_event,
+                raw_state=form.age,
+            )
+            is False
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_exclude_blocks_matching_state(
+        self, sample_message_created_event, form
+    ):
+        """exclude имеет приоритет над основными состояниями."""
+        assert (
+            await StateFilter("*", exclude=form.age)(
+                sample_message_created_event,
+                raw_state=form.age,
+            )
+            is False
+        )
+        assert (
+            await StateFilter("*", exclude=form.age)(
+                sample_message_created_event,
+                raw_state=form.name,
+            )
+            is True
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_exclude_with_group(
+        self, sample_message_created_event, form
+    ):
+        """Из группы можно исключить отдельные состояния."""
+        assert (
+            await StateFilter(form, exclude=[form.age])(
+                sample_message_created_event,
+                raw_state=form.name,
+            )
+            is True
+        )
+        assert (
+            await StateFilter(form, exclude=[form.age])(
+                sample_message_created_event,
+                raw_state=form.age,
+            )
+            is False
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_exclude_none_means_no_exclusions(
+        self, sample_message_created_event
+    ):
+        """exclude=None оставляет поведение StateFilter('*') прежним."""
+        assert (
+            await StateFilter("*", exclude=None)(
+                sample_message_created_event,
+                raw_state=None,
+            )
+            is True
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_exclude_default_state_with_iterable(
+        self, sample_message_created_event
+    ):
+        """Для исключения default-state используется exclude=[None]."""
+        assert (
+            await StateFilter("*", exclude=[None])(
+                sample_message_created_event,
+                raw_state=None,
+            )
+            is False
+        )
+        assert (
+            await StateFilter("*", exclude=[None])(
+                sample_message_created_event,
+                raw_state="Form:name",
+            )
+            is True
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_exclude_states_group(
+        self, sample_message_created_event, form
+    ):
+        """exclude=StatesGroup исключает любое состояние группы."""
+        assert (
+            await StateFilter("*", exclude=form)(
+                sample_message_created_event,
+                raw_state=form.name,
+            )
+            is False
+        )
+        assert (
+            await StateFilter("*", exclude=form)(
+                sample_message_created_event,
+                raw_state="Other:state",
+            )
+            is True
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_filter_exclude_keeps_mixed_iterable_and_state(
+        self, sample_message_created_event, form
+    ):
+        """exclude тоже разворачивает mixed iterable-аргументы."""
+        assert (
+            await StateFilter("*", exclude=([form.name], form.age))(
+                sample_message_created_event,
+                raw_state=form.name,
+            )
+            is False
+        )
+        assert (
+            await StateFilter("*", exclude=([form.name], form.age))(
+                sample_message_created_event,
+                raw_state=form.age,
+            )
+            is False
+        )
+        assert (
+            await StateFilter("*", exclude=([form.name], form.age))(
+                sample_message_created_event,
+                raw_state="Other:state",
+            )
+            is True
+        )
+
+    def test_state_filter_str_includes_exclude(self, form):
+        """В строковом виде видно исключённые состояния."""
+        assert "exclude=Form:age" in str(StateFilter("*", exclude=form.age))
 
 
 class TestCommandFilter:
