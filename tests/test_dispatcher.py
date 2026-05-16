@@ -12,6 +12,7 @@ from maxapi.enums.update import UpdateType
 from maxapi.filters import F
 from maxapi.filters.command import Command, CommandsInfo
 from maxapi.filters.handler import Handler
+from maxapi.filters.state import StateFilter
 from maxapi.types.updates.bot_started import BotStarted
 from maxapi.types.updates.message_created import MessageCreated
 
@@ -387,6 +388,137 @@ class TestDispatcherAsync:
 
         assert result is None
 
+    async def test_process_base_filters_passes_context_and_raw_state(
+        self, dispatcher, sample_message_created_event, sample_context
+    ):
+        """BaseFilter получает context/raw_state только если объявил их."""
+        from maxapi.filters.filter import BaseFilter
+
+        received: dict = {}
+
+        class ContextFilter(BaseFilter):
+            async def __call__(self, event, context=None, raw_state=None):
+                received["event"] = event
+                received["context"] = context
+                received["raw_state"] = raw_state
+                return True
+
+        result = await dispatcher.process_base_filters(
+            sample_message_created_event,
+            [ContextFilter()],
+            data={"context": sample_context, "raw_state": "Form:name"},
+        )
+
+        assert result == {}
+        assert received == {
+            "event": sample_message_created_event,
+            "context": sample_context,
+            "raw_state": "Form:name",
+        }
+
+    async def test_process_base_filters_chains_returned_data(
+        self, dispatcher, sample_message_created_event
+    ):
+        """dict от одного BaseFilter доступен следующему фильтру."""
+        from maxapi.filters.filter import BaseFilter
+
+        class FirstFilter(BaseFilter):
+            async def __call__(self, event):
+                return {"answer": 42}
+
+        class SecondFilter(BaseFilter):
+            async def __call__(self, event, answer: int | None = None):
+                return {"seen_answer": answer}
+
+        result = await dispatcher.process_base_filters(
+            sample_message_created_event,
+            [FirstFilter(), SecondFilter()],
+        )
+
+        assert result == {"answer": 42, "seen_answer": 42}
+
+    async def test_process_base_filters_keeps_event_only_filters_compatible(
+        self, dispatcher, sample_message_created_event, sample_context
+    ):
+        """Старые фильтры с __call__(event) не получают лишние kwargs."""
+        from maxapi.filters.filter import BaseFilter
+
+        received = []
+
+        class OldStyleFilter(BaseFilter):
+            async def __call__(self, event):
+                received.append(event)
+                return True
+
+        result = await dispatcher.process_base_filters(
+            sample_message_created_event,
+            [OldStyleFilter()],
+            data={"context": sample_context, "raw_state": "state"},
+        )
+
+        assert result == {}
+        assert received == [sample_message_created_event]
+
+    async def test_process_base_filters_does_not_duplicate_event_kwarg(
+        self, dispatcher, sample_message_created_event
+    ):
+        """Фильтр с **kwargs не получает event вторым keyword-аргументом."""
+        from maxapi.filters.filter import BaseFilter
+
+        received = []
+
+        class FirstFilter(BaseFilter):
+            async def __call__(self, event):
+                return {"event": "shadowed", "payload": 42}
+
+        class KwargsFilter(BaseFilter):
+            async def __call__(self, event, **kwargs):
+                received.append((event, kwargs))
+                return True
+
+        result = await dispatcher.process_base_filters(
+            sample_message_created_event,
+            [FirstFilter(), KwargsFilter()],
+        )
+
+        assert result == {"event": "shadowed", "payload": 42}
+        assert received == [(sample_message_created_event, {"payload": 42})]
+
+    async def test_process_base_filters_caches_filter_signature(
+        self, dispatcher, sample_message_created_event, monkeypatch
+    ):
+        """Сигнатура BaseFilter не разбирается заново на каждый вызов."""
+        import maxapi.dispatcher as dp_module
+        from maxapi.filters.filter import BaseFilter
+
+        dp_module._get_filter_kwarg_spec.cache_clear()
+        calls = 0
+        original_signature = dp_module.inspect.signature
+
+        class CachedFilter(BaseFilter):
+            async def __call__(self, event, raw_state=None):
+                return {"seen_state": raw_state}
+
+        def spy_signature(obj, *args, **kwargs):
+            nonlocal calls
+            if obj is CachedFilter.__call__:
+                calls += 1
+            return original_signature(obj, *args, **kwargs)
+
+        monkeypatch.setattr(dp_module.inspect, "signature", spy_signature)
+
+        filter_obj = CachedFilter()
+        for _ in range(2):
+            result = await dispatcher.process_base_filters(
+                sample_message_created_event,
+                [filter_obj],
+                data={"raw_state": "Form:name"},
+            )
+            assert result == {"seen_state": "Form:name"}
+
+        assert calls == 1
+        dp_module._get_filter_kwarg_spec.cache_clear()
+
 
 class TestDispatcherSubscriptions:
     async def test_check_subscriptions_no_subscriptions(
@@ -621,6 +753,78 @@ class TestHandlePipeline:
         _setup_for_handle(dispatcher, bot)
         await dispatcher.handle(fixture_message_created)  # не должно падать
 
+    async def test_handle_dispatches_with_legacy_state_arg(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """Старый синтаксис @dp.message_created(Form.name) работает."""
+        from maxapi.context.state_machine import State, StatesGroup
+
+        class Form(StatesGroup):
+            name = State()
+
+        handled = []
+        context = dispatcher._Dispatcher__get_context(
+            *fixture_message_created.get_ids()
+        )
+        await context.set_state(Form.name)
+
+        @dispatcher.message_created(Form.name)
+        async def _handler(event: MessageCreated):
+            handled.append(event)
+
+        _setup_for_handle(dispatcher, bot)
+        await dispatcher.handle(fixture_message_created)
+
+        assert handled == [fixture_message_created]
+
+    async def test_handle_dispatches_with_states_kwarg(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """states=[...] остаётся совместимым API."""
+        from maxapi.context.state_machine import State, StatesGroup
+
+        class Form(StatesGroup):
+            name = State()
+
+        handled = []
+        context = dispatcher._Dispatcher__get_context(
+            *fixture_message_created.get_ids()
+        )
+        await context.set_state(Form.name)
+
+        @dispatcher.message_created(states=[Form.name])
+        async def _handler(event: MessageCreated):
+            handled.append(event)
+
+        _setup_for_handle(dispatcher, bot)
+        await dispatcher.handle(fixture_message_created)
+
+        assert handled == [fixture_message_created]
+
+    async def test_handle_dispatches_with_state_filter(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """Новый StateFilter работает как обычный BaseFilter."""
+        from maxapi.context.state_machine import State, StatesGroup
+
+        class Form(StatesGroup):
+            name = State()
+
+        handled = []
+        context = dispatcher._Dispatcher__get_context(
+            *fixture_message_created.get_ids()
+        )
+        await context.set_state(Form.name)
+
+        @dispatcher.message_created(StateFilter(Form.name))
+        async def _handler(event: MessageCreated, raw_state):
+            handled.append((event, raw_state))
+
+        _setup_for_handle(dispatcher, bot)
+        await dispatcher.handle(fixture_message_created)
+
+        assert handled == [(fixture_message_created, Form.name)]
+
     async def test_handle_catches_handler_exception(
         self, dispatcher, bot, fixture_message_created
     ):
@@ -722,6 +926,33 @@ class TestDispatcherHelpers:
             current_state=state_b,
         )
         assert result is None
+
+    async def test_check_handler_match_reuses_prepared_state_filter(
+        self, dispatcher, fixture_message_created
+    ):
+        """Legacy states используют подготовленный StateFilter."""
+
+        class State:
+            pass
+
+        state = State()
+        handler = Handler(
+            func_event=lambda e: None,
+            update_type=UpdateType.MESSAGE_CREATED,
+            states=[state],
+        )
+        state_filter = handler.state_filter
+
+        assert state_filter is not None
+
+        for _ in range(2):
+            result = await dispatcher._check_handler_match(
+                handler=handler,
+                event=fixture_message_created,
+                current_state=state,
+            )
+            assert result == {}
+            assert handler.state_filter is state_filter
 
     def test_get_middleware_title_with_func_attr(self, dispatcher):
         """_get_middleware_title берёт имя из chain.func.__class__.__name__."""

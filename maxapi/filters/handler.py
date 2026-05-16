@@ -1,12 +1,14 @@
 from collections.abc import Callable
+from inspect import isclass
 from typing import Any
 
 from magic_filter import MagicFilter
 
-from ..context.state_machine import State
+from ..context.state_machine import State, StatesGroup
 from ..enums.update import UpdateType
 from ..filters.filter import BaseFilter
 from ..filters.middleware import BaseMiddleware, HandlerCallable
+from ..filters.state import StateFilter
 from ..loggers import logger_dp
 
 
@@ -41,13 +43,14 @@ class Handler:
         self.base_filters: list[BaseFilter] = []
 
         states_kwargs = kwargs.pop("states", [])
-        self.states: list[State | None]
+        self.states: list[Any]
         if isinstance(states_kwargs, (list, tuple, set)):
             self.states = list(states_kwargs)
         else:
             self.states = [states_kwargs]
 
         self.middlewares: list[BaseMiddleware] = []
+        self.state_filter: StateFilter | None = None
 
         self.func_args: frozenset[str] | None = None
         self.mw_chain: HandlerCallable | None = None
@@ -55,7 +58,12 @@ class Handler:
         for arg in args:
             if isinstance(arg, MagicFilter):
                 self.filters.append(arg)
-            elif isinstance(arg, State) or arg is None:
+            elif (
+                isinstance(arg, State)
+                or arg is None
+                or (isclass(arg) and issubclass(arg, StatesGroup))
+                or isinstance(arg, StatesGroup)
+            ):
                 self.states.append(arg)
             elif isinstance(arg, BaseMiddleware):
                 self.middlewares.append(arg)
@@ -66,3 +74,9 @@ class Handler:
                     f"Неизвестный фильтр `{arg}` "
                     f"при регистрации `{func_event.__name__}`"
                 )
+
+        self.prepare_state_filter()
+
+    def prepare_state_filter(self) -> None:
+        """Подготавливает фильтр состояний для hot-path dispatch."""
+        self.state_filter = StateFilter(self.states) if self.states else None

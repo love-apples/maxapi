@@ -35,6 +35,33 @@ class StatesGroup:
     возвращает список всех состояний в виде строк.
     """
 
+    @staticmethod
+    def _append_unique_state(
+        states: list[str], seen: set[str], state: str
+    ) -> None:
+        if state not in seen:
+            seen.add(state)
+            states.append(state)
+
+    @classmethod
+    def _append_nested_states(
+        cls,
+        states: list[str],
+        seen: set[str],
+        group: type["StatesGroup"],
+    ) -> None:
+        child_prefix = f"{group.__name__}:"
+        full_child_prefix = f"{cls.__name__}.{group.__name__}:"
+
+        for state in group.states():
+            cls._append_unique_state(states, seen, state)
+            if state.startswith(child_prefix):
+                cls._append_unique_state(
+                    states,
+                    seen,
+                    f"{full_child_prefix}{state[len(child_prefix) :]}",
+                )
+
     @classmethod
     def states(cls) -> list[str]:
         """
@@ -43,9 +70,24 @@ class StatesGroup:
         Returns:
             Список строковых представлений состояний
         """
+        states: list[str] = []
 
-        return [
-            str(getattr(cls, attr))
-            for attr in dir(cls)
-            if isinstance(getattr(cls, attr), State)
-        ]
+        seen: set[str] = set()
+
+        for base in cls.__bases__:
+            if issubclass(base, StatesGroup) and base is not StatesGroup:
+                for state in base.states():
+                    cls._append_unique_state(states, seen, state)
+
+        for attr in dir(cls):
+            value = getattr(cls, attr)
+            if isinstance(value, State):
+                cls._append_unique_state(states, seen, str(value))
+            elif (
+                isinstance(value, type)
+                and issubclass(value, StatesGroup)
+                and value is not StatesGroup
+            ):
+                cls._append_nested_states(states, seen, value)
+
+        return states
