@@ -488,6 +488,41 @@ class TestDispatcherAsync:
             (sample_message_created_event, {"payload": 42})
         ]
 
+    async def test_process_base_filters_caches_filter_signature(
+        self, dispatcher, sample_message_created_event, monkeypatch
+    ):
+        """Сигнатура BaseFilter не разбирается заново на каждый вызов."""
+        import maxapi.dispatcher as dp_module
+        from maxapi.filters.filter import BaseFilter
+
+        dp_module._get_filter_kwarg_spec.cache_clear()
+        calls = 0
+        original_signature = dp_module.inspect.signature
+
+        class CachedFilter(BaseFilter):
+            async def __call__(self, event, raw_state=None):
+                return {"seen_state": raw_state}
+
+        def spy_signature(obj, *args, **kwargs):
+            nonlocal calls
+            if obj is CachedFilter.__call__:
+                calls += 1
+            return original_signature(obj, *args, **kwargs)
+
+        monkeypatch.setattr(dp_module.inspect, "signature", spy_signature)
+
+        filter_obj = CachedFilter()
+        for _ in range(2):
+            result = await dispatcher.process_base_filters(
+                sample_message_created_event,
+                [filter_obj],
+                data={"raw_state": "Form:name"},
+            )
+            assert result == {"seen_state": "Form:name"}
+
+        assert calls == 1
+        dp_module._get_filter_kwarg_spec.cache_clear()
+
 
 class TestDispatcherSubscriptions:
     async def test_check_subscriptions_no_subscriptions(
@@ -895,6 +930,33 @@ class TestDispatcherHelpers:
             current_state=state_b,
         )
         assert result is None
+
+    async def test_check_handler_match_reuses_prepared_state_filter(
+        self, dispatcher, fixture_message_created
+    ):
+        """Legacy states используют подготовленный StateFilter."""
+
+        class State:
+            pass
+
+        state = State()
+        handler = Handler(
+            func_event=lambda e: None,
+            update_type=UpdateType.MESSAGE_CREATED,
+            states=[state],
+        )
+        state_filter = handler.state_filter
+
+        assert state_filter is not None
+
+        for _ in range(2):
+            result = await dispatcher._check_handler_match(
+                handler=handler,
+                event=fixture_message_created,
+                current_state=state,
+            )
+            assert result == {}
+            assert handler.state_filter is state_filter
 
     def test_get_middleware_title_with_func_attr(self, dispatcher):
         """_get_middleware_title берёт имя из chain.func.__class__.__name__."""

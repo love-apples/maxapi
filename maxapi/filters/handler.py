@@ -8,6 +8,7 @@ from ..context.state_machine import State, StatesGroup
 from ..enums.update import UpdateType
 from ..filters.filter import BaseFilter
 from ..filters.middleware import BaseMiddleware, HandlerCallable
+from ..filters.state import StateFilter
 from ..loggers import logger_dp
 
 
@@ -49,6 +50,7 @@ class Handler:
             self.states = [states_kwargs]
 
         self.middlewares: list[BaseMiddleware] = []
+        self.state_filter: StateFilter | None = None
 
         self.func_args: frozenset[str] | None = None
         self.mw_chain: HandlerCallable | None = None
@@ -72,3 +74,9 @@ class Handler:
                     f"Неизвестный фильтр `{arg}` "
                     f"при регистрации `{func_event.__name__}`"
                 )
+
+        self.prepare_state_filter()
+
+    def prepare_state_filter(self) -> None:
+        """Подготавливает фильтр состояний для hot-path dispatch."""
+        self.state_filter = StateFilter(self.states) if self.states else None

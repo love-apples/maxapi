@@ -6,8 +6,9 @@ import inspect
 import warnings
 from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
 from collections import OrderedDict
+from collections.abc import Hashable
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from warnings import warn
 
 from aiohttp import ClientConnectorError
@@ -18,7 +19,6 @@ from .exceptions.dispatcher import HandlerException, MiddlewareException
 from .exceptions.max import InvalidToken, MaxApiError, MaxConnection
 from .filters import filter_attrs
 from .filters.handler import Handler
-from .filters.state import StateFilter
 from .loggers import logger_dp
 from .methods.types.getted_updates import process_update_request
 from .types.bot_mixin import BotMixin
@@ -40,6 +40,48 @@ if TYPE_CHECKING:
 CONNECTION_RETRY_DELAY = 30
 GET_UPDATES_RETRY_DELAY = 5
 CONTEXTS_MAX_SIZE = 10_000
+
+_FilterKwargSpec = tuple[str | None, frozenset[str] | None]
+
+
+@functools.lru_cache(maxsize=1024)
+def _get_filter_kwarg_spec(filter_cls: Any) -> _FilterKwargSpec:
+    """Возвращает имя event-аргумента и допустимые kwargs для фильтра."""
+    try:
+        signature = inspect.signature(filter_cls.__call__)
+    except (TypeError, ValueError):
+        return None, frozenset()
+
+    params = list(signature.parameters.values())
+    event_arg_name: str | None = None
+    event_param_skipped = False
+    allowed_kwargs: set[str] = set()
+
+    for param in params:
+        if param.kind is inspect.Parameter.VAR_POSITIONAL:
+            continue
+
+        if not event_param_skipped and param.name == "self":
+            continue
+
+        if not event_param_skipped and param.kind in (
+            inspect.Parameter.POSITIONAL_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        ):
+            event_arg_name = param.name
+            event_param_skipped = True
+            continue
+
+        if param.kind is inspect.Parameter.VAR_KEYWORD:
+            return event_arg_name, None
+
+        if param.kind in (
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.KEYWORD_ONLY,
+        ):
+            allowed_kwargs.add(param.name)
+
+    return event_arg_name, frozenset(allowed_kwargs)
 
 
 class Dispatcher(BotMixin):
@@ -541,55 +583,20 @@ class Dispatcher(BotMixin):
         """
         Подбирает kwargs для BaseFilter по сигнатуре ``__call__``.
         """
-        try:
-            signature = inspect.signature(base_filter.__call__)
-        except (TypeError, ValueError):
-            return {}
+        event_arg_name, allowed_kwargs = _get_filter_kwarg_spec(
+            cast(Hashable, type(base_filter))
+        )
 
-        params = list(signature.parameters.values())
-        event_arg_name: str | None = None
-        for param in params:
-            if param.kind in (
-                inspect.Parameter.POSITIONAL_ONLY,
-                inspect.Parameter.POSITIONAL_OR_KEYWORD,
-            ):
-                event_arg_name = param.name
-                break
-
-        if any(
-            param.kind is inspect.Parameter.VAR_KEYWORD for param in params
-        ):
+        if allowed_kwargs is None:
             return {
                 key: value
                 for key, value in data.items()
                 if key != event_arg_name
             }
 
-        kwargs: dict[str, Any] = {}
-        event_param_skipped = False
-
-        for param in params:
-            if param.kind is inspect.Parameter.VAR_POSITIONAL:
-                continue
-
-            if not event_param_skipped and param.kind in (
-                inspect.Parameter.POSITIONAL_ONLY,
-                inspect.Parameter.POSITIONAL_OR_KEYWORD,
-            ):
-                event_param_skipped = True
-                continue
-
-            if (
-                param.kind
-                in (
-                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                    inspect.Parameter.KEYWORD_ONLY,
-                )
-                and param.name in data
-            ):
-                kwargs[param.name] = data[param.name]
-
-        return kwargs
+        return {
+            key: value for key, value in data.items() if key in allowed_kwargs
+        }
 
     @staticmethod
     async def process_base_filters(
@@ -872,10 +879,13 @@ class Dispatcher(BotMixin):
 
         handler_data: dict[str, Any] = {}
 
-        if handler.states:
+        if handler.states and handler.state_filter is None:
+            handler.prepare_state_filter()
+
+        if handler.state_filter is not None:
             state_result = await self.process_base_filters(
                 event=event,
-                filters=[StateFilter(handler.states)],
+                filters=[handler.state_filter],
                 data=check_data,
             )
             if state_result is None:
