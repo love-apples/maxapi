@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING, Any
+
 from ..filters.command import Command, CommandStart
 from ..types.attachments.attachment import (
     Attachment,
@@ -56,6 +58,9 @@ from ..types.updates.user_added import UserAdded
 from ..types.updates.user_removed import UserRemoved
 from ..types.users import ChatAdmin, User
 from .input_media import InputMedia, InputMediaBuffer
+
+if TYPE_CHECKING:
+    from ..methods.types.sended_message import SendedMessage
 
 __all__ = [
     "Attachment",
@@ -123,7 +128,7 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     if name == "SendedMessage":
         from ..methods.types.sended_message import (  # noqa: PLC0415
             SendedMessage,

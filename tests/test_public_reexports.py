@@ -1,4 +1,5 @@
 from maxapi import enums
+from maxapi import types as types_module
 from maxapi.methods import types as method_types
 from maxapi.types import (
     AttachmentPayload,
@@ -34,6 +35,13 @@ def test_common_types_are_reexported_from_maxapi_types():
     assert MessageBody is DirectMessageBody
     assert SendedMessage is DirectSendedMessage
     assert User is DirectUser
+
+
+def test_unknown_lazy_type_export_raises_attribute_error():
+    import pytest
+
+    with pytest.raises(AttributeError):
+        types_module.__getattr__("UnknownType")
 
 
 def test_attachment_types_are_reexported_from_attachment_package():
