@@ -66,11 +66,10 @@ class SendCallback(BaseConnection):
                 exclude={"attachments"},
                 exclude_none=True,
             )
-            message_json["attachments"] = []
-
-            if self.message.attachments:
+            if self.message.attachments is not None:
+                message_json["attachments"] = []
                 for att in self.message.attachments:
-                    if isinstance(att, (InputMedia, InputMediaBuffer)):
+                    if isinstance(att, InputMedia | InputMediaBuffer):
                         input_media = await process_input_media(
                             base_connection=self,
                             bot=bot,
@@ -83,7 +82,10 @@ class SendCallback(BaseConnection):
                         att.payload, AttachmentUpload
                     ):
                         message_json["attachments"].append(
-                            att.payload.model_dump()
+                            {
+                                "type": att.type,
+                                "payload": att.payload.payload.model_dump(),
+                            }
                         )
                     else:
                         message_json["attachments"].append(att.model_dump())

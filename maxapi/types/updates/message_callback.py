@@ -4,7 +4,7 @@ __all__ = ["Message", "MessageCallback", "MessageForCallback"]
 
 from typing import TYPE_CHECKING, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from ...enums.parse_mode import ParseMode
 from ...enums.update import UpdateType
@@ -30,16 +30,17 @@ class MessageForCallback(BaseModel):
 
     Attributes:
         text: Текст сообщения.
-        attachments: Список вложений. По умолчанию пустой список.
+        attachments: Список вложений. None означает, что поле не будет
+            отправлено в callback-ответе; пустой список очищает вложения.
         link: Связь с другим сообщением.
         notify: Отправлять ли уведомление.
         format: Режим разбора текста.
     """
 
-    text: str | None = None
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    attachments: list[AttachmentInput] | None = Field(default_factory=list)
+    text: str | None = None
+    attachments: list[AttachmentInput] | None = None
     link: NewMessageLink | None = None
     notify: bool | None = True
     format: ParseMode | None = None
@@ -120,7 +121,24 @@ class MessageCallback(BaseUpdate):
         notify: bool = True,
         raise_if_not_exists: bool = True,
     ) -> SendedCallback:
-        """Изменить сообщение, связанное с callback."""
+        """
+        Изменить сообщение, связанное с callback.
+
+        Args:
+            text: Новый текст сообщения.
+            attachments: Вложения для сообщения. None сохраняет вложения
+                исходного сообщения, пустой список очищает их, непустой список
+                заменяет существующие вложения.
+            link: Связь с другим сообщением.
+            format: Режим разбора текста.
+            notification: Текст уведомления.
+            notify: Отправлять ли уведомление.
+            raise_if_not_exists: Выдавать ошибку при отсутствии сообщения,
+                если пытаются изменить его содержимое.
+
+        Returns:
+            SendedCallback: Результат вызова send_callback бота.
+        """
 
         message = self.message
         original_body = None if message is None else message.body
@@ -238,6 +256,9 @@ class MessageCallback(BaseUpdate):
         Args:
             notification: Текст уведомления.
             new_text: Новый текст сообщения.
+            attachments: Вложения для сообщения. None сохраняет вложения
+                исходного сообщения, пустой список очищает их, непустой список
+                заменяет существующие вложения.
             link: Связь с другим сообщением.
             notify: Отправлять ли уведомление.
             format: Режим разбора текста.

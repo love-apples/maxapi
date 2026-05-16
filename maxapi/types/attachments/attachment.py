@@ -72,10 +72,11 @@ class ContactAttachmentPayload(BaseModel):
 
     Attributes:
         vcf_info: Информация в формате vcf.
+        hash: Хеш контакта.
         max_info: Дополнительная информация о пользователе.
     """
 
-    vcf_info: str | None = ""
+    vcf_info: str | None = None
     hash: str | None = None
     max_info: User | None = None
 

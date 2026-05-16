@@ -153,7 +153,8 @@ async def on_callback(event: MessageCallback) -> None:
     elif payload == CB_CLOSE:
         # Убираем клавиатуру, оставляем текст.
         # Для callback-ответа пустой список attachments действительно
-        # очищает клавиатуру.
+        # очищает клавиатуру. В Message.edit() attachments=None сохраняет
+        # текущие вложения, а attachments=[] очищает их.
         await event.edit(
             text="Клавиатура убрана. Напишите /start для повтора.",
             attachments=[],
