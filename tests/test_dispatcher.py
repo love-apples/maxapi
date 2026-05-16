@@ -397,9 +397,7 @@ class TestDispatcherAsync:
         received: dict = {}
 
         class ContextFilter(BaseFilter):
-            async def __call__(
-                self, event, context=None, raw_state=None
-            ):
+            async def __call__(self, event, context=None, raw_state=None):
                 received["event"] = event
                 received["context"] = context
                 received["raw_state"] = raw_state
@@ -484,9 +482,7 @@ class TestDispatcherAsync:
         )
 
         assert result == {"event": "shadowed", "payload": 42}
-        assert received == [
-            (sample_message_created_event, {"payload": 42})
-        ]
+        assert received == [(sample_message_created_event, {"payload": 42})]
 
     async def test_process_base_filters_caches_filter_signature(
         self, dispatcher, sample_message_created_event, monkeypatch

@@ -59,7 +59,7 @@ class StatesGroup:
                 cls._append_unique_state(
                     states,
                     seen,
-                    f"{full_child_prefix}{state[len(child_prefix):]}",
+                    f"{full_child_prefix}{state[len(child_prefix) :]}",
                 )
 
     @classmethod
