@@ -15,6 +15,7 @@ from ..utils.formatting import (
     Bold,
     Code,
     Heading,
+    Highlighted,
     Italic,
     Link,
     Strikethrough,
@@ -185,13 +186,15 @@ class MessageBody(BaseModel):
             return len(text)
 
         order = {
+            TextStyle.QUOTE: 0,
             TextStyle.BLOCKQUOTE: 0,
             TextStyle.STRONG: 1,
             TextStyle.EMPHASIZED: 2,
             TextStyle.UNDERLINE: 3,
             TextStyle.STRIKETHROUGH: 4,
             TextStyle.MONOSPACED: 5,
-            TextStyle.HEADING: 6,
+            TextStyle.HIGHLIGHTED: 6,
+            TextStyle.HEADING: 7,
             TextStyle.LINK: 8,
             TextStyle.USER_MENTION: 9,
         }
@@ -234,6 +237,8 @@ class MessageBody(BaseModel):
             TextStyle.STRIKETHROUGH: Strikethrough,
             TextStyle.MONOSPACED: Code,
             TextStyle.HEADING: Heading,
+            TextStyle.HIGHLIGHTED: Highlighted,
+            TextStyle.QUOTE: Blockquote,
             TextStyle.BLOCKQUOTE: Blockquote,
         }
 
@@ -323,6 +328,7 @@ class Message(
     """
 
     model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
+
     sender: User | None = None
     recipient: Recipient
     timestamp: int
@@ -330,7 +336,7 @@ class Message(
     body: MessageBody | None = None
     stat: MessageStat | None = None
     url_api: str | None = Field(
-        # Поле для хранения сырого url из ответа API
+        # Поле для хранения сырого url из ответа API.
         alias="url",
         default=None,
     )
@@ -340,6 +346,20 @@ class Message(
 
     if TYPE_CHECKING:
         bot: Bot | None  # type: ignore
+
+    @property
+    def url(self) -> str | None:
+        """
+        Прямая ссылка на сообщение в интерфейсе MAX.
+
+        Для каналов возвращается ссылка, полученная от API. Для диалогов и
+        групповых чатов ссылка строится из ``body.mid``.
+        """
+        if self.url_api:
+            return self.url_api
+        if self.body:
+            return build_message_link(self.body.mid)
+        return None
 
     def _resolve_send_target(self) -> tuple[int | None, int | None]:
         return self.recipient.chat_id, self.recipient.user_id
@@ -628,25 +648,6 @@ class Message(
         return await self._ensure_bot().delete_pin_message(
             chat_id=self.recipient.chat_id,
         )
-
-    @property
-    def url(self) -> str | None:
-        """
-        Прямая ссылка на сообщение в интерфейсе MAX
-
-        Returns:
-            str: Ссылка на сообщение в формате
-                - Для диалогов и групповых чатов:
-                  https://max.ru/c/{chat_id}/{seq_b64}
-                - Постов в канале:
-                  https://max.ru/{channel_name}/{seq_b64}
-            None: Если объект Message не содержит в себе body
-        """
-        if self.url_api:
-            return self.url_api
-        elif self.body:
-            return build_message_link(self.body.mid)
-        return None
 
 
 class Messages(BaseModel):

@@ -1,12 +1,16 @@
 import pytest
 from maxapi.enums.parse_mode import ParseMode
 from maxapi.enums.update import UpdateType
+from maxapi.types.attachments.attachment import ButtonsPayload
+from maxapi.types.attachments.buttons.callback_button import CallbackButton
 from maxapi.types.callback import Callback
 from maxapi.types.updates.message_callback import (
     MessageCallback,
     MessageForCallback,
 )
 from maxapi.types.users import User
+from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
+from pydantic import ValidationError
 
 
 class DummyBot:
@@ -93,6 +97,14 @@ async def test_answer_with_no_message_notification_only(cb_obj):
     assert bot.last["notification"] == "n"
 
 
+def test_message_for_callback_rejects_bare_payload_attachment():
+    with pytest.raises(ValidationError):
+        MessageForCallback(
+            text="updated",
+            attachments=[ButtonsPayload(buttons=[])],  # type: ignore[list-item]
+        )
+
+
 async def test_answer_uses_bot_default_parse_mode(cb_obj):
     """Если format не передан явно, берётся parse_mode из бота."""
     from maxapi.enums.chat_type import ChatType
@@ -140,3 +152,55 @@ async def test_answer_explicit_format_overrides_bot_default(cb_obj):
     await mc.answer(new_text="world", format=ParseMode.HTML)
 
     assert bot.last["message"].format == ParseMode.HTML
+
+
+async def test_edit_allows_overriding_attachments(cb_obj):
+    from maxapi.enums.chat_type import ChatType
+    from maxapi.types.message import Message, MessageBody, Recipient
+
+    recipient = Recipient(chat_id=100, chat_type=ChatType.CHAT)
+    body = MessageBody(mid="mid3", seq=3, text="hello")
+    message = Message(recipient=recipient, timestamp=1, body=body)
+
+    mc = MessageCallback(
+        message=message,
+        user_locale=None,
+        callback=cb_obj,
+        update_type=UpdateType.MESSAGE_CALLBACK,
+        timestamp=1,
+    )
+    bot = DummyBot(parse_mode=ParseMode.MARKDOWN)
+    mc.bot = bot
+
+    await mc.edit(text="world", attachments=[])
+
+    assert bot.last["message"] is not None
+    assert bot.last["message"].attachments == []
+
+
+async def test_edit_accepts_inline_keyboard_attachment(cb_obj):
+    from maxapi.enums.chat_type import ChatType
+    from maxapi.types.message import Message, MessageBody, Recipient
+
+    recipient = Recipient(chat_id=100, chat_type=ChatType.CHAT)
+    body = MessageBody(mid="mid4", seq=4, text="hello")
+    message = Message(recipient=recipient, timestamp=1, body=body)
+
+    mc = MessageCallback(
+        message=message,
+        user_locale=None,
+        callback=cb_obj,
+        update_type=UpdateType.MESSAGE_CALLBACK,
+        timestamp=1,
+    )
+    bot = DummyBot(parse_mode=ParseMode.MARKDOWN)
+    mc.bot = bot
+
+    keyboard = InlineKeyboardBuilder().row(
+        CallbackButton(text="Info", payload="info")
+    )
+
+    await mc.edit(text="world", attachments=[keyboard.as_markup()])
+
+    assert bot.last["message"] is not None
+    assert len(bot.last["message"].attachments or []) == 1

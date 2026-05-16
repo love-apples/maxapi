@@ -3,7 +3,9 @@ from typing import TYPE_CHECKING, Any, Literal
 from pydantic import BaseModel, Field
 
 from ...enums.attachment import AttachmentType
-from .attachment import Attachment
+from .attachment import (
+    Attachment,
+)
 
 if TYPE_CHECKING:
     from ...bot import Bot
@@ -37,9 +39,13 @@ class VideoThumbnail(BaseModel):
     Миниатюра видео.
 
     Attributes:
+        photo_id: Идентификатор фото миниатюры.
+        token: Токен миниатюры.
         url: URL миниатюры.
     """
 
+    photo_id: int | None = None
+    token: str | None = None
     url: str
 
 
@@ -57,10 +63,10 @@ class Video(Attachment):
         bot: Ссылка на экземпляр бота, не сериализуется.
     """
 
-    type: Literal[AttachmentType.VIDEO]  # pyright: ignore[reportIncompatibleVariableOverride]
+    type: Literal[AttachmentType.VIDEO] = AttachmentType.VIDEO  # pyright: ignore[reportIncompatibleVariableOverride]
     token: str | None = None
     urls: VideoUrl | None = None
-    thumbnail: VideoThumbnail
+    thumbnail: VideoThumbnail | None = None
     width: int | None = None
     height: int | None = None
     duration: int | None = None

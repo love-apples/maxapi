@@ -4,25 +4,24 @@ __all__ = ["Message", "MessageCallback", "MessageForCallback"]
 
 from typing import TYPE_CHECKING, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict
 
 from ...enums.parse_mode import ParseMode
 from ...enums.update import UpdateType
-from ...types.attachments import Attachments
+from ...types.attachments import AttachmentInput
 from ...types.callback import Callback  # noqa: TC001
 from ...types.message import Message, NewMessageLink
 from .base_update import BaseUpdate
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from ...enums.parse_mode import TextFormat
     from ...methods.types.deleted_message import DeletedMessage
     from ...methods.types.deleted_pin_message import DeletedPinMessage
     from ...methods.types.pinned_message import PinnedMessage
     from ...methods.types.sended_callback import SendedCallback
     from ...methods.types.sended_message import SendedMessage
-    from ...types.attachments.attachment import Attachment
-    from ...types.attachments.upload import AttachmentUpload
-    from ...types.input_media import InputMedia, InputMediaBuffer
 
 
 class MessageForCallback(BaseModel):
@@ -31,14 +30,17 @@ class MessageForCallback(BaseModel):
 
     Attributes:
         text: Текст сообщения.
-        attachments: Список вложений. По умолчанию пустой список.
+        attachments: Список вложений. None означает, что поле не будет
+            отправлено в callback-ответе; пустой список очищает вложения.
         link: Связь с другим сообщением.
         notify: Отправлять ли уведомление.
         format: Режим разбора текста.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     text: str | None = None
-    attachments: list[Attachments] | None = Field(default_factory=list)  # type: ignore
+    attachments: list[AttachmentInput] | None = None
     link: NewMessageLink | None = None
     notify: bool | None = True
     format: ParseMode | None = None
@@ -111,6 +113,7 @@ class MessageCallback(BaseUpdate):
     async def edit(
         self,
         text: str | None = None,
+        attachments: Sequence[AttachmentInput] | None = None,
         link: NewMessageLink | None = None,
         format: ParseMode | None = None,
         *,
@@ -118,7 +121,24 @@ class MessageCallback(BaseUpdate):
         notify: bool = True,
         raise_if_not_exists: bool = True,
     ) -> SendedCallback:
-        """Изменить сообщение, связанное с callback."""
+        """
+        Изменить сообщение, связанное с callback.
+
+        Args:
+            text: Новый текст сообщения.
+            attachments: Вложения для сообщения. None сохраняет вложения
+                исходного сообщения, пустой список очищает их, непустой список
+                заменяет существующие вложения.
+            link: Связь с другим сообщением.
+            format: Режим разбора текста.
+            notification: Текст уведомления.
+            notify: Отправлять ли уведомление.
+            raise_if_not_exists: Выдавать ошибку при отсутствии сообщения,
+                если пытаются изменить его содержимое.
+
+        Returns:
+            SendedCallback: Результат вызова send_callback бота.
+        """
 
         message = self.message
         original_body = None if message is None else message.body
@@ -135,9 +155,15 @@ class MessageCallback(BaseUpdate):
             return await self.ack(notification=notification)
 
         bot = self._ensure_bot()
+        resolved_attachments: Sequence[AttachmentInput]
+        if attachments is None:
+            resolved_attachments = original_body.attachments or []
+        else:
+            resolved_attachments = attachments
+
         message_for_callback = MessageForCallback(
             text=text,
-            attachments=original_body.attachments or [],
+            attachments=list(resolved_attachments),
             link=link,
             notify=notify,
             format=bot.resolve_format(format),
@@ -152,10 +178,7 @@ class MessageCallback(BaseUpdate):
     async def send(
         self,
         text: str | None = None,
-        attachments: list[
-            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
-        ]
-        | None = None,
+        attachments: list[AttachmentInput] | None = None,
         link: NewMessageLink | None = None,
         format: TextFormat | None = None,
         parse_mode: ParseMode | None = None,
@@ -180,10 +203,7 @@ class MessageCallback(BaseUpdate):
     async def reply(
         self,
         text: str | None = None,
-        attachments: list[
-            Attachment | InputMedia | InputMediaBuffer | AttachmentUpload
-        ]
-        | None = None,
+        attachments: list[AttachmentInput] | None = None,
         format: TextFormat | None = None,
         parse_mode: ParseMode | None = None,
         *,
@@ -222,6 +242,7 @@ class MessageCallback(BaseUpdate):
         self,
         notification: str | None = None,
         new_text: str | None = None,
+        attachments: Sequence[AttachmentInput] | None = None,
         link: NewMessageLink | None = None,
         format: ParseMode | None = None,
         *,
@@ -235,6 +256,9 @@ class MessageCallback(BaseUpdate):
         Args:
             notification: Текст уведомления.
             new_text: Новый текст сообщения.
+            attachments: Вложения для сообщения. None сохраняет вложения
+                исходного сообщения, пустой список очищает их, непустой список
+                заменяет существующие вложения.
             link: Связь с другим сообщением.
             notify: Отправлять ли уведомление.
             format: Режим разбора текста.
@@ -246,6 +270,7 @@ class MessageCallback(BaseUpdate):
         """
         return await self.edit(
             text=new_text,
+            attachments=attachments,
             link=link,
             format=format,
             notification=notification,
