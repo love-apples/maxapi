@@ -545,8 +545,8 @@ class BaseConnection(BotMixin):
         self,
         url: str,
         destination: Path | str,
-        filename: Path | str | None = None,
         *,
+        filename: Path | str | None = None,
         chunk_size: int = DOWNLOAD_CHUNK_SIZE,
     ) -> Path:
         """
