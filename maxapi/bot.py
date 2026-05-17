@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import os
 import warnings
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from aiohttp import ClientSession
 
 from .client.default import DefaultConnectionProperties
-from .connection.base import DOWNLOAD_CHUNK_SIZE, BaseConnection
+from .connection.base import BaseConnection
 from .enums.sender_action import SenderAction
 from .exceptions.max import InvalidToken
 from .loggers import logger_bot
@@ -1092,36 +1091,6 @@ class Bot(BaseConnection):
             base_connection=self,
             bot=self,
             att=media,
-        )
-
-    async def download_file(
-        self,
-        url: str,
-        destination: str | Path,
-        *,
-        chunk_size: int = DOWNLOAD_CHUNK_SIZE,
-    ) -> Path:
-        """
-        Скачивает файл по URL и сохраняет на диск.
-
-        URL можно получить из payload вложения:
-        - Изображение: ``attachment.payload.url``
-        - Видео: ``attachment.urls.mp4_720`` (или другое разрешение)
-        - Аудио/Файл: ``attachment.payload.url``
-        - Стикер: ``attachment.payload.url``
-
-        Args:
-            url: URL файла для скачивания.
-            destination: Путь к директории для сохранения.
-            chunk_size: Размер чанка (по умолчанию 64 КБ).
-
-        Returns:
-            Path: Полный путь к скачанному файлу.
-        """
-        return await super().download_file(
-            url=url,
-            destination=Path(destination),
-            chunk_size=chunk_size,
         )
 
     async def set_my_commands(self, *commands: BotCommand) -> User:
