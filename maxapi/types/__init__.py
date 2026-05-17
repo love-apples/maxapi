@@ -39,6 +39,7 @@ from ..types.updates.message_edited import MessageEdited
 from ..types.updates.message_removed import MessageRemoved
 from ..types.updates.user_added import UserAdded
 from ..types.updates.user_removed import UserRemoved
+from .file_info import FileInfo
 from .input_media import InputMedia, InputMediaBuffer
 
 __all__ = [
@@ -61,6 +62,7 @@ __all__ = [
     "DialogMuted",
     "DialogRemoved",
     "DialogUnmuted",
+    "FileInfo",
     "FromUserRef",
     "InputMedia",
     "InputMediaBuffer",
