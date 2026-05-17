@@ -13,7 +13,7 @@ Covers:
 from __future__ import annotations
 
 import warnings
-from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 from maxapi.enums.chat_type import ChatType
