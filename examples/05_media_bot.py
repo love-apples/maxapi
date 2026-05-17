@@ -8,16 +8,19 @@
 - Обработку входящих вложений: image, file, audio, video
 - Пересылку сообщений через message.forward()
 - SenderAction.SENDING_PHOTO / SENDING_VIDEO / SENDING_FILE
+- FileInspector — получение метаинформации о файле без полной загрузки
 
 Команды:
     /photo     — отправить тестовое изображение из файла
     /buffer    — отправить изображение из буфера (байты)
     /upload    — загрузить медиа заранее, затем отправить
+    /info      — метаинформация о replied-вложении (FileInspector)
 
 Любой файл/фото/аудио/видео от пользователя пересылается обратно
 с описанием типа вложения.
 
-Аналог Telegram: send_photo, send_document, send_audio, forward_message
+Аналог Telegram: send_photo, send_document, send_audio, forward_message,
+get_file
 
 Запуск:
     MAX_BOT_TOKEN=your_token python 05_media_bot.py
@@ -30,11 +33,14 @@ import logging
 import os
 import tempfile
 
+import aiohttp
+
 # Опционально: загрузка .env, если установлен python-dotenv
 with contextlib.suppress(ImportError):
     from dotenv import load_dotenv
 
     load_dotenv()
+
 from maxapi import Bot, Dispatcher, F
 from maxapi.enums.sender_action import SenderAction
 from maxapi.filters.command import Command, CommandStart
@@ -47,6 +53,7 @@ from maxapi.types.input_media import InputMedia, InputMediaBuffer
 from maxapi.types.updates.message_created import MessageCreated
 
 logging.basicConfig(level=logging.INFO)
+log = logging.getLogger()
 
 bot = Bot()
 dp = Dispatcher()
@@ -77,6 +84,26 @@ def get_sample_image_path() -> str:
     return tmp_path
 
 
+# ============================================================================
+# Хелперы
+# ============================================================================
+
+
+def _get_first_attachment_url(attachments) -> str | None:
+    """Извлекает URL из первого вложения."""
+    if not attachments:
+        return None
+    first = attachments[0]
+    if hasattr(first, "url") and first.url:
+        return first.url
+    return None
+
+
+# ============================================================================
+# Команды
+# ============================================================================
+
+
 @dp.message_created(CommandStart())
 async def on_start(event: MessageCreated) -> None:
     """Приветствие с описанием команд."""
@@ -85,7 +112,8 @@ async def on_start(event: MessageCreated) -> None:
         "Команды:\n"
         "/photo  — фото из файла\n"
         "/buffer — фото из буфера\n"
-        "/upload — предзагрузка медиа\n\n"
+        "/upload — предзагрузка медиа\n"
+        "/info — метаинформация о replied-вложении\n\n"
         "Пришли мне любой файл, фото, аудио или видео — "
         "я расскажу, что получил, и перешлю обратно."
     )
@@ -123,6 +151,7 @@ async def cmd_buffer(event: MessageCreated) -> None:
     chat_id = event.message.recipient.chat_id
     if chat_id is None:
         return
+
     await bot.send_action(chat_id=chat_id, action=SenderAction.SENDING_PHOTO)
 
     # Используем тот же минимальный PNG 1×1 пиксель для демонстрации.
@@ -167,7 +196,53 @@ async def cmd_upload(event: MessageCreated) -> None:
     )
 
 
-# ── Обработка входящих вложений ────────────────────────────────────────────
+@dp.message_created(Command("info"))
+async def cmd_info(event: MessageCreated) -> None:
+    """Получение метаинформации о файле через bot.get_file_info().
+
+    Ответьте командой на сообщение с вложением.
+    """
+    chat_id = event.message.recipient.chat_id
+    if chat_id is None:
+        return
+
+    replied_body = event.message.link.message if event.message.link else None
+    if not replied_body or not replied_body.attachments:
+        await event.message.answer(
+            "ℹ️ Ответьте этой командой на сообщение с файлом."
+        )
+        return
+
+    url = _get_first_attachment_url(replied_body.attachments)
+    if not url:
+        await event.message.answer("⚠️ Не удалось получить URL вложения.")
+        return
+
+    await bot.send_action(chat_id=chat_id, action=SenderAction.SENDING_FILE)
+
+    try:
+        info = await bot.get_file_info(url, timeout=10)
+    except Exception as e:
+        log.error("Ошибка инспекции: %s", e)
+        await event.message.answer("⚠️ Не удалось определить метаинформацию")
+        return
+
+    if info.status == "error":
+        # info.status == "error" только если ничего не получилось определить,
+        # Даже минимально: info.format is None
+        # info.error_desc содерит описание ошибки
+        await event.message.answer(f"⚠️ {info.error_desc}")
+        return
+
+    # Всё, что получилось узнать о файле — в строку через str(FileInfo)
+    answer = str(info)
+
+    await event.message.answer(answer)
+
+
+# ============================================================================
+# Обработка входящих вложений
+# ============================================================================
 
 
 @dp.message_created(F.message.body.attachments)
@@ -198,13 +273,24 @@ async def on_attachment(event: MessageCreated) -> None:
     chat_id = event.message.recipient.chat_id
     if chat_id is None:
         return
+
     await bot.send_action(chat_id=chat_id, action=action)
 
     # Информируем пользователя о полученном вложении
     count = len(attachments)
-    await event.message.answer(
-        f"Получено {count} вложение(й), тип: {label}. Пересылаю..."
-    )
+    reply_txt = f"Получено {count} вложение(й), тип: {label}.\n\n"
+
+    # Пытаемся получить метаинформацию через FileInspector
+    url = _get_first_attachment_url(attachments)
+    if url:
+        try:
+            info = await bot.get_file_info(url, timeout=3)
+            reply_txt += f"Первое вложение:\n{info}"
+        except aiohttp.ClientError:
+            # Не дошло даже до HTTP (нет сети, DNS)
+            reply_txt += "Не удалось получить подробности:\nСетевая ошибка"
+    reply_txt += "Пересылаю..."
+    await event.message.answer(reply_txt)
 
     # Пересылаем оригинальное сообщение обратно
     await event.message.forward(chat_id=chat_id)
