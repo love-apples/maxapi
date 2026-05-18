@@ -338,6 +338,7 @@ async def test_message_callback_shortcuts_and_legacy_answer():
     bot.send_callback.reset_mock()
     await callback.edit(
         text="updated",
+        attachments=[],
         notification="changed",
         notify=False,
     )
@@ -349,9 +350,10 @@ async def test_message_callback_shortcuts_and_legacy_answer():
     assert edit_kwargs["notification"] == "changed"
 
     bot.send_callback.reset_mock()
-    await callback.answer(notification="legacy")
+    await callback.answer(notification="legacy", attachments=[])
     legacy_kwargs = bot.send_callback.await_args.kwargs
     assert legacy_kwargs["message"] is not None
+    assert legacy_kwargs["message"].attachments == []
     assert legacy_kwargs["notification"] == "legacy"
 
     bot.send_message.reset_mock()

@@ -52,6 +52,7 @@ __all__ = [
     "OtherAttachmentPayload",
     "PhotoAttachmentPayload",
     "PhotoAttachmentRequestPayload",
+    "PhotoToken",
     "Recipient",
     "RequestContactButton",
     "RequestGeoLocationButton",
@@ -85,7 +86,7 @@ from ..types.attachments.buttons.request_contact import RequestContactButton
 from ..types.attachments.buttons.request_geo_location_button import (
     RequestGeoLocationButton,
 )
-from ..types.attachments.image import PhotoAttachmentRequestPayload
+from ..types.attachments.image import PhotoAttachmentRequestPayload, PhotoToken
 from ..types.attachments.upload import AttachmentPayload, AttachmentUpload
 from ..types.callback import Callback
 from ..types.chats import Chat, ChatMember, Chats, Icon

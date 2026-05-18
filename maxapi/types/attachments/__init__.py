@@ -5,6 +5,7 @@ from pydantic import Field
 __all__ = [
     "Attachment",
     "AttachmentButton",
+    "AttachmentInput",
     "AttachmentPayload",
     "AttachmentUpload",
     "Attachments",
@@ -19,6 +20,8 @@ __all__ = [
     "File",
     "Image",
     "InlineButtonUnion",
+    "InputMedia",
+    "InputMediaBuffer",
     "LinkButton",
     "Location",
     "MessageButton",
@@ -26,6 +29,7 @@ __all__ = [
     "OtherAttachmentPayload",
     "PhotoAttachmentPayload",
     "PhotoAttachmentRequestPayload",
+    "PhotoToken",
     "RequestContactButton",
     "RequestGeoLocationButton",
     "Share",
@@ -37,6 +41,7 @@ __all__ = [
     "VideoUrl",
 ]
 
+from ..input_media import InputMedia, InputMediaBuffer
 from .attachment import (
     Attachment,
     ButtonsPayload,
@@ -62,7 +67,7 @@ from .buttons import (
 from .buttons.attachment_button import AttachmentButton
 from .contact import Contact
 from .file import File
-from .image import Image, PhotoAttachmentRequestPayload
+from .image import Image, PhotoAttachmentRequestPayload, PhotoToken
 from .location import Location
 from .share import Share
 from .sticker import Sticker
@@ -81,3 +86,7 @@ Attachments = Annotated[
     | Contact,
     Field(discriminator="type"),
 ]
+
+AttachmentInput = (
+    Attachment | AttachmentUpload | Attachments | InputMedia | InputMediaBuffer
+)
