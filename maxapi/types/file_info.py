@@ -140,10 +140,12 @@ class FileInfo(BaseModel):
 
     def __str__(self) -> str:
         """Форматированная строка для вывода пользователю."""
-        lines = [
-            f"Имя файла: {self.file_name}",
-            f"Размер: {self.file_size_human}",
-        ]
+        lines = []
+        if self.file_name:
+            lines.append(f"Имя файла: {self.file_name}")
+        else:
+            lines.append("[Без имени]")
+        lines.append(f"Размер: {self.file_size_human}")
         if self.format:
             lines.append(f"Формат: {self.format}")
         if self.width and self.height:
