@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import mimetypes
+from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -37,6 +38,21 @@ class _RetryableServerError(Exception):
     def __init__(self, status: int) -> None:
         self.status = status
         super().__init__(f"Server error {status}")
+
+
+class NamedBytesIO(BytesIO):
+    """
+    BytesIO с поддержкой атрибута .name для единообразия с файловыми объектами.
+    """
+
+    __slots__ = ("name",)
+    name: str | None
+
+    def __init__(
+        self, buffer: bytes = b"", *, name: str | None = None
+    ) -> None:
+        super().__init__(buffer)
+        self.name = name  # Соответствует протоколу typing.BinaryIO
 
 
 def _on_backoff(details: Details) -> None:
