@@ -11,7 +11,7 @@
 <p align="center">
 <a href='https://pypi.org/project/maxapi/'>
   <img src='https://img.shields.io/pypi/v/maxapi.svg' alt='PyPI version'></a>
-  <img src='https://img.shields.io/pypi/dm/maxapi.svg' alt='PyPI downloads'></a>
+  <img src="https://static.pepy.tech/badge/maxapi/month" alt="PyPI downloads per month">
 <a href='https://pypi.org/project/maxapi/'>
   <img src='https://img.shields.io/pypi/pyversions/maxapi.svg' alt='Python Version'></a>
 <a href='https://codecov.io/gh/love-apples/maxapi'>
