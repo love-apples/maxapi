@@ -919,7 +919,7 @@ class FileInspector:
 
     async def inspect_bytes(
         self,
-        data: bytes | BytesIO,
+        data: bytes | BytesIO | NamedBytesIO,
         *,
         file_name: str = "",
         full_read_limit: int = 20_971_520,  # 20 Мб
@@ -1725,9 +1725,11 @@ class FileInspector:
         Ищет атом moov в head и tail. Для файлов с moov в конце
         (потоковая запись) нужен tail.
         """
-        result = None
+        result = {}
         if cls._mp4_check(data):
             result = {"format": "MP4"}
+        elif cls._m4a_check(data):
+            result = {"format": "M4A"}
 
         # Ищем moov в head
         dims = cls._mp4_find_moov(data)
@@ -1742,7 +1744,7 @@ class FileInspector:
                 result.update(dims)
                 return result
 
-        return result
+        return result or None
 
     @classmethod
     def _mp4_find_moov(cls, data: bytes) -> dict | None:

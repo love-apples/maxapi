@@ -412,7 +412,7 @@ class TestFileInspectorBytes:
     """Тесты FileInspector с локальными файлами."""
 
     @pytest.mark.parametrize("name", FIXTURES_ID)
-    async def test_bytes_butesio_namedbytesio_match(self, name, all_fixtures):
+    async def test_bytes_bytesio_namedbytesio_match(self, name, all_fixtures):
         """bytes, BytesIO, NamedBytesIO дают идентичные результаты"""
         head, tail, exp = all_fixtures[name]
 
