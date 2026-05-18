@@ -96,3 +96,4 @@ class ChatAdmin(BaseModel):
 
     user_id: int
     permissions: list[ChatPermission]
+    alias: str | None = None

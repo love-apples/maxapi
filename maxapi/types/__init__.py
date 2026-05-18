@@ -18,7 +18,7 @@ from ..types.attachments.buttons.request_contact import RequestContactButton
 from ..types.attachments.buttons.request_geo_location_button import (
     RequestGeoLocationButton,
 )
-from ..types.attachments.image import PhotoAttachmentRequestPayload
+from ..types.attachments.image import PhotoAttachmentRequestPayload, PhotoToken
 from ..types.command import BotCommand
 from ..types.fetchable import ChatRef, FromUserRef
 from ..types.message import Message, NewMessageLink
@@ -77,6 +77,7 @@ __all__ = [
     "OtherAttachmentPayload",
     "PhotoAttachmentPayload",
     "PhotoAttachmentRequestPayload",
+    "PhotoToken",
     "RequestContactButton",
     "RequestGeoLocationButton",
     "ShareAttachmentPayload",
