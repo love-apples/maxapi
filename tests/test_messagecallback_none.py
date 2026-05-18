@@ -79,6 +79,21 @@ async def test_answer_with_no_message_raises_on_change(cb_obj):
         await mc.answer(notification="n", new_text="text")
 
 
+async def test_edit_with_no_message_raises_on_attachments_change(cb_obj):
+    mc = MessageCallback(
+        message=None,
+        user_locale=None,
+        callback=cb_obj,
+        update_type=UpdateType.MESSAGE_CALLBACK,
+        timestamp=1,
+    )
+    bot = DummyBot()
+    mc.bot = bot
+
+    with pytest.raises(ValueError, match="исходное сообщение отсутствует"):
+        await mc.edit(attachments=[])
+
+
 async def test_answer_with_no_message_notification_only(cb_obj):
     mc = MessageCallback(
         message=None,

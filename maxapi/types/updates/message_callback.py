@@ -145,7 +145,10 @@ class MessageCallback(BaseUpdate):
 
         if original_body is None:
             if raise_if_not_exists and (
-                text is not None or link is not None or format is not None
+                text is not None
+                or attachments is not None
+                or link is not None
+                or format is not None
             ):
                 raise ValueError(
                     "Невозможно изменить сообщение: "
