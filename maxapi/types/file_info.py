@@ -140,30 +140,26 @@ class FileInfo(BaseModel):
 
     def __str__(self) -> str:
         """Форматированная строка для вывода пользователю."""
-        # fmt: off
-        lines = [ f"Имя файла: {self.file_name}",
-                  f"Размер: {self.file_size_human}",
+        lines = [
+            f"Имя файла: {self.file_name}",
+            f"Размер: {self.file_size_human}",
         ]
-        _FIELD_LABELS = (
-            ("format",          "Формат: {}"),
-            ("width",           "  Размеры: {}"),
-            ("height",  None),  # добавляется к width
-            ("duration",        "  Длительность: {} сек"),
-            ("fps",             "  Частота кадров: {} к/с"),
-            ("sample_rate",     "  Аудио: {} Гц"),
-            ("bitrate_nominal", "  Битрейт (номинальный): {} кбит/с"),
-            ("bitrate_avg",     "  Битрейт (средний): {} кбит/с"),
-        )
-        # fmt: on
-        for field, tmpl in _FIELD_LABELS:
-            value = getattr(self, field, None)
-            if not value:
-                continue
-            if field == "height":
-                lines[-1] += f"×{value} пикс"
-            elif tmpl:
-                lines.append(tmpl.format(value))
-
+        if self.format:
+            lines.append(f"Формат: {self.format}")
+        if self.width and self.height:
+            lines.append(f"Размеры: {self.width}×{self.height} пикс")
+        if self.duration:
+            lines.append(f"Длительность: {self.duration} сек")
+        if self.fps:
+            lines.append(f"Частота кадров: {self.fps} к/с")
+        if self.sample_rate:
+            lines.append(f"Аудио: {self.sample_rate} Гц")
+        if self.bitrate_nominal:
+            lines.append(
+                f"Битрейт (номинальный): {self.bitrate_nominal} кбит/с"
+            )
+        if self.bitrate_avg:
+            lines.append(f"Битрейт (средний): {self.bitrate_avg} кбит/с")
         if self.error_desc:
             lines.append(f"⚠️ {self.error_desc}")
 
