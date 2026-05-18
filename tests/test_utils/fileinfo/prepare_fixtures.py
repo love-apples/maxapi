@@ -59,13 +59,12 @@ USE_AUTOMATIC_EXPECTED = True
 
 SAMPLE_URLS = {
     # Провеирть ключи. Совпадающие заменят данные, новые добавят.
-
+    # --
     # Без expected — работает только в автоматическом режиме.
     # Формат, размеры и т.д. будут получены из FileInspector.
     "mp4_vp9": {
         "url": "https://samplelib.com/mp4/sample-10s-vp9.mp4",
     },
-
     # С expected — работает в обоих режимах.
     # В ручном режиме значения берутся отсюда.
     # В автоматическом — перезаписываются тем, что вернул FileInspector.
@@ -81,7 +80,6 @@ SAMPLE_URLS = {
         },
         "head_size": 8192,
     },
-
     # Минимальный объём
     "png_transparency": {
         "url": (
@@ -91,11 +89,10 @@ SAMPLE_URLS = {
         "expected": {"format": "PNG", "width": 800, "height": 600},
         "head_size": 2048,
     },
-
     # Локальный файл
     "mp3_id3_tag": {
         "file": "/path/to/local/mp3.mp3",
-        "expected": {"format": "MP3", "duration": 160, "sample_rate": 44100, bit},
+        "expected": {"format": "MP3", "duration": 160, "sample_rate": 44100},
     },
 }
 

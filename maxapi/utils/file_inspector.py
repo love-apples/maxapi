@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 Инспекция медиафайлов без полной загрузки.
 
@@ -7,6 +5,8 @@ from __future__ import annotations
 или из bytes) и извлекает метаданные: формат, размеры, длительность,
 битрейт. Высокоуровневая точка входа — :class:`FileInspector`.
 """
+
+from __future__ import annotations
 
 import asyncio
 import logging
@@ -1118,19 +1118,16 @@ class FileInspector:
         if not content_type or content_type == "application/octet-stream":
             # Если сервер не определил тип файла
             # Проверим все типы по содержанию
-            result = cls._parse_image_dimensions(head, content_type, file_size)
+            result = cls._parse_image_dimensions(head, "", file_size)
             if result:
                 return result
-            result = cls._parse_video_dimensions(
-                head, tail, content_type, file_size
-            )
+            result = cls._parse_video_dimensions(head, tail, "", file_size)
             if result:
                 return result
-            result = cls._parse_audio_dimensions(
-                head, tail, content_type, file_size
-            )
+            result = cls._parse_audio_dimensions(head, tail, "", file_size)
             if result:
                 return result
+            return None
 
         if content_type.startswith("image/"):
             return cls._parse_image_dimensions(head, content_type, file_size)
