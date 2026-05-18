@@ -146,7 +146,7 @@ class FileInfo(BaseModel):
         ]
         _FIELD_LABELS = (
             ("format",          "Формат: {}"),
-            ("width",           "  Размеры: {}×"),
+            ("width",           "  Размеры: {}"),
             ("height",  None),  # добавляется к width
             ("duration",        "  Длительность: {} сек"),
             ("fps",             "  Частота кадров: {} к/с"),
@@ -160,7 +160,7 @@ class FileInfo(BaseModel):
             if not value:
                 continue
             if field == "height":
-                lines[-1] = lines[-1].rstrip(" пикс") + f"×{value} пикс"
+                lines[-1] += f"×{value} пикс"
             elif tmpl:
                 lines.append(tmpl.format(value))
 

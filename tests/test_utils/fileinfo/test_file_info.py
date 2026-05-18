@@ -65,7 +65,7 @@ def _make_fixture_named_bytes_io(name, head, tail, exp) -> NamedBytesIO:
     ext = mimetypes.guess_extension(mime) or ".bin"
     file_name = f"{name}{ext}"
 
-    file_size = exp.get("file_size") or (len(head) + len(tail))
+    file_size = exp.get("file_size") or (len(head) + len(tail) if tail else 0)
 
     full = bytearray(file_size)
     full[: len(head)] = head
@@ -161,7 +161,7 @@ class MockResponseFactory:
             if self._tail_used:
                 return b""
             self._tail_used = True
-            return self.tail or b"self.tail empty"
+            return self.tail or b""
 
         resp.content.read = read_tail
         resp.read = AsyncMock(return_value=self.tail)
@@ -289,21 +289,24 @@ class TestFileInspectorError:
         assert info.error_desc == "unexpected"
 
     async def test_retry_then_success(self):
-        """503 → retry → успех."""
+        """Проверка retry/call_count"""
+        minimal_jpeg = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01"
         factory = MockResponseFactory(
-            head=b"data", tail=b"", content_type="image/jpeg", file_size=4
+            head=minimal_jpeg, tail=b"", content_type="image/jpeg", file_size=4
         )
         meta_resp = factory.make_head_response("url")  # для _fetch_meta
         bad = factory.make_head_response("url")
         bad.status, bad.ok = 503, False
         good = factory.make_head_response("url")
         session = AsyncMock()
+        # 503 → retry → 200.
         session.get = AsyncMock(side_effect=[meta_resp, bad, good])
 
         info = await FileInspector().inspect_url(
             "https://x.com/x.jpg", session=session, retry_backoff_factor=0
         )
-        assert info.status == "error"
+        assert info.status == "partial"
+        assert info.format == "JPEG"
         assert session.get.call_count == 3
 
     async def test_retry_exhausted(self):
@@ -561,9 +564,12 @@ class TestBotGetFileInfo:
 
     async def test_returns_fileinfo(self, bot):
         """Возвращает FileInfo с полями."""
-        head = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01"  # минимальный JPEG
+        minimal_jpeg = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01"
         session = _make_mock_session(
-            head=head, tail=b"", content_type="image/jpeg", file_size=len(head)
+            head=minimal_jpeg,
+            tail=b"",
+            content_type="image/jpeg",
+            file_size=len(minimal_jpeg),
         )
 
         info = await bot.get_file_info(

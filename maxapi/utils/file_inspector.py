@@ -81,7 +81,7 @@ class FetchPlan(BaseModel):
     """
 
     initial_head: int = 2048
-    expand_chunk: int = 8196
+    expand_chunk: int = 8192
     max_head: int = 128_000
     min_head: int = 2048
     need_tail: int = 0
@@ -1604,7 +1604,7 @@ class FileInspector:
                     )
                 result["error_desc"] = (
                     "Длительность и частота кадров определены "
-                    "экстраполирвоанием (приблизительно)"
+                    "экстраполированием (приблизительно)"
                 )
             else:
                 result["duration"] = scanned_duration_sec
@@ -1669,7 +1669,7 @@ class FileInspector:
                 result["duration"] = scanned_duration_sec * ratio
                 result["error_desc"] = (
                     "Длительность и частота кадров определены "
-                    "экстраполирвоанием (приблизительно)"
+                    "экстраполированием (приблизительно)"
                 )
             else:
                 # Файл маленький или размер неизвестен — возвращаем как есть
@@ -2576,7 +2576,7 @@ class FileInspector:
         return out
 
     @staticmethod
-    def _m4a_parse_mvhd_duration(data: bytes) -> int | None:
+    def _m4a_parse_mvhd_duration(data: bytes) -> float | None:
         """Парсит длительность из mvhd атома."""
         if len(data) < 20:
             return None

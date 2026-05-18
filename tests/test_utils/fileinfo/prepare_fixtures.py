@@ -201,7 +201,7 @@ async def get_expected(name, cfg, session) -> tuple[bytes, bytes]:
             or len(expected) <= 3
         ):
             logger.warning(
-                "Не достаточно данных в expected для %s: %s",
+                "Недостаточно данных в expected для %s: %s",
                 name,
                 expected,
             )
@@ -242,7 +242,7 @@ async def generate_fixture(name, cfg, session, head, tail) -> dict | None:
 
             fixture.update(
                 {
-                    "mine_type": content_type,
+                    "mime_type": content_type,
                     "file_size": file_size,
                 }
             )
