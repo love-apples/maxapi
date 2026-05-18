@@ -13,6 +13,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import aiohttp
 import pytest
 from maxapi.connection.base import NamedBytesIO
+from maxapi.types.file_info import FileInfo
 from maxapi.utils.file_inspector import (
     FileInspector,
     RangeDownloader,
@@ -553,3 +554,31 @@ class TestRangeDownloader:
             async with dl:
                 assert dl.session is not None
             assert dl.session is None
+
+
+class TestBotGetFileInfo:
+    """Тесты bot.get_file_info()."""
+
+    async def test_returns_fileinfo(self, bot):
+        """Возвращает FileInfo с полями."""
+        head = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01"  # минимальный JPEG
+        session = _make_mock_session(
+            head=head, tail=b"", content_type="image/jpeg", file_size=len(head)
+        )
+
+        info = await bot.get_file_info(
+            "https://example.com/photo.jpg", timeout=5, session=session
+        )
+
+        assert isinstance(info, FileInfo)
+        assert info.mime_type == "image/jpeg"
+        assert info.format == "JPEG"
+
+    @patch("maxapi.utils.file_inspector.FileInspector.inspect_url")
+    async def test_timeout_passed_to_inspector(self, mock_inspect, bot):
+        """timeout передаётся в RangeDownloader."""
+        mock_inspect.return_value = FileInfo(url="test")
+        bot.session = AsyncMock()
+
+        await bot.get_file_info("https://example.com/file.mp4", timeout=15)
+        assert mock_inspect.call_args.kwargs["timeout"] == 15

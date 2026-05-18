@@ -1685,7 +1685,7 @@ class FileInspector:
     def _jpeg_parse(data: bytes) -> dict | None:
         if len(data) < 2 or data[:2] != b"\xff\xd8":
             return None
-
+        result = {"format": "JPEG"}
         pos = 2
         while pos < len(data) - 1:
             if data[pos] != 0xFF:
@@ -1709,7 +1709,7 @@ class FileInspector:
                     break
             else:
                 pos += 2
-        return None
+        return result
 
     # =========================================================================
     # [ ] Парсеры: видео

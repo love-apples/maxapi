@@ -739,7 +739,9 @@ class Bot(BaseConnection):
 
         return await GetVideo(bot=self, video_token=video_token).fetch()
 
-    async def get_file_info(self, url: str, *, timeout: int = 10) -> FileInfo:
+    async def get_file_info(
+        self, url: str, *, timeout: int = 10, **kwargs
+    ) -> FileInfo:
         """
         Получает метаинформацию о файле по URL.
 
@@ -751,12 +753,19 @@ class Bot(BaseConnection):
         Args:
             url: URL файла.
             timeout: Таймаут HTTP-запроса в секундах.
+            kwargs:
+            - session: Общая aiohttp-сессия (создаётся при ``None``).
+            - max_total: Максимальный объём скачанных данных (байт).
+            - max_retries: Число повторных попыток при ``retry_on_statuses``.
+            - retry_on_statuses: HTTP-статусы, при которых повторять запрос.
+            - retry_backoff_factor: Множитель задержки между попытками
+                (1.0 → 1с, 2с, 4с).
 
         Returns:
             FileInfo: Метаинформация о файле.
         """
         inspector = FileInspector()
-        return await inspector.inspect_url(url, timeout=timeout)
+        return await inspector.inspect_url(url, timeout=timeout, **kwargs)
 
     async def send_callback(
         self,
