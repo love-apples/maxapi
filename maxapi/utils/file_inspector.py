@@ -572,26 +572,23 @@ class RangeDownloader(RangeReader):
 
     async def _fetch_meta(self):
         """Получает метаинформацию с retry."""
-        response = await self._request_with_retry(self.original_url)
-        async with response:
-            final_url = str(response.url)
-            http_headers = response.headers
-            content_type = http_headers.get("Content-Type", "")
-            file_name = self._extract_filename(http_headers, self.original_url)
+        self._response = await self._request_with_retry(self.original_url)
+        final_url = str(self._response.url)
+        http_headers = self._response.headers
+        content_type = http_headers.get("Content-Type", "")
+        file_name = self._extract_filename(http_headers, self.original_url)
 
-            try:
-                file_size = (
-                    int(http_headers.get("Content-Length", "0")) or None
-                )
-            except ValueError:
-                file_size = None
+        try:
+            file_size = int(http_headers.get("Content-Length", "0")) or None
+        except ValueError:
+            file_size = None
 
-            self._meta = FileMeta(
-                url=final_url,
-                content_type=content_type,
-                file_name=file_name,
-                file_size=file_size,
-            )
+        self._meta = FileMeta(
+            url=final_url,
+            content_type=content_type,
+            file_name=file_name,
+            file_size=file_size,
+        )
 
     # ========================================================================
     # Private: Fetch with retry
@@ -613,13 +610,12 @@ class RangeDownloader(RangeReader):
         if not self._meta:
             raise RuntimeError("Метаинформация не загружена.")
 
-        response = await self._request_with_retry(
-            self._meta.url,
-            allow_range=tail,
-            range_bytes=size if tail else None,
-        )
-
         if tail:
+            response = await self._request_with_retry(
+                self._meta.url,
+                allow_range=tail,
+                range_bytes=size if tail else None,
+            )
             async with response:
                 if response.status not in (200, 206):
                     logger.debug(
@@ -628,8 +624,11 @@ class RangeDownloader(RangeReader):
                     return b""
                 return await self._read_response(response, size)
         else:
-            # Head: сохраняем соединение для докачки
-            self._response = response
+            response = self._response
+            if not response:
+                raise RuntimeError(
+                    "Response отсутвует. Сначала нужно запросить _fetch_meta()"
+                )
             data = await self._read_response(response, size)
 
             # Проверка: если tail повторяет начало head,
