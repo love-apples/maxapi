@@ -294,13 +294,12 @@ class TestFileInspectorError:
         factory = MockResponseFactory(
             head=minimal_jpeg, tail=b"", content_type="image/jpeg", file_size=4
         )
-        meta_resp = factory.make_head_response("url")  # для _fetch_meta
         bad = factory.make_head_response("url")
         bad.status, bad.ok = 503, False
         good = factory.make_head_response("url")
         session = AsyncMock()
-        # 503 → retry → 200.
-        session.get = AsyncMock(side_effect=[meta_resp, bad, good])
+        # 503 → retry → 200 (один GET: meta + head).
+        session.get = AsyncMock(side_effect=[bad, bad, good])
 
         info = await FileInspector().inspect_url(
             "https://x.com/x.jpg", session=session, retry_backoff_factor=0

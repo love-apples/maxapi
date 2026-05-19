@@ -1799,27 +1799,29 @@ class FileInspector:
                 └── minf
                     └── stbl
                         └── stsd
-                            └── mp4a    # ← sample_rate здесь (+24 от "mp4a")
+                            └── mp4a    # ← sample_rate (+28 от "mp4a")
         mdat                        # медиа-данные (видео/аудио)
         """
-        result = {}
+        result: dict = {}
         if cls._mp4_check(data):
             result = {"format": "MP4"}
         elif cls._m4a_check(data):
             result = {"format": "M4A"}
+        else:
+            return None
 
-        # Ищем moov в head
-        dims = cls._mp4_find_moov(data)
-        if dims and result:
-            result.update(dims)
-            return result
-
-        # Ищем moov в tail
-        if tail:
-            dims = cls._mp4_find_moov(tail)
-            if dims and result:
+        for chunk in (data, tail or b""):
+            if not chunk:
+                continue
+            dims = cls._mp4_find_moov(chunk)
+            if dims:
                 result.update(dims)
-                return result
+
+        if not result.get("sample_rate"):
+            for chunk in (data, tail or b""):
+                if sr := cls._mp4_parse_sample_rate(chunk):
+                    result["sample_rate"] = sr
+                    break
 
         return result or None
 
@@ -1864,8 +1866,12 @@ class FileInspector:
             elif atom_type == b"trak":
                 trak_data = data[pos + header_size : pos + size]
                 dims = cls._mp4_parse_trak_for_dims(trak_data)
-                if dims and cls._mp4_is_valid_video_dims(dims):
-                    result.update(dims)
+                if dims:
+                    if cls._mp4_is_valid_video_dims(dims):
+                        result.update(dims)
+                    elif dims.get("sample_rate"):
+                        # Всегда проверяем sample_rate, даже для аудио-trak
+                        result["sample_rate"] = dims["sample_rate"]
 
             pos += size
             if size < header_size:
@@ -1873,8 +1879,9 @@ class FileInspector:
         return result or None
 
     @classmethod
-    def _mp4_parse_trak_for_dims(cls, data: bytes) -> dict | None:
+    def _mp4_parse_trak_for_dims(cls, data: bytes) -> dict | None:  # noqa: C901
         """Ищет tkhd внутри trak"""
+        result = {}
         pos = 0
         while pos + 8 <= len(data):
             size = struct.unpack(">I", data[pos : pos + 4])[0]
@@ -1882,23 +1889,34 @@ class FileInspector:
 
             if size == 0:
                 break
+            header_size = 16 if size == 1 else 8
             if size == 1:
-                if pos + 16 > len(data):
-                    break
                 size = struct.unpack(">Q", data[pos + 8 : pos + 16])[0]
-                header_size = 16
-            else:
-                header_size = 8
 
             if atom_type == b"tkhd":
-                return cls._mp4_parse_tkhd(
+                dims = cls._mp4_parse_tkhd(
                     data[pos + header_size : pos + size]
                 )
+                if dims:
+                    result.update(dims)
+            elif atom_type == b"mdia":
+                # Ищем sample_rate внутри mdia → minf → stbl → stsd → mp4a
+                sr = cls._mp4_parse_sample_rate(
+                    data[pos + header_size : pos + size]
+                )
+                if sr:
+                    result["sample_rate"] = sr
 
             pos += size
             if size < header_size:
                 break
-        return None
+
+        if "sample_rate" not in result:
+            sr = cls._mp4_parse_sample_rate(data)
+            if sr:
+                result["sample_rate"] = sr
+
+        return result or None
 
     @staticmethod
     def _mp4_parse_tkhd(data: bytes) -> dict | None:
@@ -1942,13 +1960,28 @@ class FileInspector:
             }
         return None
 
+    @classmethod
+    def _mp4_parse_sample_rate(cls, data: bytes) -> int | None:
+        """Ищет sample_rate в mp4a (AudioSampleEntry, 16.16 fixed point)."""
+        pos = 0
+        while pos < len(data):
+            mp4a_idx = data.find(b"mp4a", pos)
+            if mp4a_idx < 0 or mp4a_idx + 32 > len(data):
+                return None
+            raw = struct.unpack_from(">I", data, mp4a_idx + 28)[0]
+            sr = raw >> 16
+            if 8000 <= sr <= 192000:
+                return sr
+            pos = mp4a_idx + 4
+        return None
+
     @staticmethod
     def _mp4_is_valid_video_dims(result: dict | None) -> bool:
         """Проверяет, что размеры видео реалистичны."""
         if not result:
             return False
-        w = result.get("width") or 0
-        h = result.get("height") or 0
+        w = result.get("width", 0)
+        h = result.get("height", 0)
         return (
             # Некоторые файлы имеют 0x40000000 (16384.0) как "не задано"
             not (w == 16_384 and h == 16_384)
