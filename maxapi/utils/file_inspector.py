@@ -69,139 +69,20 @@ _FORMAT_TO_MIME: dict[str, str] = {
     "MKV": "video/x-matroska",
 }
 
+# Лимиты частичного чтения (парсеры запрашивают докачку через _need_*).
+INITIAL_HEAD = 4096
+MAX_HEAD = 256_000
+EXPAND_CHUNK = 4096
+MAX_TAIL = 65_536
+
+# Ключи метаданных ответа парсера (не попадают в FileInfo).
+NEED_HEAD = "_need_head"
+NEED_TAIL = "_need_tail"
+PARSE_STATUS = "_status"  # "ok" | "partial"
+
 # ============================================================================
 # [ ] Структуры данных
 # ============================================================================
-
-
-class FetchPlan(BaseModel):
-    """
-    План частичного чтения файла.
-
-    Attributes:
-        initial_head: Размер первого блока с начала файла.
-        expand_chunk: Размер блока докачки (0 — без докачки).
-        max_head: Верхняя граница размера head.
-        min_head: Нижняя граница размера head.
-        need_tail: Размер блока с конца (0 — хвост не нужен).
-    """
-
-    initial_head: int = 2048
-    expand_chunk: int = 8192
-    max_head: int = 128_000
-    min_head: int = 2048
-    need_tail: int = 0
-
-    @classmethod
-    def from_content_type(  # noqa: C901
-        cls,
-        content_type: str,
-        file_size: int | None = None,
-    ) -> FetchPlan:
-        """
-        Строит план по MIME-типу и размеру файла.
-
-        Args:
-            content_type: MIME-тип из заголовков или guess.
-            file_size: Размер файла в байтах, если известен.
-
-        Returns:
-            FetchPlan: План чтения для данного типа контента.
-        """
-        # Маленькие файлы качаем целиком
-        if file_size and file_size <= 64_000:
-            return cls(
-                initial_head=file_size,
-                max_head=file_size,
-                min_head=file_size,
-            )
-
-        # AVI: начало с докачкой
-        if content_type in ("video/x-msvideo", "video/msvideo"):
-            return cls(
-                initial_head=8192,
-                expand_chunk=4096,
-                max_head=256000,
-            )
-
-        # MP3: может иметь большой ID3v2 и иногда нужен хвост
-        if content_type in ("audio/mpeg", "audio/mp3"):
-            return cls(
-                initial_head=8192,
-                expand_chunk=8192,
-                max_head=32_768,
-                need_tail=8192,
-            )
-
-        # Видео с moov/seekhead в конце.
-        # Без хвоста не возможно определить длительность
-        if content_type in (
-            "audio/ogg",
-            "video/ogg",
-            "application/ogg",
-            "video/ogv",
-        ):
-            return cls(
-                initial_head=8192,
-                expand_chunk=8192,
-                need_tail=8192,
-            )
-
-        # Видео mp4, если потоковое то все параметры записаны вконце
-        if content_type == "video/mp4":
-            return cls(
-                initial_head=8192,
-                expand_chunk=8192,
-                max_head=65_536,
-                need_tail=24_576,
-            )
-
-        # WMA: большой начальный кусок
-        if content_type in ("audio/x-ms-wma", "audio/wma"):
-            return cls(
-                initial_head=8192,
-                expand_chunk=8192,
-            )
-
-        # JPEG
-        if content_type == "image/jpeg":
-            if file_size:
-                # За счёт EXIF+preview информация о размере может быть глубже
-                # Кривая: резкий рост до ~10 КБ на маленьких файлах,
-                # плавный до ~30 КБ на средних, пологий до 64 КБ на больших.
-                # 10 КБ → 2.9 КБ
-                # 500 КБ → 17.5 КБ
-                # 1024 КБ → 25 КБ
-                needed = min(512 + int(24 * (file_size**0.5)), 65536)
-            else:
-                needed = 8192
-
-            return cls(
-                initial_head=needed,
-                expand_chunk=needed // 2,
-            )
-
-        # GIF/WebP Для оценки длительности анимации нужно >= 3% файла
-        if content_type in ("image/gif", "image/webp"):
-            needed = (
-                max(20_240, (file_size or 0) // 25) if file_size else 20_240
-            )
-            needed = min(needed, 256_000)
-            return cls(
-                initial_head=needed,
-                expand_chunk=needed,  # Вероятно никогда не будет использовано
-                max_head=needed,  # Чтобы не урезалось
-            )
-
-        # По умолчанию для видео
-        if content_type.startswith("video/"):
-            return cls(
-                initial_head=8192,
-                expand_chunk=8192,
-            )
-
-        # По умолчанию
-        return cls()
 
 
 class FileMeta(BaseModel):
@@ -223,23 +104,66 @@ class RangeReader(ABC):
 
     def __init__(
         self,
-        plan: FetchPlan,
         content_type: str,
         file_name: str,
         file_size: int | None,
+        *,
+        full_read_threshold: int = 20_971_520,
     ):
-        self.plan = plan
         self.content_type = content_type
         self.file_name = file_name
         self.file_size = file_size
+        self._full_read_threshold = full_read_threshold
         self.head: bytes = b""
         self.tail: bytes = b""
+        self.pending_needs: dict[str, int] = {}
+        self._expand_count = 0
+
+    def _initial_head_size(self) -> int:
+        if self.file_size and self.file_size <= MAX_HEAD:
+            return self.file_size
+        if self.file_size and self.file_size < self._full_read_threshold:
+            return self.file_size
+        return INITIAL_HEAD
 
     @abstractmethod
     def __aiter__(self) -> AsyncIterator[None]: ...
 
     @abstractmethod
     async def close(self): ...
+
+    @abstractmethod
+    async def _fetch_tail(self, size: int) -> bytes: ...
+
+    @abstractmethod
+    async def _expand_head(self, *, target: int | None = None) -> bytes: ...
+
+    async def _satisfy_pending_needs(self) -> bool:
+        """
+        Докачивает head/tail по pending_needs.
+        Возвращает True если что-то скачано.
+        """
+        need_head = self.pending_needs.get(NEED_HEAD, 0)
+        need_tail = self.pending_needs.get(NEED_TAIL, 0)
+        self.pending_needs = {}
+        progressed = False
+
+        if need_tail > 0 and len(self.tail) < need_tail:
+            self.tail = await self._fetch_tail(min(need_tail, MAX_TAIL))
+            progressed = True
+
+        if need_head == -1 and len(self.head) < MAX_HEAD:
+            chunk = await self._expand_head()
+            if chunk:
+                self.head += chunk
+                progressed = True
+        elif need_head > len(self.head):
+            chunk = await self._expand_head(target=min(need_head, MAX_HEAD))
+            if chunk:
+                self.head += chunk
+                progressed = True
+
+        return progressed
 
 
 # ============================================================================
@@ -254,7 +178,7 @@ class RangeFileReader(RangeReader):
         self,
         path: str,
         *,
-        full_read_limit: int = 20_971_520,  # 20 Мб
+        full_read_threshold: int = 20_971_520,  # 20 Мб
     ):
         self.path = path
         file_path = Path(path)
@@ -263,53 +187,53 @@ class RangeFileReader(RangeReader):
         file_size = file_path.stat().st_size
         content_type, _ = mimetypes.guess_type(path)
         content_type = content_type or "application/octet-stream"
-
-        if file_size < full_read_limit:
-            # Небольшие данные будем анализировать целиком
-            plan = FetchPlan(
-                initial_head=file_size,
-                expand_chunk=0,
-                max_head=file_size,
-                need_tail=0,
-            )
-        else:
-            plan = FetchPlan.from_content_type(content_type, file_size)
-        logger.debug(
-            "FILE plan: initial=%s, expand=%s, tail=%s",
-            plan.initial_head,
-            plan.expand_chunk,
-            plan.need_tail,
+        super().__init__(
+            content_type,
+            file_name,
+            file_size,
+            full_read_threshold=full_read_threshold,
         )
-        super().__init__(plan, content_type, file_name, file_size)
+        self._file: Any = None
 
     async def __aiter__(self) -> AsyncIterator[None]:
         async with await anyio.open_file(self.path, "rb") as f:
-            # 1. Tail
-            if self.plan.need_tail > 0:
-                await f.seek(
-                    max(0, (self.file_size or 0) - self.plan.need_tail)
-                )
-                self.tail = await f.read()
-                await f.seek(0)
-
-            # 2. Head + expand
-            # Первый чанк
-            self.head = await f.read(self.plan.initial_head)
+            self._file = f
+            self.head = await f.read(self._initial_head_size())
             logger.debug(
                 "head len=%s, tail len=%s", len(self.head), len(self.tail)
             )
             yield
-
-            # Докачка
-            while (
-                self.plan.expand_chunk > 0
-                and len(self.head) < self.plan.max_head
-            ):
-                chunk = await f.read(self.plan.expand_chunk)
-                if not chunk:
+            while self.pending_needs:
+                if not await self._satisfy_pending_needs():
                     break
-                self.head += chunk
+                logger.debug(
+                    "head len=%s, tail len=%s", len(self.head), len(self.tail)
+                )
                 yield
+            self._file = None
+
+    async def _fetch_tail(self, size: int) -> bytes:
+        if not self._file:
+            return b""
+        await self._file.seek(max(0, (self.file_size or 0) - size))
+        return await self._file.read()
+
+    async def _expand_head(self, *, target: int | None = None) -> bytes:
+        if not self._file:
+            return b""
+        if target is not None:
+            need = min(target, MAX_HEAD) - len(self.head)
+            if need <= 0:
+                return b""
+            return await self._file.read(need)
+        chunk_size = min(
+            EXPAND_CHUNK * (2**self._expand_count),
+            MAX_HEAD - len(self.head),
+        )
+        self._expand_count += 1
+        if chunk_size <= 0:
+            return b""
+        return await self._file.read(chunk_size)
 
     async def close(self):
         pass  # anyio.open_file закрывается через async with
@@ -328,63 +252,69 @@ class RangeBytesReader(RangeReader):
         data: bytes | BytesIO | NamedBytesIO,
         file_name: str = "",
         *,
-        full_read_limit=20_971_520,  # 20 Мб
+        full_read_threshold=20_971_520,  # 20 Мб
     ):
         if isinstance(data, (BytesIO, NamedBytesIO)):
-            self._file_name = file_name or getattr(data, "name", "")
+            file_name = file_name or getattr(data, "name", "")
             raw = data.getbuffer()  # memoryview без копирования
         else:
-            self._file_name = file_name
             raw = memoryview(data)  # bytes → memoryview
 
-        self._file_size = len(raw)
-        content_type, _ = mimetypes.guess_type(self._file_name)
+        file_size = len(raw)
+        content_type, _ = mimetypes.guess_type(file_name)
         content_type = content_type or "application/octet-stream"
-
-        if self._file_size < full_read_limit:
-            # Небольшие данные будем анализировать целиком
-            plan = FetchPlan(
-                initial_head=self._file_size,
-                expand_chunk=0,
-                max_head=self._file_size,
-                need_tail=0,
-            )
-        else:
-            plan = FetchPlan.from_content_type(content_type, self._file_size)
-        logger.debug(
-            "BYTES plan: initial=%s, expand=%s, tail=%s",
-            plan.initial_head,
-            plan.expand_chunk,
-            plan.need_tail,
+        super().__init__(
+            content_type,
+            file_name,
+            file_size,
+            full_read_threshold=full_read_threshold,
         )
-        super().__init__(plan, content_type, self._file_name, self._file_size)
         self._raw = raw
+        self._head_pos = 0
 
     async def __aiter__(self) -> AsyncIterator[None]:
-        # 1. Tail
-        if self.plan.need_tail > 0:
-            tail_start = max(0, self._file_size - self.plan.need_tail)
-            self.tail = bytes(self._raw[tail_start:])
-
-        # 2. Head + expand (синхронно, без await)
-        pos = 0
-        while pos < self._file_size:
-            chunk_size = (
-                self.plan.expand_chunk if pos > 0 else self.plan.initial_head
-            )
-            if chunk_size <= 0:
+        file_size = self.file_size or 0
+        end = min(self._initial_head_size(), file_size)
+        self.head = bytes(self._raw[:end])
+        self._head_pos = end
+        logger.debug(
+            "head len=%s, tail len=%s", len(self.head), len(self.tail)
+        )
+        yield
+        while self.pending_needs:
+            if not await self._satisfy_pending_needs():
                 break
-
-            end = min(pos + chunk_size, self._file_size)
-            self.head = bytes(self._raw[:end])
-            pos = end
             logger.debug(
                 "head len=%s, tail len=%s", len(self.head), len(self.tail)
             )
             yield
 
-            if end >= self._file_size:
-                break
+    async def _fetch_tail(self, size: int) -> bytes:
+        file_size = self.file_size or 0
+        tail_start = max(0, file_size - size)
+        return bytes(self._raw[tail_start:])
+
+    async def _expand_head(self, *, target: int | None = None) -> bytes:
+        file_size = self.file_size or 0
+        if target is not None:
+            end = min(target, MAX_HEAD, file_size)
+            if end <= self._head_pos:
+                return b""
+            chunk = bytes(self._raw[self._head_pos : end])
+            self._head_pos = end
+            return chunk
+        chunk_size = min(
+            EXPAND_CHUNK * (2**self._expand_count),
+            MAX_HEAD - len(self.head),
+            file_size - self._head_pos,
+        )
+        self._expand_count += 1
+        if chunk_size <= 0:
+            return b""
+        end = self._head_pos + chunk_size
+        chunk = bytes(self._raw[self._head_pos : end])
+        self._head_pos = end
+        return chunk
 
     async def close(self):
         pass
@@ -443,7 +373,6 @@ class RangeDownloader(RangeReader):
         allow_external_auth: bool = False,
     ):
         super().__init__(
-            plan=FetchPlan(),
             content_type="",
             file_name="",
             file_size=None,
@@ -479,7 +408,6 @@ class RangeDownloader(RangeReader):
         self._closed: bool = False
         self._fetched_meta: bool = False
         self._meta: FileMeta | None = None
-        self._expand_count = 0
 
     @property
     def final_url(self) -> str:
@@ -517,54 +445,47 @@ class RangeDownloader(RangeReader):
         if self._closed:
             return
 
-        # Получаем метаинформацию и строим план
         if not self._fetched_meta:
-            await self._fetch_meta()
-            self._meta = cast(FileMeta, self._meta)
-            self.content_type = self._meta.content_type
-            self.file_name = self._meta.file_name
-            self.file_size = self._meta.file_size
-            self.plan = FetchPlan.from_content_type(
-                self._meta.content_type,
-                self._meta.file_size,
-            )
+            initial = INITIAL_HEAD
+            if self.file_size and self.file_size <= MAX_HEAD:
+                initial = self.file_size
+            await self._fetch_meta_and_head(initial)
             self._fetched_meta = True
             logger.debug(
-                "URL plan: initial_head=%s, expand=%s, tail=%s, max=%s",
-                self.plan.initial_head,
-                self.plan.expand_chunk,
-                self.plan.need_tail,
-                self.plan.max_head,
-            )
-        else:
-            self._meta = cast(FileMeta, self._meta)
-
-        # 1. Head
-        if self.plan.initial_head > 0:
-            self.head = await self._fetch_chunk(
-                self.plan.initial_head,
-                tail=False,
-            )
-
-        # 2. Tail
-        if self.plan.need_tail > 0:
-            self.tail = await self._fetch_chunk(
-                self.plan.need_tail,
-                tail=True,
+                "URL initial head=%s, file_size=%s",
+                len(self.head),
+                self.file_size,
             )
 
         yield
 
-        # 3. Докачка head
-        self._expand_count = 0  # Сброс перед докачкой
-        while (
-            self.plan.expand_chunk > 0 and len(self.head) < self.plan.max_head
-        ):
-            chunk = await self._expand_head()
-            if not chunk:
+        while self.pending_needs:
+            if not await self._satisfy_pending_needs():
                 break
-            self.head += chunk
+            logger.debug(
+                "head len=%s, tail len=%s", len(self.head), len(self.tail)
+            )
             yield
+
+    async def _fetch_meta_and_head(self, size: int) -> None:
+        """Один GET: заголовки + первые size байт тела."""
+        await self._fetch_meta()
+        self._meta = cast(FileMeta, self._meta)
+        self.content_type = self._meta.content_type
+        self.file_name = self._meta.file_name
+        self.file_size = self._meta.file_size
+        if size > 0:
+            self.head = await self._read_head_bytes(size)
+
+    async def _read_head_bytes(self, size: int) -> bytes:
+        if not self._response:
+            raise RuntimeError(
+                "Response отсутствует. Сначала нужно вызвать _fetch_meta()"
+            )
+        return await self._read_response(self._response, size)
+
+    async def _fetch_tail(self, size: int) -> bytes:
+        return await self._fetch_chunk(size, tail=True)
 
     # ========================================================================
     # Управление
@@ -701,8 +622,8 @@ class RangeDownloader(RangeReader):
             data += chunk
         return data
 
-    async def _expand_head(self) -> bytes:
-        """Докачивает дополнительный кусок к head с удвоением размера."""
+    async def _expand_head(self, *, target: int | None = None) -> bytes:
+        """Докачивает head: удвоение или до target байт."""
         if not self._response or getattr(self._response, "closed", False):
             return b""
 
@@ -710,9 +631,19 @@ class RangeDownloader(RangeReader):
         if allowed <= 0:
             return b""
 
-        # Удвоение от начального expand_chunk
+        if target is not None:
+            need = min(target, MAX_HEAD) - len(self.head)
+            if need <= 0:
+                return b""
+            try:
+                return await self._read_response(
+                    self._response, min(need, allowed)
+                )
+            except Exception:
+                return b""
+
         chunk_size = min(
-            self.plan.expand_chunk * (2**self._expand_count),
+            EXPAND_CHUNK * (2**self._expand_count),
             allowed,
         )
         self._expand_count += 1
@@ -921,14 +852,16 @@ class FileInspector:
             logger.error("Сетевая ошибка: %s", e)
             self.last_file_info = self._build_file_info(
                 url=url,
-                error_desc=f"Сетевая ошибка: {e}",
+                parse_note=f"Сетевая ошибка: {e}",
+                status="error",
             )
             return self.last_file_info
         except Exception as e:
             logger.exception("Ошибка инспекции: %s", e)
             self.last_file_info = self._build_file_info(
                 url=url,
-                error_desc=str(e),
+                parse_note=str(e),
+                status="error",
             )
             return self.last_file_info
 
@@ -936,14 +869,14 @@ class FileInspector:
         self,
         path: str,
         *,
-        full_read_limit: int = 20_971_520,  # 20 Мб
+        full_read_threshold: int = 20_971_520,  # 20 Мб
     ) -> FileInfo:
         """
         Инспектирует локальный файл.
 
         Args:
             path: Путь к файлу.
-            full_read_limit: Файлы меньше этого размера читаются целиком.
+            full_read_threshold: Файлы меньше этого размера читаются целиком.
                 Установите в ноль, чтоюы отключить полное чтение.
                 В таком случае будет использован план загрузки как для
                 inspect_url
@@ -956,18 +889,21 @@ class FileInspector:
             if not await file_path.exists():
                 self.last_file_info = self._build_file_info(
                     url=path,
-                    error_desc="Файл не найден",
+                    parse_note="Файл не найден",
+                    status="error",
                 )
                 return self.last_file_info
             reader = RangeFileReader(
-                str(await file_path.resolve()), full_read_limit=full_read_limit
+                str(await file_path.resolve()),
+                full_read_threshold=full_read_threshold,
             )
             return await self._inspect(reader, url=path)
         except Exception as e:
             logger.exception("Ошибка инспекции файла: %s", e)
             self.last_file_info = self._build_file_info(
                 url=path,
-                error_desc=str(e),
+                parse_note=str(e),
+                status="error",
             )
             return self.last_file_info
 
@@ -976,7 +912,7 @@ class FileInspector:
         data: bytes | BytesIO | NamedBytesIO,
         *,
         file_name: str = "",
-        full_read_limit: int = 20_971_520,  # 20 Мб
+        full_read_threshold: int = 20_971_520,  # 20 Мб
     ) -> FileInfo:
         """
         Инспектирует уже загруженные байты.
@@ -984,7 +920,7 @@ class FileInspector:
         Args:
             data: Содержимое файла.
             file_name: Имя файла (для guess MIME по расширению).
-            full_read_limit: Буферы меньше этого размера читаются целиком.
+            full_read_threshold: Буферы меньше этого размера читаются целиком.
 
         Returns:
             FileInfo: Результат инспекции.
@@ -993,7 +929,7 @@ class FileInspector:
             file_name = file_name or getattr(data, "name", "")
 
         reader = RangeBytesReader(
-            data, file_name, full_read_limit=full_read_limit
+            data, file_name, full_read_threshold=full_read_threshold
         )
         return await self._inspect(reader, url="")
 
@@ -1009,32 +945,54 @@ class FileInspector:
     ) -> FileInfo:
         """Общая логика для любого источника (RangeReader)."""
         self._last_reader = reader
-        dims = {}
+        dims: dict = {}
+        status: Literal["ok", "partial", "error"] = "partial"
+        content_type = reader.content_type
+
         async for _ in reader:
-            # Проверка: не HTML
+            if reader.content_type:
+                content_type = reader.content_type
+
+            if not reader.head:
+                self.last_file_info = self._build_file_info(
+                    url=url,
+                    mime_type=content_type,
+                    file_name=reader.file_name,
+                    file_size=reader.file_size,
+                    status="error",
+                    parse_note="Недостаточно данных для "
+                    "определения параметров",
+                )
+                return self.last_file_info
+
             if self._looks_like_html(reader.head, reader.content_type):
                 self.last_file_info = self._build_file_info(
                     url=url,
                     mime_type=reader.content_type,
                     file_name=reader.file_name,
                     file_size=reader.file_size,
-                    error_desc="Файл не является медиа (HTML-страница)",
+                    status="error",
+                    parse_note="Файл не является медиа (HTML-страница)",
                 )
                 return self.last_file_info
 
-            # Парсим
-            dims = (
-                self.parse_media_dimensions(
-                    reader.head,
-                    reader.tail,
-                    reader.content_type,
-                    reader.file_size,
-                )
-                or {}
+            raw = self.parse_media_dimensions(
+                reader.head,
+                reader.tail,
+                reader.file_size,
             )
+            if raw is None:
+                self.last_file_info = self._build_file_info(
+                    url=url,
+                    mime_type=content_type,
+                    file_name=reader.file_name,
+                    file_size=reader.file_size,
+                    status="partial",
+                )
+                return self.last_file_info
 
-            # Уточняем content_type если octet-stream
-            content_type = reader.content_type
+            dims, needs, status = self._split_parse_result(raw)
+
             fmt = dims.get("format")
             if (
                 fmt
@@ -1046,37 +1004,52 @@ class FileInspector:
             ):
                 content_type = _FORMAT_TO_MIME[fmt]
 
-            # Достаточно ли данных
-            if self._is_complete(dims, content_type):
+            if status == "ok":
                 logger.debug(
                     "Использовано финально head_len=%s, tail_len=%s",
                     len(reader.head),
                     len(reader.tail),
                 )
-
                 self.last_file_info = self._build_file_info(
                     url=url,
                     mime_type=content_type,
                     file_name=reader.file_name,
                     file_size=reader.file_size,
                     dims=dims,
+                    status="ok",
                 )
                 return self.last_file_info
 
-        # Цикл кончился — не хватило данных
+            reader.pending_needs = needs
+
         self.last_file_info = self._build_file_info(
             url=url,
-            mime_type=reader.content_type,
+            mime_type=content_type,
             file_name=reader.file_name,
             file_size=reader.file_size,
             dims=dims or None,
-            error_desc="Недостаточно данных для определения параметров",
+            status=status,
         )
         return self.last_file_info
 
     # ========================================================================
     # Private: хелперы
     # ========================================================================
+
+    @staticmethod
+    def _split_parse_result(
+        raw: dict,
+    ) -> tuple[dict, dict[str, int], Literal["ok", "partial"]]:
+        """Отделяет служебные ключи парсера от полей FileInfo."""
+        dims = dict(raw)
+        needs: dict[str, int] = {}
+        for key in (NEED_HEAD, NEED_TAIL):
+            if key in dims:
+                needs[key] = int(dims.pop(key))
+        status = dims.pop(PARSE_STATUS, "partial")
+        if status not in ("ok", "partial"):
+            status = "partial"
+        return dims, needs, status
 
     @staticmethod
     def _looks_like_html(head: bytes, content_type: str) -> bool:
@@ -1089,39 +1062,19 @@ class FileInspector:
         return head_lower.startswith((b"<!doctype html", b"<html"))
 
     @staticmethod
-    def _is_complete(dims: dict, content_type: str) -> bool:
-        """Проверяет, достаточно ли данных для этого типа контента."""
-        if not dims:
-            return False
-        if content_type.startswith("image/"):
-            return bool(dims.get("width") and dims.get("height"))
-        if content_type.startswith("audio/"):
-            return bool(dims.get("duration") and dims.get("sample_rate"))
-        if content_type.startswith("video/"):
-            if dims.get("error_desc") == (
-                "Для определения duration необходим "
-                "конец файла (tail) или файл целиком"
-            ):
-                return True
-            return bool(
-                dims.get("duration") and dims.get("width") and dims.get("fps")
-            )
-        return bool(dims)
-
-    @staticmethod
     def _build_file_info(
         url: str = "",
         mime_type: str = "",
         file_name: str = "",
         file_size: int | None = None,
         dims: dict | None = None,
-        error_desc: str = "",
+        parse_note: str = "",
+        status: Literal["ok", "partial", "error"] = "partial",
     ) -> FileInfo:
         """Собирает FileInfo из параметров."""
         if dims is None:
             dims = {}
 
-        # Вычисляем производные поля
         bitrate_avg = None
         if file_size and dims.get("duration"):
             bitrate_avg = round(file_size / dims["duration"] * 8 / 1024)
@@ -1143,7 +1096,8 @@ class FileInspector:
             sample_rate=dims.get("sample_rate"),
             bitrate_nominal=dims.get("bitrate_nominal") or dims.get("bitrate"),
             bitrate_avg=bitrate_avg,
-            error_desc=error_desc or dims.get("error_desc", ""),
+            parse_note=parse_note or dims.get("parse_note", ""),
+            status=status,
         )
 
     @classmethod
@@ -1151,236 +1105,93 @@ class FileInspector:
         cls,
         head: bytes,
         tail: bytes | None,
-        content_type: str | None = None,
         file_size: int | None = None,
     ) -> dict | None:
         """
-        Извлекает метаданные из фрагментов файла.
-
-        Args:
-            head: Байты с начала файла.
-            tail: Байты с конца (если нужны для формата).
-            content_type: MIME-тип, опционально
-            file_size: Полный размер файла, если известен.
+        Извлекает метаданные из фрагментов файла (только по сигнатуре).
 
         Returns:
-            Словарь полей для :class:`FileInfo` или ``None``.
+            Словарь с полями FileInfo и служебными ключами
+            (``_need_head``, ``_need_tail``, ``_status``), или ``None``.
         """
         if len(head) < 2:
             return None
 
-        if not tail and len(head) == file_size:
-            # файл целиком
+        if not tail and file_size and len(head) == file_size:
             tail = head
 
-        if not content_type or content_type == "application/octet-stream":
-            # Если сервер не определил тип файла
-            # Проверим все типы по содержанию
-            result = cls._parse_image_dimensions(head, "", file_size)
-            if result:
+        for parser in (
+            lambda: cls._parse_image_dimensions(head, file_size),
+            lambda: cls._parse_video_dimensions(head, tail, file_size),
+            lambda: cls._parse_audio_dimensions(head, tail, file_size),
+        ):
+            if result := parser():
                 return result
-            result = cls._parse_video_dimensions(head, tail, "", file_size)
-            if result:
-                return result
-            result = cls._parse_audio_dimensions(head, tail, "", file_size)
-            if result:
-                return result
-            return None
-
-        if content_type.startswith("image/"):
-            return cls._parse_image_dimensions(head, content_type, file_size)
-
-        if content_type.startswith("video/"):
-            return cls._parse_video_dimensions(
-                head, tail, content_type, file_size
-            )
-
-        if content_type.startswith("audio/"):
-            return cls._parse_audio_dimensions(
-                head, tail, content_type, file_size
-            )
-
         return None
 
     @classmethod
     def _parse_image_dimensions(
-        cls, data: bytes, content_type: str, file_size: int | None
+        cls,
+        data: bytes,
+        file_size: int | None,
     ) -> dict | None:
         """
-        Парсит метаданные изображений, определяя формат по сигнатурам,
-        с fallback на content_type.
+        Изображения: PNG, JPEG, GIF, WEBP (по сигнатуре).
 
-        Args:
-            data: начальные байты файла (head).
-            content_type: MIME-тип из заголовков HTTP.
-            file_size: размер файла в байтах (опционально).
-
-        Returns:
-            dict с ключами format, width, height или None.
+        Может: format, width, height; GIF/аним. WEBP — duration, fps.
         """
-
-        # WEBP — сигнатура RIFF WEBP
         if cls._webp_check(data):
             return cls._webp_parse(data, file_size)
-
-        # PNG — сигнатура 8 байт + IHDR
         if cls._png_check(data):
             return cls._png_parse(data)
-
-        # JPEG — сигнатура \xFF\xD8
         if cls._jpg_check(data):
             return cls._jpeg_parse(data)
-
-        # GIF — сигнатура GIF87a / GIF89a
         if cls._gif_check(data):
             return cls._gif_parse_info(data, file_size)
-
-        # Fallback на content_type, если байты не распознаны
-        # Это полезно, если файл обрезан или сигнатура нестандартна
-        if content_type == "image/webp":
-            return cls._webp_parse(data, file_size)
-        if content_type == "image/png":
-            return cls._png_parse(data)
-        if content_type == "image/jpeg":
-            return cls._jpeg_parse(data)
-        if content_type == "image/gif":
-            return cls._gif_parse_info(data, file_size)
-
         return None
 
     @classmethod
-    def _parse_video_dimensions(  # noqa: C901
+    def _parse_video_dimensions(
         cls,
         head: bytes,
         tail: bytes | None,
-        content_type: str,
         file_size: int | None,
     ) -> dict | None:
         """
-        Парсит метаданные видео, определяя формат по сигнатурам,
-        с fallback на content_type.
-
-        Args:
-            head: начальные байты файла.
-            tail: конечные байты файла (опционально, для moov/seekhead).
-            content_type: MIME-тип из заголовков HTTP.
-            file_size: размер файла в байтах (опционально).
-
-        Returns:
-            dict с ключами format, width, height, fps, duration или None.
+        Видео: MP4, AVI, WebM/MKV, OGV. MP4/OGV: moov/duration часто в tail.
         """
-
-        # MP4 / MOV — сигнатура ftyp или moov
         if cls._mp4_check(head):
             return cls._mp4_m4a_parse_info(head, tail)
-
-        # AVI — сигнатура RIFF AVI
         if cls._avi_check(head):
             return cls._avi_parse_info(head)
-
-        # MKV / WebM — сигнатура EBML
         if cls._webm_mkv_check(head):
-            result = cls._webm_mkv_parse_info(head)
-            # format определяется по содержанию,
-            # но если есть content_type, берём из него.
-            if content_type:
-                if not result:
-                    result = {}
-                if content_type == "video/webm":
-                    result["format"] = "WEBM"
-                elif content_type == "video/x-matroska":
-                    result["format"] = "MKV"
-            return result
-
-        # OGV / OGG — сигнатура OggS
+            return cls._webm_mkv_parse_info(head)
         if cls._ogg_ogv_check(head):
             return cls._ogg_parse_info(head, tail, file_size)
-
-        # Fallback на content_type, если байты не распознаны
-        # Это полезно, если файл обрезан или сигнатура нестандартна
-        if content_type in ("video/mp4", "video/quicktime"):
-            return cls._mp4_m4a_parse_info(head)
-        if content_type in ("video/x-msvideo", "video/msvideo"):
-            return cls._avi_parse_info(head)
-        if content_type == "video/webm":
-            result = cls._webm_mkv_parse_info(head)
-            if result:
-                result["format"] = "WEBM"
-            return result
-        if content_type == "video/x-matroska":
-            result = cls._webm_mkv_parse_info(head)
-            if result:
-                result["format"] = "MKV"
-            return result
-        if content_type in ("video/ogg", "application/ogg", "video/ogv"):
-            return cls._ogg_parse_info(head, tail, file_size)
-
         return None
 
     @classmethod
-    def _parse_audio_dimensions(  # noqa: C901
+    def _parse_audio_dimensions(
         cls,
         head: bytes,
         tail: bytes | None,
-        content_type: str,
         file_size: int | None,
     ) -> dict | None:
-        """
-        Парсит метаданные аудио, определяя формат по сигнатурам,
-        с fallback на content_type.
-
-        Args:
-            head: начальные байты файла.
-            tail: конечные байты файла (опционально, для Vorbis/Opus).
-            content_type: MIME-тип из заголовков HTTP.
-            file_size: размер файла в байтах (опционально).
-
-        Returns:
-            dict с ключами format, duration, sample_rate, bitrate или None.
-        """
-
+        """Аудио: MP3, WAV, FLAC, OGG, AAC, M4A, WMA."""
         if cls._mp3_check(head):
             return cls._mp3_parse_info(head, tail, file_size)
-
-        # WAV (RIFF WAVE)
         if cls._wav_check(head):
-            return cls._wav_parse_info(head)
-
-        # FLAC (fLaC)
+            return cls._wav_parse_info(head, file_size)
         if cls._flac_check(head):
             return cls._flac_parse_info(head)
-
-        # OGG / OPUS / SPEEX (OggS)
         if cls._ogg_ogv_check(head):
             return cls._ogg_parse_info(head, tail, file_size)
-
-        # AAC (ADTS)
         if cls._aac_check(head):
             return cls._aac_parse_info(head, file_size)
-
-        # M4A (ftyp)
-        if cls._m4a_check(head):
-            return cls._mp4_m4a_parse_info(head)
-
-        # WMA / ASF
+        if cls._m4a_check(head) or cls._mp4_check(head):
+            return cls._mp4_m4a_parse_info(head, tail)
         if cls._wma_check(head):
             return cls._wma_parse_info(head)
-
-        # Fallback на content_type, если байты не распознаны
-        # Это полезно, если файл обрезан или сигнатура нестандартна
-        if content_type in ("audio/mpeg", "audio/mp3"):
-            return cls._mp3_parse_info(head, tail, file_size)
-        if content_type == "audio/mp4":
-            return cls._mp4_m4a_parse_info(head)
-        if content_type in ("audio/ogg", "application/ogg"):
-            return cls._ogg_parse_info(head, tail, file_size)
-        if content_type in ("audio/aac", "audio/x-aac"):
-            return cls._aac_parse_info(head, file_size)
-        if content_type in ("audio/wav", "audio/x-wav", "audio/wave"):
-            return cls._wav_parse_info(head)
-        if content_type in ("audio/x-ms-wma", "audio/wma"):
-            return cls._wma_parse_info(head)
-
         return None
 
     # =========================================================================
@@ -1483,37 +1294,33 @@ class FileInspector:
 
     @classmethod
     def _png_parse(cls, data: bytes) -> dict[str, Any] | None:
+        """PNG: format, width, height (IHDR в первых 24 байтах)."""
         if not cls._png_check(data):
-            return
+            return None
         w, h = struct.unpack(">II", data[16:24])
-        return {"width": w, "height": h, "format": "PNG"}
+        return {
+            "width": w,
+            "height": h,
+            "format": "PNG",
+            PARSE_STATUS: "ok",
+        }
 
-    @staticmethod
+    @classmethod
     def _webp_parse(  # noqa: C901
-        data: bytes, file_size: int | None = None
+        cls,
+        data: bytes,
+        file_size: int | None = None,
     ) -> dict[str, Any] | None:
         """
-        Парсит метаданные из WEBP-файла.
+        WEBP: format, width, height; для анимации (VP8X/ANMF) — duration, fps.
 
-        Поддерживает форматы:
-        - WEBP/VP8X (расширенный, с анимацией/альфа-каналом)
-        - WEBP/VP8 (стандартный lossy)
-        - WEBP/VP8L (lossless)
-
-        Args:
-            data: Начальные байты файла
-                (рекомендуется ≥ 32 КБ для анимированных)
-            file_size: Полный размер файла в байтах (опционально,
-                для апроксимации длительности)
-
-        Returns:
-            dict с ключами: format, width, height, duration, fps
-            None, если формат не распознан
+        Анимация: кадры ANMF в head; для точности нужен head ≈ file_size/25.
         """
         # Базовая проверка заголовка RIFF WEBP
         if len(data) < 12 or data[0:4] != b"RIFF" or data[8:12] != b"WEBP":
             return None
 
+        head_len = len(data)
         result: dict[str, Any] = {"format": "WEBP"}
 
         # Переменные для накопления данных об анимации
@@ -1641,122 +1448,153 @@ class FileInspector:
                 break
             pos = next_pos
 
-        # Если размеры не найдены, файл невалиден для наших целей
         if "width" not in result or "height" not in result:
+            result[NEED_HEAD] = -1
+            result[PARSE_STATUS] = "partial"
             return result
 
-        # --- Расчет длительности и FPS ---
+        need_head = 0
+        is_animated = frame_count > 0 or result.get("format", "").endswith(
+            "VP8X"
+        )
+        if is_animated and file_size:
+            target = min(max(20_240, file_size // 25), MAX_HEAD)
+            if head_len < target and not (file_size and head_len >= file_size):
+                need_head = target
+
         if frame_count > 0:
             result["frames"] = frame_count
             scanned_duration_sec = total_ms / 1000.0
-
-            # Экстраполяция, если файл обрезан (data < file_size)
-            if file_size and file_size > len(data) and len(data) > 0:
-                ratio = file_size / len(data)
-                # Предполагаем равномерное распределение данных
-                estimated_duration_sec = scanned_duration_sec * ratio
-                result["duration"] = estimated_duration_sec
-                if estimated_duration_sec > 0:
-                    result["fps"] = round(
-                        (frame_count * ratio) / estimated_duration_sec, 3
-                    )
-                result["error_desc"] = (
-                    "Длительность и частота кадров определены "
-                    "экстраполированием (приблизительно)"
-                )
-            else:
-                result["duration"] = scanned_duration_sec
+            if not need_head:
                 if scanned_duration_sec > 0:
                     result["fps"] = round(
                         frame_count / scanned_duration_sec, 3
                     )
+                if file_size:
+                    target = min(max(20_240, file_size // 25), MAX_HEAD)
+                    if head_len >= target and file_size > target:
+                        ratio = file_size / target
+                        scanned_duration_sec *= ratio
+                        result["parse_note"] = (
+                            "Длительность и частота кадров определены "
+                            "экстраполированием (приблизительно)"
+                        )
+                    elif file_size > len(data) and len(data) > 0:
+                        ratio = file_size / len(data)
+                        scanned_duration_sec *= ratio
+                        result["parse_note"] = (
+                            "Длительность и частота кадров определены "
+                            "экстраполированием (приблизительно)"
+                        )
+                result["duration"] = scanned_duration_sec
 
+        if need_head:
+            result[NEED_HEAD] = need_head
+        ok = (
+            not need_head
+            and result.get("width")
+            and result.get("height")
+            and (not is_animated or result.get("duration") is not None)
+        )
+        result[PARSE_STATUS] = "ok" if ok else "partial"
         return result
 
-    @staticmethod
-    def _gif_parse_info(
-        data: bytes, file_size: int | None = None
-    ) -> dict[str, Any]:
+    @classmethod
+    def _gif_parse_info(  # noqa: C901
+        cls,
+        data: bytes,
+        file_size: int | None = None,
+    ) -> dict[str, Any] | None:
         """
-        Извлекает метаданные из GIF по заголовку.
+        GIF: format, width, height; duration, fps по GCE в head.
 
-        Аргументы:
-            data: Первые байты файла (рекомендуется ≥ 20 КБ).
-            file_size: Полный размер файла.
-
-        Возвращает:
-            dict с 'format', 'width', 'height', 'bitrate' или None.
+        Анимация: для точной duration нужен head ≈ file_size/25.
         """
         if len(data) < 10 or data[:6] not in (b"GIF87a", b"GIF89a"):
-            return {}
+            return None
 
-        # Логические размеры изображения
+        head_len = len(data)
         width, height = struct.unpack("<HH", data[6:10])
-
         result: dict[str, Any] = {
             "format": "GIF",
             "width": width,
             "height": height,
         }
 
-        # Подсчёт кадров и длительности
         total_cs = 0
         frame_count = 0
         pos = 0
         while True:
-            idx = data.find(b"\x21\xf9\x04", pos)  # Graphic Control Extension
+            idx = data.find(b"\x21\xf9\x04", pos)
             if idx < 0 or idx + 8 > len(data):
                 break
             delay_cs = struct.unpack("<H", data[idx + 4 : idx + 6])[0]
-            # GIF: delay в сотых долях секунды,
-            # 0 = использовать дефолт (обычно 10)
             if delay_cs == 0:
                 delay_cs = 10
             total_cs += delay_cs
             frame_count += 1
             pos = idx + 8
 
-        if frame_count > 0:
-            # Длительность по просканированным кадрам
+        need_head = 0
+        if file_size and frame_count > 0:
+            target = min(max(20_240, file_size // 25), MAX_HEAD)
+            if head_len < target:
+                need_head = target
+
+        if frame_count > 0 and not need_head:
             scanned_duration_sec = total_cs / 100.0
-
-            data_size = len(data)
-            # Если известен полный размер файла — экстраполируем
-            if file_size and file_size > data_size:
-                ratio = file_size / data_size
-                result["duration"] = scanned_duration_sec * ratio
-                result["error_desc"] = (
-                    "Длительность и частота кадров определены "
-                    "экстраполированием (приблизительно)"
-                )
-            else:
-                # Файл маленький или размер неизвестен — возвращаем как есть
-                result["duration"] = scanned_duration_sec
-
-            # FPS считаем по просканированным кадрам
             if scanned_duration_sec > 0:
                 result["fps"] = round(frame_count / scanned_duration_sec, 3)
+            if file_size:
+                target = min(max(20_240, file_size // 25), MAX_HEAD)
+                if head_len >= target and file_size > target:
+                    scanned_duration_sec *= file_size / target
+                    result["parse_note"] = (
+                        "Длительность и частота кадров определены "
+                        "экстраполированием (приблизительно)"
+                    )
+            result["duration"] = scanned_duration_sec
 
+        if file_size and frame_count > 0:
+            target = min(max(20_240, file_size // 25), MAX_HEAD)
+            if head_len >= file_size and head_len < target:
+                need_head = 0
+                if not result.get("duration"):
+                    result["duration"] = (
+                        (total_cs / 100.0) if total_cs else None
+                    )
+
+        if need_head:
+            result[NEED_HEAD] = need_head
+        ok = not need_head and (
+            frame_count == 0 or result.get("duration") is not None
+        )
+        result[PARSE_STATUS] = "ok" if ok else "partial"
         return result
 
-    @staticmethod
-    def _jpeg_parse(data: bytes) -> dict | None:
+    @classmethod
+    def _jpeg_parse(cls, data: bytes) -> dict | None:
+        """
+        JPEG: format, width, height (маркер SOF в head).
+
+        EXIF может сдвинуть SOF глубже — тогда нужен больший head.
+        """
         if len(data) < 2 or data[:2] != b"\xff\xd8":
             return None
-        result = {"format": "JPEG"}
         pos = 2
         while pos < len(data) - 1:
             if data[pos] != 0xFF:
                 pos += 1
                 continue
             marker = data[pos + 1]
-            if (
-                marker in (0xC0, 0xC1, 0xC2)  # SOF0, SOF1, SOF2
-                and pos + 9 <= len(data)
-            ):
+            if marker in (0xC0, 0xC1, 0xC2) and pos + 9 <= len(data):
                 h, w = struct.unpack(">HH", data[pos + 5 : pos + 9])
-                return {"width": w, "height": h, "format": "JPEG"}
-            # Пропускаем сегменты
+                return {
+                    "width": w,
+                    "height": h,
+                    "format": "JPEG",
+                    PARSE_STATUS: "ok",
+                }
             if marker not in (1, *tuple(range(208, 218))):
                 if pos + 4 <= len(data):
                     segment_length = struct.unpack(
@@ -1767,21 +1605,24 @@ class FileInspector:
                     break
             else:
                 pos += 2
-        return result
+        if len(data) < MAX_HEAD:
+            return {"format": "JPEG", NEED_HEAD: -1, PARSE_STATUS: "partial"}
+        return {"format": "JPEG", PARSE_STATUS: "partial"}
 
     # =========================================================================
     # [ ] Парсеры: видео
     # =========================================================================
 
     @classmethod
-    def _mp4_m4a_parse_info(
-        cls, data: bytes, tail: bytes | None = None
+    def _mp4_m4a_parse_info(  # noqa: C901
+        cls,
+        data: bytes,
+        tail: bytes | None = None,
     ) -> dict | None:
         """
-        Парсит размеры и длительность из MP4/MOV файла.
+        MP4/M4A: format, width, height, duration, sample_rate (moov, mp4a).
 
-        Ищет атом moov в head и tail. Для файлов с moov в конце
-        (потоковая запись) нужен tail.
+        moov может быть в tail (потоковая запись); mp4a/sample_rate — в moov.
 
         Схема данных:
         ftyp                        # тип файла (mp42, isom, M4A...)
@@ -1803,13 +1644,14 @@ class FileInspector:
         mdat                        # медиа-данные (видео/аудио)
         """
         result: dict = {}
-        if cls._mp4_check(data):
-            result = {"format": "MP4"}
-        elif cls._m4a_check(data):
+        if cls._m4a_check(data):
             result = {"format": "M4A"}
+        elif cls._mp4_check(data):
+            result = {"format": "MP4"}
         else:
             return None
 
+        head_len = len(data)
         for chunk in (data, tail or b""):
             if not chunk:
                 continue
@@ -1823,7 +1665,47 @@ class FileInspector:
                     result["sample_rate"] = sr
                     break
 
-        return result or None
+        if not result:
+            return None
+
+        has_moov = any(cls._mp4_find_moov(c) for c in (data, tail or b"") if c)
+        is_audio = result.get("format") == "M4A" or (
+            result.get("format") == "MP4" and not result.get("width")
+        )
+        need_head = 0
+        need_tail = 0
+        if not has_moov:
+            need_tail = MAX_TAIL
+        if not result.get("duration") and not has_moov:
+            need_tail = max(need_tail, MAX_TAIL)
+        if not result.get("sample_rate") and not any(
+            cls._mp4_parse_sample_rate(c) for c in (data, tail or b"") if c
+        ):
+            need_tail = max(need_tail, MAX_TAIL)
+            if head_len < MAX_HEAD:
+                need_head = -1
+
+        if need_head:
+            result[NEED_HEAD] = need_head
+        if need_tail:
+            result[NEED_TAIL] = need_tail
+        if is_audio:
+            ok = bool(
+                result.get("duration")
+                and result.get("sample_rate")
+                and not need_head
+                and not need_tail
+            )
+        else:
+            ok = bool(
+                result.get("duration")
+                and result.get("width")
+                and result.get("height")
+                and not need_head
+                and not need_tail
+            )
+        result[PARSE_STATUS] = "ok" if ok else "partial"
+        return result
 
     @classmethod
     def _mp4_find_moov(cls, data: bytes) -> dict | None:
@@ -1843,7 +1725,7 @@ class FileInspector:
         return cls._mp4_moov_parse(moov_data)
 
     @classmethod
-    def _mp4_moov_parse(cls, data: bytes) -> dict | None:
+    def _mp4_moov_parse(cls, data: bytes) -> dict | None:  # noqa: C901
         result: dict[str, int | float | str] = {}
         pos = 0
         while pos + 8 <= len(data):
@@ -1862,7 +1744,6 @@ class FileInspector:
                 duration = cls._m4a_parse_mvhd_duration(data[pos : pos + size])
                 if duration is not None:
                     result["duration"] = duration
-                    result["format"] = "MP4"
             elif atom_type == b"trak":
                 trak_data = data[pos + header_size : pos + size]
                 dims = cls._mp4_parse_trak_for_dims(trak_data)
@@ -2063,10 +1944,16 @@ class FileInspector:
         if result["total_frames"] and result["fps"]:
             result["duration"] = int(result["total_frames"] / result["fps"])
 
-        # Удаляем служебные ключи
         result.pop("total_frames", None)
         result.pop("file_size", None)
 
+        head_len = len(data)
+        ok = bool(
+            result.get("width") and result.get("height") and result.get("fps")
+        )
+        if not ok and head_len < MAX_HEAD:
+            result[NEED_HEAD] = -1
+        result[PARSE_STATUS] = "ok" if ok else "partial"
         return result
 
     @classmethod
@@ -2252,7 +2139,10 @@ class FileInspector:
 
     @classmethod
     def _webm_mkv_parse_info(cls, data: bytes) -> dict | None:  # noqa: C901
-        """Парсит размеры и длительность из MKV/WebM файла."""
+        """
+        WebM/MKV: format, width, height, duration, fps,
+        sample_rate (EBML в head).
+        """
         if len(data) < 4:
             return None
 
@@ -2302,7 +2192,14 @@ class FileInspector:
             result["sample_rate"] = round(sample_rate)
         result["bitrate_nominal"] = bitrate_nominal
 
-        return result if len(result) > 1 else None
+        if len(result) <= 1:
+            return None
+        head_len = len(data)
+        ok = bool(result.get("width") and result.get("height"))
+        if not ok and head_len < MAX_HEAD:
+            result[NEED_HEAD] = -1
+        result[PARSE_STATUS] = "ok" if ok else "partial"
+        return result
 
     @staticmethod
     def _webm_read_ebml_size_vint(
@@ -2465,19 +2362,14 @@ class FileInspector:
         file_size: int | None = None,
     ) -> dict[str, Any] | None:
         """
-        Извлекает метаданные из MP3 по заголовку (начало или конец файла).
-
-        Args:
-            head: начальные байты файла (рекомендуется ≥32 КБ).
-            tail: последние байты файла (для поиска Xing/VBRI/ID3v1).
-            file_size: полный размер файла.
-
-        Returns:
-            dict с 'format', 'duration', 'sample_rate', 'bitrate' или None.
+        MP3: format, sample_rate, bitrate из первого фрейма;
+        duration — Xing/VBRI в head/tail или оценка по размеру.
         """
         if len(head) < 4:
             return None
 
+        head_len = len(head)
+        tail_len = len(tail or b"")
         result: dict[str, Any] = {"format": "MP3"}
         sample_rate: int | None = None
         bitrate: int | None = None
@@ -2514,6 +2406,11 @@ class FileInspector:
                 break
 
         if frame_pos is None:
+            if head_len < MAX_HEAD:
+                result[NEED_HEAD] = -1
+            if not (file_size and head_len >= file_size):
+                result[NEED_TAIL] = MAX_TAIL
+            result[PARSE_STATUS] = "partial"
             return result
 
         # Парсим заголовок фрейма (big-endian)
@@ -2578,12 +2475,33 @@ class FileInspector:
         if duration:
             result["duration"] = duration
 
-        return result if len(result) > 1 else None
+        if len(result) <= 1:
+            return None
+
+        need_tail = 0
+        need_head = 0
+        if (
+            not duration
+            and tail_len < 8192
+            and not (file_size and head_len >= file_size)
+        ):
+            need_tail = MAX_TAIL
+        if not sample_rate and head_len < MAX_HEAD:
+            need_head = -1
+
+        if need_head:
+            result[NEED_HEAD] = need_head
+        if need_tail:
+            result[NEED_TAIL] = need_tail
+        ok = bool(sample_rate and duration and not need_head and not need_tail)
+        result[PARSE_STATUS] = "ok" if ok else "partial"
+        return result
 
     @staticmethod
     def _mp3_find_frame_header(data: bytes, start: int) -> int | None:
         """Поиск заголовка первого аудио-фрейма после пропуска тегов."""
-        for i in range(max(0, start), min(len(data) - 4, start + 65536)):
+        search_end = min(len(data) - 4, start + MAX_HEAD)
+        for i in range(max(0, start), search_end):
             if data[i] == 0xFF and (data[i + 1] & 0xE0) == 0xE0:
                 # Проверка валидности версии и слоя
                 version = (data[i + 1] >> 3) & 0x03
@@ -2719,22 +2637,15 @@ class FileInspector:
         file_size: int | None = None,
     ) -> dict | None:
         """
-        Извлекает метаданные из OGG/OGV файла.
+        OGG/OGV: format, sample_rate, width, height, fps из BOS в head.
 
-        Args:
-            head: Первые байты файла (заголовок).
-            tail: Последние байты файла (хвост для поиска гранулы).
-            content_type: MIME-тип файла (audio/ogg или video/ogg).
-
-        Returns:
-            dict с ключами format, duration, sample_rate, width, height, fps
-            или None если формат не распознан.
-            Без tail возвращает format + размеры/fps/sample_rate без duration.
+        duration — из последней гранулы в tail (или весь файл в head).
         """
         # 1. Базовая валидация сигнатуры Ogg
         if len(head) < 27 or head[:4] != b"OggS":
             return None
 
+        head_len = len(head)
         # 2. Парсим заголовки всех потоков (Vorbis/Theora) из BOS-страниц
         streams = cls._ogg_parse_all_streams(head)
         if not streams:
@@ -2764,17 +2675,17 @@ class FileInspector:
                 if fps_num and fps_den and fps_den > 0:
                     result["fps"] = round(fps_num / fps_den, 3)
 
-        # Если нет tail — возвращаем что есть
+        need_tail = 0
         if not tail or len(tail) < 27:
-            if file_size and len(head) >= file_size:
-                # Весь файл в head — ищем последнюю гранулу в head
-                tail = head[-8192:]  # Берём конец head как tail
+            if file_size and head_len >= file_size:
+                tail = head[-8192:]
             else:
-                result["error_desc"] = (
-                    "Для определения duration необходим "
-                    "конец файла (tail) или файл целиком"
-                )
-                return result
+                need_tail = MAX_TAIL
+
+        if need_tail and (not tail or len(tail) < 27):
+            result[NEED_TAIL] = need_tail
+            result[PARSE_STATUS] = "partial"
+            return result
 
         # 3. Проходим по каждому найденному потоку для извлечения метаданных
         # С tail — пытаемся получить длительность
@@ -2837,7 +2748,27 @@ class FileInspector:
                                 )
                             break
 
-        return result if len(result) > 1 else None
+        if len(result) <= 1:
+            return None
+
+        if not result.get("duration") and need_tail:
+            result[NEED_TAIL] = need_tail
+            result[PARSE_STATUS] = "partial"
+            return result
+
+        is_audio = result.get("format") == "OGG"
+        if is_audio:
+            ok = bool(result.get("duration") and result.get("sample_rate"))
+        else:
+            ok = bool(
+                result.get("duration")
+                and result.get("width")
+                and result.get("fps")
+            )
+        if need_tail:
+            result[NEED_TAIL] = need_tail
+        result[PARSE_STATUS] = "ok" if ok else "partial"
+        return result
 
     @staticmethod
     def _ogg_parse_all_streams(data: bytes) -> list:  # noqa: C901
@@ -2957,7 +2888,7 @@ class FileInspector:
 
     @staticmethod
     def _ogg_extract_last_granule(
-        tail: bytes,
+        tail: bytes | None,
         expected_serial: int | None = None,
         stream_type: Literal["vorbis", "theora"] | None = None,
     ) -> int | None:
@@ -2972,6 +2903,8 @@ class FileInspector:
         Возвращает:
             Значение гранулы или None, если не найдено.
         """
+        if not tail or len(tail) < 27:
+            return None
         pos = tail.rfind(b"OggS")
         while pos >= 0:
             if pos + 27 <= len(tail):
@@ -3180,6 +3113,8 @@ class FileInspector:
             result["duration"] = duration
 
         if total_samples == 0:
+            result[NEED_HEAD] = -1
+            result[PARSE_STATUS] = "partial"
             return result
 
         # 📈 Экстраполяция по полному размеру файла
@@ -3195,6 +3130,8 @@ class FileInspector:
                     if estimated_duration > duration * 1.3:
                         result["duration"] = estimated_duration
 
+        ok = bool(result.get("sample_rate") and result.get("duration"))
+        result[PARSE_STATUS] = "ok" if ok else "partial"
         return result
 
     @staticmethod
@@ -3254,9 +3191,11 @@ class FileInspector:
         if sample_rate and sample_rate > 0:
             result["sample_rate"] = sample_rate
         if not byte_rate or byte_rate == 0:
+            result[PARSE_STATUS] = (
+                "ok" if result.get("sample_rate") else "partial"
+            )
             return result
 
-        # Определяем размер аудиоданных
         audio_bytes = None
         if data_size and data_size != 0xFFFFFFFF:
             audio_bytes = data_size
@@ -3268,6 +3207,8 @@ class FileInspector:
         if audio_bytes and audio_bytes > 0:
             result["duration"] = audio_bytes / byte_rate
 
+        ok = bool(result.get("sample_rate") and result.get("duration"))
+        result[PARSE_STATUS] = "ok" if ok else "partial"
         return result
 
     @staticmethod
@@ -3394,15 +3335,17 @@ class FileInspector:
             result["sample_rate"] = sample_rate
         result["bitrate"] = bitrate  # Всегда добавляем, даже если None
 
-        return (
-            result
-            if (
-                "duration" in result
-                or "sample_rate" in result
-                or bitrate is not None
-            )
-            else None
-        )
+        if not (
+            "duration" in result
+            or "sample_rate" in result
+            or bitrate is not None
+        ):
+            return None
+        ok = bool(result.get("duration") and result.get("sample_rate"))
+        if not result.get("duration"):
+            result[NEED_HEAD] = -1
+        result[PARSE_STATUS] = "ok" if ok else "partial"
+        return result
 
     @staticmethod
     def _flac_parse_info(head: bytes) -> dict | None:
@@ -3493,6 +3436,7 @@ class FileInspector:
                     "channels": channels,
                     "duration": duration,
                     "format": "FLAC",
+                    PARSE_STATUS: "ok",
                 }
 
             # Переходим к следующему блоку

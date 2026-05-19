@@ -230,8 +230,8 @@ async def cmd_info(event: MessageCreated) -> None:
     if info.status == "error":
         # info.status == "error" только если ничего не получилось определить,
         # Даже минимально: info.format is None
-        # info.error_desc содерит описание ошибки
-        await event.message.answer(f"⚠️ {info.error_desc}")
+        # info.parse_note содерит описание ошибки
+        await event.message.answer(f"⚠️ {info.parse_note}")
         return
 
     # Всё, что получилось узнать о файле — в строку через str(FileInfo)

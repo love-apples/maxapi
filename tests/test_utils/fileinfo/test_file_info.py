@@ -286,7 +286,7 @@ class TestFileInspectorError:
             max_retries=1,
         )
         assert info.status == "error"
-        assert info.error_desc == "unexpected"
+        assert info.parse_note == "unexpected"
 
     async def test_retry_then_success(self):
         """Проверка retry/call_count"""
@@ -367,7 +367,7 @@ class TestFileInspectorLocalFile:
         inspector = FileInspector()
         info = await inspector.inspect_file(
             str(file_path),
-            full_read_limit=0,  # Отключаем полное чтение файла
+            full_read_threshold=0,  # Отключаем полное чтение файла
         )
         if exp.get("format"):
             assert info.format == exp["format"]
@@ -390,7 +390,7 @@ class TestFileInspectorLocalErrors:
         inspector = FileInspector()
         info = await inspector.inspect_file("/nonexistent/file.jpg")
         assert info.status == "error"
-        assert info.error_desc == "Файл не найден"
+        assert info.parse_note == "Файл не найден"
 
     async def test_inspect_local_permission_denied(self, tmp_path: Path):
         """Ошибка чтения файла → error."""
@@ -404,7 +404,7 @@ class TestFileInspectorLocalErrors:
             inspector = FileInspector()
             info = await inspector.inspect_file(str(file_path))
             assert info.status == "error"
-            assert "read error" in info.error_desc
+            assert "read error" in info.parse_note
 
 
 class TestFileInspectorBytes:
@@ -435,7 +435,7 @@ class TestFileInspectorBytes:
         nbio = _make_fixture_named_bytes_io(name, head, tail, exp)
         info = await FileInspector().inspect_bytes(
             nbio,
-            full_read_limit=0,  # Отключаем полное чтение данных
+            full_read_threshold=0,  # Отключаем полное чтение данных
         )
         if exp.get("format"):
             assert info.format == exp["format"]
@@ -470,7 +470,6 @@ class TestEdgeCases:
         )
         assert info.format == "WEBP"
         assert info.status == "partial"
-        assert info.error_desc.startswith("Недостаточно данных")
 
     async def test_html_page_error(self):
         """HTML-страница — error."""
@@ -481,18 +480,21 @@ class TestEdgeCases:
             "https://example.com/page.html", session=session
         )
         assert info.status == "error"
-        assert info.error_desc == "Файл не является медиа (HTML-страница)"
+        assert info.parse_note == "Файл не является медиа (HTML-страница)"
 
-    async def test_wrong_random_data_page_error(self):
-        """Случайное содержание по ссылке — error."""
+    async def test_wrong_random_data_partial(self):
+        """
+        Случайное содержание по ссылке — partial (только заголовки сервера).
+        """
         data = b"8"
         session = _make_mock_session(data, b"", "", len(data))
         inspector = FileInspector()
         info = await inspector.inspect_url(
             "https://example.com/page.html", session=session
         )
-        assert info.status == "error"
-        assert info.error_desc.startswith("Недостаточно данных")
+        assert info.status == "partial"
+        assert info.file_size == len(data)
+        assert info.format is None
 
     async def test_empty_body_error(self):
         """Пустой ответ — error."""
@@ -502,7 +504,7 @@ class TestEdgeCases:
             "https://example.com/empty", session=session
         )
         assert info.status == "error"
-        assert info.error_desc.startswith("Недостаточно данных")
+        assert info.parse_note.startswith("Недостаточно данных")
 
 
 # =============================================================================

@@ -19,8 +19,9 @@ class FileInfo(BaseModel):
         sample_rate: Частота дискретизации (аудио), Гц.
         bitrate_nominal: Номинальный битрейт из метаданных, кбит/с.
         bitrate_avg: Средний битрейт (размер / длительность), кбит/с.
-        error_desc: Описание ошибки или предупреждения.
+        parse_note: Описание ошибки или предупреждения от парсера.
         format: Определённый формат контейнера/кодека (по сигнатуре).
+        status: Результат инспекции (задаёт парсер или inspect).
     """
 
     model_config = ConfigDict(frozen=True)
@@ -36,7 +37,8 @@ class FileInfo(BaseModel):
     sample_rate: int | None = None
     bitrate_nominal: int | None = None
     bitrate_avg: int | None = None
-    error_desc: str = ""
+    status: Literal["ok", "partial", "error"] = "error"
+    parse_note: str = ""
     format: (
         Literal[
             "PNG",
@@ -95,37 +97,6 @@ class FileInfo(BaseModel):
             return f"{self.file_size / 1_048_576:.1f} МБ"
         return f"{self.file_size / 1_073_741_824:.2f} ГБ"
 
-    @property
-    def status(self) -> Literal["ok", "partial", "error", "unknown"]:
-        """
-        Степень полноты метаданных.
-
-        Returns:
-            ``ok``      — ключевые поля для типа медиа заполнены;
-            ``partial`` — часть полей отсутствует;
-            ``error``   — ошибка получения данных;
-            ``unknown`` — тип медиа не распознан.
-        """
-        if self.error_desc and not self.format:
-            return "error"
-
-        if self.is_image:
-            if self.width and self.height:
-                return "ok"
-            return "partial"
-
-        elif self.is_audio:
-            if self.duration and self.sample_rate:
-                return "ok"
-            return "partial"
-
-        elif self.is_video:
-            if self.duration and self.width and self.fps:
-                return "ok"
-            return "partial"
-        else:
-            return "unknown"
-
     def __eq__(self, other: object) -> bool:
         """Сравнение без учёта ``url`` и ``file_name``."""
         if not isinstance(other, FileInfo):
@@ -162,7 +133,7 @@ class FileInfo(BaseModel):
             )
         if self.bitrate_avg:
             lines.append(f"Битрейт (средний): {self.bitrate_avg} кбит/с")
-        if self.error_desc:
-            lines.append(f"⚠️ {self.error_desc}")
+        if self.parse_note:
+            lines.append(f"⚠️ {self.parse_note}")
 
         return "\n".join(lines)

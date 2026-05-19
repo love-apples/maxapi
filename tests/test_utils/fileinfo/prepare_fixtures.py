@@ -179,7 +179,7 @@ async def get_expected(name, cfg, session) -> tuple[bytes, bytes]:
         inspector = FileInspector()
         if "file" in cfg:
             finfo = await inspector.inspect_file(
-                cfg["file"], full_read_limit=0
+                cfg["file"], full_read_threshold=0
             )
         elif "url" in cfg:
             finfo = await inspector.inspect_url(cfg["url"], session=session)
