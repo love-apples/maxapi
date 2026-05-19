@@ -64,7 +64,7 @@ class SendAction(BaseConnection):
 
         json: dict[str, Any] = {}
 
-        json["action"] = self.action.value
+        json["action"] = self.action
 
         response = await super().request(
             method=HTTPMethod.POST,
