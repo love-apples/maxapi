@@ -753,13 +753,21 @@ class Bot(BaseConnection):
         Args:
             url: URL файла.
             timeout: Таймаут HTTP-запроса в секундах.
+
             kwargs:
-            - session: Общая aiohttp-сессия (создаётся при ``None``).
-            - max_total: Максимальный объём скачанных данных (байт).
-            - max_retries: Число повторных попыток при ``retry_on_statuses``.
-            - retry_on_statuses: HTTP-статусы, при которых повторять запрос.
-            - retry_backoff_factor: Множитель задержки между попытками
+            - session : aiohttp-сессия (создаётся при ``None``).
+                Если вам нужно отправить авторизацию (``Authorization``,
+                ``Cookie``) на сторонний URL, укажите
+                ``allow_external_auth=True``. Без этого флага авторизация
+                отправляется только на доверенные домены
+                (``oneme.ru``, ``okcdn.ru``).
+            - max_total : Максимальный объём скачанных данных (байт).
+            - max_retries : Число повторных попыток при ``retry_on_statuses``.
+            - retry_on_statuses : HTTP-статусы, при которых повторять запрос.
+            - retry_backoff_factor : Множитель задержки между попытками
                 (1.0 → 1с, 2с, 4с).
+            - allow_external_auth : Разрешить отправку авторизации на
+                сторонние домены (по умолчанию только oneme.ru/okcdn.ru).
 
         Returns:
             FileInfo: Метаинформация о файле.

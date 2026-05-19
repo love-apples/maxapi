@@ -20,8 +20,15 @@ from urllib.parse import unquote, urlparse
 
 import aiohttp
 import anyio
-from aiohttp import ClientConnectionError, ClientResponse, ClientTimeout
+from aiohttp import (
+    ClientConnectionError,
+    ClientResponse,
+    ClientTimeout,
+    RequestInfo,
+)
+from multidict import CIMultiDict
 from pydantic import BaseModel
+from yarl import URL
 
 from ..connection.base import NamedBytesIO
 from ..types.file_info import FileInfo
@@ -40,7 +47,7 @@ logger = logging.getLogger("maxapi.fileinfo")
 # 503 — Service Unavailable (сервер перегружен или на обслуживании)
 # 504 — Gateway Timeout (промежуточный прокси не дождался ответа)
 DEFAULT_RETRY_STATUSES: tuple[int, ...] = (429, 500, 502, 503, 504)
-
+_TRUSTED_DOMAINS = {"oneme.ru", "okcdn.ru"}
 _FORMAT_TO_MIME: dict[str, str] = {
     "JPEG": "image/jpeg",
     "PNG": "image/png",
@@ -419,15 +426,35 @@ class RangeBytesReader(RangeReader):
 
 class RangeDownloader(RangeReader):
     """
-    Самодостаточный загрузчик: определяет тип файла, планирует стратегию,
-    скачивает данные не разрывая соединение.
+    Загрузчик файлов по HTTP с докачкой и retry.
 
     Использование:
-        async with RangeDownloader(url, session=session) as downloader:
-            async for chunks in downloader:
-                if has_enough(chunks):
-                    await downloader.success()
+        async with RangeDownloader(url, session=session) as dl:
+            async for chunks in dl:
+                dims = parse(chunks.head, chunks.tail, ...)
+                if dims.get("width"):
+                    await dl.success()
                     break
+
+    Args:
+        url: URL файла.
+        session: aiohttp-сессия (создаётся при ``None``).
+            **Внимание:** Если передана сессия с авторизацией
+            (``Authorization``, ``Cookie``), эти заголовки будут
+            отправлены на указанный URL. Для публичных URL
+            не передавайте сессию — она будет создана автоматически
+            без чувствительных заголовков.
+        headers: Дополнительные HTTP-заголовки.
+        max_total: Максимальный объём скачанных данных (байт).
+        min_total: Минимальный гарантированный объём (байт).
+        timeout: Таймаут HTTP-запроса в секундах.
+        sock_connect: Таймаут установки TCP-соединения в секундах.
+        max_retries: Число повторных попыток при ``retry_on_statuses``.
+        retry_on_statuses: HTTP-статусы, при которых повторять запрос.
+        retry_backoff_factor: Множитель задержки между попытками
+            (1.0 → 1с, 2с, 4с).
+        allow_external_auth: Разрешить отправку авторизации на
+            сторонние домены (по умолчанию только oneme.ru или okcdn.ru).
     """
 
     def __init__(
@@ -442,6 +469,7 @@ class RangeDownloader(RangeReader):
         max_retries: int = 3,
         retry_on_statuses: tuple[int, ...] = DEFAULT_RETRY_STATUSES,
         retry_backoff_factor: float = 1.0,
+        allow_external_auth: bool = False,
     ):
         super().__init__(
             plan=FetchPlan(),
@@ -457,6 +485,7 @@ class RangeDownloader(RangeReader):
         self.max_retries = max_retries
         self.retry_on_statuses = retry_on_statuses
         self.retry_backoff_factor = retry_backoff_factor
+        self._allow_external_auth = allow_external_auth
 
         # Сессия
         self._own_session = session is None
@@ -484,6 +513,15 @@ class RangeDownloader(RangeReader):
     @property
     def final_url(self) -> str:
         return self._meta.url if self._meta else self.original_url
+
+    @property
+    def _is_trusted_url(self) -> bool:
+        """Проверяет, принадлежит ли URL доверенному домену."""
+        host = urlparse(self.original_url).hostname or ""
+        return any(
+            host == domain or host.endswith("." + domain)
+            for domain in _TRUSTED_DOMAINS
+        )
 
     # ========================================================================
     # Async Context Manager
@@ -572,6 +610,39 @@ class RangeDownloader(RangeReader):
 
     async def _fetch_meta(self):
         """Получает метаинформацию с retry."""
+        if (
+            ("Authorization" in self.headers or "Cookie" in self.headers)
+            and not self._is_trusted_url
+            and not self._allow_external_auth
+        ):
+            logger.warning(
+                "Сессия содержит авторизацию и будет "
+                "отправлена на сторонний URL: %s. "
+                "Передайте allow_external_auth=True чтобы разрешить.",
+                self.original_url,
+            )
+            self._meta = FileMeta(
+                url=self.original_url,
+                content_type="",
+                file_name="",
+                file_size=None,
+            )
+            self._fetched_meta = True
+            # исключение, поймается в inspect_url
+            # и вернёт FileInfo(status="error")
+            raise aiohttp.ClientResponseError(
+                status=0,
+                message="Сессия с авторизацией не может быть отправлена "
+                "на сторонний URL. Передайте allow_external_auth=True "
+                "чтобы разрешить.",
+                headers=CIMultiDict(self.headers),
+                request_info=RequestInfo(
+                    url=URL(self.original_url),
+                    method="GET",
+                    headers={},
+                ),
+                history=(),
+            )
         self._response = await self._request_with_retry(self.original_url)
         final_url = str(self._response.url)
         http_headers = self._response.headers
@@ -842,13 +913,20 @@ class FileInspector:
 
         Args:
             url: URL файла.
-            session: Общая aiohttp-сессия (создаётся при ``None``).
+            session: aiohttp-сессия (создаётся при ``None``).
+                Если вам нужно отправить авторизацию (``Authorization``,
+                ``Cookie``) на сторонний URL, укажите
+                ``allow_external_auth=True``. Без этого флага авторизация
+                отправляется только на доверенные домены
+                (``oneme.ru``, ``okcdn.ru``).
             timeout: Таймаут HTTP-запроса в секундах.
             max_total: Максимальный объём скачанных данных (байт).
             max_retries: Число повторных попыток при ``retry_on_statuses``.
             retry_on_statuses: HTTP-статусы, при которых повторять запрос.
             retry_backoff_factor: Множитель задержки между попытками
                 (1.0 → 1с, 2с, 4с).
+            allow_external_auth: Разрешить отправку авторизации на
+                сторонние домены (по умолчанию только oneme.ru/okcdn.ru).
 
         Returns:
             FileInfo: Результат инспекции (в т.ч. при сетевой ошибке).
