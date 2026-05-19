@@ -26,7 +26,7 @@ from aiohttp import (
     ClientTimeout,
     RequestInfo,
 )
-from multidict import CIMultiDict
+from multidict import CIMultiDict, CIMultiDictProxy
 from pydantic import BaseModel
 from yarl import URL
 
@@ -36,7 +36,6 @@ from ..types.file_info import FileInfo
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
 
-    from multidict import CIMultiDictProxy
 
 logger = logging.getLogger("maxapi.fileinfo")
 
@@ -205,17 +204,6 @@ class FetchPlan(BaseModel):
         return cls()
 
 
-class MediaChunks(BaseModel):
-    """Фрагменты файла, доступные парсеру."""
-
-    head: bytes = b""
-    tail: bytes = b""
-    file_size: int | None = None
-    is_complete: bool = False
-    fetched_head: int = 0
-    fetched_tail: int = 0
-
-
 class FileMeta(BaseModel):
     """HTTP-метаданные до чтения тела файла."""
 
@@ -248,24 +236,10 @@ class RangeReader(ABC):
         self.tail: bytes = b""
 
     @abstractmethod
-    def __aiter__(self) -> AsyncIterator[MediaChunks]: ...
+    def __aiter__(self) -> AsyncIterator[None]: ...
 
     @abstractmethod
     async def close(self): ...
-
-    def _make_chunks(self) -> MediaChunks:
-        is_complete = (
-            self.file_size is not None
-            and len(self.head) + len(self.tail) >= self.file_size
-        )
-        return MediaChunks(
-            head=self.head,
-            tail=self.tail,
-            file_size=self.file_size,
-            is_complete=is_complete,
-            fetched_head=len(self.head),
-            fetched_tail=len(self.tail),
-        )
 
 
 # ============================================================================
@@ -308,24 +282,23 @@ class RangeFileReader(RangeReader):
         )
         super().__init__(plan, content_type, file_name, file_size)
 
-    async def __aiter__(self) -> AsyncIterator[MediaChunks]:
-        # 1. Tail
-        if self.plan.need_tail > 0:
-            async with await anyio.open_file(self.path, "rb") as f:
+    async def __aiter__(self) -> AsyncIterator[None]:
+        async with await anyio.open_file(self.path, "rb") as f:
+            # 1. Tail
+            if self.plan.need_tail > 0:
                 await f.seek(
                     max(0, (self.file_size or 0) - self.plan.need_tail)
                 )
                 self.tail = await f.read()
-            yield self._make_chunks()
+                await f.seek(0)
 
-        # 2. Head + expand
-        async with await anyio.open_file(self.path, "rb") as f:
+            # 2. Head + expand
             # Первый чанк
             self.head = await f.read(self.plan.initial_head)
             logger.debug(
                 "head len=%s, tail len=%s", len(self.head), len(self.tail)
             )
-            yield self._make_chunks()
+            yield
 
             # Докачка
             while (
@@ -336,7 +309,7 @@ class RangeFileReader(RangeReader):
                 if not chunk:
                     break
                 self.head += chunk
-                yield self._make_chunks()
+                yield
 
     async def close(self):
         pass  # anyio.open_file закрывается через async with
@@ -387,12 +360,11 @@ class RangeBytesReader(RangeReader):
         super().__init__(plan, content_type, self._file_name, self._file_size)
         self._raw = raw
 
-    async def __aiter__(self) -> AsyncIterator[MediaChunks]:
+    async def __aiter__(self) -> AsyncIterator[None]:
         # 1. Tail
         if self.plan.need_tail > 0:
             tail_start = max(0, self._file_size - self.plan.need_tail)
             self.tail = bytes(self._raw[tail_start:])
-            yield self._make_chunks()
 
         # 2. Head + expand (синхронно, без await)
         pos = 0
@@ -409,8 +381,7 @@ class RangeBytesReader(RangeReader):
             logger.debug(
                 "head len=%s, tail len=%s", len(self.head), len(self.tail)
             )
-
-            yield self._make_chunks()
+            yield
 
             if end >= self._file_size:
                 break
@@ -542,7 +513,7 @@ class RangeDownloader(RangeReader):
     # Итерация по чанкам
     # ========================================================================
 
-    async def __aiter__(self) -> AsyncIterator[MediaChunks]:
+    async def __aiter__(self) -> AsyncIterator[None]:
         if self._closed:
             return
 
@@ -565,24 +536,26 @@ class RangeDownloader(RangeReader):
                 self.plan.need_tail,
                 self.plan.max_head,
             )
+        else:
+            self._meta = cast(FileMeta, self._meta)
 
-        # 1. Tail
-        if self.plan.need_tail > 0:
-            self.tail = await self._fetch_chunk(
-                self.plan.need_tail,
-                tail=True,
-            )
-            yield self._make_chunks()
-
-        # 2. Head
+        # 1. Head
         if self.plan.initial_head > 0:
             self.head = await self._fetch_chunk(
                 self.plan.initial_head,
                 tail=False,
             )
-            yield self._make_chunks()
 
-        # 3. Докачка
+        # 2. Tail
+        if self.plan.need_tail > 0:
+            self.tail = await self._fetch_chunk(
+                self.plan.need_tail,
+                tail=True,
+            )
+
+        yield
+
+        # 3. Докачка head
         self._expand_count = 0  # Сброс перед докачкой
         while (
             self.plan.expand_chunk > 0 and len(self.head) < self.plan.max_head
@@ -591,7 +564,7 @@ class RangeDownloader(RangeReader):
             if not chunk:
                 break
             self.head += chunk
-            yield self._make_chunks()
+            yield
 
     # ========================================================================
     # Управление
@@ -639,7 +612,7 @@ class RangeDownloader(RangeReader):
                 request_info=RequestInfo(
                     url=URL(self.original_url),
                     method="GET",
-                    headers={},
+                    headers=CIMultiDictProxy(CIMultiDict(self.headers)),
                 ),
                 history=(),
             )
@@ -693,7 +666,15 @@ class RangeDownloader(RangeReader):
                         "Range не поддерживается: %s", response.status
                     )
                     return b""
-                return await self._read_response(response, size)
+                data = await self._read_response(response, size)
+                # Проверка: если tail повторяет начало head,
+                # то Range не поддерживается
+                if (
+                    self.head
+                    and data[: len(self.head)] == self.head[: len(data)]
+                ):
+                    logger.debug("Range не поддерживается: tail == head")
+                    return b""
         else:
             response = self._response
             if not response:
@@ -702,21 +683,11 @@ class RangeDownloader(RangeReader):
                 )
             data = await self._read_response(response, size)
 
-            # Проверка: если tail повторяет начало head,
-            # то Range не поддерживается
-            if (
-                self.tail
-                and len(data) >= len(self.tail)
-                and data[: len(self.tail)] == self.tail
-            ):
-                logger.debug("Range не поддерживается: tail == head")
-                self.tail = b""
+        logger.debug(
+            "Скачан %s: %s байт", "tail" if tail else "head", len(data)
+        )
 
-            logger.debug(
-                "Скачан %s: %s байт", "tail" if tail else "head", len(data)
-            )
-
-            return data
+        return data
 
     async def _read_response(
         self, response: ClientResponse, size: int
@@ -907,6 +878,7 @@ class FileInspector:
         max_retries: int = 3,
         retry_on_statuses: tuple[int, ...] = DEFAULT_RETRY_STATUSES,
         retry_backoff_factor: float = 1.0,
+        allow_external_auth: bool = False,
     ) -> FileInfo:
         """
         Инспектирует удалённый файл по URL.
@@ -941,8 +913,10 @@ class FileInspector:
                 max_retries=max_retries,
                 retry_on_statuses=retry_on_statuses,
                 retry_backoff_factor=retry_backoff_factor,
+                allow_external_auth=allow_external_auth,
             ) as reader:
                 return await self._inspect(reader, url=url)
+
         except aiohttp.ClientError as e:
             logger.error("Сетевая ошибка: %s", e)
             self.last_file_info = self._build_file_info(
@@ -970,6 +944,9 @@ class FileInspector:
         Args:
             path: Путь к файлу.
             full_read_limit: Файлы меньше этого размера читаются целиком.
+                Установите в ноль, чтоюы отключить полное чтение.
+                В таком случае будет использован план загрузки как для
+                inspect_url
 
         Returns:
             FileInfo: Результат инспекции.
@@ -1033,9 +1010,9 @@ class FileInspector:
         """Общая логика для любого источника (RangeReader)."""
         self._last_reader = reader
         dims = {}
-        async for chunks in reader:
+        async for _ in reader:
             # Проверка: не HTML
-            if self._looks_like_html(chunks.head, reader.content_type):
+            if self._looks_like_html(reader.head, reader.content_type):
                 self.last_file_info = self._build_file_info(
                     url=url,
                     mime_type=reader.content_type,
@@ -1048,8 +1025,8 @@ class FileInspector:
             # Парсим
             dims = (
                 self.parse_media_dimensions(
-                    chunks.head,
-                    chunks.tail,
+                    reader.head,
+                    reader.tail,
                     reader.content_type,
                     reader.file_size,
                 )
@@ -1073,8 +1050,8 @@ class FileInspector:
             if self._is_complete(dims, content_type):
                 logger.debug(
                     "Использовано финально head_len=%s, tail_len=%s",
-                    len(chunks.head),
-                    len(chunks.tail),
+                    len(reader.head),
+                    len(reader.tail),
                 )
 
                 self.last_file_info = self._build_file_info(
@@ -1192,6 +1169,10 @@ class FileInspector:
         if len(head) < 2:
             return None
 
+        if not tail and len(head) == file_size:
+            # файл целиком
+            tail = head
+
         if not content_type or content_type == "application/octet-stream":
             # Если сервер не определил тип файла
             # Проверим все типы по содержанию
@@ -1291,7 +1272,7 @@ class FileInspector:
 
         # MP4 / MOV — сигнатура ftyp или moov
         if cls._mp4_check(head):
-            return cls._mp4_parse_info(head, tail)
+            return cls._mp4_m4a_parse_info(head, tail)
 
         # AVI — сигнатура RIFF AVI
         if cls._avi_check(head):
@@ -1318,7 +1299,7 @@ class FileInspector:
         # Fallback на content_type, если байты не распознаны
         # Это полезно, если файл обрезан или сигнатура нестандартна
         if content_type in ("video/mp4", "video/quicktime"):
-            return cls._mp4_parse_info(head)
+            return cls._mp4_m4a_parse_info(head)
         if content_type in ("video/x-msvideo", "video/msvideo"):
             return cls._avi_parse_info(head)
         if content_type == "video/webm":
@@ -1379,7 +1360,7 @@ class FileInspector:
 
         # M4A (ftyp)
         if cls._m4a_check(head):
-            return cls._m4a_parse_audio_info(head)
+            return cls._mp4_m4a_parse_info(head)
 
         # WMA / ASF
         if cls._wma_check(head):
@@ -1390,7 +1371,7 @@ class FileInspector:
         if content_type in ("audio/mpeg", "audio/mp3"):
             return cls._mp3_parse_info(head, tail, file_size)
         if content_type == "audio/mp4":
-            return cls._m4a_parse_audio_info(head)
+            return cls._mp4_m4a_parse_info(head)
         if content_type in ("audio/ogg", "application/ogg"):
             return cls._ogg_parse_info(head, tail, file_size)
         if content_type in ("audio/aac", "audio/x-aac"):
@@ -1793,7 +1774,7 @@ class FileInspector:
     # =========================================================================
 
     @classmethod
-    def _mp4_parse_info(
+    def _mp4_m4a_parse_info(
         cls, data: bytes, tail: bytes | None = None
     ) -> dict | None:
         """
@@ -1801,6 +1782,25 @@ class FileInspector:
 
         Ищет атом moov в head и tail. Для файлов с moov в конце
         (потоковая запись) нужен tail.
+
+        Схема данных:
+        ftyp                        # тип файла (mp42, isom, M4A...)
+        moov                        # метаданные
+        ├── mvhd                    # длительность
+        ├── trak (видео)
+        │   ├── tkhd                # width, height
+        │   └── mdia
+        │       └── minf
+        │           └── stbl
+        │               └── stsd    # кодек (avc1, mp4v...)
+        └── trak (аудио)
+            ├── tkhd                # width=0, height=0
+            └── mdia
+                └── minf
+                    └── stbl
+                        └── stsd
+                            └── mp4a    # ← sample_rate здесь (+24 от "mp4a")
+        mdat                        # медиа-данные (видео/аудио)
         """
         result = {}
         if cls._mp4_check(data):
@@ -1864,7 +1864,7 @@ class FileInspector:
             elif atom_type == b"trak":
                 trak_data = data[pos + header_size : pos + size]
                 dims = cls._mp4_parse_trak_for_dims(trak_data)
-                if dims and cls._mp4_valid_video_dims(dims):
+                if dims and cls._mp4_is_valid_video_dims(dims):
                     result.update(dims)
 
             pos += size
@@ -1943,7 +1943,7 @@ class FileInspector:
         return None
 
     @staticmethod
-    def _mp4_valid_video_dims(result: dict | None) -> bool:
+    def _mp4_is_valid_video_dims(result: dict | None) -> bool:
         """Проверяет, что размеры видео реалистичны."""
         if not result:
             return False
@@ -2645,14 +2645,6 @@ class FileInspector:
                 return {"frames": frames}
 
         return None
-
-    @classmethod
-    def _m4a_parse_audio_info(cls, data: bytes) -> dict | None:
-        result = cls._mp4_parse_info(data) or {}
-        out = {"format": "M4A"}
-        if result.get("duration") is not None:
-            out["duration"] = result["duration"]
-        return out
 
     @staticmethod
     def _m4a_parse_mvhd_duration(data: bytes) -> float | None:
