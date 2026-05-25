@@ -422,6 +422,30 @@ class RangeDownloader(RangeReader):
             for domain in _TRUSTED_DOMAINS
         )
 
+    @property
+    def _has_sensitive_auth(self) -> bool:
+        """Проверяет наличие чувствительных данных авторизации."""
+        if not self.session:
+            # Проверяем только собственные headers
+            return any(h in self.headers for h in ("Authorization", "Cookie"))
+
+        headers = self.session.headers
+        if headers and any(h in headers for h in ("Authorization", "Cookie")):
+            return True
+
+        # Куки, которые будут отправлены на этот URL
+        cookie_jar = self.session.cookie_jar
+        if cookie_jar and self.original_url:
+            try:
+                target_url = URL(self.original_url)
+                cookies_to_send = cookie_jar.filter_cookies(target_url)
+                return bool(cookies_to_send)
+            except Exception:
+                # Если не смогли проверить точно — перестраховываемся
+                return len(cookie_jar) > 0
+
+        return False
+    
     # ========================================================================
     # Async Context Manager
     # ========================================================================
@@ -505,7 +529,7 @@ class RangeDownloader(RangeReader):
     async def _fetch_meta(self):
         """Получает метаинформацию с retry."""
         if (
-            ("Authorization" in self.headers or "Cookie" in self.headers)
+            self._has_sensitive_auth
             and not self._is_trusted_url
             and not self._allow_external_auth
         ):
@@ -537,6 +561,7 @@ class RangeDownloader(RangeReader):
                 ),
                 history=(),
             )
+
         self._response = await self._request_with_retry(self.original_url)
         final_url = str(self._response.url)
         http_headers = self._response.headers
@@ -600,7 +625,8 @@ class RangeDownloader(RangeReader):
             response = self._response
             if not response:
                 raise RuntimeError(
-                    "Response отсутствует. Сначала нужно запросить _fetch_meta()"
+                    "Response отсутствует. "
+                    "Сначала нужно запросить _fetch_meta()"
                 )
             data = await self._read_response(response, size)
 
