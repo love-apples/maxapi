@@ -288,6 +288,7 @@ class TestFileInspectorError:
             "https://example.com/test.jpg",
             session=session,
             max_retries=1,
+            allow_external_auth=True,
         )
         assert info.status == "error"
         assert info.parse_note == "unexpected"
@@ -306,7 +307,10 @@ class TestFileInspectorError:
         session.get = AsyncMock(side_effect=[bad, bad, good])
 
         info = await FileInspector().inspect_url(
-            "https://x.com/x.jpg", session=session, retry_backoff_factor=0
+            "https://x.com/x.jpg",
+            session=session,
+            retry_backoff_factor=0,
+            allow_external_auth=True,
         )
         assert info.status == "partial"
         assert info.format == "JPEG"
@@ -327,6 +331,7 @@ class TestFileInspectorError:
             session=session,
             max_retries=1,
             retry_backoff_factor=0,
+            allow_external_auth=True,
         )
         assert info.status == "error"
         assert session.get.call_count == 2
@@ -346,6 +351,7 @@ class TestFileInspectorError:
             session=session,
             max_retries=2,
             retry_backoff_factor=0,
+            allow_external_auth=True,
         )
         assert info.status == "error"
         assert session.get.call_count == 1
