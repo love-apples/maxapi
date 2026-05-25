@@ -380,7 +380,7 @@ class RangeDownloader(RangeReader):
         self.original_url = url
         self.max_total = max_total
         self._downloaded: int = 0
-        
+
         # Параметры соединения
         self.timeout = ClientTimeout(total=timeout, sock_connect=sock_connect)
         self.max_retries = max_retries
@@ -446,7 +446,7 @@ class RangeDownloader(RangeReader):
                 return len(cookie_jar) > 0
 
         return False
-    
+
     # ========================================================================
     # Async Context Manager
     # ========================================================================
@@ -642,7 +642,7 @@ class RangeDownloader(RangeReader):
     ) -> bytes:
         remaining = self.max_total - self._downloaded
         if remaining < 0:
-            return b""        
+            return b""
         to_read = min(size, remaining)
         data = b""
         while len(data) < to_read:
