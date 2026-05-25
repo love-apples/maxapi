@@ -1211,13 +1211,22 @@ class Dispatcher(BotMixin):
         data["context"] = memory_context
         data["raw_state"] = data["_current_state"]
 
-        router_id, is_handled = await self._iter_and_dispatch_routers(
-            event_object=event_object,
-            data=data,
-            memory_context=memory_context,
-            current_state=data["_current_state"],
-            process_info=data["_process_info"],
-        )
+        try:
+            router_id, is_handled = await self._iter_and_dispatch_routers(
+                event_object=event_object,
+                data=data,
+                memory_context=memory_context,
+                current_state=data["_current_state"],
+                process_info=data["_process_info"],
+            )
+        except HandlerException as e:
+            # Хендлер был найден и запущен — фиксируем флаги до re-raise,
+            # чтобы outer middleware, поглотившая исключение, не получила
+            # ложное "Проигнорировано" в handle().
+            data["_router_id"] = e.router_id
+            data["_is_handled"] = True
+            raise
+
         data["_router_id"] = router_id
         data["_is_handled"] = is_handled
 
@@ -1259,6 +1268,8 @@ class Dispatcher(BotMixin):
 
             try:
                 await global_chain(event_object, kwargs)
+            except HandlerException:
+                raise
             except Exception as e:
                 mem_data = await memory_context.get_data()
 
@@ -1283,6 +1294,12 @@ class Dispatcher(BotMixin):
                     process_info,
                 )
 
+        except HandlerException as e:
+            logger_dp.exception(
+                "Ошибка в обработчике: %s",
+                e,
+                exc_info=e.cause,
+            )
         except Exception as e:
             logger_dp.exception(
                 "Ошибка при обработке события: router_id: %s | %s | %r",
