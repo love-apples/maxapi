@@ -13,15 +13,14 @@ from unittest.mock import AsyncMock, Mock, patch
 import aiohttp
 import pytest
 from aiohttp import CookieJar
-from multidict import CIMultiDict
-from yarl import URL
-
-from ..connection.base import NamedBytesIO
-from ..types.file_info import FileInfo
+from maxapi.connection.base import NamedBytesIO
+from maxapi.types.file_info import FileInfo
 from ..utils.file_inspector import (
     FileInspector,
     RangeDownloader,
 )
+from multidict import CIMultiDict
+from yarl import URL
 
 log = logging.getLogger("maxapi.fileinfo")
 log.setLevel(logging.DEBUG)
