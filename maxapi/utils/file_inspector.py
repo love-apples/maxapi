@@ -379,7 +379,8 @@ class RangeDownloader(RangeReader):
         )
         self.original_url = url
         self.max_total = max_total
-
+        self._downloaded: int = 0
+        
         # Параметры соединения
         self.timeout = ClientTimeout(total=timeout, sock_connect=sock_connect)
         self.max_retries = max_retries
@@ -639,13 +640,17 @@ class RangeDownloader(RangeReader):
     async def _read_response(
         self, response: ClientResponse, size: int
     ) -> bytes:
-        actual = min(size, self.max_total)
+        remaining = self.max_total - self._downloaded
+        if remaining < 0:
+            return b""        
+        to_read = min(size, remaining)
         data = b""
-        while len(data) < actual:
-            chunk = await response.content.read(actual - len(data))
+        while len(data) < to_read:
+            chunk = await response.content.read(to_read - len(data))
             if not chunk:
                 break
             data += chunk
+        self._downloaded += len(data)
         return data
 
     async def _expand_head(self, *, target: int | None = None) -> bytes:
