@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import aiohttp
 import pytest
-from aiohttp import CIMultiDict, CookieJar
+from multidict import CIMultiDict, CookieJar
 from yarl import URL
 
 from ..connection.base import NamedBytesIO
