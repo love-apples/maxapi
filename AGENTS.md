@@ -92,8 +92,9 @@ Async Python SDK + bot-фреймворк для мессенджера **MAX** 
 ## Project conventions
 
 - **Язык docstring — русский**, формат — PEP 257, `"""…"""` обязательны на публичных
-  модулях/классах/функциях (правила `D100–D104` обязаны проходить, см. `CONTRIBUTING.md`). Длина
-  строки **79** (`pyproject.toml::tool.ruff`), docstring — 72.
+  модулях/классах/функциях как соглашение проекта. Актуальные автоматические проверки смотрите в
+  `pyproject.toml`, дополнительные рекомендации по разработке — в `doc/dev.md`. Длина строки
+  **79** (`pyproject.toml::tool.ruff`), docstring — 72.
 - **Типы в секциях `Args`/`Attributes`/`Returns` не дублируем** — mkdocstrings читает их из
   аннотаций Python. Пишем только имя и описание: `name: Описание.`, но не `name (type): Описание.`
 - `ruff` сконфигурён с `select = ["ALL"]` и широким `ignore`. Смотри `pyproject.toml` перед
