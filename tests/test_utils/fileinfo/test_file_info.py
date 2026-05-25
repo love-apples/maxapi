@@ -12,13 +12,15 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import aiohttp
 import pytest
-from maxapi.connection.base import NamedBytesIO
-from maxapi.types.file_info import FileInfo
-from maxapi.utils.file_inspector import (
+from aiohttp import CIMultiDict, CookieJar
+from yarl import URL
+
+from ..connection.base import NamedBytesIO
+from ..types.file_info import FileInfo
+from ..utils.file_inspector import (
     FileInspector,
     RangeDownloader,
 )
-from yarl import URL
 
 log = logging.getLogger("maxapi.fileinfo")
 log.setLevel(logging.DEBUG)
@@ -187,6 +189,8 @@ def _make_mock_session(
             else factory.make_head_response(url)
         )
     )
+    session.headers = CIMultiDict()
+    session.cookie_jar = CookieJar()
     return session
 
 
