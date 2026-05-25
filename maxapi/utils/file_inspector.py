@@ -600,7 +600,7 @@ class RangeDownloader(RangeReader):
             response = self._response
             if not response:
                 raise RuntimeError(
-                    "Response отсутвует. Сначала нужно запросить _fetch_meta()"
+                    "Response отсутствует. Сначала нужно запросить _fetch_meta()"
                 )
             data = await self._read_response(response, size)
 
