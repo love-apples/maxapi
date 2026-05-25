@@ -65,7 +65,7 @@ def _make_fixture_named_bytes_io(name, head, tail, exp) -> NamedBytesIO:
     ext = mimetypes.guess_extension(mime) or ".bin"
     file_name = f"{name}{ext}"
 
-    file_size = exp.get("file_size") or (len(head) + len(tail) if tail else 0)
+    file_size = exp.get("file_size") or len(head) + (len(tail) if tail else 0)
 
     full = bytearray(file_size)
     full[: len(head)] = head
