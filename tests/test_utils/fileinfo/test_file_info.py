@@ -15,7 +15,7 @@ import pytest
 from aiohttp import CookieJar
 from maxapi.connection.base import NamedBytesIO
 from maxapi.types.file_info import FileInfo
-from ..utils.file_inspector import (
+from maxapi.utils.file_inspector import (
     FileInspector,
     RangeDownloader,
 )
