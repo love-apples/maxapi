@@ -47,15 +47,13 @@ def test_custom_encoder_decoder_roundtrip() -> None:
 
 def test_create_start_link_from_username() -> None:
     assert (
-        create_start_link("MyBot", "abc")
-        == "https://max.ru/MyBot?start=abc"
+        create_start_link("MyBot", "abc") == "https://max.ru/MyBot?start=abc"
     )
 
 
 def test_create_start_link_normalizes_username_at_sign() -> None:
     assert (
-        create_start_link("@MyBot", "abc")
-        == "https://max.ru/MyBot?start=abc"
+        create_start_link("@MyBot", "abc") == "https://max.ru/MyBot?start=abc"
     )
 
 
