@@ -971,9 +971,7 @@ class FailingAsyncStream:
 
 
 class TestInternalUncoveredParts:
-    async def test_fetch_content_stream_reads_eof_response(
-        self, bot: Bot
-    ):
+    async def test_fetch_content_stream_reads_eof_response(self, bot: Bot):
         """aiohttp может выставить closed=True после EOF до чтения stream."""
 
         async def handler(request):
