@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-from aiohttp import ClientResponse
+from aiohttp import ClientResponse, ClientSession, web
 from maxapi.bot import Bot
 from maxapi.exceptions.download_file import DownloadFileError
 from yarl import URL
@@ -120,6 +120,7 @@ def _make_mock_response(
     chunks=None,
     url=None,
     closed=False,
+    released=False,
 ):
     """Создаёт мок aiohttp-ответа для скачивания."""
     mock_response = AsyncMock(spec_set=ClientResponse)
@@ -128,6 +129,7 @@ def _make_mock_response(
         side_effect=lambda: setattr(mock_response, "closed", True)
     )
     mock_response.closed = closed
+    mock_response._released = released
     mock_response.status = status
     mock_response.content_type = content_type
     mock_response.__class__ = ClientResponse  # type: ignore
@@ -969,11 +971,63 @@ class FailingAsyncStream:
 
 
 class TestInternalUncoveredParts:
-    async def test_fetch_content_stream_closed_response(self, bot: Bot):
-        """Проверка ветки: response.closed == True"""
+    async def test_fetch_content_stream_reads_eof_response(
+        self, bot: Bot
+    ):
+        """aiohttp может выставить closed=True после EOF до чтения stream."""
+
+        async def handler(request):
+            return web.Response(body=b"hello")
+
+        app = web.Application()
+        app.router.add_get("/file", handler)
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "127.0.0.1", 0)
+        await site.start()
+
+        try:
+            port = site._server.sockets[0].getsockname()[1]  # type: ignore[union-attr]
+            async with ClientSession() as session:
+                response = await session.get(f"http://127.0.0.1:{port}/file")
+                assert response.closed is True
+                assert response._released is False
+
+                chunks = [
+                    chunk
+                    async for chunk in bot._fetch_content_stream(
+                        response,
+                        chunk_size=2,
+                    )
+                ]
+
+                assert chunks == [b"he", b"ll", b"o"]
+        finally:
+            await runner.cleanup()
+
+    async def test_fetch_content_stream_closed_response_with_buffered_content(
+        self, bot: Bot
+    ):
+        """closed=True не мешает читать уже доступный body stream."""
         mock_response = _make_mock_response(
             ok=True,
             closed=True,
+            chunks=[b"data"],
+        )
+
+        chunks = [
+            chunk async for chunk in bot._fetch_content_stream(mock_response)
+        ]
+
+        assert chunks == [b"data"]
+        mock_response.release.assert_called_once()
+
+    async def test_fetch_content_stream_released_response(self, bot: Bot):
+        """Явно released response читать нельзя."""
+        mock_response = _make_mock_response(
+            ok=True,
+            closed=True,
+            released=True,
         )
 
         with pytest.raises(

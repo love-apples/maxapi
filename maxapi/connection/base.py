@@ -380,7 +380,7 @@ class BaseConnection(BotMixin):
         Raises:
             DownloadFileError: при ошибке запроса или недопустимом статусе.
         """
-        if response.closed:
+        if getattr(response, "_released", False) is True:
             raise DownloadFileError("response соединение закрыто")
 
         if not response.ok:
