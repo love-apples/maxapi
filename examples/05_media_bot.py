@@ -23,12 +23,13 @@
     MAX_BOT_TOKEN=your_token python 05_media_bot.py
 """
 
+from __future__ import annotations
+
 import asyncio
-import base64
 import contextlib
 import logging
-import os
-import tempfile
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 # Опционально: загрузка .env, если установлен python-dotenv
 with contextlib.suppress(ImportError):
@@ -44,37 +45,16 @@ from maxapi.types.attachments.image import Image
 from maxapi.types.attachments.sticker import Sticker
 from maxapi.types.attachments.video import Video
 from maxapi.types.input_media import InputMedia, InputMediaBuffer
-from maxapi.types.updates.message_created import MessageCreated
+
+if TYPE_CHECKING:
+    from maxapi.types.updates.message_created import MessageCreated
 
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot()
 dp = Dispatcher()
 
-# Минимальный валидный PNG 1×1 пиксель (красный) — fallback для /photo
-# и /upload, чтобы пример запускался без ручного добавления sample.jpg.
-_PNG_1X1_B64 = (
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4"
-    "2mP8/58BAwAI/AL+hc2rNAAAAABJRU5ErkJggg=="
-)
-
-
-def get_sample_image_path() -> str:
-    """Возвращает путь к тестовому изображению.
-
-    Если рядом со скриптом есть sample.jpg — используем его, иначе
-    создаём временный PNG 1×1 (красный пиксель). Так пример работает
-    из коробки без необходимости добавлять медиа вручную.
-    """
-    local = os.path.join(os.path.dirname(__file__), "sample.jpg")
-    if os.path.exists(local):
-        return local
-
-    tmp_path = os.path.join(tempfile.gettempdir(), "maxapi_example_sample.png")
-    if not os.path.exists(tmp_path):
-        with open(tmp_path, "wb") as f:
-            f.write(base64.b64decode(_PNG_1X1_B64))
-    return tmp_path
+PHOTO_PATH = Path(__file__).resolve().parent.parent / "logo.png"
 
 
 @dp.message_created(CommandStart())
@@ -101,14 +81,9 @@ async def cmd_photo(event: MessageCreated) -> None:
     # Показываем индикатор «отправляет фото...»
     await bot.send_action(chat_id=chat_id, action=SenderAction.SENDING_PHOTO)
 
-    # Берём sample.jpg, если он есть рядом со скриптом, иначе — сгенерим
-    # на лету маленький PNG, чтобы пример работал «из коробки».
-    sample_path = get_sample_image_path()
-
     # InputMedia принимает путь к файлу
-    media = InputMedia(path=sample_path)
-    await bot.send_message(
-        chat_id=chat_id,
+    media = InputMedia(path=str(PHOTO_PATH))
+    await event.message.answer(
         text="Фото из файла:",
         attachments=[media],
     )
@@ -125,13 +100,12 @@ async def cmd_buffer(event: MessageCreated) -> None:
         return
     await bot.send_action(chat_id=chat_id, action=SenderAction.SENDING_PHOTO)
 
-    # Используем тот же минимальный PNG 1×1 пиксель для демонстрации.
-    # В реальном проекте здесь будет PIL, matplotlib, reportlab и т.д.
-    png_1x1 = base64.b64decode(_PNG_1X1_B64)
+    # Читаем обычный PNG в память. В реальном проекте здесь может быть
+    # результат PIL, matplotlib, reportlab и т.д.
+    image_bytes = PHOTO_PATH.read_bytes()
     # InputMediaBuffer принимает bytes и имя файла
-    media = InputMediaBuffer(buffer=png_1x1, filename="generated.png")
-    await bot.send_message(
-        chat_id=chat_id,
+    media = InputMediaBuffer(buffer=image_bytes, filename="logo.png")
+    await event.message.answer(
         text="Фото из буфера (сгенерировано в памяти):",
         attachments=[media],
     )
@@ -149,10 +123,8 @@ async def cmd_upload(event: MessageCreated) -> None:
         return
     await bot.send_action(chat_id=chat_id, action=SenderAction.SENDING_PHOTO)
 
-    sample_path = get_sample_image_path()
-
     # Загружаем файл на серверы Max и получаем token
-    uploaded = await bot.upload_media(InputMedia(path=sample_path))
+    uploaded = await bot.upload_media(InputMedia(path=str(PHOTO_PATH)))
 
     await event.message.answer(
         f"Медиа загружено! token: {uploaded.payload.token}\n"
@@ -160,8 +132,7 @@ async def cmd_upload(event: MessageCreated) -> None:
     )
 
     # Отправляем по полученному token
-    await bot.send_message(
-        chat_id=chat_id,
+    await event.message.answer(
         text="Отправлено по upload-token:",
         attachments=[uploaded],
     )
@@ -187,7 +158,7 @@ async def on_attachment(event: MessageCreated) -> None:
     elif isinstance(first, Video):
         label, action = "видео", SenderAction.SENDING_VIDEO
     elif isinstance(first, Audio):
-        label, action = "аудио", SenderAction.SENDING_FILE
+        label, action = "аудио", SenderAction.SENDING_AUDIO
     elif isinstance(first, File):
         label, action = "файл", SenderAction.SENDING_FILE
     elif isinstance(first, Sticker):

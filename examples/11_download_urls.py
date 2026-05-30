@@ -16,7 +16,7 @@
 - /zipinfo ответом на архив — содержимое ZIP (download_bytes_io)
 
 Запуск:
-    MAX_BOT_TOKEN=your_token python 11_download_bytes.py
+    MAX_BOT_TOKEN=your_token python 11_download_urls.py
 """
 
 import asyncio
