@@ -212,6 +212,68 @@ async def handler(event: MessageCreated, custom_data: str):
     await event.message.answer(custom_data)
 ```
 
+## Перехват ошибок из обработчиков
+
+Если внутри хендлера возникает исключение, диспетчер оборачивает его в
+`HandlerException` и логирует. Middleware может перехватить это исключение
+до логирования — поведение зависит от типа middleware.
+
+### Outer middleware — получает `HandlerException`
+
+```python
+from maxapi.exceptions.dispatcher import HandlerException
+from maxapi.filters.middleware import BaseMiddleware
+
+
+class ErrorHandlerMiddleware(BaseMiddleware):
+    async def __call__(self, handler, event, data):
+        try:
+            await handler(event, data)
+        except HandlerException as e:
+            # e.cause — оригинальное исключение из хендлера
+            # e.handler_title — имя функции-обработчика
+            print(f"Ошибка в {e.handler_title}: {e.cause}")
+            raise  # обязательно re-raise, иначе см. примечание ниже
+
+
+dp.register_outer_middleware(ErrorHandlerMiddleware())
+```
+
+### Inner middleware — получает оригинальное исключение
+
+Inner middleware вызывается внутри хендлера, до оборачивания исключения,
+поэтому получает исходный тип исключения:
+
+```python
+class RawErrorMiddleware(BaseMiddleware):
+    async def __call__(self, handler, event, data):
+        try:
+            await handler(event, data)
+        except ValueError as e:
+            # ValueError напрямую, без HandlerException
+            print(f"Ошибка валидации: {e}")
+            raise
+
+
+@dp.message_created(Command("start"), RawErrorMiddleware())
+async def start(event: MessageCreated):
+    await event.message.answer("a" * 5000)  # поднимет ValueError
+```
+
+### Поведение по типам
+
+| Тип middleware | Получает | Доступ к оригиналу |
+|---|---|---|
+| **Inner** (в декораторе хендлера) | RAW исключение | напрямую |
+| **Router outer** | `HandlerException` | `e.cause` |
+| **Global outer** | `HandlerException` | `e.cause` |
+
+!!! warning "Не забывайте `raise` после обработки"
+    Если outer middleware поглощает `HandlerException` без `raise`,
+    диспетчер корректно определит событие как обработанное и не напишет
+    лишнего в лог. Однако `handle()` не будет логировать ошибку — вся
+    ответственность за уведомление об ошибке ложится на middleware.
+
 ## Примеры использования
 
 - Логирование

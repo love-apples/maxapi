@@ -7,11 +7,14 @@
 - inner_mw срабатывает только когда handler реально совпал
 - deprecated aliases: .middlewares, .middleware(), .outer_middleware()
 - наследование outer_mw и inner_mw через дерево роутеров
+- HandlerException, поглощённая router outer mw, не приводит к ложному
+  «Проигнорировано»
 """
 
 import warnings
 
 from maxapi.dispatcher import Dispatcher, Router
+from maxapi.exceptions.dispatcher import HandlerException
 from maxapi.filters.filter import BaseFilter
 from maxapi.filters.middleware import BaseMiddleware
 from maxapi.types.updates.bot_started import BotStarted
@@ -475,3 +478,110 @@ class TestInnerMiddlewareInheritance:
 
         assert handled
         assert "global_inner:before" in log
+
+
+# ===========================================================================
+# HandlerException: поглощение router outer mw
+# ===========================================================================
+
+
+class SwallowingMW(BaseMiddleware):
+    """Middleware, перехватывающая HandlerException и не пробрасывающая её."""
+
+    def __init__(self, log: list) -> None:
+        self.log = log
+
+    async def __call__(self, handler, event, data) -> None:
+        try:
+            await handler(event, data)
+        except HandlerException:
+            self.log.append("swallowed")
+
+
+class TestRouterOuterMwSwallowedHandlerException:
+    """router outer mw, поглотившая HandlerException, не должна вызывать
+    ложное «Проигнорировано» — событие считается обработанным."""
+
+    async def test_router_outer_mw_swallows_handler_exception_is_handled(
+        self, bot, fixture_message_created
+    ):
+        """
+        Когда router outer mw глотает HandlerException:
+        - событие должно считаться обработанным (_handled = True)
+        - handle() не должен логировать «Проигнорировано»
+        """
+        dp = Dispatcher()
+        router = Router("failing_router")
+
+        swallow_log: list[str] = []
+        router.register_outer_middleware(SwallowingMW(swallow_log))
+
+        called = []
+
+        @router.message_created()
+        async def _h(event: MessageCreated):
+            called.append(event)
+            raise RuntimeError("handler failed")
+
+        dp.include_routers(router)
+        _setup(dp, bot)
+
+        # handle() не должен пробросить исключение (оно поглощается mw)
+        await dp.handle(fixture_message_created)
+
+        # handler точно вызвался
+        assert called, "handler должен был вызваться"
+        # mw проглотила HandlerException
+        assert "swallowed" in swallow_log
+
+    async def test_global_outer_mw_swallows_handler_exception_is_handled(
+        self, bot, fixture_message_created
+    ):
+        """
+        Когда global outer mw глотает HandlerException:
+        - симметричный тест для dp-уровня (уже работало, регрессия)
+        """
+        dp = Dispatcher()
+        swallow_log: list[str] = []
+        dp.register_outer_middleware(SwallowingMW(swallow_log))
+
+        called = []
+
+        @dp.message_created()
+        async def _h(event: MessageCreated):
+            called.append(event)
+            raise RuntimeError("handler failed")
+
+        _setup(dp, bot)
+        await dp.handle(fixture_message_created)
+
+        assert called
+        assert "swallowed" in swallow_log
+
+    async def test_router_outer_mw_reraises_handler_exception_still_logged(
+        self, bot, fixture_message_created, caplog
+    ):
+        """Если router outer mw НЕ глотает HandlerException — она долетает
+        до handle() и логируется как 'Ошибка в обработчике'."""
+        import logging
+
+        dp = Dispatcher()
+        router = Router("reraise_router")
+
+        class ReRaiseMW(BaseMiddleware):
+            async def __call__(self, handler, event, data) -> None:
+                await handler(event, data)  # не ловит — пробрасывает
+
+        router.register_outer_middleware(ReRaiseMW())
+
+        @router.message_created()
+        async def _h(event: MessageCreated):
+            raise RuntimeError("boom")
+
+        dp.include_routers(router)
+        _setup(dp, bot)
+
+        with caplog.at_level(logging.ERROR, logger="maxapi.dispatcher"):
+            await dp.handle(fixture_message_created)
+
+        assert any("Ошибка в обработчике" in r.message for r in caplog.records)
