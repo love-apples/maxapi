@@ -1047,16 +1047,24 @@ class Dispatcher(BotMixin):
             router_id: Идентификатор роутера для логов.
             process_info: Информация о процессе для логов.
         """
-        if await self._run_router_handlers(
-            event=event,
-            data=handler_data,
-            matching_handlers=matching_handlers,
-            memory_context=memory_context,
-            current_state=current_state,
-            router_id=router_id,
-            process_info=process_info,
-        ):
+        try:
+            if await self._run_router_handlers(
+                event=event,
+                data=handler_data,
+                matching_handlers=matching_handlers,
+                memory_context=memory_context,
+                current_state=current_state,
+                router_id=router_id,
+                process_info=process_info,
+            ):
+                handler_data["_handled"] = True
+        except HandlerException:
+            # Хендлер был найден и запущен — фиксируем флаг до re-raise,
+            # чтобы router outer middleware, поглотившая исключение,
+            # не получила ложное «Проигнорировано» в handle().
+            # Симметрично тому, что делает _process_event для global outer mw.
             handler_data["_handled"] = True
+            raise
 
     async def _dispatch_to_router(
         self,
