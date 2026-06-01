@@ -894,25 +894,6 @@ class TestHandlePipeline:
 
         assert handled == [(fixture_message_created, Form.name)]
 
-    async def test_handle_injects_state_alias(
-        self, dispatcher, bot, fixture_message_created
-    ):
-        """Хендлер может принять FSM-контекст как state."""
-        states = []
-
-        @dispatcher.message_created()
-        async def _handler(event: MessageCreated, state: MemoryContext):
-            states.append(state)
-
-        _setup_for_handle(dispatcher, bot)
-        await dispatcher.handle(fixture_message_created)
-
-        assert states == [
-            dispatcher._Dispatcher__get_context(
-                *fixture_message_created.get_ids()
-            )
-        ]
-
     async def test_handle_catches_handler_exception(
         self, dispatcher, bot, fixture_message_created
     ):

@@ -1269,7 +1269,6 @@ class Dispatcher(BotMixin):
 
             kwargs: dict[str, Any] = {
                 "context": memory_context,
-                "state": memory_context,
                 "raw_state": current_state,
                 "_memory_context": memory_context,
                 "_current_state": current_state,
