@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import binascii
 import re
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, overload
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -79,7 +79,12 @@ def decode_payload(
     if decoder is not None:
         payload_bytes = decoder(payload_bytes)
 
-    return payload_bytes.decode("utf-8")
+    try:
+        return payload_bytes.decode("utf-8")
+    except UnicodeDecodeError as e:
+        raise ValueError(
+            "payload должен быть в URL-safe base64 формате"
+        ) from e
 
 
 def create_start_link(
@@ -112,7 +117,7 @@ def create_start_link(
 
 def create_startapp_link(
     username: str,
-    payload: str,
+    payload: str | None = None,
     *,
     encode: bool = False,
     encoder: Callable[[bytes], bytes] | None = None,
@@ -138,10 +143,32 @@ def create_startapp_link(
     )
 
 
+@overload
+def create_deep_link(
+    username: str,
+    link_type: Literal["start"],
+    payload: str,
+    *,
+    encode: bool = False,
+    encoder: Callable[[bytes], bytes] | None = None,
+) -> str: ...
+
+
+@overload
+def create_deep_link(
+    username: str,
+    link_type: Literal["startapp"],
+    payload: str | None = None,
+    *,
+    encode: bool = False,
+    encoder: Callable[[bytes], bytes] | None = None,
+) -> str: ...
+
+
 def create_deep_link(
     username: str,
     link_type: Literal["start", "startapp"],
-    payload: str,
+    payload: str | None = None,
     *,
     encode: bool = False,
     encoder: Callable[[bytes], bytes] | None = None,
@@ -166,6 +193,11 @@ def create_deep_link(
         raise ValueError('link_type должен быть "start" или "startapp"')
 
     username = _normalize_username(username)
+    if payload is None:
+        if link_type == "start":
+            raise ValueError("payload обязателен для start deep link")
+        return f"{MAX_DEEPLINK_HOST}/{username}?{link_type}"
+
     if not isinstance(payload, str):
         payload = str(payload)
 

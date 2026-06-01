@@ -23,6 +23,10 @@ def test_unicode_payload_roundtrip() -> None:
     assert decode_payload(encode_payload(payload)) == payload
 
 
+def test_encode_payload_coerces_non_string_payload() -> None:
+    assert encode_payload(123456789) == "MTIzNDU2Nzg5"  # type: ignore[arg-type]
+
+
 @pytest.mark.parametrize("payload", ["a", "ab", "abc", "abcd"])
 def test_decode_payload_restores_missing_padding(payload: str) -> None:
     assert decode_payload(encode_payload(payload)) == payload
@@ -31,6 +35,16 @@ def test_decode_payload_restores_missing_padding(payload: str) -> None:
 def test_decode_payload_invalid_base64_raises() -> None:
     with pytest.raises(ValueError, match="URL-safe base64"):
         decode_payload("!!!")
+
+
+def test_decode_payload_invalid_base64_with_valid_alphabet_raises() -> None:
+    with pytest.raises(ValueError, match="URL-safe base64"):
+        decode_payload("A")
+
+
+def test_decode_payload_invalid_utf8_raises_value_error() -> None:
+    with pytest.raises(ValueError, match="URL-safe base64"):
+        decode_payload("____")
 
 
 def test_custom_encoder_decoder_roundtrip() -> None:
@@ -138,6 +152,15 @@ def test_create_startapp_link() -> None:
         create_startapp_link("MyBot", "abc")
         == "https://max.ru/MyBot?startapp=abc"
     )
+
+
+def test_create_startapp_link_without_payload() -> None:
+    assert create_startapp_link("MyBot") == "https://max.ru/MyBot?startapp"
+
+
+def test_start_link_rejects_none_payload() -> None:
+    with pytest.raises(ValueError, match="payload"):
+        create_start_link("MyBot", None)  # type: ignore[arg-type]
 
 
 def test_unknown_link_type_raises() -> None:
