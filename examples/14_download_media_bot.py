@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 bot = Bot()
 dp = Dispatcher()
 
-DOWNLOAD_DIR = Path("./")
+DOWNLOAD_DIR = Path("media_downloads")
 
 
 def _get_attachment_url(attachment: Attachments) -> str | None:

@@ -8,6 +8,8 @@
 
 Установите Pillow:
     pip install Pillow
+    # или, если используете uv:
+    uv pip install Pillow
 
 Логика:
 - Фото → размытие и отправка обратно (download_bytes)
@@ -31,13 +33,15 @@ with contextlib.suppress(ImportError):
 
     load_dotenv()
 
-import PIL
 from maxapi import Bot, Dispatcher, F
 from maxapi.enums.sender_action import SenderAction
 from maxapi.filters.command import Command, CommandStart
 from maxapi.types.attachments.image import Image
+from maxapi.types.attachments.video import Video
 from maxapi.types.input_media import InputMediaBuffer
 from maxapi.types.updates.message_created import MessageCreated
+from PIL import Image as PILImage
+from PIL import ImageFilter
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -53,14 +57,38 @@ ARCHIVE_DIR = Path("media_archive")
 # ============================================================================
 
 
+def _get_attachment_url(attachment) -> str | None:
+    """Извлекает URL из поддерживаемого вложения."""
+
+    payload = getattr(attachment, "payload", None)
+    url = getattr(payload, "url", None)
+    if isinstance(url, str) and url:
+        return url
+
+    if isinstance(attachment, Video) and attachment.urls is not None:
+        for attr in (
+            "mp4_720",
+            "mp4_480",
+            "mp4_360",
+            "mp4_240",
+            "mp4_144",
+            "mp4_1080",
+            "hls",
+        ):
+            video_url = getattr(attachment.urls, attr, None)
+            if video_url:
+                return video_url
+
+    return None
+
+
 def _get_first_attachment_url(attachments) -> str | None:
     """Извлекает URL из первого вложения."""
+
     if not attachments:
         return None
-    first = attachments[0]
-    if hasattr(first, "url") and first.url:
-        return first.url
-    return None
+
+    return _get_attachment_url(attachments[0])
 
 
 def _archive_size() -> str:
@@ -206,8 +234,8 @@ async def _handle_photo(event: MessageCreated, url: str) -> None:
     try:
         # Скачиваем в память, получаем байты
         image_bytes = await bot.download_bytes(url)
-        img = PIL.Image.open(io.BytesIO(image_bytes))
-        img = img.filter(PIL.ImageFilter.GaussianBlur(radius=5))
+        img = PILImage.open(io.BytesIO(image_bytes))
+        img = img.filter(ImageFilter.GaussianBlur(radius=5))
 
         output = io.BytesIO()
         img.save(output, format="PNG")

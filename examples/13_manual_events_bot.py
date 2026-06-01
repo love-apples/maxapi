@@ -12,7 +12,7 @@
 import asyncio
 import contextlib
 import json
-from typing import cast
+from typing import Any, cast
 
 with contextlib.suppress(ImportError):
     from dotenv import load_dotenv
@@ -28,7 +28,29 @@ from maxapi.types.updates.message_created import MessageCreated
 from maxapi.types.users import User
 from maxapi.utils.updates import enrich_event
 
-bot = Bot(auto_requests=False)
+
+class ConsoleBot(Bot):
+    """Бот для локальной демонстрации без запросов к API."""
+
+    async def get_me(self) -> User:
+        """Вернуть данные бота без сетевого запроса."""
+
+        return User(
+            user_id=123456789,
+            first_name="Manual Bot",
+            username="manual_bot",
+            is_bot=True,
+            last_activity_time=1700000000000,
+        )
+
+    async def send_message(self, *args: Any, **kwargs: Any) -> None:
+        """Показать ответ handler в консоли вместо отправки в MAX."""
+
+        text = kwargs.get("text") or (args[0] if args else "")
+        print(f"Ответ handler: {text}")
+
+
+bot = ConsoleBot(token="demo-token", auto_requests=False)
 dp = Dispatcher()
 
 MESSAGE_CREATED_JSON = """
@@ -140,7 +162,7 @@ async def feed_event_from_your_code() -> None:
 
 async def main() -> None:
     # Подготавливает handlers, middleware, фильтры и привязывает bot
-    # к dispatcher. Polling/webhook при этом не запускаются.
+    # к dispatcher. ConsoleBot не делает реальных запросов к MAX.
     await dp.startup(bot)
 
     # Здесь вместо примера может быть чтение из очереди, websocket,
