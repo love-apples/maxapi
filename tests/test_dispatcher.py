@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from maxapi.bot import Bot
-from maxapi.context import MemoryContext
+from maxapi.context import ContextManager, MemoryContext
 from maxapi.dispatcher import Dispatcher, Event, Router
 from maxapi.enums.update import UpdateType
 from maxapi.filters import F
@@ -32,6 +32,8 @@ class TestDispatcherInitialization:
         assert isinstance(dp.contexts, dict)
         assert isinstance(dp.routers, list)
         assert isinstance(dp.outer_middlewares, list)
+        assert isinstance(dp.fsm, ContextManager)
+        assert dp.fsm.dispatcher is dp
         assert dp.bot is None
         assert dp.polling is False
 
@@ -268,6 +270,73 @@ class TestDispatcherContext:
 
         assert context1 is not context2
         assert len(dispatcher.contexts) == 2
+
+    async def test_fsm_get_context_by_ids(self, dispatcher):
+        """dp.fsm.get_context возвращает контекст по идентификаторам."""
+        context = await dispatcher.fsm.get_context(
+            chat_id=12345,
+            user_id=67890,
+        )
+
+        assert isinstance(context, MemoryContext)
+        assert context is dispatcher._Dispatcher__get_context(12345, 67890)
+
+    def test_router_fsm_is_not_available(self):
+        """router.fsm явно запрещён, чтобы не создать отдельное хранилище."""
+        router = Router()
+
+        with pytest.raises(RuntimeError, match=r"Используйте dp\.fsm"):
+            _ = router.fsm
+
+        assert router.contexts == {}
+
+    async def test_fsm_manager_context_methods(self, dispatcher):
+        """dp.fsm проксирует основные методы контекста."""
+        await dispatcher.fsm.set_state(
+            chat_id=12345,
+            user_id=67890,
+            state="Form:name",
+        )
+        await dispatcher.fsm.set_data(
+            chat_id=12345,
+            user_id=67890,
+            data={"name": "Max"},
+        )
+        updated_data = await dispatcher.fsm.update_data(
+            chat_id=12345,
+            user_id=67890,
+            age=7,
+        )
+
+        state = await dispatcher.fsm.get_state(
+            chat_id=12345,
+            user_id=67890,
+        )
+        data = await dispatcher.fsm.get_data(
+            chat_id=12345,
+            user_id=67890,
+        )
+
+        assert state == "Form:name"
+        assert data == {"name": "Max", "age": 7}
+        assert updated_data == data
+
+        await dispatcher.fsm.clear(chat_id=12345, user_id=67890)
+
+        assert (
+            await dispatcher.fsm.get_state(
+                chat_id=12345,
+                user_id=67890,
+            )
+            is None
+        )
+        assert (
+            await dispatcher.fsm.get_data(
+                chat_id=12345,
+                user_id=67890,
+            )
+            == {}
+        )
 
     def test_get_memory_context_recreates_expired_context(self):
         """Просроченный context не должен переиспользоваться."""
@@ -824,6 +893,25 @@ class TestHandlePipeline:
         await dispatcher.handle(fixture_message_created)
 
         assert handled == [(fixture_message_created, Form.name)]
+
+    async def test_handle_injects_state_alias(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """Хендлер может принять FSM-контекст как state."""
+        states = []
+
+        @dispatcher.message_created()
+        async def _handler(event: MessageCreated, state: MemoryContext):
+            states.append(state)
+
+        _setup_for_handle(dispatcher, bot)
+        await dispatcher.handle(fixture_message_created)
+
+        assert states == [
+            dispatcher._Dispatcher__get_context(
+                *fixture_message_created.get_ids()
+            )
+        ]
 
     async def test_handle_catches_handler_exception(
         self, dispatcher, bot, fixture_message_created

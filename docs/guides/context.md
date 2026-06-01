@@ -42,6 +42,36 @@ async def age_handler(event: MessageCreated, context: MemoryContext):
 - `set_data(data)` — полностью заменить данные
 - `clear()` — очистить контекст и сбросить состояние
 
+## Получение контекста вне хендлера
+
+```python
+context = await dp.fsm.get_context(
+    chat_id=chat_id,
+    user_id=user_id,
+)
+```
+
+Для простых операций можно не получать объект контекста вручную:
+
+```python
+await dp.fsm.set_state(
+    chat_id=chat_id,
+    user_id=user_id,
+    state=Form.name,
+)
+await dp.fsm.update_data(
+    chat_id=chat_id,
+    user_id=user_id,
+    name="Макс",
+)
+data = await dp.fsm.get_data(chat_id=chat_id, user_id=user_id)
+await dp.fsm.clear(chat_id=chat_id, user_id=user_id)
+```
+
+Метод использует то же хранилище, TTL и LRU-кеш, что и обычная
+обработка событий. FSM manager доступен через `Dispatcher`: используйте
+`dp.fsm`, а не `router.fsm`.
+
 ## TTL для контекста
 
 Для автоматической очистки неактивных контекстов можно передать `ttl`
