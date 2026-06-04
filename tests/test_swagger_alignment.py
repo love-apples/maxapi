@@ -1,12 +1,19 @@
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, Mock, patch
+
 import pytest
+from maxapi.connection.base import BaseConnection
 from maxapi.enums.add_chat_members_error_code import AddChatMembersErrorCode
 from maxapi.enums.attachment import AttachmentType
 from maxapi.enums.chat_permission import ChatPermission
 from maxapi.enums.text_style import TextStyle
+from maxapi.methods.get_chat_by_link import GetChatByLink
+from maxapi.methods.get_messages import GetMessages
 from maxapi.methods.types.added_members_chat import AddedMembersChat
 from maxapi.types.attachments.attachment import ContactAttachmentPayload
 from maxapi.types.attachments.image import PhotoAttachmentRequestPayload
 from maxapi.types.attachments.video import Video
+from maxapi.types.chats import ChatMember
 from maxapi.types.message import MessageBody
 from maxapi.types.users import ChatAdmin, User
 from pydantic import ValidationError
@@ -53,15 +60,25 @@ def test_added_members_chat_error_code_enum_rejects_unknown_code():
 
 
 def test_chat_permission_accepts_swagger_admin_values():
-    assert (
-        ChatPermission.POST_EDIT_DELETE_MESSAGE.value
-        == "post_edit_delete_message"
-    )
-    assert ChatPermission.EDIT_MESSAGE.value == "edit_message"
-    assert ChatPermission.DELETE_MESSAGE.value == "delete_message"
+    swagger_values = {
+        "read_all_messages",
+        "add_remove_members",
+        "add_admins",
+        "change_chat_info",
+        "pin_message",
+        "write",
+        "can_call",
+        "edit_link",
+        "post_edit_delete_message",
+        "edit_message",
+        "delete_message",
+        "edit",
+        "delete",
+    }
 
-    assert ChatPermission.EDIT.value == "edit"
-    assert ChatPermission.DELETE.value == "delete"
+    assert {ChatPermission(value).value for value in swagger_values} == (
+        swagger_values
+    )
     assert ChatPermission.VIEW_STATS.value == "view_stats"
 
 
@@ -85,6 +102,139 @@ def test_user_and_chat_admin_keep_swagger_compat_fields():
 
     assert user.first_name == "Alice"
     assert admin.alias == "owner"
+
+
+def test_chat_member_accepts_swagger_fields_with_nullable_permissions():
+    member = ChatMember.model_validate(
+        {
+            "user_id": 1,
+            "first_name": "Alice",
+            "username": "alice",
+            "is_bot": False,
+            "last_activity_time": 0,
+            "last_access_time": 10,
+            "is_owner": False,
+            "is_admin": True,
+            "join_time": 20,
+            "permissions": None,
+            "alias": "moderator",
+        }
+    )
+
+    assert member.last_access_time == 10
+    assert member.is_owner is False
+    assert member.is_admin is True
+    assert member.join_time == 20
+    assert member.permissions is None
+    assert member.alias == "moderator"
+
+
+def test_get_messages_requires_chat_id_or_message_ids(bot):
+    with pytest.raises(ValueError, match="chat_id или message_ids"):
+        GetMessages(bot=bot)
+
+
+def test_get_messages_rejects_chat_id_with_message_ids(bot):
+    with pytest.raises(ValueError, match="chat_id или message_ids"):
+        GetMessages(bot=bot, chat_id=1, message_ids=["mid-1"])
+
+
+async def test_get_messages_sends_message_ids_as_comma_list(bot):
+    method = GetMessages(
+        bot=bot,
+        message_ids=["mid-1", "mid-2"],
+    )
+
+    with patch.object(
+        BaseConnection, "request", new=AsyncMock(return_value=Mock())
+    ) as mocked_request:
+        await method.fetch()
+
+    params = mocked_request.call_args.kwargs["params"]
+    assert params["message_ids"] == "mid-1,mid-2"
+    assert "chat_id" not in params
+
+
+async def test_get_messages_sends_datetime_bounds_as_unix_seconds(bot):
+    from_time = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+    to_time = datetime(2026, 1, 3, 3, 4, 5, tzinfo=timezone.utc)
+    method = GetMessages(
+        bot=bot,
+        chat_id=1,
+        from_time=from_time,
+        to_time=to_time,
+    )
+
+    with patch.object(
+        BaseConnection, "request", new=AsyncMock(return_value=Mock())
+    ) as mocked_request:
+        await method.fetch()
+
+    params = mocked_request.call_args.kwargs["params"]
+    assert params["from"] == int(from_time.timestamp())
+    assert params["to"] == int(to_time.timestamp())
+
+
+async def test_get_messages_omits_none_count(bot):
+    method = GetMessages(bot=bot, chat_id=1, count=None)
+
+    with patch.object(
+        BaseConnection, "request", new=AsyncMock(return_value=Mock())
+    ) as mocked_request:
+        await method.fetch()
+
+    params = mocked_request.call_args.kwargs["params"]
+    assert "count" not in params
+
+
+@pytest.mark.parametrize(
+    ("link", "expected_path"),
+    [
+        ("channel", "/chats/channel"),
+        ("@channel", "/chats/@channel"),
+        ("https://max.ru/channel", "/chats/channel"),
+    ],
+)
+async def test_get_chat_by_link_normalizes_public_link(
+    bot,
+    link,
+    expected_path,
+):
+    method = GetChatByLink(bot=bot, link=link)
+
+    with patch.object(
+        BaseConnection, "request", new=AsyncMock(return_value=Mock())
+    ) as mocked_request:
+        await method.fetch()
+
+    assert mocked_request.call_args.kwargs["path"] == expected_path
+
+
+@pytest.mark.parametrize(
+    "link",
+    [
+        "",
+        "not a link",
+        "https://max.ru/",
+        "https://max.ru/channel/extra invalid",
+    ],
+)
+def test_get_chat_by_link_rejects_invalid_link(bot, link):
+    with pytest.raises(ValueError, match="link не соответствует"):
+        GetChatByLink(bot=bot, link=link)
+
+
+async def test_get_chat_by_link_keeps_valid_link_characters(bot):
+    method = GetChatByLink(bot=bot, link="channel-name_123")
+
+    with patch.object(
+        BaseConnection, "request", new=AsyncMock(return_value=Mock())
+    ) as mocked_request:
+        await method.fetch()
+
+    assert mocked_request.call_args.kwargs["path"] == (
+        "/chats/channel-name_123"
+    )
 
 
 def test_contact_payload_accepts_hash_and_nullable_vcf():

@@ -519,19 +519,23 @@ class Bot(BaseConnection):
         message_ids: list[str] | None = None,
         from_time: datetime | int | None = None,
         to_time: datetime | int | None = None,
-        count: int = 50,
+        count: int | None = 50,
     ) -> Messages:
         """
-        Получает сообщения из чата.
+        Получает сообщения из чата или по списку идентификаторов.
+
+        Нужно передать ровно один из параметров: `chat_id`
+        или `message_ids`.
 
         https://dev.max.ru/docs-api/methods/GET/messages
 
         Args:
-            chat_id: ID чата.
-            message_ids: ID сообщений.
+            chat_id: ID чата, из которого нужно получить сообщения.
+            message_ids: ID сообщений, которые нужно получить.
             from_time: Начало периода.
             to_time: Конец периода.
-            count: Количество сообщений.
+            count: Количество сообщений. Если None, параметр
+                не отправляется.
 
         Returns:
             Messages: Список сообщений.
@@ -659,12 +663,12 @@ class Bot(BaseConnection):
 
     async def get_chat_by_link(self, link: str) -> Chat:
         """
-        Получает чат по ссылке.
+        Получает канал по публичной ссылке или алиасу.
 
         https://dev.max.ru/docs-api/methods/GET/chats/-chatLink-
 
         Args:
-            link: Ссылка на чат.
+            link: Публичная ссылка или алиас канала.
 
         Returns:
             Chat: Объект чата.

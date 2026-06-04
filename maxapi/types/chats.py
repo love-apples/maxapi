@@ -407,7 +407,7 @@ class Chat(
         message_ids: list[str] | None = None,
         from_time: datetime | int | None = None,
         to_time: datetime | int | None = None,
-        count: int = 50,
+        count: int | None = 50,
     ) -> Messages:
         """Получить историю сообщений текущего чата."""
 
