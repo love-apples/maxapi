@@ -24,7 +24,7 @@ def test_unicode_payload_roundtrip() -> None:
 
 
 def test_encode_payload_coerces_non_string_payload() -> None:
-    assert encode_payload(123456789) == "MTIzNDU2Nzg5"  # type: ignore[arg-type]
+    assert encode_payload(123456789) == "MTIzNDU2Nzg5"
 
 
 @pytest.mark.parametrize("payload", ["a", "ab", "abc", "abcd"])
@@ -35,6 +35,11 @@ def test_decode_payload_restores_missing_padding(payload: str) -> None:
 def test_decode_payload_invalid_base64_raises() -> None:
     with pytest.raises(ValueError, match="URL-safe base64"):
         decode_payload("!!!")
+
+
+def test_decode_payload_rejects_not_string_payload() -> None:
+    with pytest.raises(TypeError, match="payload"):
+        decode_payload(object())  # type: ignore[arg-type]
 
 
 def test_decode_payload_invalid_base64_with_valid_alphabet_raises() -> None:
@@ -111,7 +116,7 @@ def test_invalid_payload_without_encode_raises() -> None:
 
 def test_non_string_payload_is_coerced() -> None:
     assert (
-        create_start_link("MyBot", 123456789)  # type: ignore[arg-type]
+        create_start_link("MyBot", 123456789)
         == "https://max.ru/MyBot?start=123456789"
     )
 

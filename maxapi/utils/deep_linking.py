@@ -5,10 +5,15 @@ from __future__ import annotations
 import base64
 import binascii
 import re
-from typing import TYPE_CHECKING, Literal, overload
+from typing import TYPE_CHECKING, Literal, Protocol, overload
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+
+class _SupportsStr(Protocol):
+    def __str__(self) -> str: ...
+
 
 DEEPLINK_PAYLOAD_MAX_LENGTH = 128
 STARTAPP_PAYLOAD_MAX_LENGTH = 512
@@ -26,14 +31,14 @@ __all__ = [
 
 
 def encode_payload(
-    payload: str,
+    payload: str | _SupportsStr,
     encoder: Callable[[bytes], bytes] | None = None,
 ) -> str:
     """
     Кодирует payload в URL-safe base64 без padding.
 
     Args:
-        payload: Строка payload.
+        payload: Payload. Значения не строкового типа приводятся к строке.
         encoder: Дополнительный кодировщик байтов.
 
     Returns:
@@ -63,6 +68,9 @@ def decode_payload(
     Returns:
         Исходная строка payload.
     """
+    if not isinstance(payload, str):
+        raise TypeError("payload должен быть строкой")
+
     if BAD_PAYLOAD_PATTERN.search(payload):
         raise ValueError("payload должен быть в URL-safe base64 формате")
 
@@ -89,7 +97,7 @@ def decode_payload(
 
 def create_start_link(
     username: str,
-    payload: str,
+    payload: str | _SupportsStr,
     *,
     encode: bool = False,
     encoder: Callable[[bytes], bytes] | None = None,
@@ -100,7 +108,9 @@ def create_start_link(
     Args:
         username: Username бота.
         payload: Данные, которые MAX передаст в BotStarted.payload.
-        encode: Кодировать payload через URL-safe base64.
+            Значения не строкового типа приводятся к строке.
+        encode: Кодировать payload через URL-safe base64. При передаче
+            encoder кодирование выполняется независимо от значения encode.
         encoder: Дополнительный кодировщик байтов.
 
     Returns:
@@ -117,7 +127,7 @@ def create_start_link(
 
 def create_startapp_link(
     username: str,
-    payload: str | None = None,
+    payload: str | _SupportsStr | None = None,
     *,
     encode: bool = False,
     encoder: Callable[[bytes], bytes] | None = None,
@@ -127,12 +137,16 @@ def create_startapp_link(
 
     Args:
         username: Username бота.
-        payload: Данные для параметра startapp.
-        encode: Кодировать payload через URL-safe base64.
+        payload: Данные для параметра startapp. Значения не строкового типа
+            приводятся к строке. Если не передан, ссылка содержит параметр
+            startapp без значения.
+        encode: Кодировать payload через URL-safe base64. При передаче
+            encoder кодирование выполняется независимо от значения encode.
         encoder: Дополнительный кодировщик байтов.
 
     Returns:
-        Ссылка вида https://max.ru/<botName>?startapp=<payload>.
+        Ссылка вида https://max.ru/<botName>?startapp=<payload> или
+        https://max.ru/<botName>?startapp без payload.
     """
     return create_deep_link(
         username=username,
@@ -147,7 +161,7 @@ def create_startapp_link(
 def create_deep_link(
     username: str,
     link_type: Literal["start"],
-    payload: str,
+    payload: str | _SupportsStr,
     *,
     encode: bool = False,
     encoder: Callable[[bytes], bytes] | None = None,
@@ -158,7 +172,7 @@ def create_deep_link(
 def create_deep_link(
     username: str,
     link_type: Literal["startapp"],
-    payload: str | None = None,
+    payload: str | _SupportsStr | None = None,
     *,
     encode: bool = False,
     encoder: Callable[[bytes], bytes] | None = None,
@@ -168,7 +182,7 @@ def create_deep_link(
 def create_deep_link(
     username: str,
     link_type: Literal["start", "startapp"],
-    payload: str | None = None,
+    payload: str | _SupportsStr | None = None,
     *,
     encode: bool = False,
     encoder: Callable[[bytes], bytes] | None = None,
@@ -179,8 +193,10 @@ def create_deep_link(
     Args:
         username: Username бота.
         link_type: Тип ссылки: start или startapp.
-        payload: Данные для query-параметра.
-        encode: Кодировать payload через URL-safe base64.
+        payload: Данные для query-параметра. Значения не строкового типа
+            приводятся к строке.
+        encode: Кодировать payload через URL-safe base64. При передаче
+            encoder кодирование выполняется независимо от значения encode.
         encoder: Дополнительный кодировщик байтов.
 
     Raises:
