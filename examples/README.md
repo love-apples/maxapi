@@ -75,6 +75,8 @@ python examples/01_echo_bot.py
 - [08. Middleware](#08-middleware-паттерны)
 - [09. Webhook + FastAPI](#09-webhook-с-fastapi)
 - [10. Типизированные payloads](#10-типизированные-callback-payloads--каталог-товаров)
+- [11. Загрузка файлов по URL](#11-загрузка-файлов-по-url)
+- [12. Deep linking через кнопку](#12-deep-linking-через-кнопку)
 
 ### 01. Эхо-бот — первый бот за 5 минут
 
@@ -263,6 +265,36 @@ python examples/01_echo_bot.py
 - Fallback-хендлер для неизвестных callback
 
 **Аналог в Telegram:** aiogram `CallbackData` с `prefix`
+
+---
+
+### 11. Загрузка файлов по URL
+
+**Файл:** [`11_download_urls.py`](11_download_urls.py)
+
+Медиа-архив бот: скачивает входящие файлы, сохраняет их в архив и умеет
+отправлять ZIP обратно.
+
+**Что изучите:**
+- `bot.download_bytes()` — загрузка файла в память
+- `bot.download_bytes_io()` — потоковое чтение
+- `bot.download_file()` — сохранение файла на диск
+- Обработка входящих вложений и отправка ZIP-архива
+
+---
+
+### 12. Deep linking через кнопку
+
+**Файл:** [`12_deep_linking_bot.py`](12_deep_linking_bot.py)
+
+Бот предлагает создать deep link через callback-кнопку, отправляет ссылку
+текстом и обрабатывает payload при запуске по ней.
+
+**Что изучите:**
+- `create_start_link()` — генерация deep link MAX
+- `encode=True` и `decode_payload()` для безопасного payload
+- Отправка deep link обычной ссылкой в тексте
+- `BotStarted.payload` — обработка данных из deep link
 
 ---
 
