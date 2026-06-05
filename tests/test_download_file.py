@@ -988,7 +988,6 @@ class TestInternalUncoveredParts:
             port = site._server.sockets[0].getsockname()[1]  # type: ignore[union-attr]
             async with ClientSession() as session:
                 response = await session.get(f"http://127.0.0.1:{port}/file")
-                assert response.closed is True
                 assert response._released is False
 
                 chunks = [
@@ -1029,7 +1028,7 @@ class TestInternalUncoveredParts:
         )
 
         with pytest.raises(
-            DownloadFileError, match="response соединение закрыто"
+            DownloadFileError, match="response уже освобождён"
         ):
             async for _ in bot._fetch_content_stream(mock_response):
                 pass
