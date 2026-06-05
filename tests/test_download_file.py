@@ -1027,9 +1027,7 @@ class TestInternalUncoveredParts:
             released=True,
         )
 
-        with pytest.raises(
-            DownloadFileError, match="response уже освобождён"
-        ):
+        with pytest.raises(DownloadFileError, match="response уже освобождён"):
             async for _ in bot._fetch_content_stream(mock_response):
                 pass
 
