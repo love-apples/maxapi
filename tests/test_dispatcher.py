@@ -837,6 +837,42 @@ class TestHandlePipeline:
         _setup_for_handle(dispatcher, bot)
         await dispatcher.handle(fixture_message_created)  # не должно всплывать
 
+    async def test_handle_logs_handler_exception_with_str_and_cause(
+        self, dispatcher, bot, fixture_message_created, monkeypatch
+    ):
+        """
+        handle() логирует HandlerException через __str__ и передаёт
+        оригинальное исключение как exc_info.
+        """
+        import maxapi.dispatcher as dp_module
+        from maxapi.exceptions.dispatcher import HandlerException
+
+        original_cause = RuntimeError("оригинальная ошибка")
+
+        @dispatcher.message_created()
+        async def _handler(event: MessageCreated):
+            raise original_cause
+
+        _setup_for_handle(dispatcher, bot)
+
+        logged_calls: list[tuple] = []
+
+        def fake_exception(msg, *args, **kwargs):
+            logged_calls.append((msg, args, kwargs))
+
+        monkeypatch.setattr(dp_module.logger_dp, "exception", fake_exception)
+
+        await dispatcher.handle(fixture_message_created)
+
+        assert len(logged_calls) == 1
+        msg, args, kwargs = logged_calls[0]
+        assert msg == "Ошибка в обработчике: %s"
+        # args[0] — экземпляр HandlerException, логируется через __str__
+        assert isinstance(args[0], HandlerException)
+        assert args[0].cause is original_cause
+        # exc_info передаётся как оригинальное исключение, не HandlerException
+        assert kwargs.get("exc_info") is original_cause
+
     async def test_handle_catches_middleware_exception(
         self, dispatcher, bot, fixture_message_created
     ):
@@ -853,6 +889,112 @@ class TestHandlePipeline:
         dispatcher.register_outer_middleware(FailingMiddleware())
         _setup_for_handle(dispatcher, bot)
         await dispatcher.handle(fixture_message_created)  # не должно всплывать
+
+    async def test_outer_middleware_receives_handler_exception(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """
+        Outer middleware получает HandlerException при ошибке хендлера.
+
+        Оригинальное исключение доступно через HandlerException.cause.
+        """
+        from maxapi.exceptions.dispatcher import HandlerException
+        from maxapi.filters.middleware import BaseMiddleware
+
+        original_cause = RuntimeError("ошибка в хендлере")
+        caught: list[BaseException] = []
+
+        class CatchingOuterMiddleware(BaseMiddleware):
+            async def __call__(self, handler, event, data):
+                try:
+                    await handler(event, data)
+                except HandlerException as e:
+                    caught.append(e)
+                    raise
+
+        @dispatcher.message_created()
+        async def _handler(event: MessageCreated):
+            raise original_cause
+
+        dispatcher.register_outer_middleware(CatchingOuterMiddleware())
+        _setup_for_handle(dispatcher, bot)
+        await dispatcher.handle(fixture_message_created)
+
+        assert len(caught) == 1
+        assert isinstance(caught[0], HandlerException)
+        assert caught[0].cause is original_cause
+
+    async def test_outer_middleware_swallows_handler_exception_no_ignored_log(
+        self, dispatcher, bot, fixture_message_created, monkeypatch
+    ):
+        """
+        Если outer middleware поглощает HandlerException, handle() не должен
+        логировать "Проигнорировано" — хендлер ведь был найден и запущен.
+        """
+        import contextlib
+
+        import maxapi.dispatcher as dp_module
+        from maxapi.exceptions.dispatcher import HandlerException
+        from maxapi.filters.middleware import BaseMiddleware
+
+        ignored_logs: list[str] = []
+        original_info = dp_module.logger_dp.info
+
+        def fake_info(msg, *args, **kwargs):
+            if "Проигнорировано" in msg:
+                ignored_logs.append(msg)
+            else:
+                original_info(msg, *args, **kwargs)
+
+        monkeypatch.setattr(dp_module.logger_dp, "info", fake_info)
+
+        class SwallowingMiddleware(BaseMiddleware):
+            async def __call__(self, handler, event, data):
+                with contextlib.suppress(HandlerException):
+                    await handler(event, data)
+
+        @dispatcher.message_created()
+        async def _handler(event: MessageCreated):
+            raise RuntimeError("ошибка")
+
+        dispatcher.register_outer_middleware(SwallowingMiddleware())
+        _setup_for_handle(dispatcher, bot)
+        await dispatcher.handle(fixture_message_created)
+
+        assert ignored_logs == [], (
+            "handle() не должен логировать 'Проигнорировано' "
+            "когда middleware поглотила HandlerException"
+        )
+
+    async def test_inner_middleware_receives_raw_exception(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """
+        Inner middleware получает оригинальное исключение из хендлера,
+        до того как оно оборачивается в HandlerException.
+        """
+        from maxapi.filters.middleware import BaseMiddleware
+
+        original_cause = RuntimeError("ошибка в хендлере")
+        caught: list[BaseException] = []
+
+        class CatchingInnerMiddleware(BaseMiddleware):
+            async def __call__(self, handler, event, data):
+                try:
+                    await handler(event, data)
+                except RuntimeError as e:
+                    caught.append(e)
+                    raise
+
+        @dispatcher.message_created(CatchingInnerMiddleware())
+        async def _handler(event: MessageCreated):
+            raise original_cause
+
+        _setup_for_handle(dispatcher, bot)
+        await dispatcher.handle(fixture_message_created)
+
+        assert len(caught) == 1
+        assert caught[0] is original_cause
 
 
 # ===========================================================================
