@@ -9,7 +9,7 @@ Deep linking через кнопку — создание ссылки и обр
 - BotStarted.payload — обработку данных из deep link
 
 Запуск:
-    MAX_BOT_TOKEN=your_token python 12_deep_linking_bot.py
+    MAX_BOT_TOKEN=your_token python 15_deep_linking_bot.py
 """
 
 import asyncio
@@ -63,7 +63,7 @@ async def on_start(event: MessageCreated) -> None:
 
 @dp.message_callback(F.callback.payload == CB_CREATE_DEEP_LINK)
 async def on_create_deep_link(event: MessageCallback) -> None:
-    """Создать deep link и отправить его пользователю кнопкой-ссылкой."""
+    """Создать deep link и отправить его пользователю текстом."""
     username = bot.me.username if bot.me else None
     if username is None:
         await event.answer(notification="Не удалось получить username бота")
@@ -77,8 +77,10 @@ async def on_create_deep_link(event: MessageCallback) -> None:
         )
     except ValueError as e:
         log.info("Ошибка при создании deep link: %s", e)
+        await event.answer(notification=str(e))
         return
 
+    await event.answer()
     await event.message.answer(
         text=(
             "Deep link создан. Откройте ссылку: "
