@@ -30,7 +30,7 @@ class ContextManager:
         """Возвращает контекст по идентификаторам."""
         return self._context_getter(chat_id, user_id)
 
-    async def get_context(
+    def get_context(
         self,
         *,
         chat_id: int | None,
@@ -117,7 +117,12 @@ class ContextManager:
         return await context.get_data()
 
     async def update_data(
-        self, *, chat_id: int | None, user_id: int | None, **kwargs: Any
+        self,
+        *,
+        chat_id: int | None,
+        user_id: int | None,
+        data: dict[str, Any] | None = None,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """
         Обновляет данные пользователя.
@@ -125,11 +130,16 @@ class ContextManager:
         Args:
             chat_id: Идентификатор чата.
             user_id: Идентификатор пользователя.
+            data: Словарь значений для обновления.
             **kwargs: Пары ключ-значение для обновления.
+
+        Returns:
+            Актуальный словарь данных.
         """
         context = self._get_context(chat_id, user_id)
-        await context.update_data(**kwargs)
-        return await context.get_data()
+        update = dict(data or {})
+        update.update(kwargs)
+        return await context.update_data(**update)
 
     async def clear(self, *, chat_id: int | None, user_id: int | None) -> None:
         """

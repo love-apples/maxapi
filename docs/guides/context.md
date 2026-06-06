@@ -38,14 +38,14 @@ async def age_handler(event: MessageCreated, context: MemoryContext):
 - `set_state(state)` — установить состояние (State или None для сброса)
 - `get_state()` — получить текущее состояние
 - `get_data()` — получить все данные контекста
-- `update_data(**kwargs)` — обновить данные
+- `update_data(**kwargs)` — обновить данные и вернуть актуальный словарь
 - `set_data(data)` — полностью заменить данные
 - `clear()` — очистить контекст и сбросить состояние
 
 ## Получение контекста вне хендлера
 
 ```python
-context = await dp.fsm.get_context(
+context = dp.fsm.get_context(
     chat_id=chat_id,
     user_id=user_id,
 )
@@ -63,6 +63,11 @@ await dp.fsm.update_data(
     chat_id=chat_id,
     user_id=user_id,
     name="Макс",
+)
+await dp.fsm.update_data(
+    chat_id=chat_id,
+    user_id=user_id,
+    data={"chat_id": "значение в данных"},
 )
 data = await dp.fsm.get_data(chat_id=chat_id, user_id=user_id)
 await dp.fsm.clear(chat_id=chat_id, user_id=user_id)

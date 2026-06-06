@@ -51,18 +51,22 @@ class MemoryContext(BaseContext):
             self._context = data
             self._ttl_tracker.touch()
 
-    async def update_data(self, **kwargs: Any) -> None:
+    async def update_data(self, **kwargs: Any) -> dict[str, Any]:
         """
         Обновляет контекст данных новыми значениями.
 
         Args:
             **kwargs: Пары ключ-значение для обновления
+
+        Returns:
+            Актуальный словарь данных.
         """
 
         async with self._lock:
             await self._expire_if_needed()
             self._context.update(kwargs)
             self._ttl_tracker.touch()
+            return self._context.copy()
 
     async def set_state(self, state: State | str | None = None) -> None:
         """
@@ -142,9 +146,12 @@ class RedisContext(BaseContext):
             await self.redis.set(self.data_key, payload, px=ttl_ms)
             await self.redis.pexpire(self.state_key, ttl_ms)
 
-    async def update_data(self, **kwargs: Any) -> None:
+    async def update_data(self, **kwargs: Any) -> dict[str, Any]:
         """
-        Атомарно обновляет данные
+        Атомарно обновляет данные.
+
+        Returns:
+            Актуальный словарь данных.
         """
         lua_script = """
         local data = redis.call('get', KEYS[1])
@@ -161,10 +168,10 @@ class RedisContext(BaseContext):
         else
             redis.call('set', KEYS[1], cjson.encode(decoded))
         end
-        return redis.status_reply("OK")
+        return cjson.encode(decoded)
         """
         ttl_ms = _ttl_to_ms(self.ttl)
-        await self.redis.eval(
+        result = await self.redis.eval(
             lua_script,
             1,
             self.data_key,
@@ -173,6 +180,9 @@ class RedisContext(BaseContext):
         )
         if ttl_ms is not None:
             await self.redis.pexpire(self.state_key, ttl_ms)
+        if isinstance(result, bytes):
+            result = result.decode("utf-8")
+        return json.loads(result) if result else {}
 
     async def set_state(self, state: State | str | None = None) -> None:
         if state is None:

@@ -271,9 +271,9 @@ class TestDispatcherContext:
         assert context1 is not context2
         assert len(dispatcher.contexts) == 2
 
-    async def test_fsm_get_context_by_ids(self, dispatcher):
+    def test_fsm_get_context_by_ids(self, dispatcher):
         """dp.fsm.get_context возвращает контекст по идентификаторам."""
-        context = await dispatcher.fsm.get_context(
+        context = dispatcher.fsm.get_context(
             chat_id=12345,
             user_id=67890,
         )
@@ -337,6 +337,23 @@ class TestDispatcherContext:
             )
             == {}
         )
+
+    async def test_fsm_manager_update_data_accepts_reserved_keys(
+        self, dispatcher
+    ):
+        """data позволяет записывать ключи, занятые параметрами helper."""
+        updated_data = await dispatcher.fsm.update_data(
+            chat_id=12345,
+            user_id=67890,
+            data={"chat_id": "stored", "user_id": "stored"},
+            name="Max",
+        )
+
+        assert updated_data == {
+            "chat_id": "stored",
+            "user_id": "stored",
+            "name": "Max",
+        }
 
     def test_get_memory_context_recreates_expired_context(self):
         """Просроченный context не должен переиспользоваться."""
