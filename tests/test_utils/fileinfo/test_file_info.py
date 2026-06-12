@@ -273,7 +273,7 @@ class TestFileInspectorError:
 
         inspector = FileInspector()
         info = await inspector.inspect_url(
-            "https://example.com/test.jpg",
+            "https://x.com/x.jpg",
             session=session,
             max_retries=1,
         )
@@ -286,7 +286,7 @@ class TestFileInspectorError:
 
         inspector = FileInspector()
         info = await inspector.inspect_url(
-            "https://example.com/test.jpg",
+            "https://x.com/x.jpg",
             session=session,
             max_retries=1,
             allow_external_auth=True,
@@ -810,8 +810,7 @@ class TestRangeDownloaderAdvanced:
         resp.content = AsyncMock()
         resp.content.read = AsyncMock(return_value=b"\xff\xd8\xff\xe0")
         resp.read = AsyncMock(return_value=b"\xff\xd8\xff\xe0")
-        rd.session = AsyncMock()
-        rd.session.get = AsyncMock(return_value=resp)
+        rd.session = _make_mock_session(b"", None)
         await rd._fetch_meta()
         assert rd._meta is not None
         assert rd._meta.file_size is None
@@ -873,7 +872,7 @@ class TestRangeDownloaderAdvanced:
         rd = RangeDownloader("https://x.com/f")
         rd._meta = Mock(url="https://x.com/f")
         rd._response = None
-        with pytest.raises(RuntimeError, match="Response отсутвует"):
+        with pytest.raises(RuntimeError, match="Response отсутствует"):
             await rd._fetch_chunk(100, tail=False)
 
     async def test_expand_head_closed_response(self):
