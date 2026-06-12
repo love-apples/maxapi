@@ -1454,9 +1454,7 @@ class FileInspector:
                             )
 
             # 4. VP8L: Lossless изображение
-            elif (
-                chunk_type == b"VP8L" and chunk_size >= 5
-            ):
+            elif chunk_type == b"VP8L" and chunk_size >= 5:
                 if payload_start + 5 <= len(data):
                     bits = struct.unpack(
                         "<I", data[payload_start + 1 : payload_start + 5]
