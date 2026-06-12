@@ -1374,6 +1374,9 @@ class FileInspector:
 
             # 1. VP8X: Расширенный формат (флаги, размеры canvas)
             if chunk_type == b"VP8X" and len(data) >= payload_start + 10:
+                # Флаги VP8X: бит 4 = анимация
+                vp8x_flags = data[payload_start]
+                result["_vp8x_flags"] = vp8x_flags
                 # Размеры в VP8X хранятся как (value - 1)
                 width = (
                     int.from_bytes(
@@ -1452,11 +1455,11 @@ class FileInspector:
 
             # 4. VP8L: Lossless изображение
             elif (
-                chunk_type == b"VP8L" and is_chunk_complete and chunk_size >= 5
+                chunk_type == b"VP8L" and chunk_size >= 5
             ):
-                if payload_start + 4 <= len(data):
+                if payload_start + 5 <= len(data):
                     bits = struct.unpack(
-                        "<I", data[payload_start : payload_start + 4]
+                        "<I", data[payload_start + 1 : payload_start + 5]
                     )[0]
                     width = (bits & 0x3FFF) + 1
                     height = ((bits >> 14) & 0x3FFF) + 1
@@ -1485,9 +1488,8 @@ class FileInspector:
             return result
 
         need_head = 0
-        is_animated = frame_count > 0 or result.get("format", "").endswith(
-            "VP8X"
-        )
+        vp8x_flags = result.pop("_vp8x_flags", 0)
+        is_animated = frame_count > 0 or bool(vp8x_flags & 0x10)
         if is_animated and file_size:
             target = min(max(20_240, file_size // 25), MAX_HEAD)
             if head_len < target and not (file_size and head_len >= file_size):
