@@ -231,6 +231,7 @@ nav:
       - User_added: types/updates/user_added.md
       - User_removed: types/updates/user_removed.md
   - Utils:
+    - FileInspector: utils/file_inspector.md
     - Inline_keyboard: utils/inline_keyboard.md
     - Message: utils/message.md
     - Overview: utils/index.md

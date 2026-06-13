@@ -168,6 +168,7 @@ python examples/01_echo_bot.py
 - Обработка входящих вложений: определение типа (image, video, audio, file)
 - `event.message.forward(chat_id=...)` — пересылка сообщения
 - `SenderAction.SENDING_PHOTO` / `SENDING_VIDEO` / `SENDING_FILE`
+- `bot.get_file_info(url)` — Получение информации о медиафайле (размер картинки, длительность и т.д.)
 
 **Аналог в Telegram:** `send_photo`, `send_document`, `send_audio`, `forward_message`
 
