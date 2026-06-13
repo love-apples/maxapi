@@ -30,8 +30,8 @@ from multidict import CIMultiDict, CIMultiDictProxy
 from pydantic import BaseModel
 from yarl import URL
 
-from ..connection.base import NamedBytesIO
 from ..types.file_info import FileInfo
+from ..types.named_bytes_io import NamedBytesIO
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable

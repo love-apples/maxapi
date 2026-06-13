@@ -14,8 +14,8 @@ from unittest.mock import AsyncMock, Mock, patch
 import aiohttp
 import pytest
 from aiohttp import CookieJar
-from maxapi.connection.base import NamedBytesIO
 from maxapi.types.file_info import FileInfo
+from maxapi.types.named_bytes_io import NamedBytesIO
 from maxapi.utils.file_inspector import (
     FileInspector,
     RangeDownloader,

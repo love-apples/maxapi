@@ -5,7 +5,6 @@ import base64
 import mimetypes
 import re
 from datetime import datetime
-from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import unquote
@@ -27,6 +26,7 @@ from ..exceptions.download_file import DownloadFileError
 from ..exceptions.max import InvalidToken, MaxApiError, MaxConnection
 from ..loggers import logger_bot
 from ..types.bot_mixin import BotMixin
+from ..types.named_bytes_io import NamedBytesIO
 from ..utils.runtime import bind_bot
 
 if TYPE_CHECKING:
@@ -49,21 +49,6 @@ class _RetryableServerError(Exception):
     def __init__(self, status: int) -> None:
         self.status = status
         super().__init__(f"Server error {status}")
-
-
-class NamedBytesIO(BytesIO):
-    """
-    BytesIO с поддержкой атрибута .name для единообразия с файловыми объектами.
-    """
-
-    __slots__ = ("name",)
-    name: str | None
-
-    def __init__(
-        self, buffer: bytes = b"", *, name: str | None = None
-    ) -> None:
-        super().__init__(buffer)
-        self.name = name  # Соответствует протоколу typing.BinaryIO
 
 
 def _on_backoff(details: Details) -> None:
