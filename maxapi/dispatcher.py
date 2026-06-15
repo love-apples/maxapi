@@ -13,7 +13,7 @@ from warnings import warn
 
 from aiohttp import ClientConnectorError
 
-from .context import BaseContext, MemoryContext
+from .context import BaseContext, ContextManager, MemoryContext
 from .enums.update import UpdateType
 from .exceptions.dispatcher import HandlerException, MiddlewareException
 from .exceptions.max import InvalidToken, MaxApiError, MaxConnection
@@ -116,6 +116,7 @@ class Dispatcher(BotMixin):
         self.router_id = router_id
         self.storage = storage
         self.storage_kwargs = storage_kwargs
+        self._fsm = ContextManager(self, self.__get_context)
 
         self.event_handlers: list[Handler] = []
         self.handlers_by_type: dict[UpdateType, list[Handler]] | None = None
@@ -197,6 +198,13 @@ class Dispatcher(BotMixin):
             update_type=UpdateType.USER_REMOVED, router=self
         )
         self.on_started = Event(update_type=UpdateType.ON_STARTED, router=self)
+
+    @property
+    def fsm(self) -> ContextManager:
+        """
+        Менеджер FSM-контекстов диспетчера.
+        """
+        return self._fsm
 
     @property
     def middlewares(self) -> list[BaseMiddleware]:
@@ -510,7 +518,7 @@ class Dispatcher(BotMixin):
             user_id: Идентификатор пользователя.
 
         Returns:
-            BaseContext: Контекст.
+            Контекст.
         """
 
         key = (chat_id, user_id)
@@ -1538,6 +1546,14 @@ class Router(Dispatcher):
         """
 
         super().__init__(router_id)
+
+    @property
+    def fsm(self) -> ContextManager:
+        """
+        Роутер не владеет FSM-хранилищем.
+        """
+        msg = "Router не владеет FSM-хранилищем. Используйте dp.fsm."
+        raise RuntimeError(msg)
 
 
 class Event:

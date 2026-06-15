@@ -39,8 +39,8 @@ class BaseContext(ABC):
         """Полностью заменяет контекст данных."""
 
     @abstractmethod
-    async def update_data(self, **kwargs: Any) -> None:
-        """Обновляет контекст данных новыми значениями."""
+    async def update_data(self, **kwargs: Any) -> dict[str, Any]:
+        """Обновляет данные и возвращает актуальный контекст."""
 
     @abstractmethod
     async def set_state(self, state: State | str | None = None) -> None:
