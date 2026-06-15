@@ -1,11 +1,10 @@
 #!/usr/bin/env python
-"""Утилита для получения chat_id для тестов.
+"""Утилита для проверки chat_id для интеграционных тестов.
 
 Использование:
     python tests/get_chat_id.py
 """
 
-import asyncio
 import os
 import sys
 from pathlib import Path
@@ -23,30 +22,19 @@ try:
 except ImportError:
     sys.exit(1)
 
-# Core Stuff
-from maxapi import Bot
 
+def main() -> None:
+    """Проверяет наличие корректного TEST_CHAT_ID."""
+    chat_id = os.environ.get("TEST_CHAT_ID")
 
-async def main():
-    """Получает список чатов."""
-    token = os.environ.get("MAX_BOT_TOKEN")
-
-    if not token:
+    if chat_id is None:
         sys.exit(1)
-
-    bot = Bot(token=token)
 
     try:
-        chats = await bot.get_chats(count=10)
-
-        if not chats.chats or len(chats.chats) == 0:
-            return
-
-    except Exception:
+        int(chat_id)
+    except ValueError:
         sys.exit(1)
-    finally:
-        await bot.close_session()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

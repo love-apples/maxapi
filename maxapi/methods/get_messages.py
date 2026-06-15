@@ -5,7 +5,6 @@ from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
 from ..enums.http_method import HTTPMethod
 from ..types.message import Messages
-from ..utils.time import to_ms
 
 if TYPE_CHECKING:
     from ..bot import Bot
@@ -33,10 +32,18 @@ class GetMessages(BaseConnection):
         message_ids: list[str] | None = None,
         from_time: datetime | int | None = None,
         to_time: datetime | int | None = None,
-        count: int = 50,
+        count: int | None = 50,
     ):
         if count is not None and not (1 <= count <= 100):
             raise ValueError("count не должен быть меньше 1 или больше 100")
+
+        has_chat_id = chat_id is not None
+        has_message_ids = bool(message_ids)
+        if has_chat_id == has_message_ids:
+            raise ValueError(
+                "Нужно передать ровно один из параметров: "
+                "chat_id или message_ids"
+            )
 
         super().__init__()
         self.bot = bot
@@ -61,25 +68,26 @@ class GetMessages(BaseConnection):
 
         params = bot.params.copy()
 
-        if self.chat_id:
+        if self.chat_id is not None:
             params["chat_id"] = self.chat_id
 
         if self.message_ids:
             params["message_ids"] = ",".join(self.message_ids)
 
-        if self.from_time:
+        if self.from_time is not None:
             if isinstance(self.from_time, datetime):
-                params["from"] = to_ms(self.from_time)
+                params["from"] = int(self.from_time.timestamp())
             else:
                 params["from"] = self.from_time
 
-        if self.to_time:
+        if self.to_time is not None:
             if isinstance(self.to_time, datetime):
-                params["to"] = to_ms(self.to_time)
+                params["to"] = int(self.to_time.timestamp())
             else:
                 params["to"] = self.to_time
 
-        params["count"] = self.count
+        if self.count is not None:
+            params["count"] = self.count
 
         response = await super().request(
             method=HTTPMethod.GET,
