@@ -499,6 +499,10 @@ class Bot(BaseConnection):
         """
         Удаляет чат.
 
+        .. deprecated:: 1.1.0
+            Метод удалён из официальной swagger-спецификации API MAX.
+            Использование не рекомендуется.
+
         https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-
 
         Args:
@@ -507,6 +511,14 @@ class Bot(BaseConnection):
         Returns:
             DeletedChat: Результат удаления чата.
         """
+
+        warnings.warn(
+            "bot.delete_chat() устарел и отсутствует в официальной "
+            "swagger-спецификации API MAX. "
+            "Использование не рекомендуется.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         return await DeleteChat(
             bot=self,
@@ -647,6 +659,11 @@ class Bot(BaseConnection):
         """
         Получает список чатов бота.
 
+        .. deprecated:: 1.1.0
+            Начиная с июня 2026 года метод ``GET /chats`` больше не
+            поддерживается. API не предоставляет готового способа получить
+            список групповых чатов и каналов, в которые добавлен бот.
+
         https://dev.max.ru/docs-api/methods/GET/chats
 
         Args:
@@ -658,6 +675,15 @@ class Bot(BaseConnection):
         Returns:
             Chats: Список чатов.
         """
+
+        warnings.warn(
+            "bot.get_chats() устарел: начиная с июня 2026 года "
+            "GET /chats больше не поддерживается. API не предоставляет "
+            "готового способа получить список групповых чатов и каналов, "
+            "в которые добавлен бот.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         return await GetChats(bot=self, count=count, marker=marker).fetch()
 

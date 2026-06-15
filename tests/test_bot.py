@@ -237,6 +237,36 @@ class TestBotMethods:
             assert mock_fetch.called
 
     @pytest.mark.asyncio
+    async def test_delete_chat_is_deprecated(self, bot):
+        """Тест предупреждения для удалённого из swagger метода."""
+        from maxapi.methods.delete_chat import DeleteChat
+
+        with patch.object(
+            DeleteChat, "fetch", new_callable=AsyncMock
+        ) as mock_fetch:
+            mock_fetch.return_value = Mock()
+
+            with pytest.deprecated_call(match="delete_chat"):
+                await bot.delete_chat(chat_id=12345)
+
+            mock_fetch.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_get_chats_is_deprecated(self, bot):
+        """Тест предупреждения для неподдерживаемого GET /chats."""
+        from maxapi.methods.get_chats import GetChats
+
+        with patch.object(
+            GetChats, "fetch", new_callable=AsyncMock
+        ) as mock_fetch:
+            mock_fetch.return_value = Mock()
+
+            with pytest.deprecated_call(match="GET /chats"):
+                await bot.get_chats(count=5)
+
+            mock_fetch.assert_awaited_once()
+
+    @pytest.mark.asyncio
     async def test_send_action_with_wrong_action_type(self, bot):
         """Тест вызова send_action с передачей неверного типа (не SenderAction, не str)."""  # noqa: E501
         # Core Stuff
@@ -301,14 +331,6 @@ class TestBotIntegration:
         subs = await integration_bot.get_subscriptions()
         assert subs is not None
         assert hasattr(subs, "subscriptions")
-
-    @pytest.mark.asyncio
-    @pytest.mark.integration
-    async def test_get_chats_integration(self, integration_bot):
-        """Интеграционный тест get_chats."""
-        chats = await integration_bot.get_chats(count=5)
-        assert chats is not None
-        assert hasattr(chats, "chats")
 
     @pytest.mark.asyncio
     async def test_close_session_cleanup(self, integration_bot):

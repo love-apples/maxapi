@@ -17,25 +17,12 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.fixture
-async def test_chat_id(integration_bot, test_chat_id_from_env):
+async def test_chat_id(test_chat_id_from_env):
     """Получение тестового chat_id.
 
-    Приоритет:
-    1. Из переменной окружения TEST_CHAT_ID (или .env файла)
-    2. Из первого чата в списке чатов бота
+    ID берётся из переменной окружения TEST_CHAT_ID или .env файла.
     """
-    # Сначала проверяем переменную окружения
-    if test_chat_id_from_env:
-        return test_chat_id_from_env
-
-    # Если не указан в окружении, пытаемся получить из списка чатов
-    try:
-        chats = await integration_bot.get_chats(count=1)
-        if chats.chats and len(chats.chats) > 0:
-            return chats.chats[0].chat_id
-        return None
-    except Exception:
-        return None
+    return test_chat_id_from_env
 
 
 class TestBotIntegration:
@@ -51,15 +38,6 @@ class TestBotIntegration:
         assert me.is_bot is True
         # _me устанавливается только в Dispatcher.check_me(), не в Bot.get_me()
         # Проверяем только корректность возвращаемых данных
-
-    @pytest.mark.asyncio
-    async def test_get_chats(self, integration_bot):
-        """Тест получения списка чатов."""
-        chats = await integration_bot.get_chats(count=5)
-
-        assert chats is not None
-        assert hasattr(chats, "chats")
-        assert isinstance(chats.chats, list)
 
     @pytest.mark.asyncio
     async def test_get_subscriptions(self, integration_bot):

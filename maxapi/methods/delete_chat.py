@@ -1,3 +1,4 @@
+import warnings
 from typing import TYPE_CHECKING, cast
 
 from ..connection.base import BaseConnection
@@ -13,6 +14,10 @@ class DeleteChat(BaseConnection):
     """
     Класс для удаления чата через API.
 
+    .. deprecated:: 1.1.0
+        Метод удалён из официальной swagger-спецификации API MAX.
+        Использование не рекомендуется.
+
     https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-
 
     Attributes:
@@ -21,6 +26,14 @@ class DeleteChat(BaseConnection):
     """
 
     def __init__(self, bot: "Bot", chat_id: int):
+        warnings.warn(
+            "DeleteChat устарел и отсутствует в официальной "
+            "swagger-спецификации API MAX. "
+            "Использование не рекомендуется.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         super().__init__()
         self.bot = bot
         self.chat_id = chat_id
