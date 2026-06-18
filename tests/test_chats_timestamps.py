@@ -22,6 +22,11 @@ def test_convert_timestamps_none():
     assert chat.participants is None
 
 
+def test_chat_message_id_is_not_sdk_field():
+    """Поле chat_message_id отсутствует в актуальной модели Chat."""
+    assert "chat_message_id" not in Chat.model_fields
+
+
 def test_convert_timestamps_millis_to_datetime():
     # подготовим временные метки в миллисекундах
     now = datetime.now()

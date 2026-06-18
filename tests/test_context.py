@@ -98,12 +98,15 @@ class TestMemoryContext:
     async def test_update_data(self, sample_context):
         """Тест обновления данных."""
         await sample_context.set_data({"key1": "value1"})
-        await sample_context.update_data(key2="value2", key3=123)
+        updated_data = await sample_context.update_data(
+            key2="value2", key3=123
+        )
 
         data = await sample_context.get_data()
         assert data["key1"] == "value1"
         assert data["key2"] == "value2"
         assert data["key3"] == 123
+        assert updated_data == data
 
     async def test_get_state_none(self, sample_context):
         """Тест получения состояния (изначально None)."""
@@ -306,6 +309,9 @@ class TestRedisContext:
     async def test_redis_update_data(self):
         """update_data вызывает Lua-обновление и продлевает TTL."""
         redis = AsyncMock()
+        redis.eval.return_value = json.dumps(
+            {"food": "mint", "city": "Samara"}
+        )
         context = RedisContext(
             chat_id=1,
             user_id=2,
@@ -313,7 +319,7 @@ class TestRedisContext:
             ttl=1.25,
         )
 
-        await context.update_data(food="mint", city="Samara")
+        updated_data = await context.update_data(food="mint", city="Samara")
 
         redis.eval.assert_awaited_once()
         _, keys_count, key, payload, ttl_ms = redis.eval.await_args.args
@@ -321,6 +327,7 @@ class TestRedisContext:
         assert key == context.data_key
         assert json.loads(payload) == {"food": "mint", "city": "Samara"}
         assert ttl_ms == "1250"
+        assert updated_data == {"food": "mint", "city": "Samara"}
         redis.pexpire.assert_awaited_once_with(context.state_key, 1250)
 
     async def test_redis_update_data_without_ttl(self):
@@ -329,9 +336,12 @@ class TestRedisContext:
         pexpire при этом не вызывается.
         """
         redis = AsyncMock()
+        redis.eval.return_value = json.dumps(
+            {"food": "mint", "city": "Samara"}
+        )
         context = RedisContext(chat_id=1, user_id=2, redis_client=redis)
 
-        await context.update_data(food="mint", city="Samara")
+        updated_data = await context.update_data(food="mint", city="Samara")
 
         redis.eval.assert_awaited_once()
         _, keys_count, key, payload, ttl_arg = redis.eval.await_args.args
@@ -342,6 +352,7 @@ class TestRedisContext:
             "ARGV[2] должен быть пустой строкой, "
             "чтобы Lua не входила в ветку PX"
         )
+        assert updated_data == {"food": "mint", "city": "Samara"}
         redis.pexpire.assert_not_awaited()
 
     async def test_redis_set_state_none(self):

@@ -501,6 +501,10 @@ class Bot(BaseConnection):
         """
         Удаляет чат.
 
+        .. deprecated:: 1.1.0
+            Метод удалён из официальной swagger-спецификации API MAX.
+            Использование не рекомендуется.
+
         https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-
 
         Args:
@@ -509,6 +513,14 @@ class Bot(BaseConnection):
         Returns:
             DeletedChat: Результат удаления чата.
         """
+
+        warnings.warn(
+            "bot.delete_chat() устарел и отсутствует в официальной "
+            "swagger-спецификации API MAX. "
+            "Использование не рекомендуется.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         return await DeleteChat(
             bot=self,
@@ -521,19 +533,23 @@ class Bot(BaseConnection):
         message_ids: list[str] | None = None,
         from_time: datetime | int | None = None,
         to_time: datetime | int | None = None,
-        count: int = 50,
+        count: int | None = 50,
     ) -> Messages:
         """
-        Получает сообщения из чата.
+        Получает сообщения из чата или по списку идентификаторов.
+
+        Нужно передать ровно один из параметров: `chat_id`
+        или `message_ids`.
 
         https://dev.max.ru/docs-api/methods/GET/messages
 
         Args:
-            chat_id: ID чата.
-            message_ids: ID сообщений.
+            chat_id: ID чата, из которого нужно получить сообщения.
+            message_ids: ID сообщений, которые нужно получить.
             from_time: Начало периода.
             to_time: Конец периода.
-            count: Количество сообщений.
+            count: Количество сообщений. Если None, параметр
+                не отправляется.
 
         Returns:
             Messages: Список сообщений.
@@ -645,6 +661,11 @@ class Bot(BaseConnection):
         """
         Получает список чатов бота.
 
+        .. deprecated:: 1.1.0
+            Начиная с июня 2026 года метод ``GET /chats`` больше не
+            поддерживается. API не предоставляет готового способа получить
+            список групповых чатов и каналов, в которые добавлен бот.
+
         https://dev.max.ru/docs-api/methods/GET/chats
 
         Args:
@@ -657,16 +678,25 @@ class Bot(BaseConnection):
             Chats: Список чатов.
         """
 
+        warnings.warn(
+            "bot.get_chats() устарел: начиная с июня 2026 года "
+            "GET /chats больше не поддерживается. API не предоставляет "
+            "готового способа получить список групповых чатов и каналов, "
+            "в которые добавлен бот.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         return await GetChats(bot=self, count=count, marker=marker).fetch()
 
     async def get_chat_by_link(self, link: str) -> Chat:
         """
-        Получает чат по ссылке.
+        Получает канал по публичной ссылке или алиасу.
 
         https://dev.max.ru/docs-api/methods/GET/chats/-chatLink-
 
         Args:
-            link: Ссылка на чат.
+            link: Публичная ссылка или алиас канала.
 
         Returns:
             Chat: Объект чата.
