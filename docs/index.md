@@ -64,6 +64,11 @@ if __name__ == '__main__':
     Если у бота установлены подписки на Webhook, события не будут приходить при методе `start_polling`. 
     Удалите подписки через `await bot.delete_webhook()` перед `start_polling`.
 
+!!! tip "Polling — только для разработки"
+    Long Polling ограничен по скорости и сроку хранения событий и **не подходит
+    для production-окружения**. Для боевого окружения используйте Webhook —
+    подробнее в разделе [Webhook vs Polling](guides/webhook_vs_polling.md).
+
 ### Пример с фильтрами
 
 Использование MagicFilter для более гибкой фильтрации:
