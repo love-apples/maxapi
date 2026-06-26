@@ -18,10 +18,11 @@ from .enums.update import UpdateType
 from .exceptions.dispatcher import HandlerException, MiddlewareException
 from .exceptions.max import InvalidToken, MaxApiError, MaxConnection
 from .filters import filter_attrs
-from .filters.handler import Handler
+from .filters.handler import ErrorHandler, Handler
 from .loggers import logger_dp
 from .methods.types.getted_updates import process_update_request
 from .types.bot_mixin import BotMixin
+from .types.error_event import ErrorEvent as ErrorEventObject
 from .utils.commands import extract_commands
 from .utils.time import from_ms, to_ms
 from .webhook import DEFAULT_HOST, DEFAULT_PATH, DEFAULT_PORT, BaseMaxWebhook
@@ -119,6 +120,7 @@ class Dispatcher(BotMixin):
         self._fsm = ContextManager(self, self.__get_context)
 
         self.event_handlers: list[Handler] = []
+        self.error_handlers: list[ErrorHandler] = []
         self.handlers_by_type: dict[UpdateType, list[Handler]] | None = None
         self.contexts: OrderedDict[
             tuple[int | None, int | None], BaseContext
@@ -151,6 +153,8 @@ class Dispatcher(BotMixin):
         self.message_created = Event(
             update_type=UpdateType.MESSAGE_CREATED, router=self
         )
+        self.errors = ErrorEventObserver(router=self)
+        self.error = self.errors
         self.bot_added = Event(update_type=UpdateType.BOT_ADDED, router=self)
         self.bot_removed = Event(
             update_type=UpdateType.BOT_REMOVED, router=self
@@ -439,6 +443,11 @@ class Dispatcher(BotMixin):
                     handler.update_type, []
                 ).append(handler)
 
+            for error_handler in router.error_handlers:
+                error_handler.func_args = frozenset(
+                    inspect.signature(error_handler.func_event).parameters,
+                )
+
         self._cached_router_entries = self._build_dispatch_entries()
 
         logger_dp.info(
@@ -585,6 +594,31 @@ class Dispatcher(BotMixin):
         await handler.func_event(event_object)
 
     @staticmethod
+    async def call_error_handler(
+        handler: ErrorHandler,
+        event_object: ErrorEventObject,
+        data: dict[str, Any],
+    ) -> None:
+        """
+        Вызывает обработчик ошибки с подходящими kwargs.
+
+        Args:
+            handler: Обработчик ошибки.
+            event_object: Событие ошибки.
+            data: Данные, накопленные фильтрами.
+        """
+        if data:
+            func_args = handler.func_args or frozenset(
+                inspect.signature(handler.func_event).parameters,
+            )
+            kwargs = {k: v for k, v in data.items() if k in func_args}
+            if kwargs:
+                await handler.func_event(event_object, **kwargs)
+                return
+
+        await handler.func_event(event_object)
+
+    @staticmethod
     def _resolve_filter_kwargs(
         base_filter: BaseFilter, data: dict[str, Any]
     ) -> dict[str, Any]:
@@ -608,7 +642,7 @@ class Dispatcher(BotMixin):
 
     @staticmethod
     async def process_base_filters(
-        event: UpdateUnion,
+        event: Any,
         filters: list[BaseFilter],
         data: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
@@ -923,6 +957,7 @@ class Dispatcher(BotMixin):
         current_state: Any | None,
         router_id: Any,
         process_info: str,
+        router: Router | Dispatcher | None = None,
     ) -> None:
         """
         Выполняет обработчик с построением цепочки middleware
@@ -960,6 +995,7 @@ class Dispatcher(BotMixin):
                     "state": current_state,
                 },
                 cause=e,
+                router=router,
             ) from e
 
     async def handle_raw_response(
@@ -992,6 +1028,7 @@ class Dispatcher(BotMixin):
 
     async def _run_router_handlers(
         self,
+        router: Router | Dispatcher,
         event: UpdateUnion,
         data: dict[str, Any],
         matching_handlers: list[Handler],
@@ -1025,6 +1062,7 @@ class Dispatcher(BotMixin):
                 current_state=current_state,
                 router_id=router_id,
                 process_info=process_info,
+                router=router,
             )
             logger_dp.info(
                 "Обработано: router_id: %s | %s", router_id, process_info
@@ -1037,6 +1075,7 @@ class Dispatcher(BotMixin):
         event: UpdateUnion,
         handler_data: dict[str, Any],
         *,
+        router: Router | Dispatcher,
         matching_handlers: list[Handler],
         memory_context: BaseContext,
         current_state: Any | None,
@@ -1057,6 +1096,7 @@ class Dispatcher(BotMixin):
         """
         try:
             if await self._run_router_handlers(
+                router=router,
                 event=event,
                 data=handler_data,
                 matching_handlers=matching_handlers,
@@ -1076,6 +1116,7 @@ class Dispatcher(BotMixin):
 
     async def _dispatch_to_router(
         self,
+        router: Router | Dispatcher,
         event_object: UpdateUnion,
         data: dict[str, Any],
         matching_handlers: list[Handler],
@@ -1098,6 +1139,7 @@ class Dispatcher(BotMixin):
 
         process_fn = functools.partial(
             self._invoke_router_handlers,
+            router=router,
             matching_handlers=matching_handlers,
             memory_context=memory_context,
             current_state=current_state,
@@ -1172,6 +1214,7 @@ class Dispatcher(BotMixin):
                 continue
 
             if await self._dispatch_to_router(
+                router=router,
                 event_object=event_object,
                 data=data,
                 matching_handlers=matching_handlers,
@@ -1246,6 +1289,139 @@ class Dispatcher(BotMixin):
         data["_router_id"] = router_id
         data["_is_handled"] = is_handled
 
+    @staticmethod
+    def _unwrap_dispatch_exception(
+        exception: BaseException,
+    ) -> BaseException:
+        """Возвращает исходную ошибку из диспетчерской обёртки."""
+        if isinstance(exception, (HandlerException, MiddlewareException)):
+            return exception.cause or exception
+        return exception
+
+    def _build_error_event(
+        self,
+        event_object: UpdateUnion,
+        exception: BaseException,
+        *,
+        memory_context: BaseContext,
+        current_state: Any | None,
+        router_id: Any,
+        process_info: str,
+    ) -> ErrorEventObject:
+        """Создаёт объект события ошибки."""
+        return ErrorEventObject(
+            update=event_object,
+            exception=self._unwrap_dispatch_exception(exception),
+            handler_exception=(
+                exception if isinstance(exception, HandlerException) else None
+            ),
+            middleware_exception=(
+                exception
+                if isinstance(exception, MiddlewareException)
+                else None
+            ),
+            context=memory_context,
+            raw_state=current_state,
+            router_id=router_id,
+            process_info=process_info,
+        )
+
+    async def _check_error_handler_match(
+        self,
+        handler: ErrorHandler,
+        event: ErrorEventObject,
+        data: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        """Проверяет фильтры обработчика ошибки."""
+        if handler.filters and not filter_attrs(event, *handler.filters):
+            return None
+
+        if not handler.base_filters:
+            return {}
+
+        return await self.process_base_filters(
+            event=event, filters=handler.base_filters, data=data
+        )
+
+    async def _run_error_handlers(
+        self,
+        router: Router | Dispatcher,
+        event: ErrorEventObject,
+        data: dict[str, Any],
+    ) -> bool:
+        """Запускает первый подходящий обработчик ошибки роутера."""
+        for handler in router.error_handlers:
+            match_data = await self._check_error_handler_match(
+                handler=handler,
+                event=event,
+                data=data,
+            )
+            if match_data is None:
+                continue
+
+            data.update(match_data)
+            await self.call_error_handler(handler, event, data)
+            return True
+
+        return False
+
+    async def _process_error(
+        self,
+        event_object: UpdateUnion,
+        exception: BaseException,
+        *,
+        memory_context: BaseContext,
+        current_state: Any | None,
+        router_id: Any,
+        process_info: str,
+    ) -> bool:
+        """
+        Диспатчит ошибку в ``errors``-обработчики.
+
+        Returns:
+            True, если ошибка обработана пользовательским handler.
+        """
+        error_event = self._build_error_event(
+            event_object=event_object,
+            exception=exception,
+            memory_context=memory_context,
+            current_state=current_state,
+            router_id=router_id,
+            process_info=process_info,
+        )
+        data: dict[str, Any] = {
+            "context": memory_context,
+            "raw_state": current_state,
+            "router_id": router_id,
+            "process_info": process_info,
+            "exception": error_event.exception,
+            "handler_exception": error_event.handler_exception,
+            "middleware_exception": error_event.middleware_exception,
+            "update": event_object,
+        }
+
+        try:
+            router = (
+                exception.router
+                if isinstance(exception, HandlerException)
+                else None
+            )
+            if (
+                router is not None
+                and router is not self
+                and await self._run_error_handlers(router, error_event, data)
+            ):
+                return True
+
+            return await self._run_error_handlers(self, error_event, data)
+        except Exception as error_handler_exception:
+            logger_dp.exception(
+                "Ошибка в обработчике ошибки: %r | исходная ошибка: %r",
+                error_handler_exception,
+                exception,
+            )
+            return False
+
     async def handle(self, event_object: UpdateUnion) -> None:
         """
         Основной обработчик события. Применяет фильтры, middleware
@@ -1311,10 +1487,35 @@ class Dispatcher(BotMixin):
                 )
 
         except HandlerException as e:
+            if await self._process_error(
+                event_object=event_object,
+                exception=e,
+                memory_context=memory_context,
+                current_state=current_state,
+                router_id=e.router_id,
+                process_info=process_info,
+            ):
+                return
             logger_dp.exception(
                 "Ошибка в обработчике: %s",
                 e,
                 exc_info=e.cause,
+            )
+        except MiddlewareException as e:
+            if await self._process_error(
+                event_object=event_object,
+                exception=e,
+                memory_context=memory_context,
+                current_state=current_state,
+                router_id=e.router_id,
+                process_info=process_info,
+            ):
+                return
+            logger_dp.exception(
+                "Ошибка при обработке события: router_id: %s | %s | %r",
+                e.router_id,
+                process_info,
+                e,
             )
         except Exception as e:
             logger_dp.exception(
@@ -1554,6 +1755,52 @@ class Router(Dispatcher):
         """
         msg = "Router не владеет FSM-хранилищем. Используйте dp.fsm."
         raise RuntimeError(msg)
+
+
+class ErrorEventObserver:
+    """
+    Декоратор для регистрации обработчиков ошибок.
+    """
+
+    def __init__(self, router: Dispatcher | Router) -> None:
+        """
+        Инициализирует декоратор ошибок.
+
+        Args:
+            router: Экземпляр роутера или диспетчера.
+        """
+        self.router = router
+
+    def register(
+        self, func_event: Callable, *args: Any, **_kwargs: Any
+    ) -> Callable:
+        """
+        Регистрирует функцию как обработчик ошибки.
+
+        Args:
+            func_event: Функция-обработчик ошибки.
+            *args: Типы исключений или фильтры.
+
+        Returns:
+            Callable: Исходная функция.
+        """
+        self.router.error_handlers.append(
+            ErrorHandler(*args, func_event=func_event)
+        )
+        return func_event
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Callable:
+        """
+        Регистрирует функцию как обработчик ошибки через декоратор.
+
+        Returns:
+            Callable: Декоратор.
+        """
+
+        def decorator(func_event: Callable) -> Callable:
+            return self.register(func_event, *args, **kwargs)
+
+        return decorator
 
 
 class Event:

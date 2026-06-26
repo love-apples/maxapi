@@ -27,6 +27,7 @@ __all__ = [
     "DialogMuted",
     "DialogRemoved",
     "DialogUnmuted",
+    "ErrorEvent",
     "FromUserRef",
     "Icon",
     "InputMedia",
@@ -91,6 +92,7 @@ from ..types.attachments.upload import AttachmentPayload, AttachmentUpload
 from ..types.callback import Callback
 from ..types.chats import Chat, ChatMember, Chats, Icon
 from ..types.command import BotCommand
+from ..types.error_event import ErrorEvent
 from ..types.fetchable import ChatRef, FromUserRef, LazyRef
 from ..types.message import (
     LinkedMessage,
