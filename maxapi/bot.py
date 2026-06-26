@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from aiohttp import ClientSession
 
 from .client.default import DefaultConnectionProperties
+from .client.ssl import with_default_connector
 from .connection.base import BaseConnection
 from .enums.sender_action import SenderAction
 from .exceptions.max import InvalidToken
@@ -341,7 +342,7 @@ class Bot(BaseConnection):
                 base_url=self.api_url,
                 timeout=self.default_connection.timeout,
                 headers=self.headers,
-                **self.default_connection.kwargs,
+                **with_default_connector(self.default_connection.kwargs),
             )
         return self.session
 

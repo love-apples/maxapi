@@ -105,7 +105,7 @@ def test_chat_id_from_env():
 def mock_session():
     """Фикстура с мок-сессией aiohttp."""
     session = AsyncMock(spec=aiohttp.ClientSession)
-    session.base_url = "https://platform-api.max.ru"
+    session.base_url = "https://platform-api2.max.ru"
     session.headers = {}
     session.close = AsyncMock()
     session.request = AsyncMock()

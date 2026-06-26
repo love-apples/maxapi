@@ -119,7 +119,10 @@ class TestUploadFileTempSession:
                 type=UploadType.FILE,
             )
 
-            mock_cs_cls.assert_called_once_with(timeout=expected_timeout)
+            mock_cs_cls.assert_called_once()
+            kwargs = mock_cs_cls.call_args.kwargs
+            assert kwargs["timeout"] is expected_timeout
+            assert "connector" in kwargs
             mock_temp_session.post.assert_called_once()
 
     @pytest.mark.asyncio
@@ -159,7 +162,10 @@ class TestUploadFileTempSession:
                 type=UploadType.FILE,
             )
 
-            mock_cs_cls.assert_called_once_with(timeout=expected_timeout)
+            mock_cs_cls.assert_called_once()
+            kwargs = mock_cs_cls.call_args.kwargs
+            assert kwargs["timeout"] is expected_timeout
+            assert "connector" in kwargs
 
     @pytest.mark.asyncio
     async def test_uses_existing_session_when_open(self, tmp_path):
