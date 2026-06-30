@@ -67,6 +67,17 @@ class TestResolveChat:
         bot.get_chat_by_id.assert_not_called()
         assert fixture_dialog_removed.chat is None
 
+    async def test_bot_stopped_never_fetches_chat(
+        self, bot, fixture_bot_stopped
+    ):
+        """BotStopped всегда пропускает загрузку чата."""
+        bot.get_chat_by_id = AsyncMock()
+
+        await _resolve_chat(fixture_bot_stopped, bot)
+
+        bot.get_chat_by_id.assert_not_called()
+        assert fixture_bot_stopped.chat is None
+
     async def test_event_with_top_level_chat_id_fetches_chat(
         self, bot, fixture_bot_started
     ):
@@ -586,6 +597,17 @@ class TestEnrichEvent:
         assert result.chat is None
         assert result.from_user is fixture_bot_removed.user
 
+    async def test_auto_requests_false_bot_stopped_keeps_chat_none(
+        self, bot, fixture_bot_stopped
+    ):
+        """BotStopped не должен получать lazy chat ref."""
+        bot.auto_requests = False
+
+        result = await enrich_event(fixture_bot_stopped, bot)
+
+        assert result.chat is None
+        assert result.from_user is fixture_bot_stopped.user
+
     async def test_full_pipeline_message_created(
         self, bot, fixture_message_created
     ):
@@ -623,6 +645,16 @@ class TestEnrichEvent:
         assert result.chat is None
         assert result.from_user is fixture_dialog_removed.user
 
+    async def test_full_pipeline_bot_stopped(self, bot, fixture_bot_stopped):
+        """BotStopped: chat=None, from_user=user."""
+        bot.get_chat_by_id = AsyncMock()
+
+        result = await enrich_event(fixture_bot_stopped, bot)
+
+        bot.get_chat_by_id.assert_not_called()
+        assert result.chat is None
+        assert result.from_user is fixture_bot_stopped.user
+
     async def test_full_pipeline_message_removed_chat_type(
         self, bot, fixture_message_removed
     ):
@@ -653,7 +685,6 @@ class TestEnrichEvent:
             "fixture_user_added",
             "fixture_bot_added",
             "fixture_bot_started",
-            "fixture_bot_stopped",
             "fixture_chat_title_changed",
             "fixture_dialog_cleared",
             "fixture_dialog_muted",
