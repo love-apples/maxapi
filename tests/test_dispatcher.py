@@ -1798,7 +1798,7 @@ class TestStartPollingWithAresponses:
 
     aresponses перехватывает TCP-соединения на уровне резолвера и
     перенаправляет их на локальный mock-сервер — никакого реального
-    подключения к platform-api.max.ru не происходит.
+    подключения к platform-api2.max.ru не происходит.
     """
 
     async def test_start_polling_calls_http_endpoints_and_stops(
@@ -1825,7 +1825,7 @@ class TestStartPollingWithAresponses:
 
         # ── Mock GET /me ──────────────────────────────────────────────────
         aresponses.add(
-            "platform-api.max.ru",
+            "platform-api2.max.ru",
             "/me",
             "get",
             {
@@ -1838,7 +1838,7 @@ class TestStartPollingWithAresponses:
 
         # ── Mock GET /updates (1st): 500 → MaxApiError → returns None ────
         aresponses.add(
-            "platform-api.max.ru",
+            "platform-api2.max.ru",
             "/updates",
             "get",
             web.Response(
@@ -1850,7 +1850,7 @@ class TestStartPollingWithAresponses:
 
         # ── Mock GET /updates (2nd): 200 → events dict → dispatch ────────
         aresponses.add(
-            "platform-api.max.ru",
+            "platform-api2.max.ru",
             "/updates",
             "get",
             {"updates": [], "marker": 0},

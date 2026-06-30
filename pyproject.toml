@@ -29,7 +29,7 @@ Homepage = "https://github.com/love-apples/maxapi"
 license-files = []
 
 [tool.setuptools.package-data]
-maxapi = ["py.typed"]
+maxapi = ["py.typed", "client/russiantrustedca.pem"]
 
 [build-system]
 requires = [
