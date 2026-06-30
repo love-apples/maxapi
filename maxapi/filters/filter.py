@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from ..types.updates import UpdateUnion
+from typing import Any
 
 
 class BaseFilter:
@@ -18,5 +15,5 @@ class BaseFilter:
             фильтру.
     """
 
-    async def __call__(self, event: UpdateUnion) -> bool | dict[str, Any]:
+    async def __call__(self, event: Any) -> bool | dict[str, Any]:
         return True
