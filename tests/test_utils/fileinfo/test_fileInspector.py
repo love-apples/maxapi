@@ -409,7 +409,7 @@ class TestFileInspectorLocalErrors:
         file_path.write_bytes(b"fake data")
 
         # Мокаем открытие файла — выбрасывает ошибку
-        with patch("anyio.open_file") as mock_open:
+        with patch("aiofiles.open") as mock_open:
             mock_open.side_effect = OSError("read error")
 
             inspector = FileInspector()

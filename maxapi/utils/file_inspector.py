@@ -18,8 +18,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast
 from urllib.parse import unquote, urlparse
 
+import aiofiles
 import aiohttp
-import anyio
 from aiohttp import (
     ClientConnectionError,
     ClientResponse,
@@ -196,7 +196,7 @@ class RangeFileReader(RangeReader):
         self._file: Any = None
 
     async def __aiter__(self) -> AsyncIterator[None]:
-        async with await anyio.open_file(self.path, "rb") as f:
+        async with aiofiles.open(self.path, "rb") as f:
             self._file = f
             self.head = await f.read(self._initial_head_size())
             logger.debug(
@@ -236,7 +236,7 @@ class RangeFileReader(RangeReader):
         return await self._file.read(chunk_size)
 
     async def close(self):
-        pass  # anyio.open_file закрывается через async with
+        pass  # aiofiles.open закрывается через async with
 
 
 # ============================================================================
@@ -835,7 +835,7 @@ class FileInspector:
         url: str,
         *,
         session: aiohttp.ClientSession | None = None,
-        timeout: int = 30,  # noqa: ASYNC109
+        timeout: int = 30,
         max_total: int = 256_000,
         max_retries: int = 3,
         retry_on_statuses: tuple[int, ...] = DEFAULT_RETRY_STATUSES,
@@ -916,8 +916,8 @@ class FileInspector:
             FileInfo: Результат инспекции.
         """
         try:
-            file_path = anyio.Path(path)
-            if not await file_path.exists():
+            file_path = Path(path)
+            if not file_path.exists():  # noqa: ASYNC240
                 self.last_file_info = self._build_file_info(
                     url=path,
                     parse_note="Файл не найден",
@@ -925,7 +925,7 @@ class FileInspector:
                 )
                 return self.last_file_info
             reader = RangeFileReader(
-                str(await file_path.resolve()),
+                str(file_path.resolve()),  # noqa: ASYNC240
                 full_read_threshold=full_read_threshold,
             )
             return await self._inspect(reader, url=path)
