@@ -97,18 +97,6 @@ class FileInfo(BaseModel):
             return f"{self.file_size / 1_048_576:.1f} МБ"
         return f"{self.file_size / 1_073_741_824:.2f} ГБ"
 
-    def __eq__(self, other: object) -> bool:
-        """Сравнение без учёта ``url`` и ``file_name``."""
-        if not isinstance(other, FileInfo):
-            return NotImplemented
-        s = self.model_dump()
-        o = other.model_dump()
-        del s["url"]
-        del o["url"]
-        del s["file_name"]
-        del o["file_name"]
-        return s == o
-
     def __str__(self) -> str:
         """Форматированная строка для вывода пользователю."""
         lines = []

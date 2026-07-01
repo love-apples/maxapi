@@ -436,8 +436,10 @@ class TestFileInspectorBytes:
         info_bio = await inspector.inspect_bytes(bio, file_name=file_name)
         info_byt = await inspector.inspect_bytes(byt, file_name=file_name)
 
-        assert info_nbio == info_bio
-        assert info_bio == info_byt
+        assert info_nbio.model_dump(exclude={"url", "file_name"}) == \
+               info_bio.model_dump(exclude={"url", "file_name"})
+        assert info_bio.model_dump(exclude={"url", "file_name"}) == \
+               info_byt.model_dump(exclude={"url", "file_name"})
 
     @pytest.mark.parametrize("name", FIXTURES_ID)
     async def test_expected_fields_match(self, name, all_fixtures):

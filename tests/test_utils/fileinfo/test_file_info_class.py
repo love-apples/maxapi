@@ -60,23 +60,6 @@ class TestFileInfoFileSizeHuman:
         )
 
 
-class TestFileInfoEq:
-    """__eq__: сравнение без url и file_name."""
-
-    def test_equal_same_content(self):
-        a = FileInfo(url="a", file_name="x", mime_type="image/png")
-        b = FileInfo(url="b", file_name="y", mime_type="image/png")
-        assert a == b
-
-    def test_not_equal_different_content(self):
-        a = FileInfo(url="a", mime_type="image/png")
-        b = FileInfo(url="b", mime_type="image/jpeg")
-        assert a != b
-
-    def test_not_implemented(self):
-        assert FileInfo(url="u").__eq__(42) is NotImplemented
-
-
 class TestFileInfoStr:
     """__str__: проверяем ветки форматирования."""
 
