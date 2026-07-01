@@ -28,6 +28,7 @@ __all__ = [
     "DialogRemoved",
     "DialogUnmuted",
     "ErrorEvent",
+    "FileInfo",
     "FromUserRef",
     "Icon",
     "InputMedia",
@@ -125,6 +126,7 @@ from ..types.updates.message_removed import MessageRemoved
 from ..types.updates.user_added import UserAdded
 from ..types.updates.user_removed import UserRemoved
 from ..types.users import ChatAdmin, User
+from .file_info import FileInfo
 from .input_media import InputMedia, InputMediaBuffer
 
 if TYPE_CHECKING:

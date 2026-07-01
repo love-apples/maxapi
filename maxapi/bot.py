@@ -43,6 +43,7 @@ from .methods.send_callback import SendCallback
 from .methods.send_message import SendMessage
 from .methods.subscribe_webhook import SubscribeWebhook
 from .methods.unsubscribe_webhook import UnsubscribeWebhook
+from .utils.file_inspector import FileInspector
 from .utils.message import process_input_media
 
 if TYPE_CHECKING:
@@ -81,6 +82,7 @@ if TYPE_CHECKING:
     from .types.attachments.video import Video
     from .types.chats import Chat, ChatMember, Chats
     from .types.command import BotCommand
+    from .types.file_info import FileInfo
     from .types.input_media import InputMedia, InputMediaBuffer
     from .types.message import Message, Messages, NewMessageLink
     from .types.updates.message_callback import MessageForCallback
@@ -766,6 +768,42 @@ class Bot(BaseConnection):
         """
 
         return await GetVideo(bot=self, video_token=video_token).fetch()
+
+    async def get_file_info(
+        self, url: str, *, timeout: int = 10, **kwargs
+    ) -> FileInfo:
+        """
+        Получает метаинформацию о файле по URL.
+
+        Аналог ``telegram.Bot.get_file``, но с расширенными полями
+        (размеры, длительность, битрейт и т.д.). Работает с внутренними
+        и внешними URL. Для загрузки используются HTTP Range-запросы
+        (обычно 2–128 КБ вместо полного файла).
+
+        Args:
+            url: URL файла.
+            timeout: Таймаут HTTP-запроса в секундах.
+
+            kwargs:
+            - session : aiohttp-сессия (создаётся при ``None``).
+                Если вам нужно отправить авторизацию (``Authorization``,
+                ``Cookie``) на сторонний URL, укажите
+                ``allow_external_auth=True``. Без этого флага авторизация
+                отправляется только на доверенные домены
+                (``oneme.ru``, ``okcdn.ru``).
+            - max_total : Максимальный объём скачанных данных (байт).
+            - max_retries : Число повторных попыток при ``retry_on_statuses``.
+            - retry_on_statuses : HTTP-статусы, при которых повторять запрос.
+            - retry_backoff_factor : Множитель задержки между попытками
+                (1.0 → 1с, 2с, 4с).
+            - allow_external_auth : Разрешить отправку авторизации на
+                сторонние домены (по умолчанию только oneme.ru/okcdn.ru).
+
+        Returns:
+            FileInfo: Метаинформация о файле.
+        """
+        inspector = FileInspector()
+        return await inspector.inspect_url(url, timeout=timeout, **kwargs)
 
     async def send_callback(
         self,
