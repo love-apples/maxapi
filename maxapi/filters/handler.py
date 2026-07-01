@@ -6,6 +6,7 @@ from magic_filter import MagicFilter
 
 from ..context.state_machine import State, StatesGroup
 from ..enums.update import UpdateType
+from ..filters.exception_type import ExceptionTypeFilter
 from ..filters.filter import BaseFilter
 from ..filters.middleware import BaseMiddleware, HandlerCallable
 from ..filters.state import StateFilter
@@ -80,3 +81,42 @@ class Handler:
     def prepare_state_filter(self) -> None:
         """Подготавливает фильтр состояний для hot-path dispatch."""
         self.state_filter = StateFilter(self.states) if self.states else None
+
+
+class ErrorHandler:
+    """
+    Обработчик ошибки диспетчера.
+
+    Используется декораторами ``Dispatcher.errors`` и ``Router.errors``.
+    """
+
+    def __init__(self, *args: Any, func_event: Callable) -> None:
+        """
+        Создаёт обработчик ошибки.
+
+        Args:
+            *args: Типы исключений, MagicFilter или BaseFilter.
+            func_event: Функция-обработчик ошибки.
+        """
+        self.func_event: Callable = func_event
+        self.filters: list[MagicFilter] = []
+        self.base_filters: list[BaseFilter] = []
+        self.func_args: frozenset[str] | None = None
+
+        exception_types: list[type[BaseException]] = []
+
+        for arg in args:
+            if isinstance(arg, MagicFilter):
+                self.filters.append(arg)
+            elif isinstance(arg, BaseFilter):
+                self.base_filters.append(arg)
+            elif isclass(arg) and issubclass(arg, BaseException):
+                exception_types.append(arg)
+            else:
+                logger_dp.info(
+                    f"Неизвестный фильтр ошибки `{arg}` "
+                    f"при регистрации `{func_event.__name__}`"
+                )
+
+        if exception_types:
+            self.base_filters.insert(0, ExceptionTypeFilter(*exception_types))

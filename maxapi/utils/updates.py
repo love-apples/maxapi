@@ -62,7 +62,7 @@ def _extract_chat_id(event: UpdateUnion) -> int | None:
 def _can_resolve_chat(event: UpdateUnion) -> bool:
     """Проверить, допустима ли загрузка chat для данного события."""
 
-    return not isinstance(event, (DialogRemoved, BotRemoved))
+    return not isinstance(event, (DialogRemoved, BotRemoved, BotStopped))
 
 
 async def _resolve_chat(event: UpdateUnion, bot: Bot) -> None:

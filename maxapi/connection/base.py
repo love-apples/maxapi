@@ -20,6 +20,7 @@ from aiohttp import (
     FormData,
 )
 
+from ..client.ssl import connector_kwargs
 from ..enums.api_path import ApiPath
 from ..enums.update import UpdateType
 from ..exceptions.download_file import DownloadFileError
@@ -85,7 +86,7 @@ class BaseConnection(BotMixin):
     HTTP-запроса, обработка ответа).
     """
 
-    API_URL = "https://platform-api.max.ru"
+    API_URL = "https://platform-api2.max.ru"
     RETRY_DELAY = 2
     ATTEMPTS_COUNT = 5
     AFTER_MEDIA_INPUT_DELAY = 2.0
@@ -251,7 +252,8 @@ class BaseConnection(BotMixin):
         else:
             async with (
                 ClientSession(
-                    timeout=bot.default_connection.timeout
+                    timeout=bot.default_connection.timeout,
+                    **connector_kwargs(bot.default_connection.kwargs),
                 ) as temp_session,
                 temp_session.post(url=url, data=form) as response,
             ):
@@ -304,7 +306,8 @@ class BaseConnection(BotMixin):
         else:
             async with (
                 ClientSession(
-                    timeout=bot.default_connection.timeout
+                    timeout=bot.default_connection.timeout,
+                    **connector_kwargs(bot.default_connection.kwargs),
                 ) as temp_session,
                 temp_session.post(url=url, data=form) as response,
             ):

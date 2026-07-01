@@ -116,6 +116,7 @@ nav:
     - Channel_post: filters/channel_post.md
     - Contact: filters/contact.md
     - Command: filters/command.md
+    - Exception_type: filters/exception_type.md
     - Filter: filters/filter.md
     - Handler: filters/handler.md
     - Middleware: filters/middleware.md

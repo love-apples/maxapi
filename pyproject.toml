@@ -1,6 +1,6 @@
 [project]
 name = "maxapi"
-version = "1.2.0"
+version = "1.2.1"
 description = "Библиотека для разработки чат-ботов с помощью API мессенджера MAX"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -29,7 +29,7 @@ Homepage = "https://github.com/love-apples/maxapi"
 license-files = []
 
 [tool.setuptools.package-data]
-maxapi = ["py.typed"]
+maxapi = ["py.typed", "client/russiantrustedca.pem"]
 
 [build-system]
 requires = [

@@ -1,5 +1,13 @@
 from .bot import Bot
 from .dispatcher import Dispatcher, Router
-from .filters import F
+from .filters import ExceptionTypeFilter, F
+from .types import ErrorEvent
 
-__all__ = ["Bot", "Dispatcher", "F", "Router"]
+__all__ = [
+    "Bot",
+    "Dispatcher",
+    "ErrorEvent",
+    "ExceptionTypeFilter",
+    "F",
+    "Router",
+]

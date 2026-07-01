@@ -11,6 +11,7 @@ class HandlerException(Exception):
     process_info: str
     memory_context: dict[str, Any]
     cause: BaseException | None = None
+    router: Any | None = None
 
     def __str__(self) -> str:
         parts = [

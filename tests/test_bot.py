@@ -69,6 +69,11 @@ class TestBotInitialization:
         bot = Bot(token=mock_bot_token, default_connection=connection)
         assert bot.default_connection is connection
 
+    def test_bot_default_api_url(self, mock_bot_token):
+        """Тест URL API по умолчанию."""
+        bot = Bot(token=mock_bot_token)
+        assert bot.api_url == "https://platform-api2.max.ru"
+
     def test_bot_init_after_input_media_delay(self, mock_bot_token):
         """Тест создания бота с custom задержкой после медиа."""
         bot = Bot(token=mock_bot_token, after_input_media_delay=5.0)

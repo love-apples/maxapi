@@ -274,6 +274,105 @@ async def start(event: MessageCreated):
     лишнего в лог. Однако `handle()` не будет логировать ошибку — вся
     ответственность за уведомление об ошибке ложится на middleware.
 
+## Обработчики ошибок
+
+Для централизованной обработки исключений используйте `Dispatcher.errors`
+или `Router.errors`. Такой обработчик вызывается после того, как ошибка
+в хендлере или middleware была обёрнута диспетчером.
+
+```python
+from maxapi import Dispatcher, ErrorEvent
+from maxapi.filters import ExceptionTypeFilter
+
+
+dp = Dispatcher()
+
+
+@dp.message_created()
+async def handler(event):
+    raise ValueError("Некорректные данные")
+
+
+@dp.errors(ValueError)
+async def value_error_handler(event: ErrorEvent):
+    # event.exception — оригинальный ValueError
+    await event.update.message.answer("Не удалось обработать сообщение")
+
+
+@dp.errors(ExceptionTypeFilter(RuntimeError))
+async def runtime_error_handler(event: ErrorEvent):
+    ...
+```
+
+В декоратор можно передавать:
+
+- классы исключений, например `ValueError` или `RuntimeError`;
+- обычные `BaseFilter`, включая `ExceptionTypeFilter`;
+- `MagicFilter` через `F`, например `F.exception.args == ("boom",)`.
+
+Если фильтр возвращает `dict`, данные передаются в error handler так же,
+как в обычных обработчиках:
+
+```python
+from maxapi import ErrorEvent
+from maxapi.filters import BaseFilter
+
+
+class ErrorTextFilter(BaseFilter):
+    async def __call__(self, event: ErrorEvent) -> dict[str, str]:
+        return {"error_text": str(event.exception)}
+
+
+@dp.errors(ValueError, ErrorTextFilter())
+async def log_error(event: ErrorEvent, error_text: str):
+    print(error_text)
+```
+
+`ErrorEvent` содержит:
+
+- `update` — исходное событие;
+- `exception` — оригинальное исключение;
+- `handler_exception` — `HandlerException`, если упал handler;
+- `middleware_exception` — `MiddlewareException`, если упала middleware;
+- `context` и `raw_state` — FSM-контекст и состояние на момент ошибки;
+- `router_id` и `process_info` — диагностическая информация диспетчера.
+
+### Ошибки роутеров
+
+`Router.errors` обрабатывает ошибки только своих обработчиков. Если
+подходящий обработчик ошибки на роутере не найден, диспетчер пробует
+глобальные обработчики `Dispatcher.errors`.
+
+```python
+from maxapi import Dispatcher, Router, ErrorEvent
+
+
+dp = Dispatcher()
+admin_router = Router("admin")
+
+
+@admin_router.message_created()
+async def admin_handler(event):
+    raise PermissionError("forbidden")
+
+
+@admin_router.errors(PermissionError)
+async def admin_error(event: ErrorEvent):
+    await event.update.message.answer("Недостаточно прав")
+
+
+@dp.errors(Exception)
+async def fallback_error(event: ErrorEvent):
+    print(f"Необработанная ошибка: {event.exception}")
+
+
+dp.include_routers(admin_router)
+```
+
+У `Dispatcher` также есть алиас `error`, поэтому
+`dp.error.register(func, ValueError)` эквивалентен
+`dp.errors.register(func, ValueError)`.
+
 ## Примеры использования
 
 - Логирование

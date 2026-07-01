@@ -7,6 +7,7 @@ from magic_filter import MagicFilter, MagicT
 
 from .channel_post import ChannelPostFilter
 from .contact import Contact, ContactFilter
+from .exception_type import ExceptionTypeFilter
 from .filter import BaseFilter
 from .state import StateFilter
 
@@ -82,6 +83,7 @@ __all__ = [
     "ChannelPostFilter",
     "Contact",
     "ContactFilter",
+    "ExceptionTypeFilter",
     "F",
     "StateFilter",
     "filter_attrs",
