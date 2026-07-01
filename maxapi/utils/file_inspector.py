@@ -3477,3 +3477,99 @@ class FileInspector:
                 break
 
         return None
+
+
+# ============================================================================
+# Convenience functions
+# ============================================================================
+
+async def inspect_url(
+    url: str,
+    *,
+    session: aiohttp.ClientSession | None = None,
+    timeout: int = 30,
+    max_total: int | None = None,
+    max_retries: int = 3,
+    retry_on_statuses: tuple[int, ...] = DEFAULT_RETRY_STATUSES,
+    retry_backoff_factor: float = 1.0,
+    allow_external_auth: bool = False,
+) -> FileInfo:
+    """Инспектирует удалённый файл по URL.
+
+    Удобная обёртка над :class:`FileInspector`.
+
+    Args:
+        url: URL файла.
+        session: aiohttp-сессия (создаётся при ``None``).
+        timeout: Таймаут HTTP-запроса в секундах.
+        max_total: Максимальный объём скачанных данных (байт).
+            По умолчанию 256 КБ.
+        max_retries: Число повторных попыток при ``retry_on_statuses``.
+        retry_on_statuses: HTTP-статусы, при которых повторять запрос.
+        retry_backoff_factor: Множитель задержки между попытками.
+        allow_external_auth: Разрешить отправку авторизации на сторонние
+            домены.
+
+    Returns:
+        FileInfo: Результат инспекции.
+    """
+    inspector = FileInspector()
+    return await inspector.inspect_url(
+        url,
+        session=session,
+        timeout=timeout,
+        max_total=max_total or 256_000,
+        max_retries=max_retries,
+        retry_on_statuses=retry_on_statuses,
+        retry_backoff_factor=retry_backoff_factor,
+        allow_external_auth=allow_external_auth,
+    )
+
+
+async def inspect_file(
+    path: str,
+    *,
+    full_read_threshold: int = 20_971_520,
+) -> FileInfo:
+    """Инспектирует локальный файл.
+
+    Удобная обёртка над :class:`FileInspector`.
+
+    Args:
+        path: Путь к файлу.
+        full_read_threshold: Файлы меньше этого размера читаются целиком.
+
+    Returns:
+        FileInfo: Результат инспекции.
+    """
+    inspector = FileInspector()
+    return await inspector.inspect_file(
+        path,
+        full_read_threshold=full_read_threshold,
+    )
+
+
+async def inspect_bytes(
+    data: bytes | BytesIO | NamedBytesIO,
+    *,
+    file_name: str = "",
+    full_read_threshold: int = 20_971_520,
+) -> FileInfo:
+    """Инспектирует уже загруженные байты.
+
+    Удобная обёртка над :class:`FileInspector`.
+
+    Args:
+        data: Содержимое файла.
+        file_name: Имя файла (для guess MIME по расширению).
+        full_read_threshold: Буферы меньше этого размера читаются целиком.
+
+    Returns:
+        FileInfo: Результат инспекции.
+    """
+    inspector = FileInspector()
+    return await inspector.inspect_bytes(
+        data,
+        file_name=file_name,
+        full_read_threshold=full_read_threshold,
+    )
