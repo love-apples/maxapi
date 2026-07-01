@@ -680,7 +680,7 @@ class RangeDownloader(RangeReader):
         self._expand_count += 1
 
         try:
-            chunk = await self._response.content.read(chunk_size)
+            chunk = await self._read_response(self._response, chunk_size)
             if chunk:
                 logger.debug("Докачано: %s байт", len(chunk))
             return chunk
