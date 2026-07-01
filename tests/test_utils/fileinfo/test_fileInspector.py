@@ -9,7 +9,7 @@ import mimetypes
 import struct
 from io import BytesIO
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import aiohttp
 import pytest
@@ -268,7 +268,7 @@ class TestFileInspectorError:
 
     async def test_client_error_returns_error_status(self):
         """aiohttp.ClientError → FileInfo(status='error')."""
-        session = AsyncMock()
+        session = MagicMock()
         session.get = AsyncMock(side_effect=aiohttp.ClientConnectionError())
 
         inspector = FileInspector()
@@ -281,7 +281,7 @@ class TestFileInspectorError:
 
     async def test_generic_exception_returns_error_status(self):
         """Любое исключение → FileInfo(status='error')."""
-        session = AsyncMock()
+        session = MagicMock()
         session.get = AsyncMock(side_effect=ValueError("unexpected"))
 
         inspector = FileInspector()
@@ -303,7 +303,7 @@ class TestFileInspectorError:
         bad = factory.make_head_response("url")
         bad.status, bad.ok = 503, False
         good = factory.make_head_response("url")
-        session = AsyncMock()
+        session = MagicMock()
         # 503 → retry → 200 (один GET: meta + head).
         session.get = AsyncMock(side_effect=[bad, bad, good])
 
@@ -324,7 +324,7 @@ class TestFileInspectorError:
         )
         bad = factory.make_head_response("url")
         bad.status, bad.ok = 503, False
-        session = AsyncMock()
+        session = MagicMock()
         session.get = AsyncMock(side_effect=[bad, bad])
 
         info = await FileInspector().inspect_url(
@@ -344,7 +344,7 @@ class TestFileInspectorError:
         )
         bad = factory.make_head_response("url")
         bad.status, bad.ok = 404, False
-        session = AsyncMock()
+        session = MagicMock()
         session.get = AsyncMock(side_effect=[bad])
 
         info = await FileInspector().inspect_url(
@@ -793,7 +793,7 @@ class TestRangeDownloaderAdvanced:
         resp.content = AsyncMock()
         resp.content.read = AsyncMock(return_value=b"\xff\xd8\xff\xe0")
         resp.read = AsyncMock(return_value=b"\xff\xd8\xff\xe0")
-        rd.session = AsyncMock()
+        rd.session = MagicMock()
         rd.session.get = AsyncMock(return_value=resp)
         await rd._fetch_meta()
         assert rd._meta is not None
