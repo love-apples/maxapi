@@ -7,6 +7,7 @@ from ...types.attachments.buttons import InlineButtonUnion
 from ...types.attachments.upload import AttachmentUpload
 from ...types.users import User
 from ...utils.vcf import VcfInfo, parse_vcf_info
+from .url_str import UrlStr
 
 if TYPE_CHECKING:
     from ...bot import Bot
@@ -37,7 +38,7 @@ class PhotoAttachmentPayload(BaseModel):
 
     photo_id: int
     token: str
-    url: str
+    url: UrlStr | str
 
 
 class OtherAttachmentPayload(BaseModel):
@@ -49,7 +50,7 @@ class OtherAttachmentPayload(BaseModel):
         token: Опциональный токен доступа.
     """
 
-    url: str
+    url: UrlStr | str
     token: str | None = None
 
 
@@ -62,7 +63,7 @@ class ShareAttachmentPayload(BaseModel):
         token: Токен доступа.
     """
 
-    url: str | None = None
+    url: UrlStr | str | None = None
     token: str | None = None
 
 

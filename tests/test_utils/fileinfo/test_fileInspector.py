@@ -1010,6 +1010,7 @@ class TestRangeDownloaderAdvanced:
         resp.content = AsyncMock()
         resp.content.read = AsyncMock(return_value=b"\xff\xd8\xff\xe0")
         resp.read = AsyncMock(return_value=b"\xff\xd8\xff\xe0")
+        resp.closed = False
         dl._response = resp
         count = 0
         async for _ in dl:
