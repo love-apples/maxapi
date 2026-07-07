@@ -110,9 +110,12 @@ class RangeReader(ABC):
         *,
         full_read_threshold: int = 20_971_520,
     ):
-        self.content_type = content_type
-        self.file_name = file_name
-        self.file_size = file_size
+        self.meta = FileMeta(
+            url="",
+            content_type=content_type,
+            file_name=file_name,
+            file_size=file_size,
+        )
         self._full_read_threshold = full_read_threshold
         self.head: bytes = b""
         self.tail: bytes = b""
@@ -120,10 +123,14 @@ class RangeReader(ABC):
         self._expand_count = 0
 
     def _initial_head_size(self) -> int:
-        if self.file_size and self.file_size <= MAX_HEAD:
-            return self.file_size
-        if self.file_size and self.file_size < self._full_read_threshold:
-            return self.file_size
+        """Возвращает объём начального скачивания"""
+        if self.meta.file_size and self.meta.file_size <= MAX_HEAD:
+            return self.meta.file_size
+        if (
+            self.meta.file_size
+            and self.meta.file_size < self._full_read_threshold
+        ):
+            return self.meta.file_size
         return INITIAL_HEAD
 
     @abstractmethod
@@ -215,7 +222,7 @@ class RangeFileReader(RangeReader):
     async def _fetch_tail(self, size: int) -> bytes:
         if not self._file:
             return b""
-        await self._file.seek(max(0, (self.file_size or 0) - size))
+        await self._file.seek(max(0, (self.meta.file_size or 0) - size))
         return await self._file.read()
 
     async def _expand_head(self, *, target: int | None = None) -> bytes:
@@ -273,7 +280,7 @@ class RangeBytesReader(RangeReader):
         self._head_pos = 0
 
     async def __aiter__(self) -> AsyncIterator[None]:
-        file_size = self.file_size or 0
+        file_size = self.meta.file_size or 0
         end = min(self._initial_head_size(), file_size)
         self.head = bytes(self._raw[:end])
         self._head_pos = end
@@ -290,12 +297,12 @@ class RangeBytesReader(RangeReader):
             yield
 
     async def _fetch_tail(self, size: int) -> bytes:
-        file_size = self.file_size or 0
+        file_size = self.meta.file_size or 0
         tail_start = max(0, file_size - size)
         return bytes(self._raw[tail_start:])
 
     async def _expand_head(self, *, target: int | None = None) -> bytes:
-        file_size = self.file_size or 0
+        file_size = self.meta.file_size or 0
         if target is not None:
             end = min(target, MAX_HEAD, file_size)
             if end <= self._head_pos:
@@ -408,11 +415,10 @@ class RangeDownloader(RangeReader):
         self._response: ClientResponse | None = None
         self._closed: bool = False
         self._fetched_meta: bool = False
-        self._meta: FileMeta | None = None
 
     @property
     def final_url(self) -> str:
-        return self._meta.url if self._meta else self.original_url
+        return self.meta.url or self.original_url
 
     @property
     def _is_trusted_url(self) -> bool:
@@ -471,15 +477,17 @@ class RangeDownloader(RangeReader):
             return
 
         if not self._fetched_meta:
-            initial = INITIAL_HEAD
-            if self.file_size and self.file_size <= MAX_HEAD:
-                initial = self.file_size
-            await self._fetch_meta_and_head(initial)
+            await self._fetch_meta()
+
+            initial = self._initial_head_size()
+            if initial > 0:
+                self.head = await self._read_head_bytes(initial)
+
             self._fetched_meta = True
             logger.debug(
                 "URL initial head=%s, file_size=%s",
                 len(self.head),
-                self.file_size,
+                self.meta.file_size,
             )
 
         yield
@@ -491,16 +499,6 @@ class RangeDownloader(RangeReader):
                 "head len=%s, tail len=%s", len(self.head), len(self.tail)
             )
             yield
-
-    async def _fetch_meta_and_head(self, size: int) -> None:
-        """Один GET: заголовки + первые size байт тела."""
-        await self._fetch_meta()
-        self._meta = cast(FileMeta, self._meta)
-        self.content_type = self._meta.content_type
-        self.file_name = self._meta.file_name
-        self.file_size = self._meta.file_size
-        if size > 0:
-            self.head = await self._read_head_bytes(size)
 
     async def _read_head_bytes(self, size: int) -> bytes:
         if not self._response:
@@ -540,7 +538,7 @@ class RangeDownloader(RangeReader):
                 "Передайте allow_external_auth=True чтобы разрешить.",
                 self.original_url,
             )
-            self._meta = FileMeta(
+            self.meta = FileMeta(
                 url=self.original_url,
                 content_type="",
                 file_name="",
@@ -574,7 +572,7 @@ class RangeDownloader(RangeReader):
         except ValueError:
             file_size = None
 
-        self._meta = FileMeta(
+        self.meta = FileMeta(
             url=final_url,
             content_type=content_type,
             file_name=file_name,
@@ -598,12 +596,12 @@ class RangeDownloader(RangeReader):
             size: сколько байт читать.
             tail: True — Range-запрос с конца, False — начало файла.
         """
-        if not self._meta:
+        if not self.meta:
             raise RuntimeError("Метаинформация не загружена.")
 
         if tail:
             response = await self._request_with_retry(
-                self._meta.url,
+                self.meta.url,
                 allow_range=tail,
                 range_bytes=size if tail else None,
             )
@@ -978,30 +976,30 @@ class FileInspector:
         self._last_reader = reader
         dims: dict = {}
         status: Literal["ok", "partial", "error"] = "partial"
-        content_type = reader.content_type
+        content_type = reader.meta.content_type
 
         async for _ in reader:
-            if reader.content_type:
-                content_type = reader.content_type
+            if reader.meta.content_type:
+                content_type = reader.meta.content_type
 
             if not reader.head:
                 self.last_file_info = self._build_file_info(
                     url=url,
                     mime_type=content_type,
-                    file_name=reader.file_name,
-                    file_size=reader.file_size,
+                    file_name=reader.meta.file_name,
+                    file_size=reader.meta.file_size,
                     status="error",
                     parse_note="Недостаточно данных для "
                     "определения параметров",
                 )
                 return self.last_file_info
 
-            if self._looks_like_html(reader.head, reader.content_type):
+            if self._looks_like_html(reader.head, reader.meta.content_type):
                 self.last_file_info = self._build_file_info(
                     url=url,
-                    mime_type=reader.content_type,
-                    file_name=reader.file_name,
-                    file_size=reader.file_size,
+                    mime_type=reader.meta.content_type,
+                    file_name=reader.meta.file_name,
+                    file_size=reader.meta.file_size,
                     status="error",
                     parse_note="Файл не является медиа (HTML-страница)",
                 )
@@ -1010,14 +1008,14 @@ class FileInspector:
             raw = self.parse_media_dimensions(
                 reader.head,
                 reader.tail,
-                reader.file_size,
+                reader.meta.file_size,
             )
             if raw is None:
                 self.last_file_info = self._build_file_info(
                     url=url,
                     mime_type=content_type,
-                    file_name=reader.file_name,
-                    file_size=reader.file_size,
+                    file_name=reader.meta.file_name,
+                    file_size=reader.meta.file_size,
                     status="partial",
                 )
                 return self.last_file_info
@@ -1044,8 +1042,8 @@ class FileInspector:
                 self.last_file_info = self._build_file_info(
                     url=url,
                     mime_type=content_type,
-                    file_name=reader.file_name,
-                    file_size=reader.file_size,
+                    file_name=reader.meta.file_name,
+                    file_size=reader.meta.file_size,
                     dims=dims,
                     status="ok",
                 )
@@ -1056,8 +1054,8 @@ class FileInspector:
         self.last_file_info = self._build_file_info(
             url=url,
             mime_type=content_type,
-            file_name=reader.file_name,
-            file_size=reader.file_size,
+            file_name=reader.meta.file_name,
+            file_size=reader.meta.file_size,
             dims=dims or None,
             status=status,
         )

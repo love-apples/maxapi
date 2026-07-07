@@ -684,22 +684,22 @@ class TestFileInspectorAdvanced:
         from maxapi.utils.file_inspector import RangeDownloader
 
         rd = RangeDownloader("https://x.com/f")
-        rd.file_size = 100
+        rd.meta.file_size = 100
         assert rd._initial_head_size() == 100
 
     async def test_initial_head_size_below_threshold(self):
         rd = RangeDownloader("https://x.com/f")
-        rd.file_size = 1_000_000
+        rd.meta.file_size = 1_000_000
         assert rd._initial_head_size() == 1_000_000
 
     async def test_initial_head_size_large_file(self):
         rd = RangeDownloader("https://x.com/f")
-        rd.file_size = 100_000_000
+        rd.meta.file_size = 100_000_000
         assert rd._initial_head_size() == 4096
 
     async def test_initial_head_size_no_file_size(self):
         rd = RangeDownloader("https://x.com/f")
-        rd.file_size = None
+        rd.meta.file_size = None
         assert rd._initial_head_size() == 4096
 
 
@@ -767,7 +767,7 @@ class TestRangeDownloaderAdvanced:
         rd.session = MagicMock()
         rd.session.get = AsyncMock(return_value=resp)
         await rd._fetch_meta()
-        assert rd._meta is not None
+        assert rd.meta is not None
 
     async def test_fetch_meta_bad_content_length(self):
         rd = RangeDownloader("https://x.com/f")
@@ -785,18 +785,18 @@ class TestRangeDownloaderAdvanced:
         resp.read = AsyncMock(return_value=b"\xff\xd8\xff\xe0")
         rd.session = _make_mock_session(b"", None)
         await rd._fetch_meta()
-        assert rd._meta is not None
-        assert rd._meta.file_size is None
+        assert rd.meta is not None
+        assert rd.meta.file_size is None
 
     async def test_fetch_chunk_no_meta_raises(self):
         rd = RangeDownloader("https://x.com/f")
-        rd._meta = None
+        rd.meta = None # type: ignore
         with pytest.raises(RuntimeError, match="Метаинформация не загружена"):
             await rd._fetch_chunk(100, tail=True)
 
     async def test_fetch_chunk_tail_range_check_returns_empty(self):
         rd = RangeDownloader("https://x.com/f")
-        rd._meta = Mock(url="https://x.com/f")
+        rd.meta = Mock(url="https://x.com/f")
         resp = AsyncMock(
             status=200,
             ok=True,
@@ -820,7 +820,7 @@ class TestRangeDownloaderAdvanced:
 
     async def test_fetch_chunk_tail_not_200_206_returns_empty(self):
         rd = RangeDownloader("https://x.com/f")
-        rd._meta = Mock(url="https://x.com/f")
+        rd.meta = Mock(url="https://x.com/f")
         resp = AsyncMock(
             status=204,
             ok=True,
@@ -843,7 +843,7 @@ class TestRangeDownloaderAdvanced:
 
     async def test_fetch_chunk_head_no_response_raises(self):
         rd = RangeDownloader("https://x.com/f")
-        rd._meta = Mock(url="https://x.com/f")
+        rd.meta = Mock(url="https://x.com/f")
         rd._response = None
         with pytest.raises(RuntimeError, match="Response отсутствует"):
             await rd._fetch_chunk(100, tail=False)
@@ -992,8 +992,8 @@ class TestRangeDownloaderAdvanced:
 
     async def test_aiter_with_file_size_under_max_head(self):
         dl = RangeDownloader("https://x.com/f")
-        dl.file_size = 100
-        dl._meta = Mock(
+        dl.meta.file_size = 100
+        dl.meta = Mock(
             url="https://x.com/f", content_type="", file_name="", file_size=100
         )
         dl._fetched_meta = True
@@ -1067,13 +1067,13 @@ class TestRangeBytesReaderEdgeCases:
         from maxapi.utils.file_inspector import RangeBytesReader
 
         reader = RangeBytesReader(BytesIO(b"test data for bytes"), "f.txt")
-        assert reader.file_size == 19
+        assert reader.meta.file_size == 19
 
     async def test_bytesio_without_name(self):
         from maxapi.utils.file_inspector import RangeBytesReader
 
         reader = RangeBytesReader(BytesIO(b"test"))
-        assert reader.file_size == 4
+        assert reader.meta.file_size == 4
 
     async def test_named_bytesio_uses_its_name(self):
         from maxapi.utils.file_inspector import RangeBytesReader
@@ -1081,7 +1081,7 @@ class TestRangeBytesReaderEdgeCases:
         nbio = NamedBytesIO(b"test data")
         nbio.name = "test.txt"
         reader = RangeBytesReader(nbio)
-        assert reader.file_name == "test.txt"
+        assert reader.meta.file_name == "test.txt"
 
     async def test_expand_head_target_exhausted(self):
         from maxapi.utils.file_inspector import RangeBytesReader
