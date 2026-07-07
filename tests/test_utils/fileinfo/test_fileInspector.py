@@ -721,7 +721,9 @@ class TestRangeDownloaderAdvanced:
 
     async def test_closed_aiter_returns_immediately(self):
         rd = RangeDownloader("https://x.com/f")
-        rd._closed = True
+        # симулируем состояние после close()
+        rd._fetched_meta = True
+        rd._response = None
         count = 0
         async for _ in rd:
             count += 1

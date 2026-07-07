@@ -4,6 +4,10 @@
 Модуль читает начало и при необходимости конец файла (локально, по HTTP
 или из bytes) и извлекает метаданные: формат, размеры, длительность,
 битрейт. Высокоуровневая точка входа — :class:`FileInspector`.
+
+В случае необходимости, можно сохранить полный файл на диск
+используя уже полученные данные и активное соединение
+с помощью FileInspector.full_file_save()
 """
 
 from __future__ import annotations
@@ -74,6 +78,7 @@ INITIAL_HEAD = 4096
 MAX_HEAD = 256_000
 EXPAND_CHUNK = 4096
 MAX_TAIL = 65_536
+RELEASE_RESPONSE_TIMEOUT = 60
 
 # Ключи метаданных ответа парсера (не попадают в FileInfo).
 NEED_HEAD = "_need_head"
@@ -138,6 +143,14 @@ class RangeReader(ABC):
 
     @abstractmethod
     async def close(self): ...
+
+    @abstractmethod
+    async def full_file_save(
+        self,
+        file_path: str | Path,
+        *,
+        file_name: str | None = None,
+    ) -> Path: ...
 
     @abstractmethod
     async def _fetch_tail(self, size: int) -> bytes: ...
@@ -245,6 +258,22 @@ class RangeFileReader(RangeReader):
     async def close(self):
         pass  # aiofiles.open закрывается через async with
 
+    async def full_file_save(
+        self,
+        file_path: str | Path,
+        *,
+        file_name: str | None = None,
+    ) -> Path:
+        name = file_name or self.meta.file_name or Path(self.path).name
+        dest = Path(file_path) / name
+        async with (
+            aiofiles.open(self.path, "rb") as src,
+            aiofiles.open(dest, "wb") as dst,
+        ):
+            while chunk := await src.read(65536):
+                await dst.write(chunk)
+        return dest
+
 
 # ============================================================================
 # [ ] RangeBytesReader
@@ -325,6 +354,18 @@ class RangeBytesReader(RangeReader):
 
     async def close(self):
         pass
+
+    async def full_file_save(
+        self,
+        file_path: str | Path,
+        *,
+        file_name: str | None = None,
+    ) -> Path:
+        name = file_name or self.meta.file_name or "download.bin"
+        dest = Path(file_path) / name
+        async with aiofiles.open(dest, "wb") as f:
+            await f.write(bytes(self._raw))
+        return dest
 
 
 # ============================================================================
@@ -413,8 +454,14 @@ class RangeDownloader(RangeReader):
 
         # Состояние
         self._response: ClientResponse | None = None
-        self._closed: bool = False
         self._fetched_meta: bool = False
+
+    @property
+    def _closed(self) -> bool:
+        """True, если ответ закрыт или был явно вызван ``close()``."""
+        if not self._fetched_meta:
+            return False
+        return self._response is None or self._response.closed
 
     @property
     def final_url(self) -> str:
@@ -515,11 +562,94 @@ class RangeDownloader(RangeReader):
     # ========================================================================
 
     async def close(self):
-        if not self._closed:
-            if self._response:
-                self._response.release()
-                self._response = None
-            self._closed = True
+        if not self._closed and self._response:
+            self._response.release()
+            self._response = None
+
+    async def full_file_save(
+        self,
+        file_path: str | Path,
+        *,
+        file_name: str | None = None,
+    ) -> Path:
+        """
+        Сохраняет файл целиком на диск, используя уже полученные данные
+        и активное соединение для докачки недостающих данных
+        """
+        if not self._fetched_meta:
+            await self._fetch_meta()
+
+        if self.meta.file_size is None:
+            raise RuntimeError(
+                "Метаданные не получены: невозможно определить размер файла."
+            )
+
+        name = file_name or self.meta.file_name or "download.bin"
+        dest = Path(file_path) / name
+        file_size = self.meta.file_size
+        head, tail = self.head, self.tail
+        head_len, tail_len = len(head), len(tail)
+
+        need = file_size - head_len - tail_len
+        if need <= 0:
+            async with aiofiles.open(dest, "wb") as f:
+                if head_len >= file_size:
+                    await f.write(head[:file_size])
+                    return dest
+
+                if head_len + tail_len >= file_size:
+                    await f.write(head[:file_size - tail_len])
+                    await f.write(tail)
+                    return dest
+
+        # Если запрос мёртв, то освежаем
+        if not self._response or self._response.closed:
+            if self._own_session and (
+                self.session is None or self.session.closed
+            ):
+                self.session = aiohttp.ClientSession(timeout=self.timeout)
+
+            # Пробуем Range-запрос на середину
+            if head_len < file_size - tail_len:
+                resp = await self._request_with_retry(
+                    self.meta.url,
+                    range_start=head_len,
+                    range_end=file_size - tail_len - 1,
+                )
+                if resp.status == 206:
+                    async with resp:
+                        async with aiofiles.open(dest, "wb") as f:
+                            await f.write(head)
+                            async for chunk in resp.content.iter_chunked(
+                                65536
+                            ):
+                                await f.write(chunk)
+                            await f.write(tail)
+                        return dest
+
+            # Range не поддерживается — качаем целиком
+            resp = await self._request_with_retry(self.meta.url)
+            async with resp:
+                async with aiofiles.open(dest, "wb") as f:
+                    async for chunk in resp.content.iter_chunked(65536):
+                        await f.write(chunk)
+                return dest
+
+        async with aiofiles.open(dest, "wb") as f:
+            await f.write(head)
+            need = file_size - head_len - tail_len
+            while need > 0:
+                chunk = await self._response.content.read(min(65536, need))
+                if not chunk:
+                    break
+                await f.write(chunk)
+                self._downloaded += len(chunk)
+                need -= len(chunk)
+            await f.write(tail)
+            return dest
+
+        return dest
+
 
     # ========================================================================
     # Private: Meta
@@ -602,8 +732,7 @@ class RangeDownloader(RangeReader):
         if tail:
             response = await self._request_with_retry(
                 self.meta.url,
-                allow_range=tail,
-                range_bytes=size if tail else None,
+                range_end=size,
             )
             async with response:
                 if response.status not in (200, 206):
@@ -689,10 +818,21 @@ class RangeDownloader(RangeReader):
         self,
         url: str,
         *,
-        allow_range: bool = False,
-        range_bytes: int | None = None,
+        range_start: int | None = None,
+        range_end: int | None = None,
     ) -> ClientResponse:
-        """GET-запрос с retry при серверных ошибках."""
+        """GET-запрос с retry при серверных ошибках и опциональным Range.
+
+        Args:
+            url: URL для запроса.
+            range_start: Начало диапазона (байт).
+                Если ``None``, а ``range_end`` задан — суффикс ``bytes=-N``.
+            range_end: Конец диапазона (байт, включительно).
+                Если ``None``, а ``range_start`` задан — ``bytes=N-``
+                (до конца).
+                Если оба ``None`` — без Range-заголовка (весь файл).
+                Если оба заданы — ``bytes=N-M``.
+        """
         if not self.session:
             raise RuntimeError(
                 "Сессия не установлена. "
@@ -703,8 +843,13 @@ class RangeDownloader(RangeReader):
         for attempt in range(self.max_retries + 1):
             try:
                 headers = dict(self.headers)
-                if allow_range and range_bytes:
-                    headers["Range"] = f"bytes=-{range_bytes}"
+                if range_start is None and range_end is not None:
+                    headers["Range"] = f"bytes=-{range_end}"
+                elif range_start is not None and range_end is not None:
+                    headers["Range"] = f"bytes={range_start}-{range_end}"
+                elif range_start is not None:
+                    headers["Range"] = f"bytes={range_start}-"
+                # оба None — без Range
 
                 response = await self.session.get(url, headers=headers)
             except ClientConnectionError as e:
@@ -812,6 +957,8 @@ class FileInspector:
     def __init__(self):
         self._last_reader: RangeReader | None = None
         self.last_file_info: FileInfo | None = None
+        self._reader_owned_session: bool = False
+        self._close_timeout_task: asyncio.Task | None = None
 
     @property
     def last_head(self) -> bytes:
@@ -864,20 +1011,27 @@ class FileInspector:
             FileInfo: Результат инспекции (в т.ч. при сетевой ошибке).
         """
 
-        try:
-            async with RangeDownloader(
-                url,
-                session=session,
-                timeout=timeout,
-                max_total=max_total,
-                max_retries=max_retries,
-                retry_on_statuses=retry_on_statuses,
-                retry_backoff_factor=retry_backoff_factor,
-                allow_external_auth=allow_external_auth,
-            ) as reader:
-                return await self._inspect(reader, url=url)
+        await self._close_http_reader()
 
+        reader = RangeDownloader(
+            url,
+            session=session,
+            timeout=timeout,
+            max_total=max_total,
+            max_retries=max_retries,
+            retry_on_statuses=retry_on_statuses,
+            retry_backoff_factor=retry_backoff_factor,
+            allow_external_auth=allow_external_auth,
+        )
+        self._reader_owned_session = session is None
+        await reader.__aenter__()
+
+        try:
+            result = await self._inspect(reader, url=url)
         except aiohttp.ClientError as e:
+            await reader.close()
+            if self._reader_owned_session and reader.session:
+                await reader.session.close()
             logger.error("Сетевая ошибка: %s", e)
             self.last_file_info = self._build_file_info(
                 url=url,
@@ -886,6 +1040,9 @@ class FileInspector:
             )
             return self.last_file_info
         except Exception as e:
+            await reader.close()
+            if self._reader_owned_session and reader.session:
+                await reader.session.close()
             logger.exception("Ошибка инспекции: %s", e)
             self.last_file_info = self._build_file_info(
                 url=url,
@@ -893,6 +1050,11 @@ class FileInspector:
                 status="error",
             )
             return self.last_file_info
+
+        self._close_timeout_task = asyncio.create_task(
+            self._close_after_timeout()
+        )
+        return result
 
     async def inspect_file(
         self,
@@ -961,6 +1123,88 @@ class FileInspector:
             data, file_name, full_read_threshold=full_read_threshold
         )
         return await self._inspect(reader, url="")
+
+    # ========================================================================
+    # Публичный метод полного сохранения файла
+    # ========================================================================
+
+    async def full_file_save(
+        self,
+        file_path: str | Path,
+        *,
+        file_name: str | None = None,
+    ) -> Path:
+        """
+        Сохраняет файл целиком на диск, используя уже полученные данные
+        и активное соединение для докачки недостающих данных
+
+        Args:
+            file_path: Директория для сохранения.
+            file_name: Имя файла. Если не указано, используется
+                ``meta.file_name`` из результата инспекции.
+
+        Returns:
+            Path: Абсолютный путь к сохранённому файлу.
+        """
+        if self._close_timeout_task is not None:
+            self._close_timeout_task.cancel()
+            self._close_timeout_task = None
+
+        reader = self._last_reader
+        if reader is None:
+            raise RuntimeError(
+                "Нет данных. Сначала вызовите inspect_url(), "
+                "inspect_file() или inspect_bytes()."
+            )
+
+        if not file_name and self.last_file_info:
+            file_name = self.last_file_info.file_name
+
+        try:
+            return await reader.full_file_save(
+                file_path, file_name=file_name
+            )
+        finally:
+            if isinstance(reader, RangeDownloader):
+                await reader.close()
+                if self._reader_owned_session and reader.session:
+                    await reader.session.close()
+
+    # ========================================================================
+    # Private: управление временем жизни HTTP-соединения
+    # ========================================================================
+
+    async def _close_http_reader(self) -> None:
+        """
+        Закрывает активный HTTP-ридер и владеемую сессию.
+
+        Отменяет таймаут автозакрытия, если он был запущен.
+        """
+        if self._close_timeout_task is not None:
+            self._close_timeout_task.cancel()
+            self._close_timeout_task = None
+
+        reader = self._last_reader
+        if isinstance(reader, RangeDownloader):
+            await reader.close()
+            if self._reader_owned_session and reader.session:
+                await reader.session.close()
+
+    async def _close_after_timeout(
+            self,
+            timeout=RELEASE_RESPONSE_TIMEOUT
+        ) -> None:
+        """
+        Ожидает timeout, затем закрывает HTTP-соединение.
+
+        Если за это время был вызван ``full_file_save()``,
+        Задача будет отменёна.
+        """
+        try:
+            await asyncio.sleep(timeout)
+        except asyncio.CancelledError:
+            return
+        await self._close_http_reader()
 
     # ========================================================================
     # Private: общая логика инспекции
