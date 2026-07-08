@@ -60,6 +60,8 @@ class FileInfo(BaseModel):
             "WAV",
             "WMA",
             "FLAC",
+            "M3U",
+            "HLS",
         ]
         | None
     ) = None

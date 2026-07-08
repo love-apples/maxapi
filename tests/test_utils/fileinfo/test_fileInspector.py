@@ -2068,3 +2068,189 @@ class TestParsersEdgeCases:
         r = FileInspector._wav_parse_info(wav)
         assert r is not None
         assert r["format"] == "WAV"
+
+
+# =============================================================================
+# HLS tests
+# =============================================================================
+
+_MASTER = b"""#EXTM3U
+#EXT-X-STREAM-INF:BANDWIDTH=293000,AVERAGE-BANDWIDTH=256000,CODECS="avc1.66.30,mp4a.40.2",RESOLUTION=256x144
+low/caminandes_1_4k_228_x264_ts_144p.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=589000,AVERAGE-BANDWIDTH=498000,CODECS="avc1.66.30,mp4a.40.2",RESOLUTION=426x240
+medium/caminandes_1_4k_500_x264_ts_240p.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=1680000,AVERAGE-BANDWIDTH=1277000,CODECS="avc1.66.30,mp4a.40.2",RESOLUTION=640x360
+high/caminandes_1_4k_1228_q264_ts_360p.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=2490000,AVERAGE-BANDWIDTH=1971000,CODECS="avc1.66.30,mp4a.40.2",RESOLUTION=854x480
+veryhigh/caminandes_1_4k_2080_n264_ts_480p.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=3923000,AVERAGE-BANDWIDTH=3152000,CODECS="avc1.640028,mp4a.40.2",RESOLUTION=1280x720
+hdready_avc/caminandes_1_4k_4160_x264_m4s_720p.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=2989000,AVERAGE-BANDWIDTH=1899000,CODECS="hvc1.1.c.L93.90,mp4a.40.2",RESOLUTION=1280x720
+hdready_hevc/caminandes_1_4k_2112_x265_m4s_720p.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=4490000,AVERAGE-BANDWIDTH=4055000,CODECS="hvc1.1.c.L120.90,mp4a.40.2",RESOLUTION=1920x1080
+fullhd/caminandes_1_4k_4160_q265_m4s_1080p.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=8957000,AVERAGE-BANDWIDTH=7483000,CODECS="hvc1.1.c.L150.90,mp4a.40.2",RESOLUTION=3840x2160
+ultrahd/caminandes_1_4k_8288_n265_m4s_2160p.m3u8
+"""
+
+_MEDIA = b"""#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:4
+#EXT-X-MEDIA-SEQUENCE:1
+#EXTINF:4.000000,
+s1.ts
+#EXTINF:4.000000,
+s2.ts
+#EXTINF:4.000000,
+s3.ts
+#EXTINF:4.000000,
+s4.ts
+#EXTINF:4.000000,
+s5.ts
+#EXTINF:4.000000,
+s6.ts
+#EXTINF:4.000000,
+s7.ts
+#EXTINF:4.000000,
+s8.ts
+#EXTINF:4.000000,
+s9.ts
+#EXTINF:4.000000,
+s10.ts
+#EXTINF:4.000000,
+s11.ts
+#EXTINF:4.000000,
+s12.ts
+#EXTINF:4.000000,
+s13.ts
+#EXTINF:4.000000,
+s14.ts
+#EXTINF:4.000000,
+s15.ts
+#EXTINF:4.000000,
+s16.ts
+#EXTINF:4.000000,
+s17.ts
+#EXTINF:4.000000,
+s18.ts
+#EXTINF:4.000000,
+s19.ts
+#EXTINF:4.000000,
+s20.ts
+#EXTINF:4.000000,
+s21.ts
+#EXTINF:4.000000,
+s22.ts
+#EXTINF:2.000000,
+s23.ts
+#EXT-X-ENDLIST
+"""
+
+
+class TestPlaylistParsing:
+    """HLS и M3U плейлисты."""
+
+    def test_hls_master_parse(self):
+        """Master-плейлист → формат, макс. битрейт/разрешение, NEED_URL."""
+        result = FileInspector._hls_parse_info(_MASTER, len(_MASTER))
+        assert result is not None
+        assert result["format"] == "HLS"
+        assert result["bitrate_nominal"] == 8957  # 8_957_000 → 8957 kbps
+        assert result["width"] == 3840
+        assert result["height"] == 2160
+        assert result["_need_url"] == (
+            "low/caminandes_1_4k_228_x264_ts_144p.m3u8"
+        )
+        assert result["_status"] == "partial"
+        assert result["bitrate_avg"] == 2573  # среднее AVERAGE-BANDWIDTH
+
+    def test_m3u_parse(self):
+        """Plain M3U (без #EXT-X-*) → формат M3U, длительность."""
+        data = b"""#EXTM3U
+#EXTINF:180,Artist - Track 1
+track1.mp3
+#EXTINF:240,Artist - Track 2
+track2.mp3
+#EXTINF:200,
+track3.mp3
+"""
+        # _hls_parse_info должен вернуть None (нет #EXT-X-*)
+        assert FileInspector._hls_parse_info(data, len(data)) is None
+        # _m3u_parse_info должен распарсить
+        result = FileInspector._m3u_parse_info(data, len(data))
+        assert result is not None
+        assert result["format"] == "M3U"
+        assert result["duration"] == 620.0  # 180 + 240 + 200
+        assert result["_status"] == "ok"
+
+    def test_hls_media_parse(self):
+        """Media-плейлист → формат, длительность, ENDLIST → ok."""
+        result = FileInspector._hls_parse_info(_MEDIA, len(_MEDIA))
+        assert result is not None
+        assert result["format"] == "HLS"
+        assert result["duration"] == 90.0
+        assert result["_status"] == "ok"
+        assert "_need_url" not in result
+        assert "parse_note" not in result  # есть ENDLIST, не LIVE
+
+    async def test_hls_inspect_url(self):
+        """inspect_url: master → NEED_URL → download media → слитые данные."""
+        master_url = "https://example.com/hls/master.m3u8"
+        media_url = "https://example.com/hls/low/caminandes_1_4k_228_x264_ts_144p.m3u8"
+
+        session = AsyncMock(spec=aiohttp.ClientSession)
+        _head_pos: dict[str, int] = {}
+
+        async def mock_get(url, headers=None, **kwargs):
+            url_str = str(url)
+            if url_str == master_url:
+                data = _MASTER
+            elif url_str == media_url:
+                data = _MEDIA
+            else:
+                raise ValueError(f"Unexpected URL: {url_str}")
+
+            if url_str not in _head_pos:
+                _head_pos[url_str] = 0
+
+            async def read_chunk(n: int = -1) -> bytes:
+                pos = _head_pos[url_str]
+                available = len(data) - pos
+                if available <= 0:
+                    return b""
+                to_read = min(n, available) if n > 0 else available
+                chunk = data[pos : pos + to_read]
+                _head_pos[url_str] = pos + to_read
+                return chunk
+
+            resp = AsyncMock()
+            resp.ok = True
+            resp.status = 200
+            resp.url = URL(url_str)
+            resp.headers = {
+                "Content-Type": "application/vnd.apple.mpegurl",
+                "Content-Length": str(len(data)),
+            }
+            resp.history = ()
+            resp.request_info = Mock()
+            resp.closed = False
+            resp.content.read = read_chunk
+            resp.read = AsyncMock(return_value=data)
+            resp.release = Mock()
+            return resp
+
+        session.get = mock_get
+        session.headers = CIMultiDict()
+        session.cookie_jar = CookieJar()
+
+        inspector = FileInspector()
+        info = await inspector.inspect_url(master_url, session=session)
+        assert info.status == "ok"
+        assert info.format == "HLS"
+        assert info.width == 3840
+        assert info.height == 2160
+        assert info.bitrate_nominal == 8957
+        assert info.bitrate_avg == 2573
+        assert info.duration == 90.0
+        assert info.url == media_url
+        assert info.mime_type == "application/vnd.apple.mpegurl"

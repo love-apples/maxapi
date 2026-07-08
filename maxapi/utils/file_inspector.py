@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import mimetypes
 import struct
@@ -20,7 +21,7 @@ from abc import ABC, abstractmethod
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast
-from urllib.parse import unquote, urlparse
+from urllib.parse import unquote, urljoin, urlparse
 
 import aiofiles
 import aiohttp
@@ -71,6 +72,8 @@ _FORMAT_TO_MIME: dict[str, str] = {
     "M4A": "audio/mp4",
     "FLAC": "audio/flac",
     "MKV": "video/x-matroska",
+    "M3U": "audio/mpegurl",
+    "HLS": "application/vnd.apple.mpegurl",
 }
 
 # Лимиты частичного чтения (парсеры запрашивают докачку через _need_*).
@@ -81,10 +84,12 @@ MAX_TAIL = 65_536
 RELEASE_RESPONSE_TIMEOUT = 60
 
 # Ключи метаданных ответа парсера (не попадают в FileInfo).
+# NEED_HEAD — абсолютный размер head в байтах от начала файла,
+#            который нужен парсеру. -1 = «максимум, до MAX_HEAD».
 NEED_HEAD = "_need_head"
 NEED_TAIL = "_need_tail"
+NEED_URL = "_need_url"
 PARSE_STATUS = "_status"  # "ok" | "partial"
-
 # ============================================================================
 # [ ] Структуры данных
 # ============================================================================
@@ -1289,16 +1294,7 @@ class FileInspector:
 
             dims, needs, status = self._split_parse_result(raw)
 
-            fmt = dims.get("format")
-            if (
-                fmt
-                and _FORMAT_TO_MIME.get(fmt)
-                and (
-                    not content_type
-                    or content_type == "application/octet-stream"
-                )
-            ):
-                content_type = _FORMAT_TO_MIME[fmt]
+            content_type = self._resolve_content_type(content_type, dims)
 
             if status == "ok":
                 logger.debug(
@@ -1317,6 +1313,39 @@ class FileInspector:
                 return self.last_file_info
 
             reader.pending_needs = needs
+
+        # NEED_URL: парсер запросил докачку по другому URL (HLS master → media)
+        media_url = dims.pop(NEED_URL, None) if dims else None
+        if media_url and isinstance(reader, RangeDownloader):
+            try:
+                resolved_url = urljoin(url, media_url)
+                resp = await reader.session.get(resolved_url)  # type: ignore[union-attr]
+                content = await resp.read()
+                if content:
+                    raw = self.parse_media_dimensions(
+                        content, None, len(content)
+                    )
+                    if raw is not None:
+                        dims2, _needs2, status2 = self._split_parse_result(raw)
+                        # Сливаем: из первого парсинга — формат/заметки,
+                        # из второго — детальные параметры (ширина, битрейт…)
+                        dims2 = {**dims, **dims2}
+                        content_type = self._resolve_content_type(
+                            content_type, dims2
+                        )
+                        self.last_file_info = self._build_file_info(
+                            url=resolved_url,
+                            mime_type=content_type,
+                            file_name=reader.meta.file_name,
+                            file_size=len(content),
+                            dims=dims2,
+                            status=status2,
+                        )
+                        return self.last_file_info
+            except Exception:
+                logger.debug(
+                    "Не удалось скачать %s для парсинга", media_url
+                )
 
         self.last_file_info = self._build_file_info(
             url=url,
@@ -1358,6 +1387,23 @@ class FileInspector:
         return head_lower.startswith((b"<!doctype html", b"<html"))
 
     @staticmethod
+    def _resolve_content_type(
+        content_type: str, dims: dict
+    ) -> str:
+        """Обновляет MIME-тип из формата, распознанного парсером."""
+        fmt = dims.get("format")
+        if (
+            fmt
+            and _FORMAT_TO_MIME.get(fmt)
+            and (
+                not content_type
+                or content_type == "application/octet-stream"
+            )
+        ):
+            return _FORMAT_TO_MIME[fmt]
+        return content_type
+
+    @staticmethod
     def _build_file_info(
         url: str = "",
         mime_type: str = "",
@@ -1371,8 +1417,8 @@ class FileInspector:
         if dims is None:
             dims = {}
 
-        bitrate_avg = None
-        if file_size and dims.get("duration"):
+        bitrate_avg = dims.get("bitrate_avg")
+        if bitrate_avg is None and file_size and dims.get("duration"):
             bitrate_avg = round(file_size / dims["duration"] * 8 / 1024)
 
         duration = dims.get("duration")
@@ -1458,6 +1504,11 @@ class FileInspector:
         """
         if cls._mp4_check(head):
             return cls._mp4_m4a_parse_info(head, tail)
+        if head[:7] == b"#EXTM3U":
+            result = cls._hls_parse_info(head, file_size)
+            if result is not None:
+                return result
+            return cls._m3u_parse_info(head, file_size)
         if cls._avi_check(head):
             return cls._avi_parse_info(head)
         if cls._webm_mkv_check(head):
@@ -1908,6 +1959,117 @@ class FileInspector:
     # =========================================================================
     # [ ] Парсеры: видео
     # =========================================================================
+
+    @classmethod
+    def _hls_parse_info(
+        cls, data: bytes, file_size: int | None
+    ) -> dict | None:
+        """Парсит HLS .m3u8 плейлист."""
+        if len(data) < 7 or data[:7] != b"#EXTM3U":
+            return None
+
+        result: dict[str, Any] = {"format": "HLS", PARSE_STATUS: "ok"}
+
+        # Если размер неизвестен или файл не влез в head — просим докачку
+        if file_size is None or (file_size > 0 and len(data) < file_size):
+            result[NEED_HEAD] = -1
+            result[PARSE_STATUS] = "partial"
+        text = data.decode("ascii", errors="ignore")
+        lines = text.splitlines()
+
+        has_hls_tag = False
+
+        max_width = 0
+        max_height = 0
+        max_bitrate = 0
+        total_avg_bitrate = 0
+        stream_count = 0
+        total_duration = 0.0
+        is_master = False
+        has_endlist = False
+        media_url = ""
+
+        for line in lines:
+            if line.startswith("#EXT-X-STREAM-INF:"):
+                has_hls_tag = True
+                is_master = True
+                stream_count += 1
+                for part in line.split(","):
+                    if "AVERAGE-BANDWIDTH=" in part:
+                        with contextlib.suppress(ValueError, IndexError):
+                            abw = int(part.split("=")[1])
+                            total_avg_bitrate += abw
+                    if "BANDWIDTH=" in part:
+                        with contextlib.suppress(ValueError, IndexError):
+                            bw = int(part.split("=")[1])
+                            max_bitrate = max(max_bitrate, bw)
+                    if "RESOLUTION=" in part:
+                        with contextlib.suppress(ValueError, IndexError):
+                            res = part.split("=")[1]
+                            w, h = map(int, res.split("x"))
+                            max_width = max(max_width, w)
+                            max_height = max(max_height, h)
+            elif line.startswith("#EXT-X-"):
+                has_hls_tag = True
+                if line.startswith("#EXT-X-ENDLIST"):
+                    has_endlist = True
+            elif line.startswith("#EXTINF:"):
+                with contextlib.suppress(ValueError, IndexError):
+                    total_duration += float(line.split(":")[1].split(",")[0])
+            elif line and not line.startswith("#"):
+                # Первая не-комментарий строка после
+                # #EXT-X-STREAM-INF — это URL media-плейлиста
+                if is_master and not media_url:
+                    media_url = line.strip()
+                    is_master = False  # Только первый URL для докачки
+
+        if not has_hls_tag:
+            return None
+
+        if max_bitrate > 0:
+            result["bitrate_nominal"] = max_bitrate // 1000
+        if stream_count > 0 and total_avg_bitrate:
+            result["bitrate_avg"] = total_avg_bitrate // stream_count // 1000
+        if max_width > 0 and max_height > 0:
+            result["width"] = max_width
+            result["height"] = max_height
+        if total_duration > 0:
+            result["duration"] = round(total_duration, 1)
+
+        if not is_master and not has_endlist:
+            result["parse_note"] = "LIVE-поток, длительность может измениться"
+            result[PARSE_STATUS] = "partial"
+
+        # Если это мастер-плейлист — просим скачать media-плейлист
+        if media_url and total_duration == 0:
+            result[NEED_URL] = media_url
+            result[PARSE_STATUS] = "partial"
+
+        return result
+
+    @classmethod
+    def _m3u_parse_info(
+        cls, data: bytes, file_size: int | None
+    ) -> dict | None:
+        """Парсит M3U-плейлист (аудио)."""
+        if len(data) < 7 or data[:7] != b"#EXTM3U":
+            return None
+
+        text = data.decode("ascii", errors="ignore")
+        lines = text.splitlines()
+
+        total_duration = 0.0
+        for line in lines:
+            if line.startswith("#EXTINF:"):
+                with contextlib.suppress(ValueError, IndexError):
+                    total_duration += float(
+                        line.split(":")[1].split(",")[0]
+                    )
+
+        result: dict[str, Any] = {"format": "M3U", PARSE_STATUS: "ok"}
+        if total_duration > 0:
+            result["duration"] = round(total_duration, 1)
+        return result
 
     @classmethod
     def _mp4_m4a_parse_info(
