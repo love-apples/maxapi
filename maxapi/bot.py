@@ -767,7 +767,6 @@ class Bot(BaseConnection):
 
         return await GetVideo(bot=self, video_token=video_token).fetch()
 
-
     async def send_callback(
         self,
         callback_id: str,

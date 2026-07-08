@@ -73,7 +73,9 @@ class TestUrlStrGetInfo:
             MockFI.return_value = mock_inspector
             mock_inspector.inspect_url.return_value = expected
 
-            payload = OtherAttachmentPayload(url="https://example.com/file.bin")
+            payload = OtherAttachmentPayload(
+                url="https://example.com/file.bin"
+            )
             info = await payload.url.get_info()
 
         assert info is expected

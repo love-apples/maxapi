@@ -791,7 +791,7 @@ class TestRangeDownloaderAdvanced:
 
     async def test_fetch_chunk_no_meta_raises(self):
         rd = RangeDownloader("https://x.com/f")
-        rd.meta = None # type: ignore
+        rd.meta = None  # type: ignore
         with pytest.raises(RuntimeError, match="Метаинформация не загружена"):
             await rd._fetch_chunk(100, tail=True)
 

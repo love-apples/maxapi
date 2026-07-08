@@ -598,7 +598,7 @@ class RangeDownloader(RangeReader):
                     return dest
 
                 if head_len + tail_len >= file_size:
-                    await f.write(head[:file_size - tail_len])
+                    await f.write(head[: file_size - tail_len])
                     await f.write(tail)
                     return dest
 
@@ -649,7 +649,6 @@ class RangeDownloader(RangeReader):
             return dest
 
         return dest
-
 
     # ========================================================================
     # Private: Meta
@@ -1161,9 +1160,7 @@ class FileInspector:
             file_name = self.last_file_info.file_name
 
         try:
-            return await reader.full_file_save(
-                file_path, file_name=file_name
-            )
+            return await reader.full_file_save(file_path, file_name=file_name)
         finally:
             if isinstance(reader, RangeDownloader):
                 await reader.close()
@@ -1191,9 +1188,8 @@ class FileInspector:
                 await reader.session.close()
 
     async def _close_after_timeout(
-            self,
-            timeout=RELEASE_RESPONSE_TIMEOUT
-        ) -> None:
+        self, timeout=RELEASE_RESPONSE_TIMEOUT
+    ) -> None:
         """
         Ожидает timeout, затем закрывает HTTP-соединение.
 
@@ -3724,6 +3720,7 @@ class FileInspector:
 # ============================================================================
 # Convenience functions
 # ============================================================================
+
 
 async def inspect_url(
     url: str,
