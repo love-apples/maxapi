@@ -27,7 +27,10 @@ class TestUrlStrGetInfo:
 
         assert info is expected
         mock_inspector.inspect_url.assert_awaited_once_with(
-            "https://example.com/img.jpg"
+            "https://example.com/img.jpg",
+            timeout=30,
+            max_total=256000,
+            max_retries=3,
         )
 
     async def test_returns_file_info_from_inspect_url(self):
@@ -80,7 +83,10 @@ class TestUrlStrGetInfo:
 
         assert info is expected
         mock_inspector.inspect_url.assert_awaited_once_with(
-            "https://example.com/file.bin"
+            "https://example.com/file.bin",
+            timeout=30,
+            max_total=256000,
+            max_retries=3,
         )
 
     async def test_returns_error_for_unreachable_url(self):
