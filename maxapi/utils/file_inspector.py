@@ -1579,7 +1579,7 @@ class FileInspector:
         }
 
     @classmethod
-    def _webp_parse(  # noqa: C901
+    def _webp_parse(
         cls,
         data: bytes,
         file_size: int | None = None,
@@ -1773,7 +1773,7 @@ class FileInspector:
         return result
 
     @classmethod
-    def _gif_parse_info(  # noqa: C901
+    def _gif_parse_info(
         cls,
         data: bytes,
         file_size: int | None = None,
@@ -1887,7 +1887,7 @@ class FileInspector:
     # =========================================================================
 
     @classmethod
-    def _mp4_m4a_parse_info(  # noqa: C901
+    def _mp4_m4a_parse_info(
         cls,
         data: bytes,
         tail: bytes | None = None,
@@ -1998,7 +1998,7 @@ class FileInspector:
         return cls._mp4_moov_parse(moov_data)
 
     @classmethod
-    def _mp4_moov_parse(cls, data: bytes) -> dict | None:  # noqa: C901
+    def _mp4_moov_parse(cls, data: bytes) -> dict | None:
         result: dict[str, int | float | str] = {}
         pos = 0
         while pos + 8 <= len(data):
@@ -2033,7 +2033,7 @@ class FileInspector:
         return result or None
 
     @classmethod
-    def _mp4_parse_trak_for_dims(cls, data: bytes) -> dict | None:  # noqa: C901
+    def _mp4_parse_trak_for_dims(cls, data: bytes) -> dict | None:
         """Ищет tkhd внутри trak"""
         result = {}
         pos = 0
@@ -2411,7 +2411,7 @@ class FileInspector:
                 result["sample_rate"] = sample_rate
 
     @classmethod
-    def _webm_mkv_parse_info(cls, data: bytes) -> dict | None:  # noqa: C901
+    def _webm_mkv_parse_info(cls, data: bytes) -> dict | None:
         """
         WebM/MKV: format, width, height, duration, fps,
         sample_rate (EBML в head).
@@ -2628,7 +2628,7 @@ class FileInspector:
     # =========================================================================
 
     @classmethod
-    def _mp3_parse_info(  # noqa: C901
+    def _mp3_parse_info(
         cls,
         head: bytes,
         tail: bytes | None = None,
@@ -2903,7 +2903,7 @@ class FileInspector:
         return None
 
     @classmethod
-    def _ogg_parse_info(  # noqa: C901
+    def _ogg_parse_info(
         cls,
         head: bytes,
         tail: bytes | None,
@@ -3044,7 +3044,7 @@ class FileInspector:
         return result
 
     @staticmethod
-    def _ogg_parse_all_streams(data: bytes) -> list:  # noqa: C901
+    def _ogg_parse_all_streams(data: bytes) -> list:
         """
         Извлекает метаданные всех потоков из BOS-страниц Ogg.
 
@@ -3253,7 +3253,7 @@ class FileInspector:
         return None
 
     @staticmethod
-    def _aac_parse_info(  # noqa: C901
+    def _aac_parse_info(
         data: bytes, file_size: int | None = None
     ) -> dict | None:
         """
@@ -3408,7 +3408,7 @@ class FileInspector:
         return result
 
     @staticmethod
-    def _wav_parse_info(  # noqa: C901
+    def _wav_parse_info(
         data: bytes, total_size: int | None = None
     ) -> dict | None:
         """
@@ -3485,7 +3485,7 @@ class FileInspector:
         return result
 
     @staticmethod
-    def _wma_parse_info(data: bytes) -> dict[str, Any] | None:  # noqa: C901
+    def _wma_parse_info(data: bytes) -> dict[str, Any] | None:
         """
         Извлекает метаданные из WMA/ASF-файла по заголовку.
 
