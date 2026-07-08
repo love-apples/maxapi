@@ -971,6 +971,30 @@ class FileInspector:
 
         return self._last_reader.tail if self._last_reader else b""
 
+    @property
+    def downloaded(self) -> int:
+        """
+        Информаиця о количестве скаченных данных
+        для определия информации о файле
+        """
+        return len(self.last_head) + len(self.last_tail)
+
+    @property
+    def downloaded_human(self) -> str:
+        """
+        Информаиця о количестве скаченных данных
+        для определия информации о файле
+        в человекочитаемом виде
+        """
+        if self.downloaded < 1024:
+            return f"{self.downloaded} байт"
+        if self.downloaded < 1_048_576:
+            return f"{self.downloaded / 1024:.0f} КБ"
+        if self.downloaded < 1_073_741_824:
+            return f"{self.downloaded / 1_048_576:.1f} МБ"
+        return f"{self.downloaded / 1_073_741_824:.2f} ГБ"
+
+
     # ========================================================================
     # Публичные методы
     # ========================================================================

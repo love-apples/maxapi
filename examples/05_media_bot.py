@@ -19,8 +19,7 @@
 Любой файл/фото/аудио/видео от пользователя пересылается обратно
 с описанием типа вложения.
 
-Аналог Telegram: send_photo, send_document, send_audio, forward_message,
-get_file
+Аналог Telegram: send_photo, send_document, send_audio, forward_message
 
 Запуск:
     MAX_BOT_TOKEN=your_token python 05_media_bot.py
@@ -33,8 +32,6 @@ import contextlib
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
-
-import aiohttp
 
 # Опционально: загрузка .env, если установлен python-dotenv
 with contextlib.suppress(ImportError):
@@ -53,10 +50,10 @@ from maxapi.types.attachments.video import Video
 from maxapi.types.input_media import InputMedia, InputMediaBuffer
 
 if TYPE_CHECKING:
+    from maxapi.types import UrlStr
     from maxapi.types.updates.message_created import MessageCreated
 
 logging.basicConfig(level=logging.INFO)
-log = logging.getLogger()
 
 bot = Bot()
 dp = Dispatcher()
@@ -69,7 +66,7 @@ PHOTO_PATH = Path(__file__).resolve().parent.parent / "logo.png"
 # ============================================================================
 
 
-def _get_first_attachment_url(attachments) -> str | None:
+def _get_first_attachment_url(attachments) -> UrlStr | None:
     """Извлекает URL из первого вложения."""
     if not attachments:
         return None
@@ -169,7 +166,7 @@ async def cmd_upload(event: MessageCreated) -> None:
 
 @dp.message_created(Command("info"))
 async def cmd_info(event: MessageCreated) -> None:
-    """Получение метаинформации о файле через bot.get_file_info().
+    """Получение метаинформации о файле через UrlStr.get_info().
 
     Ответьте командой на сообщение с вложением.
     """
@@ -189,26 +186,15 @@ async def cmd_info(event: MessageCreated) -> None:
         await event.message.answer("⚠️ Не удалось получить URL вложения.")
         return
 
-    await bot.send_action(chat_id=chat_id, action=SenderAction.SENDING_FILE)
-
-    try:
-        info = await bot.get_file_info(url, timeout=10)
-    except Exception as e:
-        log.error("Ошибка инспекции: %s", e)
-        await event.message.answer("⚠️ Не удалось определить метаинформацию")
-        return
+    # get_info() всегда возвращает FileInfo (в т.ч. при ошибке)
+    info = await url.get_info()
 
     if info.status == "error":
-        # info.status == "error" только если ничего не получилось определить,
-        # Даже минимально: info.format is None
-        # info.parse_note содерит описание ошибки
         await event.message.answer(f"⚠️ {info.parse_note}")
         return
 
-    # Всё, что получилось узнать о файле — в строку через str(FileInfo)
-    answer = str(info)
-
-    await event.message.answer(answer)
+    # str(info) — человекочитаемый вывод
+    await event.message.answer(str(info))
 
 
 # ============================================================================
@@ -251,16 +237,15 @@ async def on_attachment(event: MessageCreated) -> None:
     count = len(attachments)
     reply_txt = f"Получено {count} вложение(й), тип: {label}.\n\n"
 
-    # Пытаемся получить метаинформацию через FileInspector
+    # Метаинформация через UrlStr.get_info() — всегда возвращает FileInfo
     url = _get_first_attachment_url(attachments)
     if url:
-        try:
-            info = await bot.get_file_info(url, timeout=3)
+        info = await url.get_info()
+        if info.status != "error":
             reply_txt += f"Первое вложение:\n{info}"
-        except aiohttp.ClientError:
-            # Не дошло даже до HTTP (нет сети, DNS)
-            reply_txt += "Не удалось получить подробности:\nСетевая ошибка"
-    reply_txt += "Пересылаю..."
+        else:
+            reply_txt += f"Не удалось получить подробности:\n{info.parse_note}"
+    reply_txt += "\nПересылаю..."
     await event.message.answer(reply_txt)
 
     # Пересылаем оригинальное сообщение обратно
