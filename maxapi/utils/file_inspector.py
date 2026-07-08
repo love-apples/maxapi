@@ -1213,6 +1213,10 @@ class FileInspector:
         url: str,
     ) -> FileInfo:
         """Общая логика для любого источника (RangeReader)."""
+        if self.last_file_info and self.last_file_info.url == url:
+            # url не изменился. Используем кэш
+            return self.last_file_info
+
         self._last_reader = reader
         dims: dict = {}
         status: Literal["ok", "partial", "error"] = "partial"
