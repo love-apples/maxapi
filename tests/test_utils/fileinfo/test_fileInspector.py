@@ -2196,7 +2196,9 @@ track3.mp3
     async def test_hls_inspect_url(self):
         """inspect_url: master → NEED_URL → download media → слитые данные."""
         master_url = "https://example.com/hls/master.m3u8"
-        media_url = "https://example.com/hls/low/caminandes_1_4k_228_x264_ts_144p.m3u8"
+        media_url = (
+            "https://example.com/hls/low/caminandes_1_4k_228_x264_ts_144p.m3u8"
+        )
 
         session = AsyncMock(spec=aiohttp.ClientSession)
         _head_pos: dict[str, int] = {}

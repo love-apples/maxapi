@@ -1343,9 +1343,7 @@ class FileInspector:
                         )
                         return self.last_file_info
             except Exception:
-                logger.debug(
-                    "Не удалось скачать %s для парсинга", media_url
-                )
+                logger.debug("Не удалось скачать %s для парсинга", media_url)
 
         self.last_file_info = self._build_file_info(
             url=url,
@@ -1387,17 +1385,14 @@ class FileInspector:
         return head_lower.startswith((b"<!doctype html", b"<html"))
 
     @staticmethod
-    def _resolve_content_type(
-        content_type: str, dims: dict
-    ) -> str:
+    def _resolve_content_type(content_type: str, dims: dict) -> str:
         """Обновляет MIME-тип из формата, распознанного парсером."""
         fmt = dims.get("format")
         if (
             fmt
             and _FORMAT_TO_MIME.get(fmt)
             and (
-                not content_type
-                or content_type == "application/octet-stream"
+                not content_type or content_type == "application/octet-stream"
             )
         ):
             return _FORMAT_TO_MIME[fmt]
@@ -2062,9 +2057,7 @@ class FileInspector:
         for line in lines:
             if line.startswith("#EXTINF:"):
                 with contextlib.suppress(ValueError, IndexError):
-                    total_duration += float(
-                        line.split(":")[1].split(",")[0]
-                    )
+                    total_duration += float(line.split(":")[1].split(",")[0])
 
         result: dict[str, Any] = {"format": "M3U", PARSE_STATUS: "ok"}
         if total_duration > 0:
