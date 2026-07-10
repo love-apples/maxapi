@@ -89,7 +89,7 @@ else:
 ## Как это работает?
 
 FileInspector использует частичную загрузку:
-* HEAD-запрос для получения Content-Type и Content-Length.
+* GET-запрос и чтение первых N байт для получения Content-Type/Content-Length и сигнатуры файла.
 * Скачивание хвоста 64 КБ — для форматов, где метаданные в конце (MP4 с moov в конце,
   OGG с длительностью в последней грануле).
 * Чтение начала файла от 4 до 256 КБ в зависимости от формата.
@@ -162,4 +162,4 @@ if __name__ == '__main__':
     asyncio.run(dp.start_polling(bot))
 ```
 
-Более подробный пример (05_media_bot.py)[https://github.com/love-apples/maxapi/blob/main/examples/05_media_bot.py]
+Более подробный пример [05_media_bot.py](https://github.com/love-apples/maxapi/blob/main/examples/05_media_bot.py)

@@ -188,7 +188,7 @@ flake8-type-checking.runtime-evaluated-base-classes = [
     "C90", # TODO: требует рефакторинга
 ]
 "maxapi/utils/file_inspector.py" = [
-    "C90", # Сложный парсинг файлов. Упрощению не целесообразно.
+    "C90", # Сложный парсинг файлов. Упрощение нецелесообразно.
 ]
 
 [tool.ruff.format]

@@ -42,6 +42,8 @@ class UrlStr(str):
     ) -> FileInfo:
         """
         Инспектирует удалённый файл по URL.
+
+        Args:
             timeout: Таймаут HTTP-запроса в секундах.
             max_total: Максимальный объём скачанных данных (байт).
             max_retries: Число повторных попыток при ``retry_on_statuses``.

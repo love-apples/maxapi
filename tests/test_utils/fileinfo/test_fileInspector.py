@@ -1389,7 +1389,7 @@ class TestParsersEdgeCases:
         assert FileInspector._mp4_parse_tkhd(b"\x02" + b"\x00" * 100) is None
 
     def test_mp4_is_valid_dims_16384(self):
-        """Размер 16384 - допустим."""
+        """Некоторые файлы имеют 0x40000000 (16384.0) как не задано"""
         assert not FileInspector._mp4_is_valid_video_dims(
             {"width": 16384, "height": 16384}
         )
