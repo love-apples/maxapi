@@ -305,6 +305,20 @@ async def test_get_chat_by_link_keeps_valid_link_characters(bot):
     )
 
 
+async def test_bot_get_chat_by_link_warns_about_deprecation(bot):
+    """Проверить предупреждение публичной обёртки устаревшего метода."""
+    with (
+        patch(
+            "maxapi.bot.GetChatByLink.fetch",
+            new=AsyncMock(return_value=Mock()),
+        ) as mocked_fetch,
+        pytest.warns(DeprecationWarning, match="get_chat_by_link"),
+    ):
+        await bot.get_chat_by_link("channel")
+
+    mocked_fetch.assert_awaited_once_with()
+
+
 def test_contact_payload_accepts_hash_and_nullable_vcf():
     payload = ContactAttachmentPayload.model_validate(
         {"vcf_info": None, "hash": "contact-hash", "max_info": None}
