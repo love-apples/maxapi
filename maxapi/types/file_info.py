@@ -107,21 +107,21 @@ class FileInfo(BaseModel):
         else:
             lines.append("[Без имени]")
         lines.append(f"Размер: {self.file_size_human}")
-        if self.format:
+        if self.format is not None:
             lines.append(f"Формат: {self.format}")
-        if self.width and self.height:
+        if self.width is not None and self.height is not None:
             lines.append(f"Размеры: {self.width}×{self.height} пикс")
-        if self.duration:
+        if self.duration is not None:
             lines.append(f"Длительность: {self.duration} сек")
-        if self.fps:
+        if self.fps is not None:
             lines.append(f"Частота кадров: {self.fps} к/с")
-        if self.sample_rate:
+        if self.sample_rate is not None:
             lines.append(f"Аудио: {self.sample_rate} Гц")
-        if self.bitrate_nominal:
+        if self.bitrate_nominal is not None:
             lines.append(
                 f"Битрейт (номинальный): {self.bitrate_nominal} кбит/с"
             )
-        if self.bitrate_avg:
+        if self.bitrate_avg is not None:
             lines.append(f"Битрейт (средний): {self.bitrate_avg} кбит/с")
         if self.parse_note:
             lines.append(f"⚠️ {self.parse_note}")
