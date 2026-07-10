@@ -1,3 +1,4 @@
+import warnings
 from re import fullmatch
 from typing import TYPE_CHECKING, cast
 from urllib.parse import urlparse
@@ -15,6 +16,10 @@ class GetChatByLink(BaseConnection):
     """
     Класс для получения информации о канале по публичной ссылке.
 
+    .. deprecated:: 1.2.1
+        Метод удалён из текущей OpenAPI-спецификации API MAX.
+        Использование не рекомендуется.
+
     https://dev.max.ru/docs-api/methods/GET/chats/-chatLink-
 
     Attributes:
@@ -25,6 +30,14 @@ class GetChatByLink(BaseConnection):
     PATTERN_LINK: str = r"@?[a-zA-Z]+[a-zA-Z0-9-_]*"
 
     def __init__(self, bot: "Bot", link: str):
+        warnings.warn(
+            "GetChatByLink устарел и отсутствует в текущей "
+            "OpenAPI-спецификации API MAX. "
+            "Использование не рекомендуется.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         super().__init__()
         self.bot = bot
         self.link = self._normalize_link(link)

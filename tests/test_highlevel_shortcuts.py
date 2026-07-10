@@ -192,7 +192,7 @@ async def test_chat_high_level_shortcuts_delegate_to_bot():
     bot.get_list_admin_chat.assert_awaited_once_with(100, marker=None)
     admin_call = bot.add_list_admin_chat.await_args.kwargs
     assert admin_call["chat_id"] == 100
-    assert admin_call["marker"] is None
+    assert "marker" not in admin_call
     assert len(admin_call["admins"]) == 1
     assert admin_call["admins"][0].user_id == 9
     bot.remove_admin.assert_awaited_once_with(chat_id=100, user_id=9)

@@ -692,6 +692,10 @@ class Bot(BaseConnection):
         """
         Получает канал по публичной ссылке или алиасу.
 
+        .. deprecated:: 1.2.1
+            Метод удалён из текущей OpenAPI-спецификации API MAX.
+            Использование не рекомендуется.
+
         https://dev.max.ru/docs-api/methods/GET/chats/-chatLink-
 
         Args:
@@ -700,6 +704,14 @@ class Bot(BaseConnection):
         Returns:
             Chat: Объект чата.
         """
+
+        warnings.warn(
+            "bot.get_chat_by_link() устарел и отсутствует в текущей "
+            "OpenAPI-спецификации API MAX. "
+            "Использование не рекомендуется.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         return await GetChatByLink(bot=self, link=link).fetch()
 
@@ -913,25 +925,32 @@ class Bot(BaseConnection):
         marker: int | None = None,
     ) -> AddedListAdminChat:
         """
-        Добавляет администраторов в чат.
+        Назначает администраторов чата или канала.
 
         https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members/admins
 
         Args:
             chat_id: ID чата.
             admins: Список администраторов.
-            marker: Указатель на следующую страницу данных.
-                По умолчанию None.
+            marker: Устаревший параметр, больше не отправляется в API.
 
         Returns:
             AddedListAdminChat: Результат добавления.
         """
 
+        if marker is not None:
+            warnings.warn(
+                "Параметр marker в bot.add_list_admin_chat() устарел "
+                "и игнорируется: POST /chats/{chatId}/members/admins "
+                "больше не поддерживает marker.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         return await AddAdminChat(
             bot=self,
             chat_id=chat_id,
             admins=admins,
-            marker=marker,
         ).fetch()
 
     async def remove_admin(self, chat_id: int, user_id: int) -> RemovedAdmin:
@@ -1021,12 +1040,12 @@ class Bot(BaseConnection):
         user_ids: list[int],
     ) -> AddedMembersChat:
         """
-        Добавляет участников в чат.
+        Добавляет участников в групповой чат.
 
         https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members
 
         Args:
-            chat_id: ID чата.
+            chat_id: ID группового чата.
             user_ids: Список ID пользователей.
 
         Returns:
