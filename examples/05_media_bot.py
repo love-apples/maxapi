@@ -8,13 +8,13 @@
 - Обработку входящих вложений: image, file, audio, video
 - Пересылку сообщений через message.forward()
 - SenderAction.SENDING_PHOTO / SENDING_VIDEO / SENDING_FILE
-- FileInspector — получение метаинформации о файле без полной загрузки
+- MediaProbe — получение метаинформации о файле без полной загрузки
 
 Команды:
     /photo     — отправить тестовое изображение из файла
     /buffer    — отправить изображение из буфера (байты)
     /upload    — загрузить медиа заранее, затем отправить
-    /info      — метаинформация о replied-вложении (FileInspector)
+    /info      — метаинформация о replied-вложении (MediaProbe)
 
 Любой файл/фото/аудио/видео от пользователя пересылается обратно
 с описанием типа вложения.
@@ -186,7 +186,7 @@ async def cmd_info(event: MessageCreated) -> None:
         await event.message.answer("⚠️ Не удалось получить URL вложения.")
         return
 
-    # get_info() всегда возвращает FileInfo (в т.ч. при ошибке)
+    # get_info() всегда возвращает MediaInfo (в т.ч. при ошибке)
     info = await url.get_info()
 
     if info.status == "error":
@@ -237,7 +237,7 @@ async def on_attachment(event: MessageCreated) -> None:
     count = len(attachments)
     reply_txt = f"Получено {count} вложение(й), тип: {label}.\n\n"
 
-    # Метаинформация через UrlStr.get_info() — всегда возвращает FileInfo
+    # Метаинформация через UrlStr.get_info() — всегда возвращает MediaInfo
     url = _get_first_attachment_url(attachments)
     if url:
         info = await url.get_info()

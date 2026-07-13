@@ -5,12 +5,6 @@ from .deep_linking import (
     decode_payload,
     encode_payload,
 )
-from .file_inspector import (
-    FileInspector,
-    inspect_bytes,
-    inspect_file,
-    inspect_url,
-)
 from .message_link import (
     build_message_link,
     chatid_seq_to_mid,
@@ -19,7 +13,6 @@ from .message_link import (
 )
 
 __all__ = [
-    "FileInspector",
     "build_message_link",
     "chatid_seq_to_mid",
     "create_deep_link",
@@ -27,9 +20,6 @@ __all__ = [
     "create_startapp_link",
     "decode_payload",
     "encode_payload",
-    "inspect_bytes",
-    "inspect_file",
-    "inspect_url",
     "link_to_chatid_seq",
     "mid_to_chatid_seq",
 ]

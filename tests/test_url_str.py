@@ -2,15 +2,15 @@ from unittest.mock import AsyncMock, patch
 
 from maxapi.types.attachments.attachment import OtherAttachmentPayload
 from maxapi.types.attachments.url_str import UrlStr
-from maxapi.types.file_info import FileInfo
+from url_media_probe import MediaInfo
 
 
 class TestUrlStrGetInfo:
     """Тесты для UrlStr.get_info()."""
 
-    async def test_delegates_to_file_inspector(self):
-        """get_info создаёт FileInspector и вызывает inspect_url."""
-        expected = FileInfo(
+    async def test_delegates_to_media_probe(self):
+        """get_info создаёт MediaProbe и вызывает from_url."""
+        expected = MediaInfo(
             url="https://example.com/img.jpg",
             mime_type="image/jpeg",
             file_name="img.jpg",
@@ -18,24 +18,24 @@ class TestUrlStrGetInfo:
             status="ok",
         )
 
-        with patch("maxapi.types.attachments.url_str.FileInspector") as MockFI:
-            mock_inspector = AsyncMock()
-            MockFI.return_value = mock_inspector
-            mock_inspector.inspect_url.return_value = expected
+        with patch("maxapi.types.attachments.url_str.MediaProbe") as MockMP:
+            mock_media_probe = AsyncMock()
+            MockMP.return_value = mock_media_probe
+            mock_media_probe.from_url.return_value = expected
 
             info = await UrlStr("https://example.com/img.jpg").get_info()
 
         assert info is expected
-        mock_inspector.inspect_url.assert_awaited_once_with(
+        mock_media_probe.from_url.assert_awaited_once_with(
             "https://example.com/img.jpg",
             timeout=30,
             max_total=256000,
             max_retries=3,
         )
 
-    async def test_returns_file_info_from_inspect_url(self):
-        """get_info возвращает то, что вернул inspect_url."""
-        expected = FileInfo(
+    async def test_get_info_returns_media_info(self):
+        """get_info возвращает то, что вернул from_url."""
+        expected = MediaInfo(
             url="https://example.com/video.mp4",
             mime_type="video/mp4",
             file_name="video.mp4",
@@ -48,10 +48,10 @@ class TestUrlStrGetInfo:
             status="ok",
         )
 
-        with patch("maxapi.types.attachments.url_str.FileInspector") as MockFI:
-            mock_inspector = AsyncMock()
-            MockFI.return_value = mock_inspector
-            mock_inspector.inspect_url.return_value = expected
+        with patch("maxapi.types.attachments.url_str.MediaProbe") as MockMP:
+            mock_media_probe = AsyncMock()
+            MockMP.return_value = mock_media_probe
+            mock_media_probe.from_url.return_value = expected
 
             info = await UrlStr("https://example.com/video.mp4").get_info()
 
@@ -63,7 +63,7 @@ class TestUrlStrGetInfo:
 
     async def test_from_attachment_field(self):
         """get_info работает при вызове через поле модели-аттача."""
-        expected = FileInfo(
+        expected = MediaInfo(
             url="https://example.com/file.bin",
             mime_type="application/octet-stream",
             file_name="file.bin",
@@ -71,10 +71,10 @@ class TestUrlStrGetInfo:
             status="ok",
         )
 
-        with patch("maxapi.types.attachments.url_str.FileInspector") as MockFI:
-            mock_inspector = AsyncMock()
-            MockFI.return_value = mock_inspector
-            mock_inspector.inspect_url.return_value = expected
+        with patch("maxapi.types.attachments.url_str.MediaProbe") as MockMP:
+            mock_media_probe = AsyncMock()
+            MockMP.return_value = mock_media_probe
+            mock_media_probe.from_url.return_value = expected
 
             payload = OtherAttachmentPayload(
                 url="https://example.com/file.bin"
@@ -82,7 +82,7 @@ class TestUrlStrGetInfo:
             info = await payload.url.get_info()
 
         assert info is expected
-        mock_inspector.inspect_url.assert_awaited_once_with(
+        mock_media_probe.from_url.assert_awaited_once_with(
             "https://example.com/file.bin",
             timeout=30,
             max_total=256000,
@@ -90,8 +90,8 @@ class TestUrlStrGetInfo:
         )
 
     async def test_returns_error_for_unreachable_url(self):
-        """get_info возвращает FileInfo(status='error') при сетевой ошибке."""
-        error_info = FileInfo(
+        """get_info возвращает MediaInfo(status='error') при сетевой ошибке."""
+        error_info = MediaInfo(
             url="https://example.com/bad",
             mime_type="",
             file_name="",
@@ -100,10 +100,10 @@ class TestUrlStrGetInfo:
             parse_note="Сетевая ошибка",
         )
 
-        with patch("maxapi.types.attachments.url_str.FileInspector") as MockFI:
-            mock_inspector = AsyncMock()
-            MockFI.return_value = mock_inspector
-            mock_inspector.inspect_url.return_value = error_info
+        with patch("maxapi.types.attachments.url_str.MediaProbe") as MockMP:
+            mock_media_probe = AsyncMock()
+            MockMP.return_value = mock_media_probe
+            mock_media_probe.from_url.return_value = error_info
 
             info = await UrlStr("https://example.com/bad").get_info()
 

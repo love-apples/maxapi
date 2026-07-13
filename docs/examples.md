@@ -1029,7 +1029,7 @@ async def cmd_info(event: MessageCreated):
         await event.message.answer('Вложение не содержит URL.')
         return
 
-    # get_info() всегда возвращает FileInfo (в т.ч. при ошибке)
+    # get_info() всегда возвращает MediaInfo (в т.ч. при ошибке)
     info = await url.get_info()
 
     if info.status == "error":
@@ -1058,13 +1058,13 @@ if __name__ == '__main__':
     asyncio.run(main())
 ```
 
-Если у вас есть URL как обычная строка (не из вложения), используйте
-свободную функцию `inspect_url`:
+Если у вас есть URL как обычная строка (не из вложения), создайте `UrlStr` напрямую:
 
 ```python
-from maxapi.utils import inspect_url
+from maxapi.types.attachments.url_str import UrlStr
 
-info = await inspect_url('https://example.com/video.mp4', timeout=10)
+url = UrlStr("https://example.com/video.mp4")
+info = await url.get_info(timeout=10)
 print(info.format)   # "MP4"
 print(info.width)    # 1920
 print(info.height)   # 1080
@@ -1082,18 +1082,6 @@ print(info)
 
 # Для аудио файлов может быть:
 # Битрейт (номинальный): 320 кбит/с"
-```
-Аналогичным способом можно проанализировать байты и файлы с диска.
-Например если вы уже скачали файл через bot.download_file(url)
-или bot.download_bytes(url)
-
-```python
-from maxapi.utils import inspect_bytes, inspect_file
-
-info = await inspect_bytes(bytes_or_bytes_io)
-print(info)
-info = await inspect_file(file_path_str_or_Path)
-print(info)
 ```
 
 

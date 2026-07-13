@@ -1,8 +1,7 @@
 # Получение метаинформации о медиафайлах
 
-Библиотека `maxapi` позволяет извлекать метаданные медиафайлов (формат, размеры, длительность, битрейт) по URL **без полной загрузки**, локальному пути или байтам в памяти.
-Анализирует сигнатуры и заголовки в первых и последних байтах файла. Скачивает минимум данных, докачивает
-только если не хватило.
+Библиотека `maxapi` позволяет извлекать метаданные медиафайлов (формат, размеры, длительность, битрейт) по URL **без полной загрузки**.
+Используется библиотека `url-media-probe` (`MediaProbe` / `MediaInfo`).
 
 Это полезно для:
 
@@ -12,7 +11,7 @@
 
 ## Поддерживаемые форматы
 
-FileInspector распознает метаданные для популярных медиаформатов:
+`MediaProbe` распознает метаданные для популярных медиаформатов:
 * Изображения: JPEG, PNG, GIF, WebP (VP8/VP8L/VP8X)
 * Видео: MP4/MOV, AVI, MKV, WEBM, OGV
 * Аудио: MP3, AAC, WAV, WMA, FLAC, OGG, M4A
@@ -20,20 +19,13 @@ FileInspector распознает метаданные для популярн�
 Для каждого формата извлекаются поля (если доступно):
 width, height, duration, fps, sample_rate, bitrate
 
-## Быстрый старт: `bot.get_file_info()`
+## Быстрый старт: `UrlStr.get_info()`
 
-Самый простой способ — использовать метод `bot.get_file_info()`, который принимает URL файла и возвращает `FileInfo`:
+Самый простой способ — получить URL вложения и вызвать `get_info()`:
 
 ```python
-from maxapi import Bot
-
-bot = Bot(token="YOUR_TOKEN")
-
-# Получаем метаинформацию о файле по URL
-info = await bot.get_file_info(
-    "https://example.com/video.mp4",
-    timeout=10,  # таймаут в секундах (опционально)
-)
+# url — это UrlStr из поля attachment.url
+info = await url.get_info()
 
 print(info)
 
@@ -46,37 +38,24 @@ if info.status != "ok":
     print(f"  Комментарий парсера: {info.parse_note}")
 ```
 
-## Анализ файла на диске или байт в памяти
+## Сохранение файла на диск
+
+После `get_info()` можно сохранить файл целиком, используя уже скачанные данные и активное соединение:
 
 ```python
-from maxapi.utils import FileInspector
-inspector = FileInspector()
-file_info = await inspector.inspect_file("/path/to/video.avi")
-file_info = await inspector.inspect_bytes(downloaded_bytes)
-# Следующий метод интегрирован в bot.get_file_info(url)
-file_info = await inspector.inspect_url("https://example.com/photo.jpg")
-```
-
-FileInspector можно использовать повторно для других файлов.
-При этом он помнит последние скачанные данные и последний FileInfo:
-
-```python
-if inspector.last_file_info:
-    print(inspector.last_file_info)
-    print("Скачано начало файла", len(inspector.last_head), "байт")
-    if inspector.last_tail:
-        print("Скачано конца файла", len(inspector.last_tail), "байт")
+path = await url.full_file_save("/tmp/downloads")
+print(f"Сохранено: {path}")
 ```
 
 ## Обработка статусов
 
-Метод возвращает FileInfo со статусом:
+Метод возвращает `MediaInfo` со статусом:
 * `ok` — все ключевые метаданные успешно извлечены.
 * `partial` — часть данных получена, но чего-то не хватает (например, длительность для MP4 с moov в конце файла).
 * `error` — произошла ошибка (сеть, HTML-страница вместо файла) и не удалось определить даже размер файла.
 
 ```python
-info = await bot.get_file_info(url)
+info = await url.get_info()
 
 if info.status == "ok":
     print(f"Полные метаданные: {info.format}, {info.width}x{info.height}")
@@ -88,31 +67,14 @@ else:
 
 ## Как это работает?
 
-FileInspector использует частичную загрузку:
+`MediaProbe` (внутри `UrlStr.get_info()`) использует частичную загрузку:
 * GET-запрос и чтение первых N байт для получения Content-Type/Content-Length и сигнатуры файла.
 * Скачивание хвоста 64 КБ — для форматов, где метаданные в конце (MP4 с moov в конце,
   OGG с длительностью в последней грануле).
 * Чтение начала файла от 4 до 256 КБ в зависимости от формата.
 
-Если сервер не поддерживает Range-запросы, FileInspector адаптируется и работает с тем, что есть,
+Если сервер не поддерживает Range-запросы, `MediaProbe` адаптируется и работает с тем, что есть,
 возвращая статус partial при невозможности определить некоторые поля.
-
-## Безопасность и авторизация
-
-Если вы передаете aiohttp.ClientSession с заголовками авторизации (Authorization, Cookie), они не будут отправлены на сторонние домены по умолчанию. Это защита от утечки токенов.
-Чтобы разрешить отправку авторизации на внешний URL:
-
-```python
-from maxapi.utils import FileInspector
-inspector = FileInspector()
-info = await inspector.inspect_url(
-    "https://external.com/private.mp4",
-    session=session_with_auth,
-    allow_external_auth=True,  # явно разрешаем
-)
-```
-
-Доверенные домены (**oneme.ru**, **okcdn.ru**) всегда принимают авторизацию без этого флага.
 
 ## Пример в боте: команда /info
 
@@ -133,29 +95,14 @@ async def cmd_info(event: MessageCreated):
         await event.message.answer("ℹ️ Ответьте этой командой на сообщение с файлом.")
         return
 
-    first_url = None
-    # Получаем URL вложений до первого успеха
-    if replied_body.attachments:
-        for att in replied_body.attachments:
-            if hasattr(att, "url"):
-                file_info = await bot.get_file_info(att.url)
-                if file_info.status == "ok":
-                    # Собрать отдельные интересующие поля
-                    # text = f"Формат: {file_info.format}\n"
-                    # if file_info.width and file_info.height:
-                    #     text += f"Размеры: {file_info.width}x{file_info.height}\n"
-                    # if file_info.duration:
-                    #     text += f"Длительность: {file_info.duration} сек\n"
-                    # if file_info.sample_rate:
-                    #     text += f"Частота сэмплов: {file_info.sample_rate} Гц\n"
-                    # text += f"Статус: {file_info.status}"
-                    # Или просто:
-                    text = str(file_info)
-                    await event.message.answer(text)
-                    return
+    for att in replied_body.attachments:
+        if hasattr(att, "url"):
+            info = await att.url.get_info()
+            if info.status == "ok":
+                await event.message.answer(str(info))
+                return
 
     await event.message.answer("Вложение не найдено")
-    return
 
 
 if __name__ == '__main__':
