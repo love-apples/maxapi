@@ -3,8 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from pydantic_core import core_schema
-
-from ...utils.file_inspector import FileInspector
+from url_media_probe import MediaInfo, MediaProbe
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -12,16 +11,14 @@ if TYPE_CHECKING:
     from pydantic import GetCoreSchemaHandler
     from pydantic_core import CoreSchema
 
-    from maxapi.types.file_info import FileInfo
-
 
 class UrlStr(str):
-    __slots__ = ("inspector",)
-    inspector: FileInspector | None
+    __slots__ = ("media_probe",)
+    media_probe: MediaProbe | None
 
     def __new__(cls, value: str):
         instance = super().__new__(cls, value)
-        instance.inspector = None
+        instance.media_probe = None
         return instance
 
     @classmethod
@@ -39,7 +36,7 @@ class UrlStr(str):
         timeout: int = 30,
         max_total: int = 256_000,
         max_retries: int = 3,
-    ) -> FileInfo:
+    ) -> MediaInfo:
         """
         Инспектирует удалённый файл по URL.
 
@@ -49,10 +46,10 @@ class UrlStr(str):
             max_retries: Число повторных попыток при ``retry_on_statuses``.
 
         Returns:
-            FileInfo: Результат инспекции (в т.ч. при сетевой ошибке).
+            MediaInfo: Результат инспекции (в т.ч. при сетевой ошибке).
         """
-        self.inspector = FileInspector()
-        return await self.inspector.inspect_url(
+        self.media_probe = MediaProbe()
+        return await self.media_probe.from_url(
             self, timeout=timeout, max_total=max_total, max_retries=max_retries
         )
 
@@ -75,8 +72,8 @@ class UrlStr(str):
         Returns:
             Path: Абсолютный путь к сохранённому файлу.
         """
-        if not self.inspector:
-            self.inspector = FileInspector()
-        return await self.inspector.full_file_save(
+        if not self.media_probe:
+            self.media_probe = MediaProbe()
+        return await self.media_probe.full_file_save(
             file_path, file_name=file_name
         )

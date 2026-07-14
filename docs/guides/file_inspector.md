@@ -17,7 +17,7 @@
 * Аудио: MP3, AAC, WAV, WMA, FLAC, OGG, M4A
 
 Для каждого формата извлекаются поля (если доступно):
-width, height, duration, fps, sample_rate, bitrate
+width, height, duration, fps, sample_rate, bitrate_nominal, bitrate_avg
 
 ## Быстрый старт: `UrlStr.get_info()`
 

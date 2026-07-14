@@ -1039,7 +1039,7 @@ async def cmd_info(event: MessageCreated):
     # str(info) — человекочитаемый вывод
     await event.message.answer(
         f"{info}"
-        f"\nДля определения параметров файла было скачано {url.inspector.downloaded_human}"
+        f"\nДля определения параметров файла было скачано {url.media_probe.downloaded_human}"
     )
 
     # Докачка файла через существующее соединение
