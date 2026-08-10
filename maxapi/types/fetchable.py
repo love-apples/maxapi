@@ -43,7 +43,7 @@ class LazyRef(BotMixin, Generic[ResolvedValue]):
         self._fetcher = fetcher
         self._setter = setter
         self._description = description
-        self._resolved: ResolvedValue | None | object = _UNSET
+        self._resolved: ResolvedValue | object | None = _UNSET
         self._fetch_lock = asyncio.Lock()
 
     async def fetch(self) -> ResolvedValue | None:

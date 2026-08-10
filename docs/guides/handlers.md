@@ -28,7 +28,8 @@ dp.message_created.register(my_handler, <фильтры>)
 ```python
 from maxapi.types import MessageCreated, Command
 
-@dp.message_created(Command('start'))
+
+@dp.message_created(Command("start"))
 async def start_handler(event: MessageCreated):
     await event.message.answer("Привет!")
 ```
@@ -38,15 +39,18 @@ async def start_handler(event: MessageCreated):
 Если вы хотите, чтобы хендлер срабатывал только тогда, когда у пользователя нет активного состояния в FSM, используйте `None`:
 
 ```python
-@dp.message_created(None, Command('help'))
+@dp.message_created(None, Command("help"))
 async def help_no_state(event: MessageCreated):
-    await event.message.answer("Вы запросили помощь вне контекста заполнения формы.")
+    await event.message.answer(
+        "Вы запросили помощь вне контекста заполнения формы."
+    )
 ```
 
 ### Обработка с фильтром
 
 ```python
 from maxapi import F
+
 
 @dp.message_created(F.message.body.text)
 async def text_handler(event: MessageCreated):
@@ -66,8 +70,10 @@ async def any_message(event: MessageCreated):
 ```python
 from maxapi.context import State, StatesGroup
 
+
 class Form(StatesGroup):
     name = State()
+
 
 @dp.message_created(F.message.body.text, Form.name)
 async def name_handler(event: MessageCreated, context: MemoryContext):
@@ -78,7 +84,7 @@ async def name_handler(event: MessageCreated, context: MemoryContext):
 ### Обработка с контекстом
 
 ```python
-@dp.message_created(Command('data'))
+@dp.message_created(Command("data"))
 async def data_handler(event: MessageCreated, context: MemoryContext):
     data = await context.get_data()
     await event.message.answer(f"Данные: {data}")
@@ -92,17 +98,17 @@ async def data_handler(event: MessageCreated, context: MemoryContext):
 from maxapi.types.attachments.upload import AttachmentUpload, AttachmentPayload
 from maxapi.enums.upload_type import UploadType
 
-@dp.message_created(Command('send_photo'))
+
+@dp.message_created(Command("send_photo"))
 async def send_photo_by_token(event: MessageCreated):
     # Создаем вложение, используя существующий токен
     attachment = AttachmentUpload(
         type=UploadType.IMAGE,
-        payload=AttachmentPayload(token="ВАШ_ТОКЕН_ЗДЕСЬ")
+        payload=AttachmentPayload(token="ВАШ_ТОКЕН_ЗДЕСЬ"),
     )
-    
+
     await event.message.answer(
-        text="Вот ваше фото по токену",
-        attachments=[attachment]
+        text="Вот ваше фото по токену", attachments=[attachment]
     )
 ```
 

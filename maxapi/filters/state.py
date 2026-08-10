@@ -10,7 +10,7 @@ from .filter import BaseFilter
 if TYPE_CHECKING:
     from ..types.updates import UpdateUnion
 
-StateType: TypeAlias = State | str | None | StatesGroup | type[StatesGroup]
+StateType: TypeAlias = State | str | StatesGroup | type[StatesGroup] | None
 StateInput: TypeAlias = StateType | Iterable[StateType]
 _UNSET = object()
 

@@ -1,8 +1,13 @@
 SHELL = /bin/bash
 
 
+.PHONY: upgrade
+upgrade:
+	uv lock --upgrade
+
+
 .PHONY: run-test
-run-test:
+run-test: upgrade
 	@echo "Running linters and tests in parallel (uv run)..."
 	@status=0; \
 	uv run -- ruff check . & p1=$$!; \

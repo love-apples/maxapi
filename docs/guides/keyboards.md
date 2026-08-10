@@ -21,8 +21,7 @@ builder.row(ClipboardButton(text="Скопировать код", payload="ABC-1
 builder.row(CallbackButton(text="Ещё кнопка", payload="more"))
 
 await event.message.answer(
-    text="Выберите действие:",
-    attachments=[builder.as_markup()]
+    text="Выберите действие:", attachments=[builder.as_markup()]
 )
 ```
 
@@ -41,14 +40,11 @@ from maxapi.types.attachments.buttons import (
 buttons = [
     [LinkButton(text="Сайт", url="https://example.com")],
     [ClipboardButton(text="Скопировать код", payload="ABC-123")],
-    [CallbackButton(text="Callback", payload="data")]
+    [CallbackButton(text="Callback", payload="data")],
 ]
 payload = ButtonsPayload(buttons=buttons).pack()
 
-await event.message.answer(
-    text="Клавиатура",
-    attachments=[payload]
-)
+await event.message.answer(text="Клавиатура", attachments=[payload])
 ```
 
 ## Типы кнопок

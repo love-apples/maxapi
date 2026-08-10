@@ -11,11 +11,11 @@
 В docstring обработчика необходимо указать маркер `commands_info:` с описанием команды:
 
 ```python
-@dp.message_created(Command('start'))
+@dp.message_created(Command("start"))
 async def start_handler(event: MessageCreated):
     """
     Обработчик команды /start
-    
+
     commands_info: Запускает бота и показывает приветственное сообщение
     """
     await event.message.answer("Привет! Добро пожаловать!")
@@ -32,24 +32,27 @@ from maxapi.types import MessageCreated, Command
 bot = Bot()
 dp = Dispatcher()
 
-@dp.message_created(Command('help'))
+
+@dp.message_created(Command("help"))
 async def help_handler(event: MessageCreated):
     """
     Обработчик команды помощи
-    
+
     commands_info: Показывает список доступных команд и их описание
     """
-    await event.message.answer("Доступные команды:\n/start - Начать работу\n/help - Помощь")
+    await event.message.answer(
+        "Доступные команды:\n/start - Начать работу\n/help - Помощь"
+    )
 ```
 
 ### Несколько команд с одним описанием
 
 ```python
-@dp.message_created(Command(['start', 'begin', 'go']))
+@dp.message_created(Command(["start", "begin", "go"]))
 async def start_handler(event: MessageCreated):
     """
     Обработчик команд запуска
-    
+
     commands_info: Инициализирует бота и начинает диалог с пользователем
     """
     await event.message.answer("Бот запущен!")
@@ -58,11 +61,11 @@ async def start_handler(event: MessageCreated):
 ### Многострочное описание
 
 ```python
-@dp.message_created(Command('settings'))
+@dp.message_created(Command("settings"))
 async def settings_handler(event: MessageCreated):
     """
     Обработчик настроек
-    
+
     commands_info: Открывает меню настроек бота.
     Позволяет изменить язык, уведомления и другие параметры.
     """
@@ -97,10 +100,7 @@ for cmd_info in commands:
 from maxapi.filters.command import CommandsInfo
 
 # Пример использования
-cmd_info = CommandsInfo(
-    commands=['start', 'begin'],
-    info='Запускает бота'
-)
+cmd_info = CommandsInfo(commands=["start", "begin"], info="Запускает бота")
 ```
 
 ## Логирование команд при старте
@@ -111,6 +111,7 @@ cmd_info = CommandsInfo(
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 @dp.on_started()
 async def log_all_commands():
@@ -143,47 +144,53 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot()
 dp = Dispatcher()
 
-@dp.message_created(Command('start'))
+
+@dp.message_created(Command("start"))
 async def start_handler(event: MessageCreated):
     """
     Обработчик команды /start
-    
+
     commands_info: Запускает бота и показывает приветствие
     """
     await event.message.answer("Привет!")
 
-@dp.message_created(Command('help'))
+
+@dp.message_created(Command("help"))
 async def help_handler(event: MessageCreated):
     """
     Обработчик команды /help
-    
+
     commands_info: Показывает справку по использованию бота
     """
     await event.message.answer("Справка по командам...")
 
-@dp.message_created(Command('settings'))
+
+@dp.message_created(Command("settings"))
 async def settings_handler(event: MessageCreated):
     """
     Обработчик команды /settings
-    
+
     commands_info: Открывает меню настроек
     """
     await event.message.answer("Настройки...")
+
 
 @dp.on_started()
 async def log_all_commands():
     """Логирует все зарегистрированные команды"""
     logger = logging.getLogger(__name__)
-    
+
     logger.info("Зарегистрированные команды:")
     for cmd_info in bot.handlers_commands:
         commands_str = ", ".join([f"/{cmd}" for cmd in cmd_info.commands])
         info_str = f" - {cmd_info.info}" if cmd_info.info else ""
         logger.info(f"  {commands_str}{info_str}")
 
+
 async def main():
     await dp.start_polling(bot)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     asyncio.run(main())
 ```
