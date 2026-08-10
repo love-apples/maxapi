@@ -3,25 +3,21 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .base import MaxError
+
+class InvalidToken(Exception): ...
 
 
-class InvalidToken(MaxError): ...
+class MaxConnection(Exception): ...
 
 
-class MaxConnection(MaxError): ...
+class MaxUploadFileFailed(Exception): ...
 
 
-class MaxUploadFileFailed(MaxError): ...
-
-
-class MaxIconParamsException(MaxError): ...
+class MaxIconParamsException(Exception): ...
 
 
 @dataclass(slots=True)
-class MaxApiError(MaxError):
-    """Ошибка, пришедшая от сервера API Макса (не-2xx ответ)."""
-
+class MaxApiError(Exception):
     code: int
     raw: str | dict[str, Any]
 

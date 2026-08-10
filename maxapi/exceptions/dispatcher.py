@@ -3,11 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .base import MaxError
-
 
 @dataclass(slots=True)
-class HandlerException(MaxError):
+class HandlerException(Exception):
     handler_title: str
     router_id: str | int | None
     process_info: str
@@ -32,7 +30,7 @@ class HandlerException(MaxError):
 
 
 @dataclass(slots=True)
-class MiddlewareException(MaxError):
+class MiddlewareException(Exception):
     middleware_title: str
     router_id: str | int | None
     process_info: str
