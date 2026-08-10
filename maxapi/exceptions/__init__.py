@@ -1,3 +1,5 @@
+from .base import MaxError
+
 from .dispatcher import HandlerException, MiddlewareException
 from .download_file import DownloadFileError, NotAvailableForDownload
 from .max import (
@@ -14,6 +16,7 @@ __all__ = [
     "InvalidToken",
     "MaxApiError",
     "MaxConnection",
+    "MaxError",
     "MaxIconParamsException",
     "MaxUploadFileFailed",
     "MiddlewareException",
