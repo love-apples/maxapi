@@ -11,6 +11,7 @@ from maxapi.methods.add_admin_chat import AddAdminChat
 from maxapi.methods.get_chat_by_link import GetChatByLink
 from maxapi.methods.get_messages import GetMessages
 from maxapi.methods.types.added_members_chat import AddedMembersChat
+from maxapi.methods.types.getted_members_chat import GettedMembersChat
 from maxapi.types.attachments.attachment import ContactAttachmentPayload
 from maxapi.types.attachments.image import PhotoAttachmentRequestPayload
 from maxapi.types.attachments.video import Video
@@ -102,6 +103,7 @@ def test_user_and_chat_admin_keep_swagger_compat_fields():
     )
 
     assert user.first_name == "Alice"
+    assert user.last_activity_time == 0
     assert admin.alias == "owner"
 
 
@@ -122,12 +124,99 @@ def test_chat_member_accepts_swagger_fields_with_nullable_permissions():
         }
     )
 
+    assert member.last_activity_time == 0
     assert member.last_access_time == 10
     assert member.is_owner is False
     assert member.is_admin is True
     assert member.join_time == 20
     assert member.permissions is None
     assert member.alias == "moderator"
+
+
+def test_chat_member_allows_missing_last_activity_time_for_deleted_user():
+    """Issue #179: удалённые пользователи (DELETED USER) не содержат
+    last_activity_time в ответе API, но содержат last_access_time.
+    """
+
+    member = ChatMember.model_validate(
+        {
+            "user_id": 1,
+            "first_name": "DELETED USER",
+            "is_bot": False,
+            "name": "DELETED USER",
+            "last_access_time": 0,
+        }
+    )
+
+    assert member.last_activity_time is None
+    assert member.last_access_time == 0
+    assert member.first_name == "DELETED USER"
+    assert member.user_id == 1
+
+
+def test_chat_member_still_requires_identity_fields():
+    """Убедиться, что фикс #179 не ослабляет остальные обязательные
+    поля — падать должны только они, а не last_activity_time.
+    """
+
+    with pytest.raises(ValidationError) as exc_info:
+        ChatMember.model_validate(
+            {"last_access_time": 0, "name": "DELETED USER"}
+        )
+
+    missing_fields = {error["loc"][0] for error in exc_info.value.errors()}
+    assert missing_fields == {"user_id", "first_name", "is_bot"}
+
+
+def test_user_allows_missing_last_activity_time():
+    user = User.model_validate(
+        {"user_id": 1, "first_name": "DELETED USER", "is_bot": False}
+    )
+
+    assert user.last_activity_time is None
+
+
+def test_getted_members_chat_accepts_deleted_and_normal_members():
+    """Issue #179: get_chat_members не должен падать, если среди
+    участников чата есть удалённый пользователь.
+    """
+
+    raw = {
+        "members": [
+            {
+                "user_id": 1,
+                "first_name": "Alice",
+                "last_name": "Smith",
+                "username": "alice",
+                "is_bot": False,
+                "last_activity_time": 1739184000000,
+                "name": "Alice Smith",
+                "last_access_time": 1739184000000,
+                "is_owner": True,
+                "is_admin": True,
+                "join_time": 1739000000000,
+                "permissions": ["write"],
+                "alias": None,
+            },
+            {
+                "user_id": 2,
+                "first_name": "DELETED USER",
+                "is_bot": False,
+                "name": "DELETED USER",
+                "last_access_time": 0,
+            },
+        ],
+        "marker": 42,
+    }
+
+    result = GettedMembersChat(**raw)
+
+    assert len(result.members) == 2
+    assert result.members[0].last_activity_time == 1739184000000
+    assert result.members[0].last_access_time == 1739184000000
+    assert result.members[1].last_activity_time is None
+    assert result.members[1].last_access_time == 0
+    assert result.marker == 42
 
 
 def test_get_messages_requires_chat_id_or_message_ids(bot):
