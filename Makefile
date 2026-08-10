@@ -7,7 +7,7 @@ upgrade:
 
 
 .PHONY: run-test
-run-test: upgrade
+run-test:
 	@echo "Running linters and tests in parallel (uv run)..."
 	@status=0; \
 	uv run -- ruff check . & p1=$$!; \
