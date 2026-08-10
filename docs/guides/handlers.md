@@ -108,7 +108,8 @@ async def send_photo_by_token(event: MessageCreated):
     )
 
     await event.message.answer(
-        text="Вот ваше фото по токену", attachments=[attachment]
+        text="Вот ваше фото по токену",
+        attachments=[attachment],
     )
 ```
 

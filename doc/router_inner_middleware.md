@@ -562,13 +562,13 @@ outer middleware и фильтры:
 ```python
 parent = Router(router_id="parent")
 parent.register_inner_middleware(
-    DbTransactionMiddleware()
-)  # на любой handler в parent + детях
+    DbTransactionMiddleware()  # на любой handler в parent + детях
+)
 
 child = Router(router_id="child")
 child.register_inner_middleware(
-    ChildAuditMiddleware()
-)  # только на handler внутри child
+    ChildAuditMiddleware()  # только на handler внутри child
+)
 parent.include_routers(child)
 ```
 

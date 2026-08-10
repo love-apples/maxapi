@@ -73,7 +73,10 @@ async def hello(event: MessageCreated):
     builder = InlineKeyboardBuilder()
 
     builder.row(
-        CallbackButton(text="Кнопка 1", payload="btn_1"),
+        CallbackButton(
+            text="Кнопка 1",
+            payload="btn_1",
+        ),
         CallbackButton(
             text="Кнопка 2",
             payload="btn_2",
@@ -81,7 +84,8 @@ async def hello(event: MessageCreated):
     )
     builder.add(
         ChatButton(  # deprecated: 0.9.14
-            text="Создать чат", chat_title="Тест чат"
+            text="Создать чат",
+            chat_title="Тест чат",
         )
     )
 
@@ -109,20 +113,25 @@ async def bot_added(event: BotAdded):
 
 @dp.message_removed()
 async def message_removed(event: MessageRemoved):
-    await bot.send_message(chat_id=event.chat_id, text="Я всё видел!")
+    await bot.send_message(
+        chat_id=event.chat_id,
+        text="Я всё видел!",
+    )
 
 
 @dp.bot_started()
 async def bot_started(event: BotStarted):
     await bot.send_message(
-        chat_id=event.chat_id, text="Привет! Отправь мне /start"
+        chat_id=event.chat_id,
+        text="Привет! Отправь мне /start",
     )
 
 
 @dp.chat_title_changed()
 async def chat_title_changed(event: ChatTitleChanged):
     await bot.send_message(
-        chat_id=event.chat_id, text=f'Крутое новое название "{event.title}"!'
+        chat_id=event.chat_id,
+        text=f'Крутое новое название "{event.title}"!',
     )
 
 
@@ -299,9 +308,14 @@ async def builder(event: MessageCreated):
 
     builder.row(
         ChatButton(  # deprecated: 0.9.14
-            text="Создать чат", chat_title="Test", chat_description="Test desc"
+            text="Создать чат",
+            chat_title="Test",
+            chat_description="Test desc",
         ),
-        LinkButton(text="Документация MAX", url="https://dev.max.ru/docs"),
+        LinkButton(
+            text="Документация MAX",
+            url="https://dev.max.ru/docs",
+        ),
     )
 
     builder.row(
@@ -340,7 +354,10 @@ async def payload(event: MessageCreated):
                 chat_title="Test",
                 chat_description="Test desc",
             ),
-            LinkButton(text="Документация MAX", url="https://dev.max.ru/docs"),
+            LinkButton(
+                text="Документация MAX",
+                url="https://dev.max.ru/docs",
+            ),
         ],
         [
             RequestGeoLocationButton(text="Геолокация"),
@@ -365,14 +382,16 @@ async def payload(event: MessageCreated):
     buttons_payload = ButtonsPayload(buttons=buttons).pack()
 
     await event.message.answer(
-        text="Клавиатура из pydantic моделей", attachments=[buttons_payload]
+        text="Клавиатура из pydantic моделей",
+        attachments=[buttons_payload],
     )
 
 
 @dp.message_chat_created()  # deprecated: 0.9.14
 async def message_chat_created(obj: MessageChatCreated):
     await obj.bot.send_message(
-        chat_id=obj.chat.chat_id, text=f"Чат создан! Ссылка: {obj.chat.link}"
+        chat_id=obj.chat.chat_id,
+        text=f"Чат создан! Ссылка: {obj.chat.link}",
     )
 
 
@@ -805,7 +824,8 @@ async def _():
 @dp.bot_started()
 async def bot_started(event: BotStarted):
     await event.bot.send_message(
-        chat_id=event.chat_id, text="Привет! Отправь мне /start"
+        chat_id=event.chat_id,
+        text="Привет! Отправь мне /start",
     )
 
 

@@ -160,7 +160,9 @@ redis_client = redis.Redis(host="localhost", port=6379, db=0)
 
 # Передача RedisContext в Диспетчер
 dp = Dispatcher(
-    storage=RedisContext, redis_client=redis_client, key_prefix="my_bot"
+    storage=RedisContext,
+    redis_client=redis_client,
+    key_prefix="my_bot",
 )
 ```
 

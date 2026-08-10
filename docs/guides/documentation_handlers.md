@@ -100,7 +100,10 @@ for cmd_info in commands:
 from maxapi.filters.command import CommandsInfo
 
 # Пример использования
-cmd_info = CommandsInfo(commands=["start", "begin"], info="Запускает бота")
+cmd_info = CommandsInfo(
+    commands=["start", "begin"],
+    info="Запускает бота",
+)
 ```
 
 ## Логирование команд при старте
