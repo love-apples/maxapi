@@ -897,7 +897,7 @@ async def hello(event: MessageCreated, context: MemoryContext):
 
 
 async def main():
-    await bot.set_my_commands(
+    await bot.set_commands(
         BotCommand(
             name='/start',
             description='Перезапустить бота'
