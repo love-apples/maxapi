@@ -2,7 +2,9 @@ from typing import Any
 
 from aiohttp import ClientTimeout
 
-DEFAULT_RETRY_STATUSES: tuple[int, ...] = (502, 503, 504)
+# 429 — превышение лимита запросов MAX: ответ временный, повтор с задержкой
+# уместен ровно так же, как при серверных 5xx.
+DEFAULT_RETRY_STATUSES: tuple[int, ...] = (429, 502, 503, 504)
 
 
 class DefaultConnectionProperties:
@@ -19,7 +21,7 @@ class DefaultConnectionProperties:
             при серверных ошибках (по умолчанию 3).
         retry_on_statuses: HTTP-статусы, при которых
             выполняется повторная попытка
-            (по умолчанию 502, 503, 504).
+            (по умолчанию 429, 502, 503, 504).
         retry_backoff_factor: Множитель для экспоненциальной
             задержки между попытками в секундах
             (по умолчанию 1.0, задержки: 1с, 2с, 4с).
