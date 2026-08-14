@@ -1,3 +1,5 @@
+"""Метод изменения списка команд бота (PATCH /me/commands)."""
+
 from typing import TYPE_CHECKING, Any, cast
 
 from ..connection.base import BaseConnection

@@ -1,3 +1,5 @@
+"""Модель результата изменения команд бота."""
+
 from pydantic import BaseModel
 
 from ...types.command import BotCommand
