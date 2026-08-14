@@ -200,7 +200,7 @@ class MessageBody(BaseModel):
         }
 
         char_styles: list[
-            list[tuple[TextStyle, str | None | tuple[str, int]]]
+            list[tuple[TextStyle, str | tuple[str, int] | None]]
         ] = []
         for i in range(len(text)):
             utf16_i = utf16_offsets[i] if i < len(utf16_offsets) else 0
@@ -244,7 +244,7 @@ class MessageBody(BaseModel):
 
         def wrap_chunk(
             chunk: str,
-            tags: list[tuple[TextStyle, str | None | tuple[str, int]]],
+            tags: list[tuple[TextStyle, str | tuple[str, int] | None]],
         ) -> object:
             node: object = chunk
             for style, val in reversed(tags):

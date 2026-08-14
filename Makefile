@@ -1,6 +1,11 @@
 SHELL = /bin/bash
 
 
+.PHONY: upgrade
+upgrade:
+	uv lock --upgrade
+
+
 .PHONY: run-test
 run-test:
 	@echo "Running linters and tests in parallel (uv run)..."
