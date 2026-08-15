@@ -57,6 +57,16 @@ class AiohttpMaxWebhook(BaseMaxWebhook):
         """
         await self._startup()
 
+    async def on_shutdown(self, app: "web.Application") -> None:
+        """Дождаться фоновых задач обработки при остановке приложения.
+
+        Добавьте в ``app.on_cleanup`` при подключении к
+        существующему приложению::
+
+            app.on_cleanup.append(webhook.on_shutdown)
+        """
+        await self._shutdown()
+
     def setup(self, app: "web.Application", path: str = DEFAULT_PATH) -> None:
         """Зарегистрировать маршрут вебхука в aiohttp-приложении."""
         from aiohttp import web  # noqa: PLC0415
@@ -93,6 +103,7 @@ class AiohttpMaxWebhook(BaseMaxWebhook):
 
         app = web.Application()
         app.on_startup.append(self.on_startup)
+        app.on_cleanup.append(self.on_shutdown)
         self.setup(app, path)
         return app
 

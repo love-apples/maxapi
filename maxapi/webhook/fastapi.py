@@ -98,7 +98,10 @@ class FastAPIMaxWebhook(BaseMaxWebhook):
         ``contextlib.asynccontextmanager`` вручную.
         """
         await self._startup()
-        yield
+        try:
+            yield
+        finally:
+            await self._shutdown()
 
     def setup(self, app: "FastAPI", path: str = DEFAULT_PATH) -> None:
         """Зарегистрировать маршрут вебхука в FastAPI-приложении."""

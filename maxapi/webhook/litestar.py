@@ -78,6 +78,18 @@ class LitestarMaxWebhook(BaseMaxWebhook):
         """
         await self._startup()
 
+    async def on_shutdown(self) -> None:
+        """Дождаться фоновых задач обработки при остановке приложения.
+
+        Передаётся в ``on_shutdown`` при ручной сборке приложения::
+
+            app = Litestar(
+                route_handlers=[...],
+                on_shutdown=[webhook.on_shutdown],
+            )
+        """
+        await self._shutdown()
+
     def make_handler(self, path: str = DEFAULT_PATH) -> "HTTPRouteHandler":
         """Вернуть настроенный POST-обработчик маршрута Litestar.
 
@@ -122,6 +134,7 @@ class LitestarMaxWebhook(BaseMaxWebhook):
         return Litestar(
             route_handlers=[self.make_handler(path)],
             on_startup=[self.on_startup],
+            on_shutdown=[self.on_shutdown],
         )
 
     async def run(
