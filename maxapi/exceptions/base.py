@@ -1,3 +1,5 @@
+"""Базовое исключение библиотеки."""
+
 from __future__ import annotations
 
 
