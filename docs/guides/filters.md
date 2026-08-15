@@ -9,23 +9,26 @@
 ```python
 from maxapi import F
 
+
 # Только текстовые сообщения
 @dp.message_created(F.message.body.text)
-async def text_handler(event: MessageCreated):
-    ...
+async def text_handler(event: MessageCreated): ...
+
 
 # Сообщения с вложениями
 @dp.message_created(F.message.body.attachments)
-async def attachment_handler(event: MessageCreated):
-    ...
+async def attachment_handler(event: MessageCreated): ...
+
 
 # Комбинация условий
 from maxapi.enums.chat_type import ChatType
 
+
 # ⚠️ Скобки обязательны: & и | имеют более высокий приоритет, чем ==
-@dp.message_created(F.message.body.text & (F.message.chat.type == ChatType.DIALOG))
-async def dialog_text_handler(event: MessageCreated):
-    ...
+@dp.message_created(
+    F.message.body.text & (F.message.chat.type == ChatType.DIALOG)
+)
+async def dialog_text_handler(event: MessageCreated): ...
 ```
 
 Для личных сообщений используйте `ChatType.DIALOG`.
@@ -35,15 +38,15 @@ async def dialog_text_handler(event: MessageCreated):
 ```python
 from maxapi.types import Command
 
+
 # Одна команда
-@dp.message_created(Command('start'))
-async def start_handler(event: MessageCreated):
-    ...
+@dp.message_created(Command("start"))
+async def start_handler(event: MessageCreated): ...
+
 
 # Несколько команд
-@dp.message_created(Command(['start', 'help', 'info']))
-async def commands_handler(event: MessageCreated):
-    ...
+@dp.message_created(Command(["start", "help", "info"]))
+async def commands_handler(event: MessageCreated): ...
 ```
 
 ## Callback Payload фильтр
@@ -51,23 +54,26 @@ async def commands_handler(event: MessageCreated):
 ```python
 from maxapi.filters.callback_payload import CallbackPayload
 
+
 # Простой payload (строка)
-@dp.message_callback(F.callback.payload == 'button_click')
-async def callback_handler(event: MessageCallback):
-    ...
+@dp.message_callback(F.callback.payload == "button_click")
+async def callback_handler(event: MessageCallback): ...
+
 
 # Структурированный payload (класс)
-class MyPayload(CallbackPayload, prefix='mypayload'):
+class MyPayload(CallbackPayload, prefix="mypayload"):
     action: str
     value: int
+
 
 # Без дополнительных условий
 @dp.message_callback(MyPayload.filter())
 async def callback_handler(event: MessageCallback, payload: MyPayload):
     await event.answer(f"Action: {payload.action}, Value: {payload.value}")
 
+
 # С дополнительным фильтром
-@dp.message_callback(MyPayload.filter(F.action == 'edit'))
+@dp.message_callback(MyPayload.filter(F.action == "edit"))
 async def callback_handler(event: MessageCallback, payload: MyPayload):
     await event.answer(f"Edit action: {payload.value}")
 ```
@@ -140,10 +146,10 @@ F.message.body.text | F.message.body.attachments
 # Отрицание (NOT)
 ~F.message.body.text
 
+
 # Несколько фильтров в декораторе (все объединяются через AND)
-@dp.message_created(F.message.body.text, Command('start'), Form.name)
-async def handler(event: MessageCreated):
-    ...
+@dp.message_created(F.message.body.text, Command("start"), Form.name)
+async def handler(event: MessageCreated): ...
 ```
 
 ## Базовые фильтры (BaseFilter)
@@ -152,6 +158,7 @@ async def handler(event: MessageCreated):
 
 ```python
 from maxapi.filters.filter import BaseFilter
+
 
 class MyFilter(BaseFilter):
     async def __call__(self, event):

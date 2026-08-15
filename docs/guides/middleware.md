@@ -8,6 +8,7 @@ Middleware позволяет обрабатывать события до и п
 from maxapi.filters.middleware import BaseMiddleware
 from typing import Any, Awaitable, Callable, Dict
 
+
 class LoggingMiddleware(BaseMiddleware):
     async def __call__(
         self,
@@ -35,7 +36,7 @@ class LoggingMiddleware(BaseMiddleware):
   захвата распределённых блокировок и т.п.
 
 ```python
-dp.register_outer_middleware(LoggingMiddleware())        # каждый update
+dp.register_outer_middleware(LoggingMiddleware())  # каждый update
 dp.register_inner_middleware(DbTransactionMiddleware())  # только под handler
 ```
 
@@ -74,6 +75,7 @@ from maxapi.types.updates.message_created import MessageCreated
 
 # ── Фильтры ──────────────────────────────────────────────────────────────────
 
+
 class IsAdmin(BaseFilter):
     """Пропускает только пользователей из списка администраторов."""
 
@@ -85,11 +87,13 @@ class IsAdmin(BaseFilter):
 
 # ── Middleware ────────────────────────────────────────────────────────────────
 
+
 class RequestIdMiddleware(BaseMiddleware):
     """Outer-global: проставляет уникальный request-id на каждое событие."""
 
     async def __call__(self, handler, event, data):
         import uuid
+
         data["request_id"] = str(uuid.uuid4())
         return await handler(event, data)
 
@@ -194,7 +198,7 @@ dp.register_outer_middleware   → RequestIdMiddleware
 ## Middleware в обработчике
 
 ```python
-@dp.message_created(Command('start'), LoggingMiddleware())
+@dp.message_created(Command("start"), LoggingMiddleware())
 async def start_handler(event: MessageCreated):
     await event.message.answer("Привет!")
 ```
@@ -204,10 +208,11 @@ async def start_handler(event: MessageCreated):
 ```python
 class CustomDataMiddleware(BaseMiddleware):
     async def __call__(self, handler, event_object, data):
-        data['custom_data'] = f'User ID: {event_object.from_user.user_id}'
+        data["custom_data"] = f"User ID: {event_object.from_user.user_id}"
         return await handler(event_object, data)
 
-@dp.message_created(Command('data'), CustomDataMiddleware())
+
+@dp.message_created(Command("data"), CustomDataMiddleware())
 async def handler(event: MessageCreated, custom_data: str):
     await event.message.answer(custom_data)
 ```
@@ -300,8 +305,7 @@ async def value_error_handler(event: ErrorEvent):
 
 
 @dp.errors(ExceptionTypeFilter(RuntimeError))
-async def runtime_error_handler(event: ErrorEvent):
-    ...
+async def runtime_error_handler(event: ErrorEvent): ...
 ```
 
 В декоратор можно передавать:
