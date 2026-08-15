@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import inspect
 
+import pytest
+
 import maxapi.exceptions as exc_module
 from maxapi.exceptions import MaxApiError, MaxError
 
@@ -49,14 +51,13 @@ def test_max_error_is_exception_subclass():
 
 def test_except_max_error_catches_any_lib_error():
     """``except MaxError`` действительно ловит конкретные подклассы."""
-    try:
+    with pytest.raises(MaxError) as exc_info:
         raise MaxApiError(code=500, raw={"x": 1})
-    except MaxError as e:
-        assert isinstance(e, MaxApiError)
-        assert e.code == 500
-        assert e.raw == {"x": 1}
-    else:
-        raise AssertionError("MaxApiError не был пойман как MaxError")
+
+    e = exc_info.value
+    assert isinstance(e, MaxApiError)
+    assert e.code == 500
+    assert e.raw == {"x": 1}
 
 
 def test_max_api_error_dataclass_contract_preserved():
