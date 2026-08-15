@@ -905,9 +905,7 @@ async def hello(event: MessageCreated, context: MemoryContext):
 
 
 async def main():
-    await bot.set_my_commands(
-        BotCommand(name="/start", description="Перезапустить бота"),
-        BotCommand(name="/clear", description="Очищает ваш контекст"),
+    await bot.set_commands(
         BotCommand(
             name="/state", description="Показывают ваше контекстное состояние"
         ),

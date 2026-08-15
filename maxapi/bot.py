@@ -41,6 +41,7 @@ from .methods.remove_member_chat import RemoveMemberChat
 from .methods.send_action import SendAction
 from .methods.send_callback import SendCallback
 from .methods.send_message import SendMessage
+from .methods.set_commands import SetCommands
 from .methods.subscribe_webhook import SubscribeWebhook
 from .methods.unsubscribe_webhook import UnsubscribeWebhook
 from .utils.message import process_input_media
@@ -72,6 +73,7 @@ if TYPE_CHECKING:
     from .methods.types.sended_action import SendedAction
     from .methods.types.sended_callback import SendedCallback
     from .methods.types.sended_message import SendedMessage
+    from .methods.types.setted_commands import SettedCommands
     from .methods.types.subscribed import Subscribed
     from .methods.types.unsubscribed import Unsubscribed
     from .types.attachments import Attachments
@@ -1143,9 +1145,32 @@ class Bot(BaseConnection):
             att=media,
         )
 
+    async def set_commands(self, *commands: BotCommand) -> SettedCommands:
+        """
+        Добавляет, изменяет или удаляет команды бота.
+
+        https://dev.max.ru/docs-api/methods/PATCH/me/commands
+
+        Вызов без аргументов удаляет все команды бота.
+
+        Args:
+            *commands: Команды, которые поддерживает бот
+                (до 32 элементов).
+
+        Returns:
+            SettedCommands: Актуальный список команд бота.
+        """
+
+        return await SetCommands(bot=self, commands=list(commands)).fetch()
+
     async def set_my_commands(self, *commands: BotCommand) -> User:
         """
         Устанавливает список команд бота.
+
+        .. deprecated:: 1.2.2
+            Метод отправляет запрос на ``PATCH /me``, поддержка
+            которого прекращается 15.09.2026. Используйте
+            :meth:`set_commands`.
 
         Args:
             *commands: Список команд.
@@ -1155,9 +1180,9 @@ class Bot(BaseConnection):
         """
 
         warnings.warn(
-            "bot.change_info() устарел и отсутствует в официальной "
-            "swagger-спецификации API MAX. "
-            "Использование не рекомендуется.",
+            "bot.set_my_commands() отправляет PATCH /me, поддержка "
+            "которого прекращается 15.09.2026. "
+            "Используйте bot.set_commands().",
             DeprecationWarning,
             stacklevel=2,
         )
