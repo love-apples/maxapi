@@ -10,9 +10,8 @@ from __future__ import annotations
 
 import inspect
 
-import pytest
-
 import maxapi.exceptions as exc_module
+import pytest
 from maxapi.exceptions import MaxApiError, MaxError
 
 
