@@ -95,13 +95,14 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot()
 dp = Dispatcher()
 
+
 # Ответ бота при нажатии на кнопку "Начать"
 @dp.bot_started()
 async def bot_started(event: BotStarted):
     await bot.send_message(
-        chat_id=event.chat_id,
-        text='Привет! Отправь мне /start'
+        chat_id=event.chat_id, text="Привет! Отправь мне /start"
     )
+
 
 # Ответ бота на команду /start
 @dp.message_created(CommandStart())
@@ -118,7 +119,7 @@ async def main():
     await dp.start_polling(bot)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
@@ -167,12 +168,12 @@ async def hello(event: MessageCreated):
 async def main():
     await dp.handle_webhook(
         bot=bot,
-        host='0.0.0.0',
+        host="0.0.0.0",
         port=8080,
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
@@ -201,11 +202,15 @@ import uvicorn
 from fastapi import FastAPI
 from maxapi.webhook.fastapi import FastAPIMaxWebhook
 
+
 async def main():
     webhook = FastAPIMaxWebhook(dp=dp, bot=bot)
     app = FastAPI(lifespan=webhook.lifespan)
-    webhook.setup(app, path='/webhook')
-    await uvicorn.Server(uvicorn.Config(app, host='0.0.0.0', port=8080)).serve()
+    webhook.setup(app, path="/webhook")
+    await uvicorn.Server(
+        uvicorn.Config(app, host="0.0.0.0", port=8080)
+    ).serve()
+
 
 asyncio.run(main())
 ```
@@ -217,10 +222,14 @@ import asyncio
 import uvicorn
 from maxapi.webhook.litestar import LitestarMaxWebhook
 
+
 async def main():
     webhook = LitestarMaxWebhook(dp=dp, bot=bot)
-    app = webhook.create_app(path='/webhook')
-    await uvicorn.Server(uvicorn.Config(app, host='0.0.0.0', port=8080)).serve()
+    app = webhook.create_app(path="/webhook")
+    await uvicorn.Server(
+        uvicorn.Config(app, host="0.0.0.0", port=8080)
+    ).serve()
+
 
 asyncio.run(main())
 ```

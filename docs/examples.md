@@ -28,7 +28,7 @@ async def main():
     await dp.start_polling(bot)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
@@ -42,23 +42,23 @@ import logging
 
 from maxapi import Bot, Dispatcher
 from maxapi.types import (
-    BotStarted, 
-    Command, 
-    MessageCreated, 
-    CallbackButton, 
-    MessageCallback, 
-    BotAdded, 
-    ChatTitleChanged, 
-    MessageEdited, 
-    MessageRemoved, 
-    UserAdded, 
+    BotStarted,
+    Command,
+    MessageCreated,
+    CallbackButton,
+    MessageCallback,
+    BotAdded,
+    ChatTitleChanged,
+    MessageEdited,
+    MessageRemoved,
+    UserAdded,
     UserRemoved,
     BotStopped,
     DialogCleared,
     DialogMuted,
     DialogUnmuted,
     ChatButton,  # deprecated: 0.9.14
-    MessageChatCreated  # deprecated: 0.9.14
+    MessageChatCreated,  # deprecated: 0.9.14
 )
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
@@ -68,32 +68,32 @@ bot = Bot()
 dp = Dispatcher()
 
 
-@dp.message_created(Command('start'))
+@dp.message_created(Command("start"))
 async def hello(event: MessageCreated):
     builder = InlineKeyboardBuilder()
 
     builder.row(
         CallbackButton(
-            text='Кнопка 1',
-            payload='btn_1'
+            text="Кнопка 1",
+            payload="btn_1",
         ),
         CallbackButton(
-            text='Кнопка 2',
-            payload='btn_2',
-        )
+            text="Кнопка 2",
+            payload="btn_2",
+        ),
     )
     builder.add(
         ChatButton(  # deprecated: 0.9.14
-            text='Создать чат',
-            chat_title='Тест чат'
+            text="Создать чат",
+            chat_title="Тест чат",
         )
     )
 
     await event.message.answer(
-        text='Привет!', 
+        text="Привет!",
         attachments=[
             builder.as_markup(),
-        ]
+        ],
     )
 
 
@@ -101,12 +101,13 @@ async def hello(event: MessageCreated):
 async def bot_added(event: BotAdded):
     chat = await event.fetch_chat()
     if chat is None:
-        logging.info('Не удалось получить chat, возможно отключен auto_requests!')
+        logging.info(
+            "Не удалось получить chat, возможно отключен auto_requests!"
+        )
         return
-    
+
     await bot.send_message(
-        chat_id=event.chat_id,
-        text=f'Привет чат {chat.title}!'
+        chat_id=event.chat_id, text=f"Привет чат {chat.title}!"
     )
 
 
@@ -114,7 +115,7 @@ async def bot_added(event: BotAdded):
 async def message_removed(event: MessageRemoved):
     await bot.send_message(
         chat_id=event.chat_id,
-        text='Я всё видел!'
+        text="Я всё видел!",
     )
 
 
@@ -122,7 +123,7 @@ async def message_removed(event: MessageRemoved):
 async def bot_started(event: BotStarted):
     await bot.send_message(
         chat_id=event.chat_id,
-        text='Привет! Отправь мне /start'
+        text="Привет! Отправь мне /start",
     )
 
 
@@ -130,22 +131,20 @@ async def bot_started(event: BotStarted):
 async def chat_title_changed(event: ChatTitleChanged):
     await bot.send_message(
         chat_id=event.chat_id,
-        text=f'Крутое новое название "{event.title}"!'
+        text=f'Крутое новое название "{event.title}"!',
     )
 
 
 @dp.message_callback()
 async def message_callback(event: MessageCallback):
     await event.answer(
-        new_text=f'Вы нажали на кнопку {event.callback.payload}!'
+        new_text=f"Вы нажали на кнопку {event.callback.payload}!"
     )
 
 
 @dp.message_edited()
 async def message_edited(event: MessageEdited):
-    await event.message.answer(
-        text='Вы отредактировали сообщение!'
-    )
+    await event.message.answer(text="Вы отредактировали сообщение!")
 
 
 @dp.user_removed()
@@ -154,12 +153,12 @@ async def user_removed(event: UserRemoved):
     if from_user is None:
         return await bot.send_message(
             chat_id=event.chat_id,
-            text=f'Неизвестный кикнул {event.user.first_name} 😢'
+            text=f"Неизвестный кикнул {event.user.first_name} 😢",
         )
-        
+
     await bot.send_message(
         chat_id=event.chat_id,
-        text=f'{from_user.first_name} кикнул {event.user.first_name} 😢'
+        text=f"{from_user.first_name} кикнул {event.user.first_name} 😢",
     )
 
 
@@ -169,12 +168,12 @@ async def user_added(event: UserAdded):
     if chat is None:
         return await bot.send_message(
             chat_id=event.chat_id,
-            text=f'Чат приветствует вас, {event.user.first_name}!'
+            text=f"Чат приветствует вас, {event.user.first_name}!",
         )
-        
+
     await bot.send_message(
         chat_id=event.chat_id,
-        text=f'Чат "{chat.title}" приветствует вас, {event.user.first_name}!'
+        text=f'Чат "{chat.title}" приветствует вас, {event.user.first_name}!',
     )
 
 
@@ -182,7 +181,7 @@ async def main():
     await dp.start_polling(bot)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
@@ -222,41 +221,41 @@ bot = Bot()
 dp = Dispatcher()
 
 
-@dp.message_created(F.message.body.text == 'привет')
+@dp.message_created(F.message.body.text == "привет")
 async def on_hello(event: MessageCreated):
-    await event.message.answer('Привет!')
+    await event.message.answer("Привет!")
 
 
-@dp.message_created(F.message.body.text.lower().contains('помощь'))
+@dp.message_created(F.message.body.text.lower().contains("помощь"))
 async def on_help(event: MessageCreated):
-    await event.message.answer('Чем могу помочь?')
+    await event.message.answer("Чем могу помочь?")
 
 
-@dp.message_created(F.message.body.text.regexp(r'^\d{4}$'))
+@dp.message_created(F.message.body.text.regexp(r"^\d{4}$"))
 async def on_code(event: MessageCreated):
-    await event.message.answer('Принят 4-значный код')
+    await event.message.answer("Принят 4-значный код")
 
 
 @dp.message_created(F.message.body.attachments)
 async def on_attachment(event: MessageCreated):
-    await event.message.answer('Получено вложение')
+    await event.message.answer("Получено вложение")
 
 
 @dp.message_created(F.message.body.text.len() > 20)
 async def on_long_text(event: MessageCreated):
-    await event.message.answer('Слишком длинное сообщение')
+    await event.message.answer("Слишком длинное сообщение")
 
 
 @dp.message_created(F.message.body.text.len() > 0)
 async def on_non_empty(event: MessageCreated):
-    await event.message.answer('Вы что-то написали.')
+    await event.message.answer("Вы что-то написали.")
 
 
 async def main():
     await dp.start_polling(bot)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
@@ -271,18 +270,18 @@ import logging
 from maxapi import Bot, Dispatcher
 from maxapi.types import (
     ChatButton,  # deprecated: 0.9.14
-    LinkButton, 
-    CallbackButton, 
-    RequestGeoLocationButton, 
-    MessageButton, 
+    LinkButton,
+    CallbackButton,
+    RequestGeoLocationButton,
+    MessageButton,
     ButtonsPayload,
-    RequestContactButton, 
+    RequestContactButton,
     OpenAppButton,
-    MessageCreated, 
-    MessageCallback, 
-    MessageChatCreated, # deprecated: 0.9.14
-    CommandStart, 
-    Command
+    MessageCreated,
+    MessageCallback,
+    MessageChatCreated,  # deprecated: 0.9.14
+    CommandStart,
+    Command,
 )
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
@@ -296,70 +295,68 @@ dp = Dispatcher()
 async def echo(event: MessageCreated):
     await event.message.answer(
         (
-            'Привет! Мои команды:\n\n'
-            
-            '/builder - Клавиатура из InlineKeyboardBuilder\n'
-            '/payload - Клавиатура из pydantic моделей\n'
+            "Привет! Мои команды:\n\n"
+            "/builder - Клавиатура из InlineKeyboardBuilder\n"
+            "/payload - Клавиатура из pydantic моделей\n"
         )
     )
-    
-    
-@dp.message_created(Command('builder'))
+
+
+@dp.message_created(Command("builder"))
 async def builder(event: MessageCreated):
     builder = InlineKeyboardBuilder()
-    
+
     builder.row(
         ChatButton(  # deprecated: 0.9.14
-            text="Создать чат", 
-            chat_title='Test', 
-            chat_description='Test desc'
+            text="Создать чат",
+            chat_title="Test",
+            chat_description="Test desc",
         ),
         LinkButton(
-            text="Документация MAX", 
-            url="https://dev.max.ru/docs"
+            text="Документация MAX",
+            url="https://dev.max.ru/docs",
         ),
     )
-    
+
     builder.row(
         RequestGeoLocationButton(text="Геолокация"),
         MessageButton(text="Сообщение"),
     )
-    
+
     builder.row(
         RequestContactButton(text="Контакт"),
         OpenAppButton(
-            text="Приложение", 
-            web_app=event.bot.me.username, 
-            contact_id=event.bot.me.user_id
+            text="Приложение",
+            web_app=event.bot.me.username,
+            contact_id=event.bot.me.user_id,
         ),
     )
-    
+
     builder.row(
         CallbackButton(
-            text='Callback',
-            payload='test',
+            text="Callback",
+            payload="test",
         )
     )
-    
+
     await event.message.answer(
-        text='Клавиатура из InlineKeyboardBuilder',
-        attachments=[
-            builder.as_markup()
-        ])
-    
-    
-@dp.message_created(Command('payload'))
+        text="Клавиатура из InlineKeyboardBuilder",
+        attachments=[builder.as_markup()],
+    )
+
+
+@dp.message_created(Command("payload"))
 async def payload(event: MessageCreated):
     buttons = [
         [
             ChatButton(  # deprecated: 0.9.14
-                text="Создать чат", 
-                chat_title='Test', 
-                chat_description='Test desc'
+                text="Создать чат",
+                chat_title="Test",
+                chat_description="Test desc",
             ),
             LinkButton(
-                text="Документация MAX", 
-                url="https://dev.max.ru/docs"
+                text="Документация MAX",
+                url="https://dev.max.ru/docs",
             ),
         ],
         [
@@ -369,46 +366,45 @@ async def payload(event: MessageCreated):
         [
             RequestContactButton(text="Контакт"),
             OpenAppButton(
-                text="Приложение", 
-                web_app=event.bot.me.username, 
-                contact_id=event.bot.me.user_id
+                text="Приложение",
+                web_app=event.bot.me.username,
+                contact_id=event.bot.me.user_id,
             ),
         ],
         [
             CallbackButton(
-                text='Callback',
-                payload='test',
+                text="Callback",
+                payload="test",
             )
-        ]
+        ],
     ]
-    
+
     buttons_payload = ButtonsPayload(buttons=buttons).pack()
-    
+
     await event.message.answer(
-        text='Клавиатура из pydantic моделей',
-        attachments=[
-            buttons_payload
-        ])
-    
-    
+        text="Клавиатура из pydantic моделей",
+        attachments=[buttons_payload],
+    )
+
+
 @dp.message_chat_created()  # deprecated: 0.9.14
 async def message_chat_created(obj: MessageChatCreated):
     await obj.bot.send_message(
         chat_id=obj.chat.chat_id,
-        text=f'Чат создан! Ссылка: {obj.chat.link}'
+        text=f"Чат создан! Ссылка: {obj.chat.link}",
     )
-    
+
 
 @dp.message_callback()
 async def message_callback(callback: MessageCallback):
-    await callback.message.answer('Вы нажали на Callback!')
+    await callback.message.answer("Вы нажали на Callback!")
 
 
 async def main():
     await dp.start_polling(bot)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
@@ -496,16 +492,15 @@ bot = Bot()
 dp = Dispatcher()
 
 
-@dp.message_created(F.message.link.type == 'forward')
+@dp.message_created(F.message.link.type == "forward")
 async def get_ids_from_forward(event: MessageCreated):
     text = (
-        'Информация о пересланном сообщении:\n\n'
-        
-        f'Из чата: <b>{event.message.link.chat_id}</b>\n'
-        f'От пользователя: <b>{event.message.link.sender.user_id}</b>'
+        "Информация о пересланном сообщении:\n\n"
+        f"Из чата: <b>{event.message.link.chat_id}</b>\n"
+        f"От пользователя: <b>{event.message.link.sender.user_id}</b>"
     )
     await event.message.reply(text)
-    
+
 
 @dp.message_created()
 async def get_ids(event: MessageCreated):
@@ -516,8 +511,8 @@ async def get_ids(event: MessageCreated):
         return
 
     text = (
-        f'Ваш ID: <b>{from_user.user_id}</b>\n'
-        f'ID этого чата: <b>{chat.chat_id}</b>'
+        f"Ваш ID: <b>{from_user.user_id}</b>\n"
+        f"ID этого чата: <b>{chat.chat_id}</b>"
     )
     await event.message.answer(text, format=Format.HTML)
 
@@ -526,7 +521,7 @@ async def main():
     await dp.start_polling(bot)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
@@ -549,30 +544,29 @@ dp = Dispatcher()
 
 
 class FilterChat(BaseFilter):
-    
     """
     Фильтр, который срабатывает только в чате с названием `Test`
     """
-    
+
     async def __call__(self, event: UpdateUnion):
 
         chat = await event.fetch_chat()
         if chat is None:
             return False
 
-        return chat.title == 'Test'
+        return chat.title == "Test"
 
 
 @dp.message_created(CommandStart(), FilterChat())
 async def custom_data(event: MessageCreated):
-    await event.message.answer('Привет!')
+    await event.message.answer("Привет!")
 
 
 async def main():
     await dp.start_polling(bot)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
@@ -600,12 +594,12 @@ bot = Bot()
 dp = Dispatcher()
 
 
-class MyPayload(CallbackPayload, prefix='mypayload'):
+class MyPayload(CallbackPayload, prefix="mypayload"):
     foo: str
     action: str
 
 
-class AnotherPayload(CallbackPayload, prefix='another'):
+class AnotherPayload(CallbackPayload, prefix="another"):
     bar: str
     value: int
 
@@ -614,33 +608,37 @@ class AnotherPayload(CallbackPayload, prefix='another'):
 async def show_keyboard(event: MessageCreated):
     kb = InlineKeyboardBuilder()
     kb.row(
-        CallbackButton( 
-            text='Первая кнопка',
-            payload=MyPayload(foo='123', action='edit').pack(), 
-        ), 
         CallbackButton(
-            text='Вторая кнопка',
-            payload=AnotherPayload(bar='abc', value=42).pack(),
+            text="Первая кнопка",
+            payload=MyPayload(foo="123", action="edit").pack(),
+        ),
+        CallbackButton(
+            text="Вторая кнопка",
+            payload=AnotherPayload(bar="abc", value=42).pack(),
         ),
     )
-    await event.message.answer('Нажми кнопку!', attachments=[kb.as_markup()])
+    await event.message.answer("Нажми кнопку!", attachments=[kb.as_markup()])
 
 
-@dp.message_callback(MyPayload.filter(F.foo == '123'))
+@dp.message_callback(MyPayload.filter(F.foo == "123"))
 async def on_first_callback(event: MessageCallback, payload: MyPayload):
-    await event.answer(new_text=f'Первая кнопка: foo={payload.foo}, action={payload.action}')
+    await event.answer(
+        new_text=f"Первая кнопка: foo={payload.foo}, action={payload.action}"
+    )
 
 
 @dp.message_callback(AnotherPayload.filter())
 async def on_second_callback(event: MessageCallback, payload: AnotherPayload):
-    await event.answer(new_text=f'Вторая кнопка: bar={payload.bar}, value={payload.value}')
+    await event.answer(
+        new_text=f"Вторая кнопка: bar={payload.bar}, value={payload.value}"
+    )
 
 
 async def main():
     await dp.start_polling(bot)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
@@ -671,8 +669,8 @@ class CheckChatTitleMiddleware(BaseMiddleware):
         event_object: UpdateUnion,
         data: Dict[str, Any],
     ) -> Any:
-        
-        if event_object.chat.title == 'MAXApi':
+
+        if event_object.chat.title == "MAXApi":
             return await handler(event_object, data)
 
 
@@ -683,33 +681,43 @@ class CustomDataMiddleware(BaseMiddleware):
         event_object: UpdateUnion,
         data: Dict[str, Any],
     ) -> Any:
-        
-        data['custom_data'] = f'Это ID того кто вызвал команду: {event_object.from_user.user_id}'
-        
+
+        data["custom_data"] = (
+            f"Это ID того кто вызвал команду: {event_object.from_user.user_id}"
+        )
+
         await handler(event_object, data)
 
 
-@dp.message_created(Command('start'), CheckChatTitleMiddleware())
+@dp.message_created(Command("start"), CheckChatTitleMiddleware())
 async def start(event: MessageCreated):
-    await event.message.answer('Это сообщение было отправлено, так как ваш чат называется "MAXApi"!')
+    await event.message.answer(
+        'Это сообщение было отправлено, так как ваш чат называется "MAXApi"!'
+    )
 
-    
-@dp.message_created(Command('custom_data'), CustomDataMiddleware())
+
+@dp.message_created(Command("custom_data"), CustomDataMiddleware())
 async def custom_data(event: MessageCreated, custom_data: str):
     await event.message.answer(custom_data)
-    
-    
-@dp.message_created(Command('many_middlewares'), CheckChatTitleMiddleware(), CustomDataMiddleware())
+
+
+@dp.message_created(
+    Command("many_middlewares"),
+    CheckChatTitleMiddleware(),
+    CustomDataMiddleware(),
+)
 async def many_middlewares(event: MessageCreated, custom_data: str):
-    await event.message.answer('Это сообщение было отправлено, так как ваш чат называется "MAXApi"!')
+    await event.message.answer(
+        'Это сообщение было отправлено, так как ваш чат называется "MAXApi"!'
+    )
     await event.message.answer(custom_data)
-    
+
 
 async def main():
     await dp.start_polling(bot)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
@@ -740,24 +748,26 @@ class CustomDataForRouterMiddleware(BaseMiddleware):
         event_object: UpdateUnion,
         data: Dict[str, Any],
     ) -> Any:
-        
-        data['custom_data'] = f'Это ID того кто вызвал команду: {event_object.from_user.user_id}'
+
+        data["custom_data"] = (
+            f"Это ID того кто вызвал команду: {event_object.from_user.user_id}"
+        )
         result = await handler(event_object, data)
         return result
-    
 
-@dp.message_created(Command('custom_data'))
+
+@dp.message_created(Command("custom_data"))
 async def custom_data(event: MessageCreated, custom_data: str):
     await event.message.answer(custom_data)
-    
-    
+
+
 async def main():
     dp.register_outer_middleware(CustomDataForRouterMiddleware())
-    
+
     await dp.start_polling(bot)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
@@ -771,7 +781,14 @@ import logging
 
 from maxapi import Bot, Dispatcher, F
 from maxapi.context import MemoryContext, State, StatesGroup
-from maxapi.types import BotStarted, Command, MessageCreated, CallbackButton, MessageCallback, BotCommand
+from maxapi.types import (
+    BotStarted,
+    Command,
+    MessageCreated,
+    CallbackButton,
+    MessageCallback,
+    BotCommand,
+)
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
 from router import router
@@ -784,14 +801,14 @@ dp = Dispatcher()
 dp.include_routers(router)
 
 
-start_text = '''Пример чат-бота для MAX 💙
+start_text = """Пример чат-бота для MAX 💙
 
 Мои команды:
 
 /clear очищает ваш контекст
 /state или /context показывают ваше контекстное состояние
 /data показывает вашу контекстную память
-'''
+"""
 
 
 class Form(StatesGroup):
@@ -801,83 +818,72 @@ class Form(StatesGroup):
 
 @dp.on_started()
 async def _():
-    logging.info('Бот стартовал!')
+    logging.info("Бот стартовал!")
 
 
 @dp.bot_started()
 async def bot_started(event: BotStarted):
     await event.bot.send_message(
         chat_id=event.chat_id,
-        text='Привет! Отправь мне /start'
+        text="Привет! Отправь мне /start",
     )
 
 
-@dp.message_created(Command('clear'))
+@dp.message_created(Command("clear"))
 async def hello(event: MessageCreated, context: MemoryContext):
     await context.clear()
     await event.message.answer(f"Ваш контекст был очищен!")
 
 
-@dp.message_created(Command('data'))
+@dp.message_created(Command("data"))
 async def hello(event: MessageCreated, context: MemoryContext):
     data = await context.get_data()
     await event.message.answer(f"Ваша контекстная память: {str(data)}")
 
 
-@dp.message_created(Command('context'))
-@dp.message_created(Command('state'))
+@dp.message_created(Command("context"))
+@dp.message_created(Command("state"))
 async def hello(event: MessageCreated, context: MemoryContext):
     data = await context.get_state()
     await event.message.answer(f"Ваше контекстное состояние: {str(data)}")
 
 
-@dp.message_created(Command('start'))
+@dp.message_created(Command("start"))
 async def hello(event: MessageCreated):
     builder = InlineKeyboardBuilder()
 
     builder.row(
-        CallbackButton(
-            text='Ввести свое имя',
-            payload='btn_1'
-        ),
-        CallbackButton(
-            text='Ввести свой возраст',
-            payload='btn_2'
-        )
+        CallbackButton(text="Ввести свое имя", payload="btn_1"),
+        CallbackButton(text="Ввести свой возраст", payload="btn_2"),
     )
-    builder.row(
-        CallbackButton(
-            text='Не хочу',
-            payload='btn_3'
-        )
-    )
+    builder.row(CallbackButton(text="Не хочу", payload="btn_3"))
 
     await event.message.answer(
-        text=start_text, 
+        text=start_text,
         attachments=[
             builder.as_markup(),
-        ]
+        ],
     )
-    
 
-@dp.message_callback(F.callback.payload == 'btn_1')
+
+@dp.message_callback(F.callback.payload == "btn_1")
 async def hello(event: MessageCallback, context: MemoryContext):
     await context.set_state(Form.name)
     await event.message.delete()
-    await event.message.answer(f'Отправьте свое имя:')
+    await event.message.answer(f"Отправьте свое имя:")
 
 
-@dp.message_callback(F.callback.payload == 'btn_2')
+@dp.message_callback(F.callback.payload == "btn_2")
 async def hello(event: MessageCallback, context: MemoryContext):
     await context.set_state(Form.age)
     await event.message.delete()
-    await event.message.answer(f'Отправьте ваш возраст:')
+    await event.message.answer(f"Отправьте ваш возраст:")
 
 
-@dp.message_callback(F.callback.payload == 'btn_3')
+@dp.message_callback(F.callback.payload == "btn_3")
 async def hello(event: MessageCallback, context: MemoryContext):
     await event.message.delete()
-    await event.message.answer(f'Ну ладно 🥲')
+    await event.message.answer(f"Ну ладно 🥲")
 
 
 @dp.message_created(F.message.body.text, Form.name)
@@ -886,8 +892,10 @@ async def hello(event: MessageCreated, context: MemoryContext):
 
     data = await context.get_data()
 
-    await event.message.answer(f"Приятно познакомиться, {data['name'].title()}!")
-    
+    await event.message.answer(
+        f"Приятно познакомиться, {data['name'].title()}!"
+    )
+
 
 @dp.message_created(F.message.body.text, Form.age)
 async def hello(event: MessageCreated, context: MemoryContext):
@@ -899,30 +907,20 @@ async def hello(event: MessageCreated, context: MemoryContext):
 async def main():
     await bot.set_commands(
         BotCommand(
-            name='/start',
-            description='Перезапустить бота'
+            name="/state", description="Показывают ваше контекстное состояние"
         ),
         BotCommand(
-            name='/clear',
-            description='Очищает ваш контекст'
+            name="/data", description="Показывает вашу контекстную память"
         ),
         BotCommand(
-            name='/state',
-            description='Показывают ваше контекстное состояние'
+            name="/context",
+            description="Показывают ваше контекстное состояние",
         ),
-        BotCommand(
-            name='/data',
-            description='Показывает вашу контекстную память'
-        ),
-        BotCommand(
-            name='/context',
-            description='Показывают ваше контекстное состояние'
-        )
     )
     await dp.start_polling(bot)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
@@ -934,23 +932,21 @@ from maxapi.types import Command, MessageCreated
 from maxapi.types import InputMedia
 
 router = Router()
-file = __file__.split('\\')[-1]
+file = __file__.split("\\")[-1]
 
 
-@router.message_created(Command('router'))
+@router.message_created(Command("router"))
 async def hello(obj: MessageCreated):
     await obj.message.answer(f"Пишу тебе из роута {file}")
-    
 
-# новая команда для примера, /media, 
+
+# новая команда для примера, /media,
 # пример использования: /media image.png (медиафайл берется указанному пути)
-@router.message_created(Command('media'))
+@router.message_created(Command("media"))
 async def hello(event: MessageCreated):
     await event.message.answer(
         attachments=[
-            InputMedia(
-                path=event.message.body.text.replace('/media ', '')
-            )
+            InputMedia(path=event.message.body.text.replace("/media ", ""))
         ]
     )
 ```
@@ -1014,12 +1010,12 @@ dp = Dispatcher()
 
 @dp.message_created()
 async def handle_message(event: MessageCreated):
-    await event.message.answer('Бот работает через вебхук!')
+    await event.message.answer("Бот работает через вебхук!")
 
 
 async def main():
-    webhook_url = 'https://ваш-домен.рф/webhook'  # <-- укажите свой
-    webhook_secret = 'my-secret-token'             # <-- укажите свой (5–256 символов)
+    webhook_url = "https://ваш-домен.рф/webhook"  # <-- укажите свой
+    webhook_secret = "my-secret-token"  # <-- укажите свой (5–256 символов)
 
     # Регистрируем вебхук на стороне MAX — платформа будет отправлять
     # заголовок X-Max-Bot-Api-Secret с каждым запросом.
@@ -1030,13 +1026,13 @@ async def main():
     # или не совпадает (защита от посторонних запросов).
     await dp.handle_webhook(
         bot=bot,
-        host='0.0.0.0',
+        host="0.0.0.0",
         port=8080,
         secret=webhook_secret,
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
@@ -1069,12 +1065,12 @@ dp = Dispatcher()
 
 @dp.message_created()
 async def handle_message(event: MessageCreated):
-    await event.message.answer('Бот работает через вебхук!')
+    await event.message.answer("Бот работает через вебхук!")
 
 
 async def main():
-    webhook_url = 'https://ваш-домен.рф/webhook'  # <-- укажите свой
-    webhook_secret = 'my-secret-token'             # <-- укажите свой (5–256 символов)
+    webhook_url = "https://ваш-домен.рф/webhook"  # <-- укажите свой
+    webhook_secret = "my-secret-token"  # <-- укажите свой (5–256 символов)
 
     # Передаём secret в конструктор — он сохраняется в webhook.secret.
     # Фреймворк будет автоматически проверять заголовок X-Max-Bot-Api-Secret
@@ -1085,24 +1081,24 @@ async def main():
     app = FastAPI(lifespan=webhook.lifespan)
 
     # Собственные маршруты — например, healthcheck
-    @app.get('/health')
+    @app.get("/health")
     async def health():
-        return {'status': 'ok'}
+        return {"status": "ok"}
 
     # Подключаем MAX webhook-обработчик к нашему приложению
-    webhook.setup(app, path='/webhook')
+    webhook.setup(app, path="/webhook")
 
     # Подписываемся на webhook — передаём тот же secret,
     # чтобы платформа MAX добавляла X-Max-Bot-Api-Secret в каждый запрос.
     await bot.subscribe_webhook(url=webhook_url, secret=webhook_secret)
 
     # Запускаем сервер uvicorn
-    config = uvicorn.Config(app=app, host='0.0.0.0', port=8080)
+    config = uvicorn.Config(app=app, host="0.0.0.0", port=8080)
     server = uvicorn.Server(config)
     await server.serve()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
@@ -1128,14 +1124,17 @@ connection_props = DefaultConnectionProperties(proxy=proxy_url)
 bot = Bot(default_connection=connection_props)
 dp = Dispatcher()
 
-@dp.message_created(Command('start'))
+
+@dp.message_created(Command("start"))
 async def start_handler(event: MessageCreated):
     await event.message.answer("Привет!")
+
 
 async def main():
     await dp.start_polling(bot)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
@@ -1155,14 +1154,17 @@ bot = Bot(
 )
 dp = Dispatcher()
 
-@dp.message_created(Command('start'))
+
+@dp.message_created(Command("start"))
 async def start_handler(event: MessageCreated):
     await event.message.answer("Привет!")
+
 
 async def main():
     await dp.start_polling(bot)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
