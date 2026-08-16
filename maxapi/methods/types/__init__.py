@@ -18,6 +18,7 @@ __all__ = [
     "SendedAction",
     "SendedCallback",
     "SendedMessage",
+    "SettedCommands",
     "Subscribed",
     "Unsubscribed",
 ]
@@ -40,5 +41,6 @@ from .removed_member_chat import RemovedMemberChat
 from .sended_action import SendedAction
 from .sended_callback import SendedCallback
 from .sended_message import SendedMessage
+from .setted_commands import SettedCommands
 from .subscribed import Subscribed
 from .unsubscribed import Unsubscribed

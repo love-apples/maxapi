@@ -1,5 +1,8 @@
-class NotAvailableForDownload(Exception): ...
+from .base import MaxError
 
 
-class DownloadFileError(Exception):
+class NotAvailableForDownload(MaxError): ...
+
+
+class DownloadFileError(MaxError):
     """Ошибка при скачивании файла."""

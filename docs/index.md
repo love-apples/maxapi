@@ -39,10 +39,12 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot()
 dp = Dispatcher()
 
+
 # Обработчик команды /start
-@dp.message_created(Command('start'))
+@dp.message_created(Command("start"))
 async def start_handler(event: MessageCreated):
     await event.message.answer("Привет! 👋\nЯ простой бот на MaxAPI.")
+
 
 # Обработчик всех текстовых сообщений
 @dp.message_created()
@@ -50,11 +52,13 @@ async def echo_handler(event: MessageCreated):
     if event.message.body.text:
         await event.message.answer(f"Вы написали: {event.message.body.text}")
 
+
 async def main():
     # Запуск бота в режиме polling
     await dp.start_polling(bot)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
@@ -80,11 +84,13 @@ from maxapi.types import MessageCreated
 bot = Bot()
 dp = Dispatcher()
 
+
 # Обработчик только текстовых сообщений
 @dp.message_created(F.message.body.text)
 async def text_handler(event: MessageCreated):
     text = event.message.body.text
     await event.message.answer(f"Длина вашего сообщения: {len(text)} символов")
+
 
 # Обработчик сообщений с вложениями
 @dp.message_created(F.message.attachments)
