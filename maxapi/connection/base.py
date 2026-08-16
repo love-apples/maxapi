@@ -20,6 +20,7 @@ from aiohttp import (
     ClientSession,
     FormData,
 )
+from puremagic.main import PureError
 
 from ..client.ssl import connector_kwargs
 from ..enums.api_path import ApiPath
@@ -298,7 +299,7 @@ class BaseConnection(BotMixin):
             else:
                 mime_type = f"{type.value}/*"
                 ext = ""
-        except (OSError, ValueError, AttributeError):
+        except (OSError, ValueError, AttributeError, PureError):
             mime_type = f"{type.value}/*"
             ext = ""
 
