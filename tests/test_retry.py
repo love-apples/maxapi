@@ -1,4 +1,4 @@
-"""Тесты retry-механизма для серверных ошибок (502, 503, 504)."""
+"""Тесты retry-механизма для временных ошибок (429, 502, 503, 504)."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -34,13 +34,13 @@ class TestDefaultConnectionRetryConfig:
 
     def test_default_retry_statuses(self):
         """Проверка дефолтных статусов для retry."""
-        assert DEFAULT_RETRY_STATUSES == (502, 503, 504)
+        assert DEFAULT_RETRY_STATUSES == (429, 502, 503, 504)
 
     def test_default_config(self):
         """Проверка дефолтных параметров retry."""
         conn = DefaultConnectionProperties()
         assert conn.max_retries == 3
-        assert conn.retry_on_statuses == (502, 503, 504)
+        assert conn.retry_on_statuses == (429, 502, 503, 504)
         assert conn.retry_backoff_factor == 1.0
 
     def test_custom_retry_config(self):
@@ -483,3 +483,86 @@ class TestRetryResponseBodyConsumed:
             )
 
         error.read.assert_awaited_once()
+
+
+class TestRateLimitStatus:
+    """Тесты обработки 429 (превышение лимита запросов MAX)."""
+
+    @pytest.fixture
+    def bot_with_defaults(self, mock_bot_token):
+        """Бот с дефолтными настройками retry и мок-сессией."""
+        conn = DefaultConnectionProperties(
+            max_retries=2,
+            retry_backoff_factor=0.01,
+        )
+        bot = Bot(token=mock_bot_token, default_connection=conn)
+        session = MagicMock()
+        session.closed = False
+        session.close = AsyncMock()
+        bot.session = session
+        return bot
+
+    @pytest.mark.asyncio
+    async def test_retry_on_429_by_default(self, bot_with_defaults):
+        """429 повторяется без дополнительной настройки соединения."""
+        error = _make_response(429)
+        success = _make_response(200, json_data={"ok": True})
+
+        bot_with_defaults.session.request = AsyncMock(
+            side_effect=[error, success]
+        )
+
+        base = BaseConnection()
+        base.bot = bot_with_defaults
+
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            result = await base.request(
+                method=HTTPMethod.GET,
+                path="/test",
+                is_return_raw=True,
+            )
+
+        assert result == {"ok": True}
+        assert bot_with_defaults.session.request.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_429_exhausted_raises_max_api_error(self, bot_with_defaults):
+        """После исчерпания попыток поднимается MaxApiError с кодом 429."""
+        error = _make_response(429)
+        bot_with_defaults.session.request = AsyncMock(return_value=error)
+
+        base = BaseConnection()
+        base.bot = bot_with_defaults
+
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock),
+            pytest.raises(MaxApiError) as exc_info,
+        ):
+            await base.request(method=HTTPMethod.GET, path="/test")
+
+        assert exc_info.value.code == 429
+
+    @pytest.mark.asyncio
+    async def test_non_json_error_body_does_not_break_parsing(
+        self, bot_with_defaults
+    ):
+        """Тело ошибки не в JSON отдаётся как текст, а не ContentTypeError.
+
+        MAX отвечает на часть ошибок с Content-Type: application/octet-stream —
+        строгий response.json() ронял вызов вместо понятного MaxApiError.
+        """
+        error = _make_response(400)
+        error.json = AsyncMock(
+            side_effect=ValueError("не удалось разобрать JSON")
+        )
+        error.text = AsyncMock(return_value="rate limit exceeded")
+        bot_with_defaults.session.request = AsyncMock(return_value=error)
+
+        base = BaseConnection()
+        base.bot = bot_with_defaults
+
+        with pytest.raises(MaxApiError) as exc_info:
+            await base.request(method=HTTPMethod.GET, path="/test")
+
+        assert exc_info.value.code == 400
+        assert exc_info.value.raw == {"error": "rate limit exceeded"}
