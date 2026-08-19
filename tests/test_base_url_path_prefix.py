@@ -45,9 +45,7 @@ class TestRequestUrlWithCustomApiUrl:
         self, bot_with_mock_session
     ):
         """Path-префикс кастомного api_url не отбрасывается."""
-        bot_with_mock_session.set_api_url(
-            "https://stand.internal/gateway/v1"
-        )
+        bot_with_mock_session.set_api_url("https://stand.internal/gateway/v1")
 
         base = BaseConnection()
         base.bot = bot_with_mock_session
@@ -61,18 +59,14 @@ class TestRequestUrlWithCustomApiUrl:
         called_url = bot_with_mock_session.session.request.call_args.kwargs[
             "url"
         ]
-        assert (
-            called_url == "https://stand.internal/gateway/v1/messages"
-        )
+        assert called_url == "https://stand.internal/gateway/v1/messages"
 
     @pytest.mark.asyncio
     async def test_trailing_slash_in_api_url_does_not_double(
         self, bot_with_mock_session
     ):
         """Trailing slash в api_url не даёт двойной слэш в URL."""
-        bot_with_mock_session.set_api_url(
-            "https://stand.internal/gateway/v1/"
-        )
+        bot_with_mock_session.set_api_url("https://stand.internal/gateway/v1/")
 
         base = BaseConnection()
         base.bot = bot_with_mock_session
