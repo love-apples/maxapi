@@ -119,7 +119,7 @@ class BaseConnection(BotMixin):
         self.bot: Bot | None = None
         self.session: ClientSession | None = None
         self.after_input_media_delay: float = self.AFTER_MEDIA_INPUT_DELAY
-        self.api_url = self.API_URL
+        self.api_url = self.API_URL.rstrip("/")
 
     def set_api_url(self, url: str) -> None:
         """
@@ -129,7 +129,7 @@ class BaseConnection(BotMixin):
             url: Новый API URL
         """
 
-        self.api_url = url
+        self.api_url = url.rstrip("/")
 
     async def request(
         self,
@@ -172,7 +172,7 @@ class BaseConnection(BotMixin):
         retry_statuses = conn.retry_on_statuses
 
         path_str = path.value if isinstance(path, ApiPath) else path
-        url = bot.api_url.rstrip("/") + path_str
+        url = bot.api_url + path_str
 
         @backoff.on_exception(
             backoff.expo,
