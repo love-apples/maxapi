@@ -119,7 +119,7 @@ class BaseConnection(BotMixin):
         self.bot: Bot | None = None
         self.session: ClientSession | None = None
         self.after_input_media_delay: float = self.AFTER_MEDIA_INPUT_DELAY
-        self.api_url = self.API_URL.rstrip("/")
+        self.api_url = self.API_URL
 
     def set_api_url(self, url: str) -> None:
         """
