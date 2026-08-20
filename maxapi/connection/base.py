@@ -224,7 +224,7 @@ class BaseConnection(BotMixin):
         if raw.get('success') is False:
             error_message = raw.get('message', '')
             
-            if "attachment.file.not.processed" in error_message or "attachment.not.ready" in error_message:
+            if "attachment.file.not.processed" in error_message:
                 if bot.dispatcher:
                     asyncio.create_task(
                         bot.dispatcher.handle_raw_response(
@@ -232,7 +232,7 @@ class BaseConnection(BotMixin):
                         )
                     )
                 
-                raise MaxApiError(code=400, raw={"code": "attachment.not.ready"})
+                raise MaxApiError(code=400, raw=raw)
 
         if bot.dispatcher:
             asyncio.create_task(
