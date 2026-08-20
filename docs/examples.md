@@ -2,6 +2,8 @@
 
 Здесь собраны практические примеры использования MaxAPI для различных задач.
 
+Смотри так же примеры в [maxapi/examples](https://github.com/love-apples/maxapi/tree/main/examples)
+
 ## Эхо-бот
 
 Простейший пример бота, который повторяет все текстовые сообщения:
@@ -988,6 +990,96 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+
+## Инспекция файлов
+
+Для получения расширенной метаинформации о файле (формат, размер, MIME-тип, размеры
+изображения, длительность видео) без полной загрузки файла используется `UrlStr.get_info()`.
+Скачиваются только необходимое количество байт для определения параметров медиа
+с начала файла и иногда с конца.
+
+```python
+import asyncio
+import logging
+
+from maxapi import Bot, Dispatcher, F
+from maxapi.filters.command import Command
+from maxapi.types import MessageCreated
+
+logging.basicConfig(level=logging.INFO)
+
+bot = Bot()
+dp = Dispatcher()
+
+
+@dp.message_created(Command('info'))
+async def cmd_info(event: MessageCreated):
+    replied = event.message.link.message if event.message.link else None
+    if not replied or not replied.attachments:
+        await event.message.answer('Ответьте на сообщение с файлом.')
+        return
+
+    first = replied.attachments[0]
+    url = first.url if hasattr(first, 'url') else None
+    if not url:
+        await event.message.answer('Вложение не содержит URL.')
+        return
+
+    # get_info() всегда возвращает MediaInfo (в т.ч. при ошибке)
+    info = await url.get_info()
+
+    if info.status == "error":
+        await event.message.answer(f'Ошибка: {info.parse_note}')
+        return
+
+    # str(info) — человекочитаемый вывод
+    await event.message.answer(
+        f"{info}"
+        f"\nДля определения параметров файла было скачано {url.media_probe.downloaded_human}"
+    )
+
+    # Докачка файла через существующее соединение
+    # Напишите собственные условия для скачивания
+    if info.mime_type.startswith("video") and info.height > 320:
+        await event.message.answer("Файл подходит. Сохраняю...")
+        path = await url.full_file_save("files/downloads_directory")
+        await event.message.answer(f'Сохранён в {path}')
+
+
+async def main():
+    await dp.start_polling(bot)
+
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+
+Если у вас есть URL как обычная строка (не из вложения), создайте `UrlStr` напрямую:
+
+```python
+from maxapi.types.attachments.url_str import UrlStr
+
+url = UrlStr("https://example.com/video.mp4")
+info = await url.get_info(timeout=10)
+print(info.format)   # "MP4"
+print(info.width)    # 1920
+print(info.height)   # 1080
+print(info.duration) # 10.0
+print(info.status)   # "ok"
+print(info)
+# Имя файла: video.mp4
+# Размер: 12,5 Мб
+# Формат: MP4
+# Размеры: 1920х1080 пикс
+# Длительность: 10 сек
+# Частота кадров: 25 к/с
+# Аудио: 48000 Гц
+# Битрейт (средний): 10240 кбит/с
+
+# Для аудио файлов может быть:
+# Битрейт (номинальный): 320 кбит/с"
+```
+
 
 ## Webhook
 

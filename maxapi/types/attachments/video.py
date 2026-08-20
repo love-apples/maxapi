@@ -6,6 +6,7 @@ from ...enums.attachment import AttachmentType
 from .attachment import (
     Attachment,
 )
+from .url_str import UrlStr
 
 if TYPE_CHECKING:
     from ...bot import Bot
@@ -25,13 +26,13 @@ class VideoUrl(BaseModel):
         hls: URL HLS потока.
     """
 
-    mp4_1080: str | None = None
-    mp4_720: str | None = None
-    mp4_480: str | None = None
-    mp4_360: str | None = None
-    mp4_240: str | None = None
-    mp4_144: str | None = None
-    hls: str | None = None
+    mp4_1080: UrlStr | str | None = None
+    mp4_720: UrlStr | str | None = None
+    mp4_480: UrlStr | str | None = None
+    mp4_360: UrlStr | str | None = None
+    mp4_240: UrlStr | str | None = None
+    mp4_144: UrlStr | str | None = None
+    hls: UrlStr | str | None = None
 
 
 class VideoThumbnail(BaseModel):
@@ -46,7 +47,7 @@ class VideoThumbnail(BaseModel):
 
     photo_id: int | None = None
     token: str | None = None
-    url: str
+    url: UrlStr | str
 
 
 class Video(Attachment):

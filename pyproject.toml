@@ -20,6 +20,7 @@ dependencies = [
     "pydantic>=2,<3",
     "aiofiles>=24.1,<26",
     "puremagic>=1.30,<2",
+    "url-media-probe>=0.1.0",
 ]
 
 [project.urls]
@@ -184,7 +185,6 @@ flake8-type-checking.runtime-evaluated-base-classes = [
 "maxapi/utils/updates.py" = [
     "C90", # TODO: требует рефакторинга
 ]
-
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"

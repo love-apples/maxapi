@@ -62,6 +62,7 @@ __all__ = [
     "StickerAttachmentPayload",
     "Subscription",
     "UpdateUnion",
+    "UrlStr",
     "User",
     "UserAdded",
     "UserRemoved",
@@ -89,6 +90,7 @@ from ..types.attachments.buttons.request_geo_location_button import (
 )
 from ..types.attachments.image import PhotoAttachmentRequestPayload, PhotoToken
 from ..types.attachments.upload import AttachmentPayload, AttachmentUpload
+from ..types.attachments.url_str import UrlStr
 from ..types.callback import Callback
 from ..types.chats import Chat, ChatMember, Chats, Icon
 from ..types.command import BotCommand

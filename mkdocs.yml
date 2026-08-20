@@ -235,6 +235,7 @@ nav:
       - User_removed: types/updates/user_removed.md
   - Utils:
     - Deep_linking: utils/deep_linking.md
+    - MediaProbe: utils/media_probe.md
     - Inline_keyboard: utils/inline_keyboard.md
     - Message: utils/message.md
     - Overview: utils/index.md
