@@ -1,6 +1,6 @@
 [project]
 name = "maxapi"
-version = "1.2.1"
+version = "1.2.2"
 description = "Библиотека для разработки чат-ботов с помощью API мессенджера MAX"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -43,10 +43,6 @@ build-backend = "setuptools.build_meta"
 include = ["maxapi*", "wiki*", "examples*"]
 
 [project.optional-dependencies]
-webhook = [
-    "fastapi>=0.103.0,<1",
-    "uvicorn>=0.15.0,<1",
-]
 fastapi = [
     "fastapi>=0.103.0,<1",
     "uvicorn>=0.15.0,<1",
@@ -55,9 +51,12 @@ litestar = [
     "litestar>=2.0.0,<3",
     "uvicorn>=0.15.0,<1",
 ]
+# алиас для обратной совместимости с maxapi[webhook]
+webhook = ["maxapi[fastapi]"]
 
 [dependency-groups]
 dev = [
+    "maxapi[fastapi,litestar]",
     "pytest>=9.0",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.0.0",
@@ -73,9 +72,6 @@ dev = [
     "python-dotenv>=1.2.1",
     "Faker>=40.4.0",
     "httpx>=0.28.1,<1",
-    "fastapi>=0.103.0,<1",
-    "uvicorn>=0.15.0,<1",
-    "litestar>=2.0.0,<3",
     "aresponses>=3.0.0,<4",
 ]
 
@@ -138,6 +134,7 @@ ignore = [
     "ARG",
     "ANN",
     "COM812",
+    "CPY",
     "D",
     "DTZ",
     "EXE",

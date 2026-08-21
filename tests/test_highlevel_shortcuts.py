@@ -192,10 +192,33 @@ async def test_chat_high_level_shortcuts_delegate_to_bot():
     bot.get_list_admin_chat.assert_awaited_once_with(100, marker=None)
     admin_call = bot.add_list_admin_chat.await_args.kwargs
     assert admin_call["chat_id"] == 100
-    assert admin_call["marker"] is None
+    assert "marker" not in admin_call
     assert len(admin_call["admins"]) == 1
     assert admin_call["admins"][0].user_id == 9
     bot.remove_admin.assert_awaited_once_with(chat_id=100, user_id=9)
+
+
+async def test_chat_admins_add_ignores_deprecated_marker():
+    """Проверить deprecated marker в high-level API администраторов."""
+    bot = ShortcutBot()
+    chat = Chat(
+        chat_id=100,
+        type=ChatType.CHAT,
+        status=ChatStatus.ACTIVE,
+        last_event_time=1,
+        participants_count=1,
+        is_public=False,
+    )
+    chat.bot = bot
+    admin = ChatAdmin(user_id=9, permissions=[])
+
+    with pytest.warns(DeprecationWarning, match="marker"):
+        await chat.admins.add([admin], marker=42)
+
+    bot.add_list_admin_chat.assert_awaited_once_with(
+        chat_id=100,
+        admins=[admin],
+    )
 
 
 async def test_chat_typing_context_sends_periodic_actions():

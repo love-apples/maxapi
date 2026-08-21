@@ -3,6 +3,7 @@ from __future__ import annotations
 # нужен в рантайме: get_type_hints() не найдёт `builtins`,
 # если импорт только под TYPE_CHECKING
 import builtins  # noqa: TC003
+import warnings
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -86,7 +87,7 @@ async def _walk_member_pages(
 
 
 class ChatMembersManager(BotMixin):
-    """High-level API для работы с участниками чата."""
+    """High-level API для работы с участниками группового чата."""
 
     def __init__(self, *, bot: Bot | None, chat_id: int) -> None:
         self.bot = bot
@@ -113,6 +114,8 @@ class ChatMembersManager(BotMixin):
         )
 
     async def add(self, user_ids: Sequence[int]) -> AddedMembersChat:
+        """Добавить участников в групповой чат."""
+
         return await self._ensure_bot().add_chat_members(
             chat_id=self.chat_id,
             user_ids=list(user_ids),
@@ -178,10 +181,18 @@ class ChatAdminsManager(BotMixin):
         *,
         marker: int | None = None,
     ) -> AddedListAdminChat:
+        if marker is not None:
+            warnings.warn(
+                "Параметр marker в chat.admins.add() устарел и "
+                "игнорируется: POST /chats/{chatId}/members/admins "
+                "больше не поддерживает marker.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         return await self._ensure_bot().add_list_admin_chat(
             chat_id=self.chat_id,
             admins=list(admins),
-            marker=marker,
         )
 
     async def remove(self, user_id: int) -> RemovedAdmin:
@@ -452,7 +463,7 @@ class Chats(BaseModel):
 
 class ChatMember(User):
     """
-    Модель участника чата.
+    Модель участника группового чата или канала.
 
     Attributes:
         last_access_time: Время последнего доступа.

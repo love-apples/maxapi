@@ -152,6 +152,7 @@ nav:
     - Send_action: methods/send_action.md
     - Send_callback: methods/send_callback.md
     - Send_message: methods/send_message.md
+    - Set_commands: methods/set_commands.md
     - Subscribe_webhook: methods/subscribe_webhook.md
     - Unsubscribe_webhook: methods/unsubscribe_webhook.md
     - Types:
@@ -175,6 +176,7 @@ nav:
       - Sended_action: methods/types/sended_action.md
       - Sended_callback: methods/types/sended_callback.md
       - Sended_message: methods/types/sended_message.md
+      - Setted_commands: methods/types/setted_commands.md
       - Subscribed: methods/types/subscribed.md
       - Unsubscribed: methods/types/unsubscribed.md
   - Types:

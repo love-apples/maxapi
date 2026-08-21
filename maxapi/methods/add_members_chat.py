@@ -11,13 +11,13 @@ if TYPE_CHECKING:
 
 class AddMembersChat(BaseConnection):
     """
-    Класс для добавления участников в чат через API.
+    Класс для добавления участников в групповой чат через API.
 
     https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members
 
     Attributes:
         bot: Экземпляр бота, через который выполняется запрос.
-        chat_id: Идентификатор целевого чата.
+        chat_id: Идентификатор группового чата.
         user_ids: Список ID пользователей для добавления в чат.
     """
 

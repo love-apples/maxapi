@@ -41,6 +41,7 @@ from .methods.remove_member_chat import RemoveMemberChat
 from .methods.send_action import SendAction
 from .methods.send_callback import SendCallback
 from .methods.send_message import SendMessage
+from .methods.set_commands import SetCommands
 from .methods.subscribe_webhook import SubscribeWebhook
 from .methods.unsubscribe_webhook import UnsubscribeWebhook
 from .utils.message import process_input_media
@@ -72,6 +73,7 @@ if TYPE_CHECKING:
     from .methods.types.sended_action import SendedAction
     from .methods.types.sended_callback import SendedCallback
     from .methods.types.sended_message import SendedMessage
+    from .methods.types.setted_commands import SettedCommands
     from .methods.types.subscribed import Subscribed
     from .methods.types.unsubscribed import Unsubscribed
     from .types.attachments import Attachments
@@ -692,6 +694,10 @@ class Bot(BaseConnection):
         """
         Получает канал по публичной ссылке или алиасу.
 
+        .. deprecated:: 1.2.1
+            Метод удалён из текущей OpenAPI-спецификации API MAX.
+            Использование не рекомендуется.
+
         https://dev.max.ru/docs-api/methods/GET/chats/-chatLink-
 
         Args:
@@ -700,6 +706,14 @@ class Bot(BaseConnection):
         Returns:
             Chat: Объект чата.
         """
+
+        warnings.warn(
+            "bot.get_chat_by_link() устарел и отсутствует в текущей "
+            "OpenAPI-спецификации API MAX. "
+            "Использование не рекомендуется.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         return await GetChatByLink(bot=self, link=link).fetch()
 
@@ -913,25 +927,32 @@ class Bot(BaseConnection):
         marker: int | None = None,
     ) -> AddedListAdminChat:
         """
-        Добавляет администраторов в чат.
+        Назначает администраторов чата или канала.
 
         https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members/admins
 
         Args:
             chat_id: ID чата.
             admins: Список администраторов.
-            marker: Указатель на следующую страницу данных.
-                По умолчанию None.
+            marker: Устаревший параметр, больше не отправляется в API.
 
         Returns:
             AddedListAdminChat: Результат добавления.
         """
 
+        if marker is not None:
+            warnings.warn(
+                "Параметр marker в bot.add_list_admin_chat() устарел "
+                "и игнорируется: POST /chats/{chatId}/members/admins "
+                "больше не поддерживает marker.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         return await AddAdminChat(
             bot=self,
             chat_id=chat_id,
             admins=admins,
-            marker=marker,
         ).fetch()
 
     async def remove_admin(self, chat_id: int, user_id: int) -> RemovedAdmin:
@@ -1021,12 +1042,12 @@ class Bot(BaseConnection):
         user_ids: list[int],
     ) -> AddedMembersChat:
         """
-        Добавляет участников в чат.
+        Добавляет участников в групповой чат.
 
         https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members
 
         Args:
-            chat_id: ID чата.
+            chat_id: ID группового чата.
             user_ids: Список ID пользователей.
 
         Returns:
@@ -1124,9 +1145,32 @@ class Bot(BaseConnection):
             att=media,
         )
 
+    async def set_commands(self, *commands: BotCommand) -> SettedCommands:
+        """
+        Добавляет, изменяет или удаляет команды бота.
+
+        https://dev.max.ru/docs-api/methods/PATCH/me/commands
+
+        Вызов без аргументов удаляет все команды бота.
+
+        Args:
+            *commands: Команды, которые поддерживает бот
+                (до 32 элементов).
+
+        Returns:
+            SettedCommands: Актуальный список команд бота.
+        """
+
+        return await SetCommands(bot=self, commands=list(commands)).fetch()
+
     async def set_my_commands(self, *commands: BotCommand) -> User:
         """
         Устанавливает список команд бота.
+
+        .. deprecated:: 1.2.2
+            Метод отправляет запрос на ``PATCH /me``, поддержка
+            которого прекращается 15.09.2026. Используйте
+            :meth:`set_commands`.
 
         Args:
             *commands: Список команд.
@@ -1136,9 +1180,9 @@ class Bot(BaseConnection):
         """
 
         warnings.warn(
-            "bot.change_info() устарел и отсутствует в официальной "
-            "swagger-спецификации API MAX. "
-            "Использование не рекомендуется.",
+            "bot.set_my_commands() отправляет PATCH /me, поддержка "
+            "которого прекращается 15.09.2026. "
+            "Используйте bot.set_commands().",
             DeprecationWarning,
             stacklevel=2,
         )

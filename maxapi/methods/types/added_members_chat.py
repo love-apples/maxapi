@@ -7,7 +7,7 @@ from ...enums.add_chat_members_error_code import (
 
 class FailedUserDetails(BaseModel):
     """
-    Детали ошибки для пользователя.
+    Детали ошибки добавления пользователя в групповой чат.
 
     Attributes:
         error_code: Код ошибки.
@@ -21,7 +21,7 @@ class FailedUserDetails(BaseModel):
 
 class AddedMembersChat(BaseModel):
     """
-    Ответ API при добавлении списка пользователей в чат.
+    Ответ API при добавлении списка пользователей в групповой чат.
 
     Attributes:
         success: Статус успешности операции.

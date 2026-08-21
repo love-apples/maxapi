@@ -46,6 +46,7 @@ echo 'MAX_BOT_TOKEN=ваш_токен' > .env
 Затем в коде бота перед созданием `Bot()`:
 ```python
 from dotenv import load_dotenv
+
 load_dotenv()  # Загружает переменные из .env в os.environ
 
 bot = Bot()  # Автоматически берёт токен из MAX_BOT_TOKEN
@@ -381,17 +382,19 @@ python examples/01_echo_bot.py
 from maxapi import Bot, Dispatcher
 
 # Инициализация
-bot = Bot()      # Токен из MAX_BOT_TOKEN
+bot = Bot()  # Токен из MAX_BOT_TOKEN
 dp = Dispatcher()
+
 
 # Обработчики
 @dp.message_created(...)
-async def handler(event):
-    ...
+async def handler(event): ...
+
 
 # Запуск
 async def main():
     await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
@@ -414,6 +417,7 @@ if __name__ == "__main__":
 **Как включить debug-логирование?**
 ```python
 import logging
+
 logging.basicConfig(level=logging.DEBUG)
 ```
 Логгеры библиотеки: `bot`, `dispatcher`, `connection`.
@@ -425,6 +429,7 @@ logging.basicConfig(level=logging.DEBUG)
 Используйте `RedisContext` вместо `MemoryContext`:
 ```python
 import redis.asyncio as redis
+
 dp = Dispatcher(
     storage=RedisContext,
     redis_client=redis.from_url("redis://localhost"),

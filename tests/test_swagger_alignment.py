@@ -7,6 +7,7 @@ from maxapi.enums.add_chat_members_error_code import AddChatMembersErrorCode
 from maxapi.enums.attachment import AttachmentType
 from maxapi.enums.chat_permission import ChatPermission
 from maxapi.enums.text_style import TextStyle
+from maxapi.methods.add_admin_chat import AddAdminChat
 from maxapi.methods.get_chat_by_link import GetChatByLink
 from maxapi.methods.get_messages import GetMessages
 from maxapi.methods.types.added_members_chat import AddedMembersChat
@@ -187,6 +188,68 @@ async def test_get_messages_omits_none_count(bot):
     assert "count" not in params
 
 
+async def test_add_admin_chat_sends_only_admins_payload(bot):
+    admin = ChatAdmin(
+        user_id=1,
+        permissions=[ChatPermission.READ_ALL_MESSAGES],
+    )
+    method = AddAdminChat(bot=bot, chat_id=123, admins=[admin])
+
+    with patch.object(
+        BaseConnection, "request", new=AsyncMock(return_value=Mock())
+    ) as mocked_request:
+        await method.fetch()
+
+    payload = mocked_request.call_args.kwargs["json"]
+    assert set(payload) == {"admins"}
+    assert payload["admins"] == [admin.model_dump()]
+
+
+async def test_add_admin_chat_ignores_deprecated_marker(bot):
+    admin = ChatAdmin(
+        user_id=1,
+        permissions=[ChatPermission.READ_ALL_MESSAGES],
+    )
+
+    with pytest.warns(DeprecationWarning, match="marker"):
+        method = AddAdminChat(
+            bot=bot,
+            chat_id=123,
+            admins=[admin],
+            marker=42,
+        )
+
+    with patch.object(
+        BaseConnection, "request", new=AsyncMock(return_value=Mock())
+    ) as mocked_request:
+        await method.fetch()
+
+    payload = mocked_request.call_args.kwargs["json"]
+    assert "marker" not in payload
+
+
+async def test_bot_add_list_admin_chat_ignores_deprecated_marker(bot):
+    admin = ChatAdmin(
+        user_id=1,
+        permissions=[ChatPermission.READ_ALL_MESSAGES],
+    )
+
+    with (
+        patch.object(
+            BaseConnection, "request", new=AsyncMock(return_value=Mock())
+        ) as mocked_request,
+        pytest.warns(DeprecationWarning, match="marker"),
+    ):
+        await bot.add_list_admin_chat(
+            chat_id=123,
+            admins=[admin],
+            marker=42,
+        )
+
+    payload = mocked_request.call_args.kwargs["json"]
+    assert "marker" not in payload
+
+
 @pytest.mark.parametrize(
     ("link", "expected_path"),
     [
@@ -200,7 +263,8 @@ async def test_get_chat_by_link_normalizes_public_link(
     link,
     expected_path,
 ):
-    method = GetChatByLink(bot=bot, link=link)
+    with pytest.warns(DeprecationWarning, match="GetChatByLink"):
+        method = GetChatByLink(bot=bot, link=link)
 
     with patch.object(
         BaseConnection, "request", new=AsyncMock(return_value=Mock())
@@ -220,12 +284,16 @@ async def test_get_chat_by_link_normalizes_public_link(
     ],
 )
 def test_get_chat_by_link_rejects_invalid_link(bot, link):
-    with pytest.raises(ValueError, match="link не соответствует"):
+    with (
+        pytest.warns(DeprecationWarning, match="GetChatByLink"),
+        pytest.raises(ValueError, match="link не соответствует"),
+    ):
         GetChatByLink(bot=bot, link=link)
 
 
 async def test_get_chat_by_link_keeps_valid_link_characters(bot):
-    method = GetChatByLink(bot=bot, link="channel-name_123")
+    with pytest.warns(DeprecationWarning, match="GetChatByLink"):
+        method = GetChatByLink(bot=bot, link="channel-name_123")
 
     with patch.object(
         BaseConnection, "request", new=AsyncMock(return_value=Mock())
@@ -235,6 +303,20 @@ async def test_get_chat_by_link_keeps_valid_link_characters(bot):
     assert mocked_request.call_args.kwargs["path"] == (
         "/chats/channel-name_123"
     )
+
+
+async def test_bot_get_chat_by_link_warns_about_deprecation(bot):
+    """Проверить предупреждение публичной обёртки устаревшего метода."""
+    with (
+        patch(
+            "maxapi.bot.GetChatByLink.fetch",
+            new=AsyncMock(return_value=Mock()),
+        ) as mocked_fetch,
+        pytest.warns(DeprecationWarning, match="get_chat_by_link"),
+    ):
+        await bot.get_chat_by_link("channel")
+
+    mocked_fetch.assert_awaited_once_with()
 
 
 def test_contact_payload_accepts_hash_and_nullable_vcf():

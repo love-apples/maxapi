@@ -8,20 +8,24 @@
 from maxapi.context import MemoryContext, StatesGroup, State
 from maxapi.types import MessageCreated, Command
 
+
 class Form(StatesGroup):
     name = State()
     age = State()
 
-@dp.message_created(Command('start'))
+
+@dp.message_created(Command("start"))
 async def start_handler(event: MessageCreated, context: MemoryContext):
     await context.set_state(Form.name)
     await event.message.answer("Как вас зовут?")
+
 
 @dp.message_created(Form.name)
 async def name_handler(event: MessageCreated, context: MemoryContext):
     await context.update_data(name=event.message.body.text)
     await context.set_state(Form.age)
     await event.message.answer("Сколько вам лет?")
+
 
 @dp.message_created(Form.age)
 async def age_handler(event: MessageCreated, context: MemoryContext):
@@ -111,7 +115,7 @@ dp = Dispatcher(
 ```python
 class Form(StatesGroup):
     name = State()  # Автоматически получит имя 'Form:name'
-    age = State()   # Автоматически получит имя 'Form:age'
+    age = State()  # Автоматически получит имя 'Form:age'
 ```
 
 ## Фильтрация по состояниям
@@ -121,18 +125,17 @@ class Form(StatesGroup):
 ```python
 # Только в состоянии Form.name
 @dp.message_created(Form.name)
-async def name_handler(event: MessageCreated, context: MemoryContext):
-    ...
+async def name_handler(event: MessageCreated, context: MemoryContext): ...
+
 
 # Только когда НЕТ активного состояния
 @dp.message_created(None)
-async def no_state_handler(event: MessageCreated):
-    ...
+async def no_state_handler(event: MessageCreated): ...
+
 
 # В любом из перечисленных состояний
 @dp.message_created(Form.name, Form.age)
-async def multi_state_handler(event: MessageCreated):
-    ...
+async def multi_state_handler(event: MessageCreated): ...
 ```
 
 ## Хранение в Redis
@@ -153,13 +156,13 @@ from maxapi import Dispatcher
 from maxapi.context import RedisContext
 
 # Инициализация клиента Redis
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
+redis_client = redis.Redis(host="localhost", port=6379, db=0)
 
 # Передача RedisContext в Диспетчер
 dp = Dispatcher(
     storage=RedisContext,
     redis_client=redis_client,
-    key_prefix="my_bot"
+    key_prefix="my_bot",
 )
 ```
 
@@ -222,6 +225,7 @@ from maxapi import Bot, Dispatcher
 bot = Bot()
 dp = Dispatcher()
 dp.register_outer_middleware(SaveMarkerMiddleware())
+
 
 async def main() -> None:
     marker = await load_marker()  # str | None
