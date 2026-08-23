@@ -1,5 +1,6 @@
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from maxapi.types.attachments.attachment import OtherAttachmentPayload
 from maxapi.types.attachments.url_str import UrlStr
 from url_media_probe import MediaInfo
@@ -79,6 +80,7 @@ class TestUrlStrGetInfo:
             payload = OtherAttachmentPayload(
                 url="https://example.com/file.bin"
             )
+            assert isinstance(payload.url, UrlStr)
             info = await payload.url.get_info()
 
         assert info is expected
@@ -109,3 +111,29 @@ class TestUrlStrGetInfo:
 
         assert info.status == "error"
         assert info.parse_note == "Сетевая ошибка"
+
+    async def test_raises_on_network_error(self):
+        """get_info выбрасывает aiohttp.ClientError при сетевой ошибке."""
+        import aiohttp
+
+        error_info = MediaInfo(
+            url="https://example.com/bad",
+            mime_type="",
+            file_name="",
+            file_size=None,
+            status="error",
+            parse_note="Connection error",
+        )
+
+        with patch(
+            "maxapi.types.attachments.url_str.MediaProbe.from_url",
+            new_callable=AsyncMock,
+        ) as mock_from_url:
+            mock_from_url.return_value = error_info
+
+            with pytest.raises(aiohttp.ClientError):
+                await UrlStr("https://example.com/bad").get_info(
+                    raise_on_network_error=True
+                )
+
+        mock_from_url.assert_awaited_once()

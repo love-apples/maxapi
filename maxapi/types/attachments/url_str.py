@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import aiohttp
 from pydantic_core import core_schema
 from url_media_probe import MediaInfo, MediaProbe
 
@@ -25,6 +26,16 @@ class UrlStr(str):
     def __get_pydantic_core_schema__(
         cls, source_type: Any, handler: GetCoreSchemaHandler
     ) -> CoreSchema:
+        """
+        Строит core-схему ``UrlStr`` (протокол pydantic v2).
+
+        Метод вызывается pydantic автоматически при построении схемы
+        модели с полем, аннотированным ``UrlStr``.
+
+        Returns:
+            CoreSchema: Схема ``str`` с валидатором, приводящим значение
+            к экземпляру ``UrlStr``.
+        """
         return core_schema.no_info_after_validator_function(
             cls,
             core_schema.str_schema(),
@@ -36,6 +47,7 @@ class UrlStr(str):
         timeout: int = 30,
         max_total: int = 256_000,
         max_retries: int = 3,
+        raise_on_network_error: bool = False,
     ) -> MediaInfo:
         """
         Инспектирует удалённый файл по URL.
@@ -44,14 +56,25 @@ class UrlStr(str):
             timeout: Таймаут HTTP-запроса в секундах.
             max_total: Максимальный объём скачанных данных (байт).
             max_retries: Число повторных попыток при ``retry_on_statuses``.
+            raise_on_network_error: Если True, сетевая ошибка приводит к
+                выбросу исключения вместо возврата результата.
 
         Returns:
             MediaInfo: Результат инспекции (в т.ч. при сетевой ошибке).
+
+        Raises:
+            aiohttp.ClientError: Сетевая ошибка при
+                ``raise_on_network_error=True``.
         """
         self.media_probe = MediaProbe()
-        return await self.media_probe.from_url(
+        result = await self.media_probe.from_url(
             self, timeout=timeout, max_total=max_total, max_retries=max_retries
         )
+
+        if result.status == "error" and raise_on_network_error:
+            raise aiohttp.ClientError("Сетевая ошибка")
+
+        return result
 
     async def full_file_save(
         self,
