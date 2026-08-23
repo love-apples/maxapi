@@ -43,6 +43,7 @@ with contextlib.suppress(ImportError):
 
 from maxapi import Bot, Dispatcher, F
 from maxapi.enums.sender_action import SenderAction
+from maxapi.exceptions import DownloadFileError
 from maxapi.filters.command import Command, CommandStart
 from maxapi.types.attachments.audio import Audio
 from maxapi.types.attachments.file import File
@@ -227,10 +228,9 @@ async def cmd_save(event: MessageCreated) -> None:
     await bot.send_action(chat_id=chat_id, action=SenderAction.SENDING_FILE)
 
     # Никаких get_info() — сразу скачиваем на диск.
-    # Сетевая ошибка здесь выбрасывается как aiohttp.ClientError.
     try:
         saved = await url.download_file(DOWNLOAD_DIR)
-    except Exception as e:
+    except DownloadFileError as e:
         await event.message.answer(f"⚠️ Ошибка скачивания: {e}")
         return
 

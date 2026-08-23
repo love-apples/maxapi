@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import aiohttp
 from pydantic_core import core_schema
 from url_media_probe import MediaInfo, MediaProbe
+
+from ...exceptions.download_file import DownloadFileError
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -105,16 +108,19 @@ class UrlStr(str):
             Path: Путь к сохранённому файлу.
 
         Raises:
-            aiohttp.ClientError: Сетевая ошибка после исчерпания ретраев.
+            DownloadFileError: Сетевая ошибка после исчерпания ретраев.
         """
         probe = self.media_probe
-        if probe is None:
-            probe = MediaProbe(raise_on_network=True)
-            self.media_probe = probe
-            await probe.from_url(
-                self,
-                timeout=timeout,
-                max_total=0,
-                max_retries=max_retries,
-            )
-        return await probe.full_file_save(file_path, file_name=file_name)
+        try:
+            if probe is None:
+                probe = MediaProbe(raise_on_network=True)
+                self.media_probe = probe
+                await probe.from_url(
+                    self,
+                    timeout=timeout,
+                    max_total=0,
+                    max_retries=max_retries,
+                )
+            return await probe.full_file_save(file_path, file_name=file_name)
+        except aiohttp.ClientError as e:
+            raise DownloadFileError(f"Network error: {e}") from e

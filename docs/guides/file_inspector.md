@@ -53,6 +53,36 @@ print(f"Сохранено: {path}")
 path = await url.download_file("/tmp/downloads")  # без get_info()
 ```
 
+## `url.download_file()` или `bot.download_file()`?
+
+Оба метода сохраняют файл на диск, оба поддерживают ретраи сети
+(обрывы соединения и статусы 429/5xx) и выбрасывают одинаковое
+исключение `DownloadFileError`. Различие — в источнике URL
+и работе с метаданными:
+
+| | `url.download_file(dir)` | `bot.download_file(url, dir)` |
+|---|---|---|
+| Вызов | прямо на URL из вложения (`UrlStr`) | по любой строке-URL |
+| Метаданные | можно сначала оценить файл через `get_info()`, тогда скачивание переиспользует уже установленный пробник и соединение без разрыва | не определяет |
+| Байты без сохранения в файл | — | bot.download_bytes(url) и bot.download_bytes_io(url) |
+
+Для вложений из сообщений удобнее `url.download_file()`,
+для произвольных ссылок — `bot.download_file()`.
+
+Комбинированный сценарий — сначала посмотреть метаданные url.get_info(), затем
+выбрать способ скачивания по размеру: большие файлы — на диск, маленькие —
+в память:
+
+```python
+info = await url.get_info(max_total=0) # Только размер файла, без медиапробы
+if info.status == "ok" and (info.file_size or 0) > 50 * 1024 * 1024:
+    path = await url.download_file("/tmp/downloads")
+    # Работа с файлом
+else:
+    file_bytes = await bot.download_bytes(url)
+    # Работа с байтами
+```
+
 ## Обработка статусов
 
 Метод возвращает `MediaInfo` со статусом:
@@ -88,14 +118,16 @@ else:
 
 ```python
 import asyncio
+
 from maxapi import Bot, Dispatcher
-from maxapi.types import Message
+from maxapi.filters.command import Command
+from maxapi.types import MessageCreated
 
 bot = Bot(token="ваш_токен")
 dp = Dispatcher()
 
 
-@dp.message_created(commands=["info"])
+@dp.message_created(Command("info"))
 async def cmd_info(event: MessageCreated):
     replied_body = event.message.link.message if event.message.link else None
     if not replied_body or not replied_body.attachments:

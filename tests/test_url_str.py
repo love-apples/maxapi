@@ -190,10 +190,11 @@ class TestUrlStrGetInfo:
         )
 
     async def test_download_file_raises_on_network_error(self):
-        """download_file пробрасывает сетевую ошибку автопробы."""
+        """download_file оборачивает сетевую ошибку в DownloadFileError."""
         from pathlib import Path
 
         import aiohttp
+        from maxapi.exceptions.download_file import DownloadFileError
 
         with patch("maxapi.types.attachments.url_str.MediaProbe") as MockMP:
             mock_media_probe = AsyncMock()
@@ -202,11 +203,12 @@ class TestUrlStrGetInfo:
                 "Connection error"
             )
 
-            with pytest.raises(aiohttp.ClientError):
+            with pytest.raises(DownloadFileError) as exc_info:
                 await UrlStr("https://example.com/bad").download_file(
                     Path("downloads")
                 )
 
+        assert isinstance(exc_info.value.__cause__, aiohttp.ClientError)
         MockMP.assert_called_once_with(raise_on_network=True)
 
     async def test_download_file_reuses_existing_probe(self):
