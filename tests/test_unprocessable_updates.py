@@ -7,7 +7,20 @@
 
 from unittest.mock import MagicMock
 
-from maxapi.methods.types.getted_updates import process_update_request
+from maxapi.methods.types.getted_updates import (
+    _dump_event_json,
+    process_update_request,
+)
+
+
+def test_dump_event_json_fallback_on_unserializable_event():
+    """При циклических ссылках в событии json.dumps падает даже
+    с default=str — должен срабатывать fallback на str().
+    """
+    event: dict = {"update_type": "bot_started"}
+    event["self"] = event
+
+    assert _dump_event_json(event) == str(event)
 
 
 async def test_message_created_without_message_is_skipped(caplog):
