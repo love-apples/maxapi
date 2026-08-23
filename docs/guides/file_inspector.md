@@ -74,7 +74,7 @@ path = await url.download_file("/tmp/downloads")  # без get_info()
 в память:
 
 ```python
-info = await url.get_info(max_total=0) # Только размер файла, без медиапробы
+info = await url.get_info(max_total=0)  # Только размер файла, без медиапробы
 if info.status == "ok" and (info.file_size or 0) > 50 * 1024 * 1024:
     path = await url.download_file("/tmp/downloads")
     # Работа с файлом
