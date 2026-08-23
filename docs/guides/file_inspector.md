@@ -88,11 +88,14 @@ from maxapi.types import Message
 bot = Bot(token="ваш_токен")
 dp = Dispatcher()
 
+
 @dp.message_created(commands=["info"])
 async def cmd_info(event: MessageCreated):
     replied_body = event.message.link.message if event.message.link else None
     if not replied_body or not replied_body.attachments:
-        await event.message.answer("ℹ️ Ответьте этой командой на сообщение с файлом.")
+        await event.message.answer(
+            "ℹ️ Ответьте этой командой на сообщение с файлом."
+        )
         return
 
     for att in replied_body.attachments:
@@ -105,7 +108,7 @@ async def cmd_info(event: MessageCreated):
     await event.message.answer("Вложение не найдено")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(dp.start_polling(bot))
 ```
 

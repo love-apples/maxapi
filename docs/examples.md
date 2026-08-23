@@ -1012,24 +1012,24 @@ bot = Bot()
 dp = Dispatcher()
 
 
-@dp.message_created(Command('info'))
+@dp.message_created(Command("info"))
 async def cmd_info(event: MessageCreated):
     replied = event.message.link.message if event.message.link else None
     if not replied or not replied.attachments:
-        await event.message.answer('Ответьте на сообщение с файлом.')
+        await event.message.answer("Ответьте на сообщение с файлом.")
         return
 
     first = replied.attachments[0]
-    url = first.url if hasattr(first, 'url') else None
+    url = first.url if hasattr(first, "url") else None
     if not url:
-        await event.message.answer('Вложение не содержит URL.')
+        await event.message.answer("Вложение не содержит URL.")
         return
 
     # get_info() всегда возвращает MediaInfo (в т.ч. при ошибке)
     info = await url.get_info()
 
     if info.status == "error":
-        await event.message.answer(f'Ошибка: {info.parse_note}')
+        await event.message.answer(f"Ошибка: {info.parse_note}")
         return
 
     # str(info) — человекочитаемый вывод
@@ -1043,14 +1043,14 @@ async def cmd_info(event: MessageCreated):
     if info.mime_type.startswith("video") and info.height > 320:
         await event.message.answer("Файл подходит. Сохраняю...")
         path = await url.full_file_save("files/downloads_directory")
-        await event.message.answer(f'Сохранён в {path}')
+        await event.message.answer(f"Сохранён в {path}")
 
 
 async def main():
     await dp.start_polling(bot)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
 ```
 
@@ -1061,11 +1061,11 @@ from maxapi.types.attachments.url_str import UrlStr
 
 url = UrlStr("https://example.com/video.mp4")
 info = await url.get_info(timeout=10)
-print(info.format)   # "MP4"
-print(info.width)    # 1920
-print(info.height)   # 1080
-print(info.duration) # 10.0
-print(info.status)   # "ok"
+print(info.format)  # "MP4"
+print(info.width)  # 1920
+print(info.height)  # 1080
+print(info.duration)  # 10.0
+print(info.status)  # "ok"
 print(info)
 # Имя файла: video.mp4
 # Размер: 12,5 Мб
