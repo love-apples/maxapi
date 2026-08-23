@@ -1042,7 +1042,7 @@ async def cmd_info(event: MessageCreated):
     # Напишите собственные условия для скачивания
     if info.mime_type.startswith("video") and info.height > 320:
         await event.message.answer("Файл подходит. Сохраняю...")
-        path = await url.full_file_save("files/downloads_directory")
+        path = await url.download_file("files/downloads_directory")
         await event.message.answer(f"Сохранён в {path}")
 
 

@@ -15,6 +15,8 @@
     /buffer    — отправить изображение из буфера (байты)
     /upload    — загрузить медиа заранее, затем отправить
     /info      — метаинформация о replied-вложении (MediaProbe)
+    /save      — скачать replied-вложение без инспекции
+                 (UrlStr.download_file)
 
 Любой файл/фото/аудио/видео от пользователя пересылается обратно
 с описанием типа вложения.
@@ -59,6 +61,7 @@ bot = Bot()
 dp = Dispatcher()
 
 PHOTO_PATH = Path(__file__).resolve().parent.parent / "logo.png"
+DOWNLOAD_DIR = Path("downloads")
 
 
 # ============================================================================
@@ -90,7 +93,8 @@ async def on_start(event: MessageCreated) -> None:
         "/photo  — фото из файла\n"
         "/buffer — фото из буфера\n"
         "/upload — предзагрузка медиа\n"
-        "/info — метаинформация о replied-вложении\n\n"
+        "/info — метаинформация о replied-вложении\n"
+        "/save — скачать replied-вложение без инспекции\n\n"
         "Пришли мне любой файл, фото, аудио или видео — "
         "я расскажу, что получил, и перешлю обратно."
     )
@@ -195,6 +199,42 @@ async def cmd_info(event: MessageCreated) -> None:
 
     # str(info) — человекочитаемый вывод
     await event.message.answer(str(info))
+
+
+@dp.message_created(Command("save"))
+async def cmd_save(event: MessageCreated) -> None:
+    """Скачивание replied-вложения без предварительной инспекции.
+
+    UrlStr.download_file() сам выполнит пробу по заголовкам (тело
+    не скачивается), затем докачает файл целиком и вернёт путь.
+    """
+    chat_id = event.message.recipient.chat_id
+    if chat_id is None:
+        return
+
+    replied_body = event.message.link.message if event.message.link else None
+    if not replied_body or not replied_body.attachments:
+        await event.message.answer(
+            "ℹ️ Ответьте этой командой на сообщение с файлом."
+        )
+        return
+
+    url = _get_first_attachment_url(replied_body.attachments)
+    if not url:
+        await event.message.answer("⚠️ Не удалось получить URL вложения.")
+        return
+
+    await bot.send_action(chat_id=chat_id, action=SenderAction.SENDING_FILE)
+
+    # Никаких get_info() — сразу скачиваем на диск.
+    # Сетевая ошибка здесь выбрасывается как aiohttp.ClientError.
+    try:
+        saved = await url.download_file(DOWNLOAD_DIR)
+    except Exception as e:
+        await event.message.answer(f"⚠️ Ошибка скачивания: {e}")
+        return
+
+    await event.message.answer(f"Файл сохранён:\n{saved}")
 
 
 # ============================================================================

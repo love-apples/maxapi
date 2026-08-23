@@ -43,8 +43,14 @@ if info.status != "ok":
 После `get_info()` можно сохранить файл целиком, используя уже скачанные данные и активное соединение:
 
 ```python
-path = await url.full_file_save("/tmp/downloads")
+path = await url.download_file("/tmp/downloads")
 print(f"Сохранено: {path}")
+```
+
+Метод можно вызывать и без предварительного `get_info()`:
+
+```python
+path = await url.download_file("/tmp/downloads")  # без get_info()
 ```
 
 ## Обработка статусов

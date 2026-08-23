@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import aiohttp
 from pydantic_core import core_schema
 from url_media_probe import MediaInfo, MediaProbe
 
@@ -56,47 +55,66 @@ class UrlStr(str):
             timeout: Таймаут HTTP-запроса в секундах.
             max_total: Максимальный объём скачанных данных (байт).
             max_retries: Число повторных попыток при ``retry_on_statuses``.
-            raise_on_network_error: Если True, сетевая ошибка приводит к
-                выбросу исключения вместо возврата результата.
+            raise_on_network_error: Пробрасывается в ``MediaProbe``: при
+                True сетевая ошибка выбрасывается как исключение, при
+                False (по умолчанию) возвращается MediaInfo со статусом
+                "error".
 
         Returns:
             MediaInfo: Результат инспекции (в т.ч. при сетевой ошибке).
 
         Raises:
             aiohttp.ClientError: Сетевая ошибка при
-                ``raise_on_network_error=True``.
+                ``raise_on_network_error=True`` (пробрасывает MediaProbe).
         """
-        self.media_probe = MediaProbe()
-        result = await self.media_probe.from_url(
+        self.media_probe = MediaProbe(raise_on_network=raise_on_network_error)
+        return await self.media_probe.from_url(
             self, timeout=timeout, max_total=max_total, max_retries=max_retries
         )
 
-        if result.status == "error" and raise_on_network_error:
-            raise aiohttp.ClientError("Сетевая ошибка")
-
-        return result
-
-    async def full_file_save(
+    async def download_file(
         self,
         file_path: str | Path,
         *,
         file_name: str | None = None,
+        timeout: int = 30,
+        max_retries: int = 3,
     ) -> Path:
         """
-        Сохраняет файл целиком на диск, используя уже полученные данные
-        и активное соединение после get_info() для докачки недостающих данных.
-        Если соединение закрыто, то создаётся новое.
+        Сохраняет файл целиком на диск.
+
+        Может вызываться без предварительного ``get_info()``: если
+        инспекция ещё не выполнялась, сначала выполняется проба по
+        одним заголовкам (тело не скачивается) — она устанавливает
+        соединение и метаданные, файл докачивается при сохранении.
+        Если ``get_info()`` уже вызывался, используется его пробник;
+        закрытое соединение переоткрывается автоматически.
+
+        Сетевые ошибки выбрасываются всегда: запросы повторяются до
+        ``max_retries`` раз (обрывы соединения и статусы 429/5xx),
+        после чего исключение пробрасывается вызывающему коду.
 
         Args:
             file_path: Директория для сохранения.
             file_name: Имя файла. Если не указано, используется
                 ``meta.file_name`` из результата инспекции.
+            timeout: Таймаут HTTP-запроса в секундах.
+            max_retries: Число повторных попыток при обрывах и 429/5xx.
 
         Returns:
-            Path: Абсолютный путь к сохранённому файлу.
+            Path: Путь к сохранённому файлу.
+
+        Raises:
+            aiohttp.ClientError: Сетевая ошибка после исчерпания ретраев.
         """
-        if not self.media_probe:
-            self.media_probe = MediaProbe()
-        return await self.media_probe.full_file_save(
-            file_path, file_name=file_name
-        )
+        probe = self.media_probe
+        if probe is None:
+            probe = MediaProbe(raise_on_network=True)
+            self.media_probe = probe
+            await probe.from_url(
+                self,
+                timeout=timeout,
+                max_total=0,
+                max_retries=max_retries,
+            )
+        return await probe.full_file_save(file_path, file_name=file_name)
