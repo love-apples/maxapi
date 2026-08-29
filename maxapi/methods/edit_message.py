@@ -162,7 +162,10 @@ class EditMessage(BaseConnection):
             except MaxApiError as e:
                 if (
                     isinstance(e.raw, dict)
-                    and e.raw.get("code") == "attachment.not.ready"
+                    and (
+                        e.raw.get("code") == "attachment.not.ready"
+                        or "attachment.file.not.processed" in e.raw.get("message", "")
+                    )
                 ):
                     elapsed = time.monotonic() - start_time
                     if (

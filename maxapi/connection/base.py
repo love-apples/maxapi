@@ -219,6 +219,23 @@ class BaseConnection(BotMixin):
 
         raw = await response.json()
 
+        # Костыль: API может вернуть HTTP 200, но с success=False и ошибкой 
+        # "attachment.file.not.processed" или "attachment.not.ready".
+        # Добавляем code для retry-механизма в EditMessage.fetch().
+        # TODO: Убрать, когда MAX API начнет возвращать корректный HTTP статус.
+        if raw.get('success') is False:
+            error_message = raw.get('message', '')
+            
+            if "attachment.file.not.processed" in error_message:
+                if bot.dispatcher:
+                    asyncio.create_task(
+                        bot.dispatcher.handle_raw_response(
+                            UpdateType.RAW_API_RESPONSE, raw
+                        )
+                    )
+                
+                raise MaxApiError(code=400, raw=raw)
+
         if bot.dispatcher:
             asyncio.create_task(
                 bot.dispatcher.handle_raw_response(
