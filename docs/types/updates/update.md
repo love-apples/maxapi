@@ -8,3 +8,5 @@
         - UpdateUnion
         - UpdateUnionAdapter
         - UNKNOWN_UPDATE_DISCLAIMER
+        - MALFORMED_UPDATE_DISCLAIMER
+        - UNSUPPORTED_MESSAGE_UPDATE_DISCLAIMER
