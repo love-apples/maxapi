@@ -99,9 +99,10 @@ class BaseMaxWebhook(ABC):
         if not task.cancelled():
             exc = task.exception()
             if exc is not None:
-                logger_dp.exception(
+                logger_dp.error(
                     "Необработанное исключение в фоновой задаче handle(): %r",
                     exc,
+                    exc_info=exc,
                 )
 
     async def _shutdown(self) -> None:
