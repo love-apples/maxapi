@@ -566,3 +566,4 @@ class TestRateLimitStatus:
 
         assert exc_info.value.code == 400
         assert exc_info.value.raw == {"error": "rate limit exceeded"}
+        error.json.assert_awaited_once_with(content_type=None)
