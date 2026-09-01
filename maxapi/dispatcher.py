@@ -1575,10 +1575,14 @@ class Dispatcher(BotMixin):
         *,
         skip_updates: bool,
     ) -> None:
-        """Обрабатывает полученные от API события."""
+        """Обрабатывает полученные от API события.
+
+        Маркер сдвигается только после успешной обработки всей пачки:
+        если разбор или диспетчеризация упадут, API отдаст те же
+        события повторно, и они не потеряются.
+        """
         try:
             bot = self._ensure_bot()
-            bot.marker_updates = events.get("marker")
 
             processed_events = await process_update_request(
                 events=events, bot=bot
@@ -1600,16 +1604,22 @@ class Dispatcher(BotMixin):
                 else:
                     await self.handle(event)
 
+            bot.marker_updates = events.get("marker")
+
         except ClientConnectorError:
             logger_dp.error(
                 "Ошибка подключения, жду %s секунд", CONNECTION_RETRY_DELAY
             )
             await asyncio.sleep(CONNECTION_RETRY_DELAY)
         except Exception as e:
+            # Маркер не сдвинут, поэтому та же пачка придёт снова.
+            # Пауза нужна, чтобы не крутить цикл вхолостую.
             logger_dp.error(
-                "Общая ошибка при обработке событий: %r",
+                "Общая ошибка при обработке событий: %r, жду %s секунд",
                 e,
+                GET_UPDATES_RETRY_DELAY,
             )
+            await asyncio.sleep(GET_UPDATES_RETRY_DELAY)
 
     async def start_polling(
         self, bot: Bot, *, skip_updates: bool = False

@@ -152,6 +152,57 @@ class TestResolveChat:
 
         bot.get_chat_by_id.assert_not_called()
 
+    async def test_api_error_is_swallowed_and_logged(
+        self, bot, fixture_message_created, caplog
+    ):
+        """MaxApiError (бота выгнали из чата) не всплывает наружу.
+
+        Регрессия на issue #196: исключение из get_chat_by_id роняло
+        разбор всей пачки событий, а маркер к тому моменту был сдвинут.
+        """
+        bot.get_chat_by_id = AsyncMock(
+            side_effect=MaxApiError(code=404, raw="chat.not.found")
+        )
+
+        caplog.clear()
+        caplog.set_level("WARNING")
+
+        await _resolve_chat(fixture_message_created, bot)
+
+        assert fixture_message_created.chat is None
+        assert any(
+            "Не удалось получить чат" in r.message for r in caplog.records
+        )
+
+    async def test_connection_error_is_swallowed_and_logged(
+        self, bot, fixture_message_created, caplog
+    ):
+        """MaxConnection не всплывает наружу и пишется в лог."""
+        bot.get_chat_by_id = AsyncMock(side_effect=MaxConnection("timeout"))
+
+        caplog.clear()
+        caplog.set_level("WARNING")
+
+        await _resolve_chat(fixture_message_created, bot)
+
+        assert fixture_message_created.chat is None
+        assert any("get_chat_by_id" in r.message for r in caplog.records)
+
+    async def test_enrich_event_survives_unavailable_chat(
+        self, bot, fixture_message_created
+    ):
+        """enrich_event возвращает событие даже без доступа к чату."""
+        bot.auto_requests = True
+        bot.get_chat_by_id = AsyncMock(
+            side_effect=MaxApiError(code=403, raw="access.denied")
+        )
+
+        result = await enrich_event(fixture_message_created, bot)
+
+        assert result is fixture_message_created
+        assert result.chat is None
+        assert result.from_user is fixture_message_created.message.sender
+
 
 # ===========================================================================
 # _resolve_from_user

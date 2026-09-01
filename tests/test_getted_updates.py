@@ -1,5 +1,6 @@
 from unittest.mock import AsyncMock, call, patch
 
+from maxapi.exceptions.max import MaxApiError
 from maxapi.methods.types.getted_updates import (
     get_update_model,
     process_update_request,
@@ -118,3 +119,53 @@ async def test_get_update_model_returns_none_for_unknown_type(bot):
 
     res = await get_update_model(event, bot)
     assert res is None
+
+
+async def test_process_update_request_skips_event_that_raised(bot, caplog):
+    """Падение на одном событии не должно ронять всю пачку.
+
+    Регрессия на issue #196: исключение из enrich_event (например,
+    MaxApiError 404 от get_chat_by_id) прерывало цикл, и вся пачка
+    терялась вместе с уже сдвинутым маркером.
+    """
+    events = {
+        "updates": [
+            {"update_type": "message_created", "n": 1},
+            {"update_type": "message_created", "n": 2},
+            {"update_type": "message_created", "n": 3},
+        ]
+    }
+
+    good_first = object()
+    good_last = object()
+
+    async_mock = AsyncMock(
+        side_effect=[
+            good_first,
+            MaxApiError(code=404, raw="chat.not.found"),
+            good_last,
+        ]
+    )
+
+    with patch(
+        "maxapi.methods.types.getted_updates.get_update_model", async_mock
+    ):
+        caplog.clear()
+        caplog.set_level("ERROR")
+
+        res = await process_update_request(events, bot)
+
+    # Битое событие пропущено, соседние обработаны
+    assert res == [good_first, good_last]
+    assert async_mock.call_count == 3
+    assert any("пропущено" in r.message.lower() for r in caplog.records)
+
+
+async def test_process_update_request_without_updates_key(bot):
+    """Ответ API без ключа "updates" не должен приводить к KeyError."""
+    assert await process_update_request({"marker": 42}, bot) == []
+
+
+async def test_process_update_request_with_null_updates(bot):
+    """updates=None трактуется как пустая пачка."""
+    assert await process_update_request({"updates": None}, bot) == []

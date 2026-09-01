@@ -66,14 +66,33 @@ def _can_resolve_chat(event: UpdateUnion) -> bool:
 
 
 async def _resolve_chat(event: UpdateUnion, bot: Bot) -> None:
-    """Загружает объект чата для события."""
+    """Загружает объект чата для события.
+
+    Ошибки API (например, бота удалили из чата) логируются и не прерывают
+    обогащение события: ``event.chat`` остаётся ``None``.
+    """
 
     if not _can_resolve_chat(event):
         return
 
     chat_id = _extract_chat_id(event)
-    if chat_id is not None:
+    if chat_id is None:
+        return
+
+    try:
         event.chat = await bot.get_chat_by_id(chat_id)
+    except MaxApiError as exc:
+        logger.warning(
+            "Не удалось получить чат: code=%s chat_id=%s",
+            exc.code,
+            chat_id,
+        )
+    except MaxConnection as exc:
+        logger.warning(
+            "get_chat_by_id: %s chat_id=%s",
+            exc,
+            chat_id,
+        )
 
 
 def _resolve_from_user_from_payload(event: UpdateUnion) -> Any | None:
