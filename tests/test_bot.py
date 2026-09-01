@@ -18,6 +18,7 @@ GET_CHATS_DEPRECATION_HINTS = (
     "bot_added",
     "bot_started",
     "bot_removed",
+    "bot_stopped",
     "https://dev.max.ru/docs-api/methods/GET/chats",
 )
 

@@ -671,12 +671,13 @@ class Bot(BaseConnection):
         Рекомендованный сценарий замены — накапливать ``chat_id``
         самостоятельно:
 
-        1. Получайте события ``bot_added``, ``bot_started`` и
-           ``bot_removed`` — через Long Polling (хендлеры
-           ``@dp.bot_added()`` и другие при ``dp.start_polling()``)
-           или через Webhook (``bot.subscribe_webhook(url,
-           update_types=[UpdateType.BOT_ADDED,
-           UpdateType.BOT_STARTED, UpdateType.BOT_REMOVED])``).
+        1. Получайте события ``bot_added``, ``bot_started``,
+           ``bot_removed`` и ``bot_stopped`` — через Long Polling
+           (хендлеры ``@dp.bot_added()`` и другие при
+           ``dp.start_polling()``) или через Webhook
+           (``bot.subscribe_webhook(url, update_types=[
+           UpdateType.BOT_ADDED, UpdateType.BOT_STARTED,
+           UpdateType.BOT_REMOVED, UpdateType.BOT_STOPPED])``).
         2. Извлекайте ``chat_id`` из входящих событий ``bot_added``
            и ``bot_started``.
         3. Храните ``chat_id`` самостоятельно: сохраняйте при
@@ -700,8 +701,9 @@ class Bot(BaseConnection):
         warnings.warn(
             "bot.get_chats() устарел: начиная с июня 2026 года GET /chats не "
             "поддерживается — https://dev.max.ru/docs-api/methods/GET/chats. "
-            "Ведите список чатов сами по событиям bot_added, bot_started и "
-            "bot_removed (Long Polling или bot.subscribe_webhook()).",
+            "Ведите список чатов сами по событиям bot_added, bot_started, "
+            "bot_removed и bot_stopped (Long Polling или "
+            "bot.subscribe_webhook()).",
             DeprecationWarning,
             stacklevel=2,
         )
