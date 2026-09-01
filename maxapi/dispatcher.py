@@ -1461,7 +1461,6 @@ class Dispatcher(BotMixin):
                 await self._handle_locked(
                     event_object=event_object,
                     ids=ids,
-                    router_id=router_id,
                     process_info=process_info,
                 )
         except Exception as e:
@@ -1476,7 +1475,6 @@ class Dispatcher(BotMixin):
         self,
         event_object: UpdateUnion,
         ids: tuple[int | None, int | None],
-        router_id: Any,
         process_info: str,
     ) -> None:
         """
@@ -1485,9 +1483,9 @@ class Dispatcher(BotMixin):
         Args:
             event_object: Событие.
             ids: Ключ ``(chat_id, user_id)``.
-            router_id: Начальный идентификатор роутера для логов.
-            process_info: Начальная строка диагностики.
+            process_info: Строка диагностики для логов.
         """
+        router_id = None
         try:
             memory_context = self.__get_context(*ids)
             current_state = await memory_context.get_state()

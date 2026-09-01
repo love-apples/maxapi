@@ -268,3 +268,16 @@ def pytest_collection_modifyitems(config, items):
         for item in items:
             if "integration" in item.keywords:
                 item.add_marker(skip_integration)
+
+
+def setup_dispatcher_for_handle(dispatcher, bot) -> None:
+    """Настраивает dispatcher для тестирования полного dispatch-пайплайна.
+
+    Общий хелпер для тестов, вызывающих dispatcher.handle() напрямую,
+    без start_polling()/startup().
+    """
+    dispatcher.routers.append(dispatcher)
+    dispatcher._prepare_handlers(bot)
+    dispatcher._global_mw_chain = dispatcher.build_middleware_chain(
+        dispatcher.outer_middlewares, dispatcher._process_event
+    )

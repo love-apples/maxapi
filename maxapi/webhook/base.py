@@ -79,7 +79,13 @@ class BaseMaxWebhook(ABC):
             return False
 
         if self.dp.use_create_task:
-            asyncio.create_task(self.dp.handle(event_object))
+            # Регистрируем задачу в пуле диспетчера: иначе GC может
+            # потерять единственную ссылку на неё, а stop_polling()
+            # не дождётся её завершения перед очисткой ресурсов
+            # (в т.ч. event_isolation.close())
+            task = asyncio.create_task(self.dp.handle(event_object))
+            self.dp._background_tasks.add(task)  # noqa: SLF001
+            task.add_done_callback(self.dp._on_background_task_done)  # noqa: SLF001
         else:
             await self.dp.handle(event_object)
 

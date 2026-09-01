@@ -17,18 +17,11 @@ from maxapi.context import (
 from maxapi.dispatcher import Dispatcher
 from maxapi.filters.state import StateFilter
 
+from tests.conftest import setup_dispatcher_for_handle as _setup_for_handle
+
 
 class Form(StatesGroup):
     waiting_amount = State()
-
-
-def _setup_for_handle(dispatcher, bot) -> None:
-    """Настраивает dispatcher для тестирования полного пайплайна."""
-    dispatcher.routers.append(dispatcher)
-    dispatcher._prepare_handlers(bot)
-    dispatcher._global_mw_chain = dispatcher.build_middleware_chain(
-        dispatcher.outer_middlewares, dispatcher._process_event
-    )
 
 
 def _one_shot_dispatcher(bot, isolation=None):
@@ -201,29 +194,33 @@ class TestDisabledEventIsolation:
 
 
 class _FakeRedisLock:
-    """Async-контекстменеджер, имитирующий redis.asyncio.lock.Lock."""
+    """Имитация redis.asyncio.lock.Lock (acquire/release)."""
 
-    def __init__(self, log: list) -> None:
+    def __init__(self, log: list, release_error: Exception | None = None):
         self._log = log
+        self._release_error = release_error
 
-    async def __aenter__(self):
+    async def acquire(self) -> bool:
         self._log.append("acquired")
-        return self
+        return True
 
-    async def __aexit__(self, *args) -> None:
+    async def release(self) -> None:
+        if self._release_error is not None:
+            raise self._release_error
         self._log.append("released")
 
 
 class _FakeRedis:
     """Имитация redis.asyncio.Redis для проверки lock()."""
 
-    def __init__(self) -> None:
+    def __init__(self, release_error: Exception | None = None) -> None:
         self.calls: list[tuple] = []
         self.log: list[str] = []
+        self._release_error = release_error
 
     def lock(self, name, timeout, sleep):
         self.calls.append((name, timeout, sleep))
-        return _FakeRedisLock(self.log)
+        return _FakeRedisLock(self.log, self._release_error)
 
 
 class TestRedisEventIsolation:
@@ -259,6 +256,20 @@ class TestRedisEventIsolation:
         assert name == "maxapi:None:5:lock"
         assert timeout == 60.0
         assert sleep == 0.1
+
+    async def test_release_error_is_swallowed(self):
+        """Ошибка release (например, LockNotOwnedError после
+        истечения lock_timeout) не превращает успешно обработанное
+        событие в ошибку."""
+        redis = _FakeRedis(release_error=RuntimeError("lock expired"))
+        isolation = RedisEventIsolation(redis)
+        entered = []
+
+        async with isolation.lock((1, 2)):
+            entered.append(True)
+
+        assert entered == [True]
+        assert redis.log == ["acquired"]
 
 
 class TestStopPollingClosesIsolation:

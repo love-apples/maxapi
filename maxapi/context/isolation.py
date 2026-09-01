@@ -42,6 +42,8 @@ from asyncio import Lock
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
 
+from ..loggers import logger_dp
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from contextlib import AbstractAsyncContextManager
@@ -73,7 +75,12 @@ class BaseEventIsolation(ABC):
 
     @abstractmethod
     async def close(self) -> None:
-        """Освобождает ресурсы изоляции."""
+        """
+        Освобождает ресурсы изоляции.
+
+        Вызывается диспетчером при каждом ``stop_polling()``,
+        поэтому реализация должна быть идемпотентной.
+        """
 
 
 class DisabledEventIsolation(BaseEventIsolation):
@@ -132,6 +139,8 @@ class SimpleEventIsolation(BaseEventIsolation):
             async with lock:
                 yield
         finally:
+            # get с дефолтом, а не прямой доступ: close() мог
+            # очистить словари, пока блокировка удерживалась
             refs = self._refcounts.get(key, 1) - 1
             if refs > 0:
                 self._refcounts[key] = refs
@@ -170,11 +179,20 @@ class RedisEventIsolation(BaseEventIsolation):
 
         Args:
             redis_client: Экземпляр ``redis.asyncio.Redis``.
-            key_prefix: Префикс ключей блокировок. Должен совпадать
-                с ``key_prefix`` вашего ``RedisContext``.
+            key_prefix: Префикс ключей блокировок. Рекомендуется тот
+                же, что у вашего ``RedisContext``, чтобы все ключи
+                бота жили в одном неймспейсе; для разных ботов на
+                одном Redis префиксы обязаны различаться, иначе их
+                блокировки пересекутся.
             lock_timeout: Максимальное время удержания блокировки в
                 секундах (страховка от вечного лока при падении
-                процесса). None — без ограничения.
+                процесса). Если обработка события длится дольше,
+                блокировка истекает и изоляция для этого события
+                перестаёт действовать. None — без ограничения; не
+                рекомендуется: после падения процесса, державшего
+                блокировку, ключ останется в Redis навсегда и все
+                апдейты этого пользователя зависнут до ручного
+                удаления ключа.
             lock_sleep: Интервал опроса блокировки в секундах.
         """
         self.redis = redis_client
@@ -192,12 +210,29 @@ class RedisEventIsolation(BaseEventIsolation):
         """
         chat_id, user_id = key
         name = f"{self.key_prefix}:{chat_id}:{user_id}:lock"
-        async with self.redis.lock(
+        lock = self.redis.lock(
             name=name,
             timeout=self.lock_timeout,
             sleep=self.lock_sleep,
-        ):
+        )
+        await lock.acquire()
+        try:
             yield
+        finally:
+            try:
+                await lock.release()
+            except Exception as e:
+                # Например, LockNotOwnedError: обработка события
+                # заняла дольше lock_timeout, ключ истёк (и изоляция
+                # на хвосте обработки не действовала). Событие при
+                # этом обработано — не превращаем успех в ошибку
+                logger_dp.warning(
+                    "Не удалось освободить блокировку изоляции %s "
+                    "(обработка дольше lock_timeout=%s?): %r",
+                    name,
+                    self.lock_timeout,
+                    e,
+                )
 
     async def close(self) -> None:
         """No-op: соединением Redis владеет вызывающая сторона."""

@@ -16,6 +16,8 @@ from maxapi.filters.state import StateFilter
 from maxapi.types.updates.bot_started import BotStarted
 from maxapi.types.updates.message_created import MessageCreated
 
+from tests.conftest import setup_dispatcher_for_handle
+
 logger = logging.getLogger(__name__)
 
 
@@ -707,14 +709,7 @@ class TestDispatcherReady:
 # Helpers
 # ===========================================================================
 
-
-def _setup_for_handle(dispatcher: Dispatcher, bot: Bot) -> None:
-    """Настраивает dispatcher для тестирования полного dispatch-пайплайна."""
-    dispatcher.routers.append(dispatcher)
-    dispatcher._prepare_handlers(bot)
-    dispatcher._global_mw_chain = dispatcher.build_middleware_chain(
-        dispatcher.outer_middlewares, dispatcher._process_event
-    )
+_setup_for_handle = setup_dispatcher_for_handle
 
 
 # ===========================================================================
