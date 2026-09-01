@@ -206,6 +206,87 @@ async def test_delete_comment_validates_comment_id(bot):
         DeleteComment(bot=bot, message_id=MESSAGE_ID, comment_id="")
 
 
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda bot: SendComment(bot=bot, message_id="", text="привет"),
+        lambda bot: EditComment(
+            bot=bot, message_id="", comment_id=COMMENT_ID, text="привет"
+        ),
+        lambda bot: DeleteComment(
+            bot=bot, message_id="", comment_id=COMMENT_ID
+        ),
+        lambda bot: GetComment(bot=bot, message_id="", comment_id=COMMENT_ID),
+    ],
+)
+async def test_methods_validate_empty_message_id(bot, factory):
+    with pytest.raises(ValueError, match="message_id"):
+        factory(bot)
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda bot: EditComment(
+            bot=bot, message_id=MESSAGE_ID, comment_id="", text="привет"
+        ),
+        lambda bot: GetComment(bot=bot, message_id=MESSAGE_ID, comment_id=""),
+    ],
+)
+async def test_methods_validate_empty_comment_id(bot, factory):
+    with pytest.raises(ValueError, match="comment_id"):
+        factory(bot)
+
+
+async def test_edit_comment_validates_text_length(bot):
+    with pytest.raises(ValueError, match="text"):
+        EditComment(
+            bot=bot,
+            message_id=MESSAGE_ID,
+            comment_id=COMMENT_ID,
+            text="a" * 4000,
+        )
+
+
+async def test_edit_comment_with_link_and_string_format(bot):
+    method = EditComment(
+        bot=bot,
+        message_id=MESSAGE_ID,
+        comment_id=COMMENT_ID,
+        text="привет",
+        link=NewMessageLink(type=MessageLinkType.REPLY, mid="mid.parent"),
+        format="html",
+    )
+
+    with _patched_request(EditedComment(success=True)) as mocked_request:
+        await method.fetch()
+
+    json = mocked_request.call_args.kwargs["json"]
+    assert json["link"]["mid"] == "mid.parent"
+    assert json["format"] == TextFormat.HTML
+
+
+async def test_bot_get_comments_wrapper(bot):
+    with _patched_request(Comments(messages=[])) as mocked_request:
+        await bot.get_comments(message_id=MESSAGE_ID, after=1000)
+
+    kwargs = mocked_request.call_args.kwargs
+    assert kwargs["path"] == f"/messages/{MESSAGE_ID}/comments"
+    assert kwargs["params"]["after"] == 1000
+
+
+async def test_bot_get_comment_wrapper(bot):
+    with _patched_request(CommentMessage(**COMMENT_PAYLOAD)) as mocked:
+        comment = await bot.get_comment(
+            message_id=MESSAGE_ID, comment_id=COMMENT_ID
+        )
+
+    assert mocked.call_args.kwargs["path"] == (
+        f"/messages/{MESSAGE_ID}/comments/{COMMENT_ID}"
+    )
+    assert comment.post_message_id == MESSAGE_ID
+
+
 def test_comment_message_parses_payload():
     comment = CommentMessage(**COMMENT_PAYLOAD)
 
