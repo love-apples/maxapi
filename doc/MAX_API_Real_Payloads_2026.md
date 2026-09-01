@@ -1,15 +1,17 @@
 # Real World MAX API Payloads (2026)
-# Reverse engineered JSON payloads for MAX Messenger API (Feb 2026). Real-world examples for developers./
----
-# MAX Messenger API & SubCheckerBot Architecture
 
-> **CRITICAL REFERENCE:** This document contains REAL payloads captured from the MAX API on Feb 10, 2026.
+Reverse-engineered JSON payloads for the MAX Messenger API (Feb 2026).
+Real-world examples for developers.
+
+> **CRITICAL REFERENCE:** This document contains real payloads captured from
+> the MAX API on Feb 10, 2026.
 > AI coding assistants must use these structures, NOT generic Telegram schemas.
 
 ## 1. Bot Identity (`/me`)
-*Source: `bot_info_me.json`*
-```json
 
+Source: `bot_info_me.json`.
+
+```json
 {
   "user_id": 12345,
   "first_name": "Bot_Name",
@@ -35,11 +37,15 @@
   ],
   "name": "Bot_Name"
 }
+```
 
-2. Real API Events (Webhooks)
-2.1 Message Event: Text (message_created)
-Triggered when a user sends text. Source: event_message_created_xxxx.json (Text variant)
-JSON
+## 2. Real API Events (Webhooks)
+
+### 2.1 Message Event: Text (`message_created`)
+
+Triggered when a user sends text. Source: `event_message_created_xxxx.json` (text variant).
+
+```json
 {
   "timestamp": 1739184000000,
   "message": {
@@ -66,11 +72,13 @@ JSON
   "user_locale": "ru",
   "update_type": "message_created"
 }
+```
 
+### 2.2 Message Event: Image/Media (`message_created`)
 
-2.2 Message Event: Image/Media (message_created)
-Triggered when a user uploads an image. Source: event_message_created_xxxx.json (Image variant)
-JSON
+Triggered when a user uploads an image. Source: `event_message_created_xxxx.json` (image variant).
+
+```json
 {
   "callback": {
     "timestamp": 1739184000000,
@@ -176,10 +184,13 @@ JSON
   "user_locale": "ru",
   "update_type": "message_callback"
 }
+```
 
-2.3 Callback Event (message_callback)
-Triggered when an inline button is pressed. Source: event_message_callback_xxxx.json
-JSON
+### 2.3 Callback Event (`message_callback`)
+
+Triggered when an inline button is pressed. Source: `event_message_callback_xxxx.json`.
+
+```json
 {
   "callback": {
     "timestamp": 1739184000000,
@@ -268,10 +279,13 @@ JSON
   "user_locale": "ru",
   "update_type": "message_callback"
 }
+```
 
-2.4 User Added (user_added)
-Triggered when a user opens the chat or unblocks the bot. Source: event_user_added_xxxx.json
-JSON
+### 2.4 User Added (`user_added`)
+
+Triggered when a user opens the chat or unblocks the bot. Source: `event_user_added_xxxx.json`.
+
+```json
 {
   "chat_id": -100000000,
   "user": {
@@ -286,27 +300,33 @@ JSON
   "timestamp": 1739184000000,
   "update_type": "user_added"
 }
+```
 
+## 3. The Internal Normalization Layer
 
-3. The Internal Normalization Layer
+**IMPORTANT FOR DEVELOPERS:** the SubCheckerBot transforms the raw data (above)
+into a normalized object in `main.py` before passing it to handlers.
 
-IMPORTANT FOR DEVELOPERS: The SubCheckerBot transforms the Raw Data (above) into a Normalized Object in main.py before passing it to Handlers.
-- If editing main.py / api.py: Use the **Raw JSON structures** above.
-- If editing handlers/.py: Use the **Normalized keys** below.
+- If editing `main.py` / `api.py`: use the **raw JSON structures** above.
+- If editing `handlers/*.py`: use the **normalized keys** below.
 
-| Normalized Field (In Handlers) | Mapped From Raw MAX JSON |
+| Normalized Field (in handlers) | Mapped from Raw MAX JSON |
 |-------------------------------|--------------------------|
 | message.text | message.body.text |
 | message.from.id / from_user.id | message.sender (MAX has no "from"; we build it from sender) |
 | message.chat.id | message.recipient.chat_id; for dialog → recipient.user_id or sender.user_id |
 | callback_query.id | callback.callback_id |
-| callback_query.data | **callback.payload** (string, e.g. "check_system_sub", "utm_view_6") | 
+| callback_query.data | **callback.payload** (string, e.g. "check_system_sub", "utm_view_6") |
 
-4. API Quirks & Limits
-Images: External URLs are forbidden. Flow: POST /uploads -> Get Token -> POST /messages with token.
+## 4. API Quirks & Limits
 
-Deep Links: Parsed from message.body.text (e.g., /start c42) or specific payload fields if available.
+Images: external URLs are forbidden. Flow: `POST /uploads` → get token →
+`POST /messages` with token.
 
->**Original Source & Updates:**
-> This document is a snapshot of the collection maintained in [this GitHub Gist](https://gist.github.com/Danya2904/4280c88912090e7440fb7bfc54abdea3).
+Deep links: parsed from `message.body.text` (e.g., `/start c42`) or specific
+payload fields if available.
+
+> **Original source & updates:**
+> This document is a snapshot of the collection maintained in
+> [this GitHub Gist](https://gist.github.com/Danya2904/4280c88912090e7440fb7bfc54abdea3).
 > Please check the Gist for the most recent updates or to leave comments/stars.
