@@ -286,3 +286,36 @@ class TestStopPollingClosesIsolation:
 
         assert isolation._locks == {}
         assert isolation._refcounts == {}
+
+
+class _BrokenIsolation(DisabledEventIsolation):
+    """Изоляция, падающая при попытке взять блокировку."""
+
+    def lock(self, key):
+        raise RuntimeError("изоляция недоступна")
+
+
+class TestIsolationFailure:
+    """Тесты отказа бэкенда изоляции."""
+
+    async def test_lock_failure_is_logged_not_raised(
+        self, bot, fixture_message_created, caplog
+    ):
+        """Ошибка захвата блокировки логируется, а не роняет
+        handle(); хендлер при этом не вызывается."""
+        dp = Dispatcher(event_isolation=_BrokenIsolation())
+        handled = []
+
+        @dp.message_created()
+        async def handler(event):
+            handled.append(event)
+
+        _setup_for_handle(dp, bot)
+
+        await dp.handle(fixture_message_created)  # не должно падать
+
+        assert handled == []
+        assert any(
+            "Ошибка при обработке события" in record.message
+            for record in caplog.records
+        )
