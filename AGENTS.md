@@ -57,7 +57,11 @@ Async Python SDK + bot-фреймворк для мессенджера **MAX** 
 - `maxapi/context/` — `BaseContext` + `MemoryContext` (default, LRU 10_000 в `Dispatcher.contexts`)
   и `RedisContext`. Оба поддерживают `ttl: float | None` — истёкший TTL сбрасывает state и данные;
   реализован через `TTLTracker` (`context/ttl.py`). FSM: `State()` + `StatesGroup` в
-  `state_machine.py` (имя автоматически `"Group:attr"`).
+  `state_machine.py` (имя автоматически `"Group:attr"`). Изоляция событий (`context/isolation.py`,
+  порт из aiogram, MIT-нотис в шапке файла): `Dispatcher(event_isolation=SimpleEventIsolation())`
+  сериализует конкурентные апдейты одного `(chat_id, user_id)` — весь `handle()` идёт под
+  per-key локом; `RedisEventIsolation` — для нескольких процессов. По умолчанию отключена
+  (`DisabledEventIsolation`), как в aiogram.
 - `maxapi/webhook/` — `BaseMaxWebhook` + три бэкенда: `aiohttp.py` (default, в основной
   зависимости), `fastapi.py`, `litestar.py` (опц. экстры `[fastapi]`/`[litestar]`). Все валидируют
   заголовок `X-Max-Bot-Api-Secret`, если в конструктор передан `secret`. Вход parsится

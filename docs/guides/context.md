@@ -240,3 +240,56 @@ asyncio.run(main())
 ```
 
 - во время работы middleware будет обновлять сохранённый маркер на основании `event_object.bot.marker_updates`.
+
+## Изоляция событий (защита от гонок FSM)
+
+При параллельной обработке событий (`Dispatcher(use_create_task=True)` или вебхук)
+два быстрых сообщения одного пользователя могут прочитать **один и тот же снимок
+FSM-состояния** до того, как первый хендлер успеет его сбросить. В результате
+одноразовый шаг FSM (например, «введите сумму перевода») выполнится дважды.
+
+Механизм изоляции сериализует обработку апдейтов одного пользователя: пока не
+завершился предыдущий `handle()` для ключа `(chat_id, user_id)`, следующий ждёт.
+События разных пользователей обрабатываются параллельно, как и раньше.
+
+По умолчанию изоляция **отключена** (как в aiogram). Включение:
+
+```python
+from maxapi import Dispatcher
+from maxapi.context import SimpleEventIsolation
+
+dp = Dispatcher(
+    use_create_task=True,
+    event_isolation=SimpleEventIsolation(),
+)
+```
+
+### Изоляция при нескольких процессах
+
+`SimpleEventIsolation` работает в пределах одного процесса. Если бот запущен в
+нескольких процессах или инстансах (например, вебхук за балансировщиком),
+используйте `RedisEventIsolation` в паре с `RedisContext`:
+
+```python
+import redis.asyncio as redis
+from maxapi import Dispatcher
+from maxapi.context import RedisContext, RedisEventIsolation
+
+redis_client = redis.Redis(host="localhost", port=6379, db=0)
+
+dp = Dispatcher(
+    storage=RedisContext,
+    redis_client=redis_client,
+    key_prefix="my_bot",
+    event_isolation=RedisEventIsolation(
+        redis_client,
+        key_prefix="my_bot",
+    ),
+)
+```
+
+!!! warning "Долгие хендлеры"
+    Блокировка удерживается на всё время обработки события. Если хендлер внутри
+    себя ожидает **следующее событие того же пользователя**, при включённой
+    изоляции это приведёт к взаимной блокировке до конца хендлера
+    (у `RedisEventIsolation` — до `lock_timeout`, по умолчанию 60 секунд).

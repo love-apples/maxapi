@@ -14,6 +14,7 @@ from warnings import warn
 from aiohttp import ClientConnectorError
 
 from .context import BaseContext, ContextManager, MemoryContext
+from .context.isolation import BaseEventIsolation, DisabledEventIsolation
 from .enums.update import UpdateType
 from .exceptions.dispatcher import HandlerException, MiddlewareException
 from .exceptions.max import InvalidToken, MaxApiError, MaxConnection
@@ -99,6 +100,7 @@ class Dispatcher(BotMixin):
         storage: Any = MemoryContext,
         *,
         use_create_task: bool = False,
+        event_isolation: BaseEventIsolation | None = None,
         **storage_kwargs: Any,
     ) -> None:
         """
@@ -108,6 +110,11 @@ class Dispatcher(BotMixin):
             router_id: Идентификатор роутера для логов.
             use_create_task: Флаг, отвечающий за параллелизацию
                 обработок событий.
+            event_isolation: Изоляция обработки событий: сериализует
+                конкурентные апдейты одного пользователя
+                (см. :class:`~maxapi.context.SimpleEventIsolation`).
+                По умолчанию отключена
+                (:class:`~maxapi.context.DisabledEventIsolation`).
             storage: Класс контекста для хранения
                 данных (MemoryContext, RedisContext и т.д.).
             **storage_kwargs: Дополнительные аргументы для
@@ -117,6 +124,11 @@ class Dispatcher(BotMixin):
         self.router_id = router_id
         self.storage = storage
         self.storage_kwargs = storage_kwargs
+        self.event_isolation: BaseEventIsolation = (
+            event_isolation
+            if event_isolation is not None
+            else DisabledEventIsolation()
+        )
         self._fsm = ContextManager(self, self.__get_context)
 
         self.event_handlers: list[Handler] = []
@@ -1427,6 +1439,12 @@ class Dispatcher(BotMixin):
         Основной обработчик события. Применяет фильтры, middleware
         и вызывает нужный handler.
 
+        При включённой изоляции (``event_isolation``) вся обработка —
+        от чтения FSM-состояния до завершения хендлера и обработчиков
+        ошибок — выполняется под блокировкой по ключу
+        ``(chat_id, user_id)``: конкурентные апдейты одного
+        пользователя сериализуются.
+
         Args:
             event_object: Событие.
         """
@@ -1435,13 +1453,44 @@ class Dispatcher(BotMixin):
 
         try:
             ids = event_object.get_ids()
-            memory_context = self.__get_context(*ids)
-            current_state = await memory_context.get_state()
-
             process_info = (
                 f"{event_object.update_type} | "
                 f"chat_id: {ids[0]}, user_id: {ids[1]}"
             )
+            async with self.event_isolation.lock(ids):
+                await self._handle_locked(
+                    event_object=event_object,
+                    ids=ids,
+                    router_id=router_id,
+                    process_info=process_info,
+                )
+        except Exception as e:
+            logger_dp.exception(
+                "Ошибка при обработке события: router_id: %s | %s | %r",
+                router_id,
+                process_info,
+                e,
+            )
+
+    async def _handle_locked(
+        self,
+        event_object: UpdateUnion,
+        ids: tuple[int | None, int | None],
+        router_id: Any,
+        process_info: str,
+    ) -> None:
+        """
+        Тело ``handle()``, выполняемое под блокировкой изоляции.
+
+        Args:
+            event_object: Событие.
+            ids: Ключ ``(chat_id, user_id)``.
+            router_id: Начальный идентификатор роутера для логов.
+            process_info: Начальная строка диагностики.
+        """
+        try:
+            memory_context = self.__get_context(*ids)
+            current_state = await memory_context.get_state()
 
             kwargs: dict[str, Any] = {
                 "context": memory_context,
@@ -1514,13 +1563,6 @@ class Dispatcher(BotMixin):
             logger_dp.exception(
                 "Ошибка при обработке события: router_id: %s | %s | %r",
                 e.router_id,
-                process_info,
-                e,
-            )
-        except Exception as e:
-            logger_dp.exception(
-                "Ошибка при обработке события: router_id: %s | %s | %r",
-                router_id,
                 process_info,
                 e,
             )
@@ -1656,6 +1698,8 @@ class Dispatcher(BotMixin):
                 *self._background_tasks, return_exceptions=True
             )
             logger_dp.info("Все фоновые задачи завершены")
+
+        await self.event_isolation.close()
 
     async def startup(self, bot: Bot) -> None:
         """
