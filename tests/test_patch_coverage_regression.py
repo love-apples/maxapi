@@ -103,7 +103,7 @@ async def test_base_connection_dispatches_raw_response_on_error(
     response = MagicMock()
     response.status = 400
     response.ok = False
-    response.json = AsyncMock(return_value={"error": "bad"})
+    response.text = AsyncMock(return_value='{"error": "bad"}')
     session = MagicMock()
     session.closed = False
     session.request = AsyncMock(return_value=response)
@@ -137,7 +137,7 @@ async def test_base_connection_dispatches_raw_response_on_success(
     response = MagicMock()
     response.status = 200
     response.ok = True
-    response.json = AsyncMock(return_value={"ok": True})
+    response.text = AsyncMock(return_value='{"ok": true}')
     session = MagicMock()
     session.closed = False
     session.request = AsyncMock(return_value=response)
