@@ -28,6 +28,8 @@ class EditChat(BaseConnection):
             (иконка) чата.
         title: Новое название чата.
         pin: Идентификатор закреплённого сообщения.
+        description: Новое описание чата или канала
+            (0-16000 символов). Пустая строка удаляет описание.
         notify: Включение или отключение уведомлений
             (по умолчанию True).
     """
@@ -39,6 +41,7 @@ class EditChat(BaseConnection):
         icon: PhotoAttachmentRequestPayload | None = None,
         title: str | None = None,
         pin: str | None = None,
+        description: str | None = None,
         *,
         notify: bool | None = None,
     ):
@@ -47,12 +50,18 @@ class EditChat(BaseConnection):
                 "title не должен быть меньше 1 или больше 200 символов"
             )
 
+        if description is not None and len(description) > 16000:
+            raise ValueError(
+                "description не должен быть больше 16000 символов"
+            )
+
         super().__init__()
         self.bot = bot
         self.chat_id = chat_id
         self.icon = icon
         self.title = title
         self.pin = pin
+        self.description = description
         self.notify = notify
 
     async def fetch(self) -> Chat:
@@ -89,6 +98,8 @@ class EditChat(BaseConnection):
             json["title"] = self.title
         if self.pin:
             json["pin"] = self.pin
+        if self.description is not None:
+            json["description"] = self.description
         if self.notify is not None:
             json["notify"] = self.notify
 
