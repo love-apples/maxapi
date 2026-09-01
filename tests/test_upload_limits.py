@@ -1,13 +1,13 @@
 """Тесты для лимитов загрузки медиафайлов (POST /uploads)."""
 
 import logging
-from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from aiohttp import ClientSession
+from maxapi.client.default import DefaultConnectionProperties
+from maxapi.connection.base import BaseConnection
 from maxapi.enums.upload_type import UploadType
-from maxapi.types.input_media import InputMedia, InputMediaBuffer
-from maxapi.utils.message import process_input_media
 from maxapi.utils.upload_limits import (
     GB,
     MB,
@@ -16,7 +16,35 @@ from maxapi.utils.upload_limits import (
     check_upload_size,
 )
 
-IMAGE_LIMIT = 50 * MB
+IMAGE_LIMIT = UPLOAD_LIMITS[UploadType.IMAGE].max_size
+
+TINY_LIMIT = 16
+TINY_LIMITS = {UploadType.IMAGE: UploadLimits(formats=(), max_size=TINY_LIMIT)}
+
+
+def _make_connection_with_bot(*, session=None):
+    """Создаёт BaseConnection с замоканным ботом."""
+    conn = BaseConnection()
+    bot = Mock()
+    bot.default_connection = DefaultConnectionProperties()
+    bot.session = session
+    conn.bot = bot
+    return conn, bot
+
+
+def _make_mock_session():
+    """Создаёт замоканную aiohttp-сессию для upload-запросов."""
+    mock_response = AsyncMock()
+    mock_response.text = AsyncMock(return_value='{"token":"t"}')
+
+    mock_cm = AsyncMock()
+    mock_cm.__aenter__.return_value = mock_response
+    mock_cm.__aexit__.return_value = False
+
+    mock_session = AsyncMock(spec=ClientSession)
+    mock_session.closed = False
+    mock_session.post = Mock(return_value=mock_cm)
+    return mock_session
 
 
 class TestUploadLimitsValues:
@@ -107,8 +135,9 @@ class TestCheckUploadSize:
     def test_warning_contains_type_and_sizes(self, caplog):
         """Предупреждение содержит тип, фактический размер и лимит."""
         with caplog.at_level(logging.WARNING, logger="bot"):
-            check_upload_size(100 * MB, UploadType.IMAGE)
+            result = check_upload_size(100 * MB, UploadType.IMAGE)
 
+        assert result is False
         assert len(caplog.records) == 1
         record = caplog.records[0]
         assert record.name == "bot"
@@ -117,6 +146,35 @@ class TestCheckUploadSize:
         assert "image" in message
         assert "100.0 МБ" in message
         assert "50.0 МБ" in message
+
+    def test_string_type_is_accepted(self, caplog):
+        """Строковый тип нормализуется в UploadType."""
+        with caplog.at_level(logging.WARNING, logger="bot"):
+            result = check_upload_size(100 * MB, "image")
+
+        assert result is False
+        assert len(caplog.records) == 1
+        assert "image" in caplog.records[0].getMessage()
+
+    def test_unknown_type_is_allowed_without_warning(self, caplog):
+        """Неизвестный тип считается допустимым: решает сервер."""
+        with caplog.at_level(logging.WARNING, logger="bot"):
+            result = check_upload_size(1, "unknown")
+
+        assert result is True
+        assert caplog.records == []
+
+    def test_warning_contains_exact_bytes(self, caplog):
+        """Байты в тексте различают размеры, округляемые одинаково."""
+        size = IMAGE_LIMIT + 1
+
+        with caplog.at_level(logging.WARNING, logger="bot"):
+            check_upload_size(size, UploadType.IMAGE)
+
+        message = caplog.records[0].getMessage()
+        assert f"{size} байт" in message
+        assert f"{IMAGE_LIMIT} байт" in message
+        assert "50.0 МБ > 50.0 МБ" not in message
 
     def test_warning_contains_file_name(self, caplog):
         """Имя файла попадает в предупреждение, если передано."""
@@ -139,110 +197,123 @@ class TestCheckUploadSize:
         assert "4.0 ГБ" in message
 
 
-def _patch_upload_pipeline():
-    """Мокает сетевые шаги process_input_media."""
-    return (
-        patch(
-            "maxapi.utils.message._get_upload_info",
-            new=AsyncMock(return_value=Mock(url="https://upload", token="t")),
-        ),
-        patch(
-            "maxapi.utils.message._upload_input_media",
-            new=AsyncMock(return_value='{"token":"t"}'),
-        ),
-        patch(
-            "maxapi.utils.message._resolve_attachment_token",
-            new=AsyncMock(return_value="token-value"),
-        ),
-    )
+class TestUploadFileSizeCheck:
+    """Мягкая проверка размера в BaseConnection.upload_file."""
 
+    async def _upload(self, path):
+        """Загружает файл через замоканную сессию."""
+        mock_session = _make_mock_session()
+        conn, _bot = _make_connection_with_bot(session=mock_session)
 
-class TestProcessInputMediaSizeCheck:
-    """Мягкая проверка размера в пайплайне загрузки."""
-
-    async def _run(self, att):
-        """Прогоняет process_input_media с замоканной загрузкой."""
-        upload_info, upload_media, resolve_token = _patch_upload_pipeline()
-        with upload_info, upload_media, resolve_token:
-            return await process_input_media(
-                base_connection=Mock(),
-                bot=Mock(),
-                att=att,
-            )
-
-    async def test_warns_for_too_big_buffer(self, caplog):
-        """Слишком большой InputMediaBuffer вызывает предупреждение."""
-        att = InputMediaBuffer(
-            buffer=b"\x00" * (IMAGE_LIMIT + 1),
-            filename="big.png",
+        result = await conn.upload_file(
+            url="https://upload.example.com",
+            path=str(path),
             type=UploadType.IMAGE,
         )
 
-        with caplog.at_level(logging.WARNING, logger="bot"):
-            result = await self._run(att)
+        mock_session.post.assert_called_once()
+        return result
 
-        assert result.payload.token == "token-value"
+    async def test_warns_for_too_big_file(self, caplog, tmp_path):
+        """Файл больше лимита вызывает предупреждение с именем файла."""
+        file_path = tmp_path / "big.png"
+        file_path.write_bytes(b"\x00" * (TINY_LIMIT + 1))
+
+        with (
+            patch.dict(
+                "maxapi.utils.upload_limits.UPLOAD_LIMITS",
+                TINY_LIMITS,
+            ),
+            caplog.at_level(logging.WARNING, logger="bot"),
+        ):
+            result = await self._upload(file_path)
+
+        assert result == '{"token":"t"}'
+        assert len(caplog.records) == 1
+        assert "big.png" in caplog.records[0].getMessage()
+
+    async def test_no_warning_for_small_file(self, caplog, tmp_path):
+        """Файл в пределах лимита не вызывает предупреждений."""
+        file_path = tmp_path / "small.png"
+        file_path.write_bytes(b"\x00" * TINY_LIMIT)
+
+        with (
+            patch.dict(
+                "maxapi.utils.upload_limits.UPLOAD_LIMITS",
+                TINY_LIMITS,
+            ),
+            caplog.at_level(logging.WARNING, logger="bot"),
+        ):
+            result = await self._upload(file_path)
+
+        assert result == '{"token":"t"}'
+        assert caplog.records == []
+
+    async def test_real_file_size_is_read_from_fs(self, caplog, tmp_path):
+        """Размер берётся из реального файла, а не из аргументов."""
+        file_path = tmp_path / "sparse.png"
+        with file_path.open("wb") as f:
+            f.truncate(TINY_LIMIT + 1)
+
+        with (
+            patch.dict(
+                "maxapi.utils.upload_limits.UPLOAD_LIMITS",
+                TINY_LIMITS,
+            ),
+            caplog.at_level(logging.WARNING, logger="bot"),
+        ):
+            await self._upload(file_path)
+
+        message = caplog.records[0].getMessage()
+        assert f"{TINY_LIMIT + 1} байт" in message
+
+
+class TestUploadFileBufferSizeCheck:
+    """Мягкая проверка размера в BaseConnection.upload_file_buffer."""
+
+    async def _upload(self, buffer, filename):
+        """Загружает буфер через замоканную сессию."""
+        mock_session = _make_mock_session()
+        conn, _bot = _make_connection_with_bot(session=mock_session)
+
+        result = await conn.upload_file_buffer(
+            filename=filename,
+            url="https://upload.example.com",
+            buffer=buffer,
+            type=UploadType.IMAGE,
+        )
+
+        mock_session.post.assert_called_once()
+        return result
+
+    async def test_warns_for_too_big_buffer(self, caplog):
+        """Слишком большой буфер вызывает предупреждение с именем файла."""
+        with (
+            patch.dict(
+                "maxapi.utils.upload_limits.UPLOAD_LIMITS",
+                TINY_LIMITS,
+            ),
+            caplog.at_level(logging.WARNING, logger="bot"),
+        ):
+            result = await self._upload(
+                b"\x00" * (TINY_LIMIT + 1),
+                "big.png",
+            )
+
+        assert result == '{"token":"t"}'
         assert len(caplog.records) == 1
         assert "big.png" in caplog.records[0].getMessage()
 
     async def test_no_warning_for_small_buffer(self, caplog):
-        """Маленький InputMediaBuffer не вызывает предупреждений."""
-        att = InputMediaBuffer(
-            buffer=b"\x00" * 1024,
-            filename="small.png",
-            type=UploadType.IMAGE,
-        )
-
-        with caplog.at_level(logging.WARNING, logger="bot"):
-            result = await self._run(att)
-
-        assert result.payload.token == "token-value"
-        assert caplog.records == []
-
-    async def test_warns_for_too_big_file(self, caplog, tmp_path):
-        """Слишком большой InputMedia вызывает предупреждение."""
-        file_path = tmp_path / "big.png"
-        file_path.write_bytes(b"\x00" * 16)
-        att = InputMedia(path=str(file_path), type=UploadType.IMAGE)
-
-        stat_result = Mock(st_size=IMAGE_LIMIT + 1)
+        """Маленький буфер не вызывает предупреждений."""
         with (
-            patch.object(Path, "stat", return_value=stat_result),
+            patch.dict(
+                "maxapi.utils.upload_limits.UPLOAD_LIMITS",
+                TINY_LIMITS,
+            ),
             caplog.at_level(logging.WARNING, logger="bot"),
         ):
-            result = await self._run(att)
+            result = await self._upload(b"\x00" * TINY_LIMIT, "small.png")
 
-        assert result.payload.token == "token-value"
-        assert len(caplog.records) == 1
-        assert "big.png" in caplog.records[0].getMessage()
-
-    async def test_missing_file_does_not_break_pipeline(
-        self, caplog, tmp_path
-    ):
-        """OSError при stat не ломает пайплайн и не логирует warning."""
-        file_path = tmp_path / "gone.png"
-        file_path.write_bytes(b"\x00" * 16)
-        att = InputMedia(path=str(file_path), type=UploadType.IMAGE)
-        file_path.unlink()
-
-        with caplog.at_level(logging.WARNING, logger="bot"):
-            result = await self._run(att)
-
-        assert result.type == UploadType.IMAGE
-        assert result.payload.token == "token-value"
-        assert caplog.records == []
-
-    async def test_stat_oserror_is_swallowed(self, caplog, tmp_path):
-        """Любая OSError при stat игнорируется проверкой."""
-        file_path = tmp_path / "denied.png"
-        file_path.write_bytes(b"\x00" * 16)
-        att = InputMedia(path=str(file_path), type=UploadType.IMAGE)
-
-        with (
-            patch.object(Path, "stat", side_effect=PermissionError),
-            caplog.at_level(logging.WARNING, logger="bot"),
-        ):
-            result = await self._run(att)
-
-        assert result.payload.token == "token-value"
+        assert result == '{"token":"t"}'
         assert caplog.records == []

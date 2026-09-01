@@ -23,6 +23,8 @@ ok = check_upload_size(
 )
 ```
 
-Проверка вызывается автоматически при загрузке вложений
-(`maxapi.utils.message.process_input_media`), поэтому предупреждение
-появится в логах и без явного вызова.
+Проверка вызывается автоматически в `BaseConnection.upload_file` и
+`BaseConnection.upload_file_buffer`, то есть на любом пути загрузки:
+`bot.upload_media`, `InputMedia`/`InputMediaBuffer` в `attachments`,
+а также ручной `bot.upload_file`. Предупреждение появится в логах и
+без явного вызова `check_upload_size`.

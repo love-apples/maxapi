@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from json import JSONDecodeError, loads
-from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -9,7 +8,6 @@ from ..enums.upload_type import UploadType
 from ..exceptions.max import MaxApiError, MaxUploadFileFailed
 from ..types.attachments.upload import AttachmentPayload, AttachmentUpload
 from ..types.input_media import InputMedia, InputMediaBuffer
-from .upload_limits import check_upload_size
 
 if TYPE_CHECKING:
     from ..bot import Bot
@@ -23,29 +21,6 @@ async def _get_upload_info(bot: Bot, upload_type: UploadType):
         raise MaxUploadFileFailed(
             f"Ошибка при загрузке файла: code={e.code}, raw={e.raw}"
         ) from e
-
-
-def _check_media_size(att: InputMedia | InputMediaBuffer) -> None:
-    """
-    Пишет предупреждение, если файл превышает лимиты MAX API.
-
-    Проверка мягкая: загрузка не прерывается, ошибки чтения файла
-    игнорируются — файл всё равно будет открыт при загрузке.
-
-    Args:
-        att: Объект вложения для загрузки.
-    """
-    if isinstance(att, InputMedia):
-        try:
-            size = Path(att.path).stat().st_size
-        except OSError:
-            return
-        name: str | None = Path(att.path).name
-    else:
-        size = len(att.buffer)
-        name = att.filename
-
-    check_upload_size(size, att.type, name=name)
 
 
 async def _upload_input_media(
@@ -148,8 +123,6 @@ async def process_input_media(
     Returns:
         AttachmentUpload: Загруженное вложение с токеном.
     """
-
-    _check_media_size(att)
 
     upload = await _get_upload_info(bot=bot, upload_type=att.type)
     upload_file_response = await _upload_input_media(
