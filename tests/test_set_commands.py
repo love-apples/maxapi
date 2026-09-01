@@ -6,6 +6,7 @@ import pytest
 from maxapi.connection.base import BaseConnection
 from maxapi.enums.api_path import ApiPath
 from maxapi.enums.http_method import HTTPMethod
+from maxapi.methods.change_info import ChangeInfo
 from maxapi.methods.set_commands import SetCommands
 from maxapi.methods.types.setted_commands import SettedCommands
 from maxapi.types.command import BotCommand
@@ -99,3 +100,40 @@ async def test_bot_set_my_commands_is_deprecated(bot):
         await bot.set_my_commands(BotCommand(name="/start"))
 
     assert mocked_request.call_args.kwargs["path"] == ApiPath.ME
+
+
+async def test_change_info_empty_commands_clears_them(bot):
+    """Пустой список команд уходит в тело запроса, а не отбрасывается."""
+    with pytest.deprecated_call(match="ChangeInfo"):
+        method = ChangeInfo(bot=bot, commands=[])
+
+    with patch.object(
+        BaseConnection, "request", new=AsyncMock(return_value=Mock())
+    ) as mocked_request:
+        await method.fetch()
+
+    assert mocked_request.call_args.kwargs["json"] == {"commands": []}
+
+
+async def test_change_info_without_params_raises(bot):
+    """Без единого параметра запрос по-прежнему отклоняется."""
+    with (
+        pytest.deprecated_call(match="ChangeInfo"),
+        pytest.raises(ValueError, match="хотя бы один параметр"),
+    ):
+        ChangeInfo(bot=bot)
+
+
+async def test_bot_set_my_commands_without_args_clears_commands(bot):
+    """Вызов без аргументов очищает команды через PATCH /me."""
+    with (
+        patch.object(
+            BaseConnection, "request", new=AsyncMock(return_value=Mock())
+        ) as mocked_request,
+        pytest.deprecated_call(match="set_commands"),
+    ):
+        await bot.set_my_commands()
+
+    kwargs = mocked_request.call_args.kwargs
+    assert kwargs["path"] == ApiPath.ME
+    assert kwargs["json"] == {"commands": []}

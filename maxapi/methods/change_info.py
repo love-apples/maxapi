@@ -27,7 +27,7 @@ class ChangeInfo(BaseConnection):
         last_name: Второе имя бота (1–64 символа).
         description: Описание бота (1–16000 символов).
         commands: Список команд
-            (до 32 элементов).
+            (до 32 элементов). Пустой список удаляет все команды.
         photo: Фото бота.
 
     Note:
@@ -52,7 +52,8 @@ class ChangeInfo(BaseConnection):
             stacklevel=2,
         )
 
-        if not any([first_name, last_name, description, commands, photo]):
+        params = (first_name, last_name, description, commands, photo)
+        if all(param is None for param in params):
             raise ValueError(
                 "Нужно указать хотя бы один параметр для изменения"
             )
@@ -95,7 +96,7 @@ class ChangeInfo(BaseConnection):
             json["last_name"] = self.last_name
         if self.description:
             json["description"] = self.description
-        if self.commands:
+        if self.commands is not None:
             json["commands"] = [
                 command.model_dump() for command in self.commands
             ]
