@@ -414,7 +414,9 @@ class BaseConnection(BotMixin):
             else:
                 mime_type = f"{type.value}/*"
                 ext = ""
-        except (OSError, ValueError, AttributeError):
+        except (OSError, ValueError, AttributeError, puremagic.PureError):
+            # PureError наследуется от LookupError и бросается
+            # puremagic, если тип буфера не удалось определить
             mime_type = f"{type.value}/*"
             ext = ""
 
