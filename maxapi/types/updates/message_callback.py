@@ -105,7 +105,7 @@ class MessageCallback(BaseUpdate):
 
         Args:
             notification: Текст уведомления.
-            disable_link_preview: Флаг генерации превью ссылок.
+            disable_link_preview: Отключить превью ссылок (True — без превью).
 
         Returns:
             SendedCallback: Результат вызова send_callback бота.
@@ -129,7 +129,7 @@ class MessageCallback(BaseUpdate):
 
         Args:
             notification: Текст уведомления.
-            disable_link_preview: Флаг генерации превью ссылок.
+            disable_link_preview: Отключить превью ссылок (True — без превью).
 
         Returns:
             SendedCallback: Результат вызова send_callback бота.
@@ -164,7 +164,7 @@ class MessageCallback(BaseUpdate):
             format: Режим разбора текста.
             notification: Текст уведомления.
             notify: Отправлять ли уведомление.
-            disable_link_preview: Флаг генерации превью ссылок.
+            disable_link_preview: Отключить превью ссылок (True — без превью).
             raise_if_not_exists: Выдавать ошибку при отсутствии сообщения,
                 если пытаются изменить его содержимое.
 
@@ -302,7 +302,7 @@ class MessageCallback(BaseUpdate):
             link: Связь с другим сообщением.
             notify: Отправлять ли уведомление.
             format: Режим разбора текста.
-            disable_link_preview: Флаг генерации превью ссылок.
+            disable_link_preview: Отключить превью ссылок (True — без превью).
             raise_if_not_exists: Выдавать ошибку при отсутствии сообщения,
                 если пытаются изменить его содержимое (new_text/link/format).
 

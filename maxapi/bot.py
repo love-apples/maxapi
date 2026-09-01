@@ -798,8 +798,8 @@ class Bot(BaseConnection):
             callback_id: ID callback.
             message: Сообщение для отправки.
             notification: Текст уведомления.
-            disable_link_preview: Флаг генерации
-                превью.
+            disable_link_preview: Отключить превью ссылок
+                (True — без превью).
 
         Returns:
             SendedCallback: Результат отправки callback.

@@ -29,7 +29,7 @@ class SendCallback(BaseConnection):
         callback_id: Идентификатор callback.
         message: Сообщение для отправки. Может быть None.
         notification: Текст уведомления. Может быть None.
-        disable_link_preview: Флаг генерации превью ссылок.
+        disable_link_preview: Отключить превью ссылок (True — без превью).
     """
 
     def __init__(
