@@ -28,6 +28,7 @@ class SendCallback(BaseConnection):
         callback_id: Идентификатор callback.
         message: Сообщение для отправки. Может быть None.
         notification: Текст уведомления. Может быть None.
+        disable_link_preview: Флаг генерации превью ссылок.
     """
 
     def __init__(
@@ -36,12 +37,15 @@ class SendCallback(BaseConnection):
         callback_id: str,
         message: MessageForCallback | None = None,
         notification: str | None = None,
+        *,
+        disable_link_preview: bool | None = None,
     ):
         super().__init__()
         self.bot = bot
         self.callback_id = callback_id
         self.message = message
         self.notification = notification
+        self.disable_link_preview = disable_link_preview
 
     async def fetch(self) -> SendedCallback:
         """
@@ -58,6 +62,11 @@ class SendCallback(BaseConnection):
         params = bot.params.copy()
 
         params["callback_id"] = self.callback_id
+
+        if self.disable_link_preview is not None:
+            params["disable_link_preview"] = str(
+                self.disable_link_preview
+            ).lower()
 
         json: dict[str, Any] = {}
 

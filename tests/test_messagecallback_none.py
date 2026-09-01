@@ -34,11 +34,14 @@ class DummyBot:
         callback_id: str,
         message: MessageForCallback,
         notification=None,
+        *,
+        disable_link_preview=None,
     ):
         self.last = {
             "callback_id": callback_id,
             "message": message,
             "notification": notification,
+            "disable_link_preview": disable_link_preview,
         }
         return {"ok": True}
 
@@ -219,3 +222,53 @@ async def test_edit_accepts_inline_keyboard_attachment(cb_obj):
 
     assert bot.last["message"] is not None
     assert len(bot.last["message"].attachments or []) == 1
+
+
+async def test_answer_passes_disable_link_preview(cb_obj):
+    """answer прокидывает disable_link_preview в bot.send_callback."""
+    from maxapi.enums.chat_type import ChatType
+    from maxapi.types.message import Message, MessageBody, Recipient
+
+    recipient = Recipient(chat_id=100, chat_type=ChatType.CHAT)
+    body = MessageBody(mid="mid-dlp", seq=1, text="hello")
+    message = Message(recipient=recipient, timestamp=1, body=body)
+
+    mc = MessageCallback(
+        message=message,
+        user_locale=None,
+        callback=cb_obj,
+        update_type=UpdateType.MESSAGE_CALLBACK,
+        timestamp=1,
+    )
+    bot = DummyBot()
+    mc.bot = bot
+
+    await mc.answer(new_text="world", disable_link_preview=True)
+
+    assert bot.last["disable_link_preview"] is True
+
+
+async def test_edit_passes_disable_link_preview(cb_obj):
+    """edit прокидывает disable_link_preview в bot.send_callback."""
+    from maxapi.enums.chat_type import ChatType
+    from maxapi.types.message import Message, MessageBody, Recipient
+
+    recipient = Recipient(chat_id=100, chat_type=ChatType.CHAT)
+    body = MessageBody(mid="mid-dlp2", seq=2, text="hello")
+    message = Message(recipient=recipient, timestamp=1, body=body)
+
+    mc = MessageCallback(
+        message=message,
+        user_locale=None,
+        callback=cb_obj,
+        update_type=UpdateType.MESSAGE_CALLBACK,
+        timestamp=1,
+    )
+    bot = DummyBot()
+    mc.bot = bot
+
+    await mc.edit(text="world")
+    assert bot.last["disable_link_preview"] is None
+
+    await mc.edit(text="world", disable_link_preview=True)
+    assert bot.last["disable_link_preview"] is True

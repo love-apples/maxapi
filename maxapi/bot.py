@@ -786,6 +786,8 @@ class Bot(BaseConnection):
         callback_id: str,
         message: MessageForCallback | None = None,
         notification: str | None = None,
+        *,
+        disable_link_preview: bool | None = None,
     ) -> SendedCallback:
         """
         Отправляет callback ответ.
@@ -796,6 +798,8 @@ class Bot(BaseConnection):
             callback_id: ID callback.
             message: Сообщение для отправки.
             notification: Текст уведомления.
+            disable_link_preview: Флаг генерации
+                превью.
 
         Returns:
             SendedCallback: Результат отправки callback.
@@ -806,6 +810,9 @@ class Bot(BaseConnection):
             callback_id=callback_id,
             message=message,
             notification=notification,
+            disable_link_preview=self._resolve_disable_link_preview(
+                disable_link_preview=disable_link_preview,
+            ),
         ).fetch()
 
     async def pin_message(
