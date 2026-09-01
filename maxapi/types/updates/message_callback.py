@@ -97,48 +97,22 @@ class MessageCallback(BaseUpdate):
     async def ack(
         self,
         notification: str | None = None,
-        *,
-        disable_link_preview: bool | None = None,
     ) -> SendedCallback:
-        """
-        Подтвердить callback без изменения исходного сообщения.
-
-        Args:
-            notification: Текст уведомления.
-            disable_link_preview: Отключить превью ссылок (True — без превью).
-
-        Returns:
-            SendedCallback: Результат вызова send_callback бота.
-        """
+        """Подтвердить callback без изменения исходного сообщения."""
 
         return await self._ensure_bot().send_callback(
             callback_id=self.callback.callback_id,
             message=None,
             notification=notification,
-            disable_link_preview=disable_link_preview,
         )
 
     async def defer(
         self,
         notification: str | None = None,
-        *,
-        disable_link_preview: bool | None = None,
     ) -> SendedCallback:
-        """
-        Семантический alias для ack().
+        """Семантический alias для ack()."""
 
-        Args:
-            notification: Текст уведомления.
-            disable_link_preview: Отключить превью ссылок (True — без превью).
-
-        Returns:
-            SendedCallback: Результат вызова send_callback бота.
-        """
-
-        return await self.ack(
-            notification=notification,
-            disable_link_preview=disable_link_preview,
-        )
+        return await self.ack(notification=notification)
 
     async def edit(
         self,
@@ -187,10 +161,9 @@ class MessageCallback(BaseUpdate):
                     "исходное сообщение отсутствует"
                 )
 
-            return await self.ack(
-                notification=notification,
-                disable_link_preview=disable_link_preview,
-            )
+            # Без исходного сообщения превью нечего отключать —
+            # disable_link_preview на этом пути не передаётся.
+            return await self.ack(notification=notification)
 
         bot = self._ensure_bot()
         resolved_attachments: Sequence[AttachmentInput]

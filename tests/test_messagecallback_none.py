@@ -115,16 +115,6 @@ async def test_answer_with_no_message_notification_only(cb_obj):
     assert bot.last["notification"] == "n"
 
 
-async def test_answer_with_no_message_passes_disable_link_preview(cb_obj):
-    """Фолбэк на ack() прокидывает disable_link_preview."""
-    mc, bot = _make_callback(cb_obj)
-
-    await mc.answer(notification="n", disable_link_preview=False)
-
-    assert bot.last["message"] is None
-    assert bot.last["disable_link_preview"] is False
-
-
 def test_message_for_callback_rejects_bare_payload_attachment():
     with pytest.raises(ValidationError):
         MessageForCallback(
