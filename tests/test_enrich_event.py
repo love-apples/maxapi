@@ -7,6 +7,7 @@
   - enrich_event    : сквозной пайплайн + auto_requests=False
 """
 
+from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -188,6 +189,27 @@ class TestResolveChat:
         assert fixture_message_created.chat is None
         assert any("get_chat_by_id" in r.message for r in caplog.records)
 
+    async def test_asyncio_timeout_is_swallowed_and_logged(
+        self, bot, fixture_message_created, caplog
+    ):
+        """asyncio.TimeoutError не должен приводить к потере события.
+
+        BaseConnection.request не заворачивает таймаут сессии
+        (ClientTimeout.total) в MaxConnection — он всплывает сырым,
+        см. _fetch_updates_once, который ловит его отдельно. Без
+        перехвата здесь событие отбрасывалось бы вместе со сдвигом
+        маркера, то есть терялось безвозвратно (issue #196).
+        """
+        bot.get_chat_by_id = AsyncMock(side_effect=AsyncioTimeoutError())
+
+        caplog.clear()
+        caplog.set_level("WARNING")
+
+        await _resolve_chat(fixture_message_created, bot)
+
+        assert fixture_message_created.chat is None
+        assert any("get_chat_by_id" in r.message for r in caplog.records)
+
     async def test_enrich_event_survives_unavailable_chat(
         self, bot, fixture_message_created
     ):
@@ -315,6 +337,36 @@ class TestResolveFromUser:
         bot.get_chat_member.assert_awaited_once()
         assert fixture_message_removed.from_user is None
 
+    async def test_message_removed_get_chat_member_timeout_swallowed(
+        self, bot, fixture_message_removed
+    ):
+        """asyncio.TimeoutError из get_chat_member не роняет событие.
+
+        Таймаут сессии всплывает из BaseConnection.request сырым, не
+        завёрнутым в MaxConnection, — событие не должно из-за него
+        отбрасываться (issue #196).
+        """
+        fake_chat = _make_chat(ChatType.CHAT)
+        fixture_message_removed.chat = fake_chat
+        bot.get_chat_member = AsyncMock(side_effect=AsyncioTimeoutError())
+
+        await _resolve_from_user(fixture_message_removed, bot)
+
+        bot.get_chat_member.assert_awaited_once()
+        assert fixture_message_removed.from_user is None
+
+    async def test_user_removed_get_chat_member_timeout_swallowed(
+        self, bot, fixture_user_removed
+    ):
+        """asyncio.TimeoutError в ветке UserRemoved тоже перехватывается."""
+        fixture_user_removed.admin_id = 777
+        bot.get_chat_member = AsyncMock(side_effect=AsyncioTimeoutError())
+
+        await _resolve_from_user(fixture_user_removed, bot)
+
+        bot.get_chat_member.assert_awaited_once()
+        assert fixture_user_removed.from_user is None
+
     async def test_user_removed_with_admin_id_fetches_member(
         self, bot, fixture_user_removed
     ):
@@ -367,7 +419,9 @@ class TestResolveFromUser:
             await _resolve_from_user(fixture_user_removed, bot)
 
         assert fixture_user_removed.from_user is None
-        assert "get_chat_member: conn error" in caplog.text
+        # %r, а не %s: у голого TimeoutError пустой str(), и по %s
+        # в логе не осталось бы даже типа ошибки.
+        assert "get_chat_member: MaxConnection('conn error')" in caplog.text
 
     @pytest.mark.parametrize(
         "fixture_name",

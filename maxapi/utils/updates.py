@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
 from typing import TYPE_CHECKING, Any
 
 from ..enums.chat_type import ChatType
@@ -87,9 +88,9 @@ async def _resolve_chat(event: UpdateUnion, bot: Bot) -> None:
             exc.code,
             chat_id,
         )
-    except MaxConnection as exc:
+    except (MaxConnection, AsyncioTimeoutError) as exc:
         logger.warning(
-            "get_chat_by_id: %s chat_id=%s",
+            "get_chat_by_id: %r chat_id=%s",
             exc,
             chat_id,
         )
@@ -130,9 +131,9 @@ async def _resolve_from_user(event: UpdateUnion, bot: Bot) -> None:
                     exc.code,
                     event.chat_id,
                 )
-            except MaxConnection as exc:
+            except (MaxConnection, AsyncioTimeoutError) as exc:
                 logger.warning(
-                    "get_chat_member: %s chat_id=%s",
+                    "get_chat_member: %r chat_id=%s",
                     exc,
                     event.chat_id,
                 )
@@ -151,9 +152,9 @@ async def _resolve_from_user(event: UpdateUnion, bot: Bot) -> None:
                 exc.code,
                 event.chat_id,
             )
-        except MaxConnection as exc:
+        except (MaxConnection, AsyncioTimeoutError) as exc:
             logger.warning(
-                "get_chat_member: %s chat_id=%s",
+                "get_chat_member: %r chat_id=%s",
                 exc,
                 event.chat_id,
             )
