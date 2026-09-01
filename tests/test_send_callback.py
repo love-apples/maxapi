@@ -160,11 +160,23 @@ async def test_send_callback_omits_disable_link_preview_when_none(
     )
 
 
-async def test_bot_send_callback_passes_explicit_disable_link_preview(
+@pytest.mark.parametrize(
+    ("bot_default", "explicit", "expected"),
+    [
+        (None, True, "true"),
+        (True, None, "true"),
+        (True, False, "false"),
+        (None, None, None),
+    ],
+)
+async def test_bot_send_callback_resolves_disable_link_preview(
     mock_bot_token,
+    bot_default,
+    explicit,
+    expected,
 ):
-    """Явный флаг доходит до SendCallback."""
-    bot = Bot(token=mock_bot_token)
+    """Дефолт бота и явный флаг сливаются в один query-параметр."""
+    bot = Bot(token=mock_bot_token, disable_link_preview=bot_default)
     bot.session = AsyncMock()
 
     with patch.object(
@@ -175,27 +187,11 @@ async def test_bot_send_callback_passes_explicit_disable_link_preview(
     ) as mock_request:
         await bot.send_callback(
             callback_id="cb-1",
-            disable_link_preview=True,
+            disable_link_preview=explicit,
         )
 
     params = mock_request.await_args.kwargs["params"]
-    assert params["disable_link_preview"] == "true"
-
-
-async def test_bot_send_callback_uses_bot_default_disable_link_preview(
-    mock_bot_token,
-):
-    """Без явного значения берётся дефолт бота."""
-    bot = Bot(token=mock_bot_token, disable_link_preview=True)
-    bot.session = AsyncMock()
-
-    with patch.object(
-        BaseConnection,
-        "request",
-        new_callable=AsyncMock,
-        return_value={"ok": True},
-    ) as mock_request:
-        await bot.send_callback(callback_id="cb-1")
-
-    params = mock_request.await_args.kwargs["params"]
-    assert params["disable_link_preview"] == "true"
+    if expected is None:
+        assert "disable_link_preview" not in params
+    else:
+        assert params["disable_link_preview"] == expected

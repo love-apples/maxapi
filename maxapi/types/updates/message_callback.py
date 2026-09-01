@@ -35,6 +35,10 @@ class MessageForCallback(BaseModel):
         link: Связь с другим сообщением.
         notify: Отправлять ли уведомление.
         format: Режим разбора текста.
+
+    Примечание: `disable_link_preview` намеренно не является полем
+    этой модели — это query-параметр `POST /answers`, который
+    передаётся через `Bot.send_callback` / `SendCallback`.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -93,22 +97,48 @@ class MessageCallback(BaseUpdate):
     async def ack(
         self,
         notification: str | None = None,
+        *,
+        disable_link_preview: bool | None = None,
     ) -> SendedCallback:
-        """Подтвердить callback без изменения исходного сообщения."""
+        """
+        Подтвердить callback без изменения исходного сообщения.
+
+        Args:
+            notification: Текст уведомления.
+            disable_link_preview: Флаг генерации превью ссылок.
+
+        Returns:
+            SendedCallback: Результат вызова send_callback бота.
+        """
 
         return await self._ensure_bot().send_callback(
             callback_id=self.callback.callback_id,
             message=None,
             notification=notification,
+            disable_link_preview=disable_link_preview,
         )
 
     async def defer(
         self,
         notification: str | None = None,
+        *,
+        disable_link_preview: bool | None = None,
     ) -> SendedCallback:
-        """Семантический alias для ack()."""
+        """
+        Семантический alias для ack().
 
-        return await self.ack(notification=notification)
+        Args:
+            notification: Текст уведомления.
+            disable_link_preview: Флаг генерации превью ссылок.
+
+        Returns:
+            SendedCallback: Результат вызова send_callback бота.
+        """
+
+        return await self.ack(
+            notification=notification,
+            disable_link_preview=disable_link_preview,
+        )
 
     async def edit(
         self,
@@ -157,7 +187,10 @@ class MessageCallback(BaseUpdate):
                     "исходное сообщение отсутствует"
                 )
 
-            return await self.ack(notification=notification)
+            return await self.ack(
+                notification=notification,
+                disable_link_preview=disable_link_preview,
+            )
 
         bot = self._ensure_bot()
         resolved_attachments: Sequence[AttachmentInput]

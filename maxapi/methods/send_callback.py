@@ -10,6 +10,7 @@ from ..types.attachments.attachment import Attachment
 from ..types.attachments.upload import AttachmentUpload
 from ..types.input_media import InputMedia, InputMediaBuffer
 from ..utils.message import process_input_media
+from ..utils.params import bool_to_query
 
 if TYPE_CHECKING:
     from ..bot import Bot
@@ -64,9 +65,9 @@ class SendCallback(BaseConnection):
         params["callback_id"] = self.callback_id
 
         if self.disable_link_preview is not None:
-            params["disable_link_preview"] = str(
+            params["disable_link_preview"] = bool_to_query(
                 self.disable_link_preview
-            ).lower()
+            )
 
         json: dict[str, Any] = {}
 
