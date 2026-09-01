@@ -1539,6 +1539,36 @@ class TestDispatchFetchedEvents:
 
         assert bot.marker_updates == 10
 
+    async def test_cancellation_is_not_swallowed(self, dispatcher, bot):
+        """CancelledError пролетает сквозь общий except и не спит.
+
+        asyncio.CancelledError с Python 3.8 наследуется напрямую от
+        BaseException, поэтому `except Exception` его не ловит и
+        stop_polling отрабатывает штатно. Тест фиксирует инвариант.
+        """
+        dispatcher.bot = bot
+        _setup_for_handle(dispatcher, bot)
+        bot.marker_updates = 10
+
+        sleep_mock = AsyncMock()
+
+        with (
+            patch(
+                "maxapi.dispatcher.process_update_request",
+                new=AsyncMock(side_effect=asyncio.CancelledError),
+            ),
+            patch("maxapi.dispatcher.asyncio.sleep", sleep_mock),
+            pytest.raises(asyncio.CancelledError),
+        ):
+            await dispatcher._dispatch_fetched_events(
+                events={"updates": [], "marker": 42},
+                current_timestamp=0,
+                skip_updates=False,
+            )
+
+        sleep_mock.assert_not_awaited()
+        assert bot.marker_updates == 10
+
     async def test_marker_not_advanced_on_connector_error(
         self, dispatcher, bot
     ):

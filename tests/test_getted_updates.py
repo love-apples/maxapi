@@ -1,5 +1,7 @@
+import asyncio
 from unittest.mock import AsyncMock, call, patch
 
+import pytest
 from maxapi.exceptions.max import MaxApiError
 from maxapi.methods.types.getted_updates import (
     get_update_model,
@@ -169,3 +171,24 @@ async def test_process_update_request_without_updates_key(bot):
 async def test_process_update_request_with_null_updates(bot):
     """updates=None трактуется как пустая пачка."""
     assert await process_update_request({"updates": None}, bot) == []
+
+
+async def test_process_update_request_does_not_swallow_cancellation(bot):
+    """Отмена корутины должна пролетать сквозь per-event except.
+
+    asyncio.CancelledError с Python 3.8 наследуется напрямую от
+    BaseException, поэтому `except Exception` его не перехватывает.
+    Тест фиксирует инвариант: если кто-то расширит перехват до
+    BaseException, остановка polling перестанет работать.
+    """
+    events = {"updates": [{"update_type": "message_created"}]}
+
+    async_mock = AsyncMock(side_effect=asyncio.CancelledError)
+
+    with (
+        patch(
+            "maxapi.methods.types.getted_updates.get_update_model", async_mock
+        ),
+        pytest.raises(asyncio.CancelledError),
+    ):
+        await process_update_request(events, bot)
