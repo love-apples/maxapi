@@ -42,8 +42,8 @@ class SendComment(BaseConnection):
         if len(message_id) < 1:
             raise ValueError("message_id не должен быть меньше 1 символа")
 
-        if text is not None and not (len(text) < 4000):
-            raise ValueError("text должен быть меньше 4000 символов")
+        if text is not None and len(text) > 4000:
+            raise ValueError("text должен быть не длиннее 4000 символов")
 
         if text is None and link is None:
             raise ValueError(

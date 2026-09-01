@@ -188,7 +188,10 @@ async def test_send_comment_builds_json(bot):
 
 async def test_send_comment_validates_text_length(bot):
     with pytest.raises(ValueError, match="text"):
-        SendComment(bot=bot, message_id=MESSAGE_ID, text="a" * 4000)
+        SendComment(bot=bot, message_id=MESSAGE_ID, text="a" * 4001)
+
+    # Ровно 4000 символов — допустимая длина
+    SendComment(bot=bot, message_id=MESSAGE_ID, text="a" * 4000)
 
 
 async def test_send_comment_requires_text_or_link(bot):
@@ -271,8 +274,16 @@ async def test_edit_comment_validates_text_length(bot):
             bot=bot,
             message_id=MESSAGE_ID,
             comment_id=COMMENT_ID,
-            text="a" * 4000,
+            text="a" * 4001,
         )
+
+    # Ровно 4000 символов — допустимая длина
+    EditComment(
+        bot=bot,
+        message_id=MESSAGE_ID,
+        comment_id=COMMENT_ID,
+        text="a" * 4000,
+    )
 
 
 async def test_edit_comment_with_link_and_string_format(bot):

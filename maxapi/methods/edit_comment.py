@@ -47,8 +47,8 @@ class EditComment(BaseConnection):
         if len(comment_id) < 1:
             raise ValueError("comment_id не должен быть меньше 1 символа")
 
-        if text is not None and not (len(text) < 4000):
-            raise ValueError("text должен быть меньше 4000 символов")
+        if text is not None and len(text) > 4000:
+            raise ValueError("text должен быть не длиннее 4000 символов")
 
         if link is not None and link.type != MessageLinkType.REPLY:
             raise ValueError(
