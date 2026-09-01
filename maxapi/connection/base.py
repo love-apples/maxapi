@@ -43,6 +43,10 @@ if TYPE_CHECKING:
 
 DOWNLOAD_CHUNK_SIZE = 65536
 
+#: Максимальная длина тела ответа в тексте исключения. Полное тело
+#: уходит подписчикам ``RAW_API_RESPONSE`` без усечения.
+ERROR_DETAILS_LIMIT = 512
+
 
 class _RetryableServerError(Exception):
     """Внутреннее исключение для retry при серверных ошибках."""
@@ -90,6 +94,101 @@ def _on_backoff(details: Details) -> None:
             exc,
             tries,
             wait,
+        )
+
+
+async def _session_request(
+    session: ClientSession, *args: Any, **kwargs: Any
+) -> ClientResponse:
+    """Выполнить запрос, переведя «Session is closed» в retryable-ошибку.
+
+    ``aiohttp`` бросает голый ``RuntimeError``, если сессию закрыли
+    между её получением и стартом запроса. Ни одного байта при этом
+    не отправлено, поэтому попытку безопасно повторить: на следующей
+    итерации ``ensure_session()`` выдаст живую сессию.
+
+    Args:
+        session: Сессия, через которую выполняется запрос.
+        *args: Позиционные аргументы ``ClientSession.request``.
+        **kwargs: Именованные аргументы ``ClientSession.request``.
+
+    Returns:
+        Ответ сервера.
+
+    Raises:
+        ClientConnectionError: Если сессия была закрыта до старта.
+    """
+
+    try:
+        return await session.request(*args, **kwargs)
+    except RuntimeError as e:
+        if session.closed:
+            raise ClientConnectionError(
+                "Сессия была закрыта до отправки запроса"
+            ) from e
+        raise
+
+
+async def _read_error_payload(resp: ClientResponse) -> dict[str, Any]:
+    """Прочитать тело ошибочного ответа, не падая на не-JSON.
+
+    Args:
+        resp: Ответ, тело которого нужно прочитать.
+
+    Returns:
+        Разобранный JSON-объект, ``{"error": <тело>}`` для остальных
+        форматов или пустой словарь, если тело прочитать не удалось.
+    """
+
+    try:
+        payload = await resp.json(content_type=None)
+    except Exception:
+        try:
+            text = await resp.text()
+        except Exception:
+            return {}
+        return {"error": text} if text else {}
+
+    if isinstance(payload, dict):
+        return payload
+    return {"error": payload} if payload is not None else {}
+
+
+def _invalid_token_message(raw: dict[str, Any]) -> str:
+    """Собрать текст ``InvalidToken`` с усечённой диагностикой.
+
+    Args:
+        raw: Тело ответа 401.
+
+    Returns:
+        Сообщение об ошибке; тело обрезается до
+        ``ERROR_DETAILS_LIMIT`` символов, чтобы многомегабайтная
+        страница от прокси не утекла в логи целиком.
+    """
+
+    message = "Неверный токен!"
+    if not raw:
+        return message
+
+    details = str(raw)
+    if len(details) > ERROR_DETAILS_LIMIT:
+        details = f"{details[:ERROR_DETAILS_LIMIT]}…"
+    return f"{message} Ответ API: {details}"
+
+
+def _schedule_raw_response(bot: Bot, raw: Any) -> None:
+    """Уведомить подписчиков ``RAW_API_RESPONSE``, не блокируя запрос.
+
+    Args:
+        bot: Бот, чей диспетчер получит событие.
+        raw: Сырой ответ API.
+    """
+
+    if bot.dispatcher:
+        asyncio.create_task(
+            bot.dispatcher.handle_raw_response(
+                UpdateType.RAW_API_RESPONSE, raw
+            )
         )
 
 
@@ -182,15 +281,18 @@ class BaseConnection(BotMixin):
         )
         async def _do_request() -> Any:
             session = await bot.ensure_session()
-            resp = await session.request(
+            resp = await _session_request(
+                session,
                 method=method.value,
                 url=url,
                 **kwargs,
             )
 
             if resp.status == 401:
-                await session.close()
-                raise InvalidToken("Неверный токен!")
+                raw = await _read_error_payload(resp)
+                resp.release()
+                _schedule_raw_response(bot, raw)
+                raise InvalidToken(_invalid_token_message(raw))
 
             if resp.status in retry_statuses:
                 await resp.read()
@@ -207,22 +309,12 @@ class BaseConnection(BotMixin):
 
         if not response.ok:
             raw = await response.json()
-            if bot.dispatcher:
-                asyncio.create_task(
-                    bot.dispatcher.handle_raw_response(
-                        UpdateType.RAW_API_RESPONSE, raw
-                    )
-                )
+            _schedule_raw_response(bot, raw)
             raise MaxApiError(code=response.status, raw=raw)
 
         raw = await response.json()
 
-        if bot.dispatcher:
-            asyncio.create_task(
-                bot.dispatcher.handle_raw_response(
-                    UpdateType.RAW_API_RESPONSE, raw
-                )
-            )
+        _schedule_raw_response(bot, raw)
 
         if is_return_raw:
             return raw
@@ -330,7 +422,6 @@ class BaseConnection(BotMixin):
 
     async def _fetch_response(self, url: str) -> ClientResponse:
         bot = self._ensure_bot()
-        session = await bot.ensure_session()
         conn = bot.default_connection
 
         @backoff.on_exception(
@@ -341,7 +432,8 @@ class BaseConnection(BotMixin):
             on_backoff=_on_backoff,
         )
         async def _do_request() -> Any:
-            resp = await session.request("GET", url)
+            session = await bot.ensure_session()
+            resp = await _session_request(session, "GET", url)
             if resp.status in conn.retry_on_statuses:
                 await resp.read()
                 raise _RetryableServerError(resp.status)

@@ -26,17 +26,54 @@ def create_default_connector() -> TCPConnector:
 
 
 def with_default_connector(kwargs: dict[str, Any]) -> dict[str, Any]:
-    """Добавить connector по умолчанию, если он не задан явно."""
+    """Добавить connector по умолчанию, если он не задан явно.
+
+    Пользовательский коннектор переиспользуется всеми сессиями бота и
+    переживает их пересоздание, поэтому владельцем остаётся
+    пользователь: ``connector_owner`` принудительно выставляется в
+    ``False``, и ``ClientSession.close()`` чужой коннектор не трогает.
+    Переданный пользователем ``connector_owner=True`` игнорируется —
+    он означал бы, что первый же ``close_session()`` закрывает
+    коннектор, который затем переиспользует следующая сессия.
+
+    Собственный дефолтный коннектор создаётся под каждую сессию, и
+    закрыть его сессия обязана: ``connector_owner=True``.
+
+    Args:
+        kwargs: Пользовательские параметры ``ClientSession``.
+
+    Returns:
+        Копия ``kwargs`` с проставленными ``connector`` и
+        ``connector_owner``.
+    """
 
     session_kwargs = dict(kwargs)
-    if "connector" not in session_kwargs:
+    if "connector" in session_kwargs:
+        session_kwargs["connector_owner"] = False
+    else:
         session_kwargs["connector"] = create_default_connector()
+        session_kwargs["connector_owner"] = True
     return session_kwargs
 
 
 def connector_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
-    """Вернуть только connector для временной aiohttp-сессии."""
+    """Вернуть connector и его владельца для временной aiohttp-сессии.
+
+    Временная сессия живёт один вызов, поэтому пользовательский
+    коннектор она не закрывает никогда — ``connector_owner=False``
+    независимо от того, что передал пользователь. Созданный на месте
+    дефолтный коннектор, наоборот, закрыть больше некому.
+
+    Args:
+        kwargs: Пользовательские параметры ``ClientSession``.
+
+    Returns:
+        Словарь с ключами ``connector`` и ``connector_owner``.
+    """
 
     if "connector" in kwargs:
-        return {"connector": kwargs["connector"]}
-    return {"connector": create_default_connector()}
+        return {
+            "connector": kwargs["connector"],
+            "connector_owner": False,
+        }
+    return {"connector": create_default_connector(), "connector_owner": True}
