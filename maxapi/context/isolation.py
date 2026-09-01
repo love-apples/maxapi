@@ -215,7 +215,13 @@ class RedisEventIsolation(BaseEventIsolation):
             timeout=self.lock_timeout,
             sleep=self.lock_sleep,
         )
-        await lock.acquire()
+        acquired = await lock.acquire()
+        if not acquired:
+            msg = (
+                f"Не удалось захватить блокировку изоляции {name}: "
+                "acquire() вернул False"
+            )
+            raise RuntimeError(msg)
         try:
             yield
         finally:

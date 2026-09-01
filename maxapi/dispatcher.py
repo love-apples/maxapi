@@ -1448,7 +1448,6 @@ class Dispatcher(BotMixin):
         Args:
             event_object: Событие.
         """
-        router_id = None
         process_info = "нет данных"
 
         try:
@@ -1465,8 +1464,7 @@ class Dispatcher(BotMixin):
                 )
         except Exception as e:
             logger_dp.exception(
-                "Ошибка при обработке события: router_id: %s | %s | %r",
-                router_id,
+                "Ошибка при обработке события: %s | %r",
                 process_info,
                 e,
             )

@@ -319,3 +319,34 @@ class TestIsolationFailure:
             "Ошибка при обработке события" in record.message
             for record in caplog.records
         )
+
+
+class _FakeUnacquirableRedis(_FakeRedis):
+    """Redis, у которого acquire() возвращает False."""
+
+    def lock(self, name, timeout, sleep):
+        self.calls.append((name, timeout, sleep))
+        lock = _FakeRedisLock(self.log)
+
+        async def _failed_acquire() -> bool:
+            return False
+
+        lock.acquire = _failed_acquire
+        return lock
+
+
+class TestRedisAcquireFailure:
+    """Тесты неуспешного захвата распределённой блокировки."""
+
+    async def test_acquire_false_raises(self):
+        """acquire() == False не пускает в критическую секцию."""
+        import pytest
+
+        isolation = RedisEventIsolation(_FakeUnacquirableRedis())
+        entered = []
+
+        with pytest.raises(RuntimeError, match="блокировку изоляции"):
+            async with isolation.lock((1, 2)):
+                entered.append(True)
+
+        assert entered == []
