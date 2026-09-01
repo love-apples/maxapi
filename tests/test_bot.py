@@ -272,6 +272,49 @@ class TestBotMethods:
             mock_fetch.assert_awaited_once()
 
     @pytest.mark.asyncio
+    async def test_get_chats_deprecation_has_recommendation(self, bot):
+        """Предупреждение bot.get_chats() содержит сценарий замены."""
+        from maxapi.methods.get_chats import GetChats
+
+        with patch.object(
+            GetChats, "fetch", new_callable=AsyncMock
+        ) as mock_fetch:
+            mock_fetch.return_value = Mock()
+
+            with pytest.deprecated_call(match="subscribe_webhook") as record:
+                await bot.get_chats(count=5)
+
+        text = "\n".join(str(w.message) for w in record)
+
+        for expected in (
+            "GET /chats",
+            "subscribe_webhook",
+            "bot_added",
+            "bot_started",
+            "bot_removed",
+            "https://dev.max.ru/docs-api/methods/GET/chats",
+        ):
+            assert expected in text
+
+    def test_get_chats_method_deprecation_has_recommendation(self, bot):
+        """Предупреждение GetChats(...) содержит сценарий замены."""
+        from maxapi.methods.get_chats import GetChats
+
+        with pytest.deprecated_call(match="subscribe_webhook") as record:
+            GetChats(bot=bot, count=5)
+
+        text = "\n".join(str(w.message) for w in record)
+
+        for expected in (
+            "GET /chats",
+            "bot_added",
+            "bot_started",
+            "bot_removed",
+            "https://dev.max.ru/docs-api/methods/GET/chats",
+        ):
+            assert expected in text
+
+    @pytest.mark.asyncio
     async def test_send_action_with_wrong_action_type(self, bot):
         """Тест вызова send_action с передачей неверного типа (не SenderAction, не str)."""  # noqa: E501
         # Core Stuff

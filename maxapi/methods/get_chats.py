@@ -19,6 +19,25 @@ class GetChats(BaseConnection):
         поддерживается. API не предоставляет готового способа получить
         список групповых чатов и каналов, в которые добавлен бот.
 
+        Рекомендованный сценарий замены — вести собственный список
+        чатов по событиям подписки:
+
+        1. Создайте подписку через ``bot.subscribe_webhook()``
+           (``POST /subscriptions``), указав в ``update_types``
+           нужные типы событий: ``UpdateType.BOT_ADDED``,
+           ``UpdateType.BOT_STARTED`` и ``UpdateType.BOT_REMOVED``.
+        2. Извлекайте ``chat_id`` из входящих событий ``bot_added``
+           и ``bot_started``.
+        3. Храните ``chat_id`` самостоятельно: сохраняйте при
+           получении события, учитывайте возможные дубли и удаляйте
+           запись по событию ``bot_removed``.
+        4. Используйте накопленные ``chat_id`` в остальных методах
+           API (``POST /messages``,
+           ``GET /chats/{chat_id}/members`` и других).
+
+        Long Polling для получения списка чатов и каналов бота
+        не предусмотрен.
+
     https://dev.max.ru/docs-api/methods/GET/chats
 
     Attributes:
@@ -38,7 +57,12 @@ class GetChats(BaseConnection):
             "GetChats устарел: начиная с июня 2026 года GET /chats "
             "больше не поддерживается. API не предоставляет готового "
             "способа получить список групповых чатов и каналов, "
-            "в которые добавлен бот.",
+            "в которые добавлен бот. Ведите список чатов сами: "
+            "подпишитесь через subscribe_webhook() на bot_added, "
+            "bot_started и bot_removed, сохраняйте chat_id из "
+            "bot_added/bot_started (учитывая дубли) и удаляйте его "
+            "по bot_removed. Подробности: "
+            "https://dev.max.ru/docs-api/methods/GET/chats",
             DeprecationWarning,
             stacklevel=2,
         )

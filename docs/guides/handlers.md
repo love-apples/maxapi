@@ -130,6 +130,13 @@ async def send_photo_by_token(event: MessageCreated):
 - `bot_started` — пользователь нажал кнопку "Начать" с ботом
 - `bot_stopped` — бот остановлен
 
+!!! tip "Как узнать список чатов бота"
+    Метод [`get_chats`](../methods/get_chats.md) устарел. Чтобы вести
+    актуальный список чатов бота, подписывайтесь на `bot_added`,
+    `bot_started` и `bot_removed` (см.
+    [`subscribe_webhook`](../methods/subscribe_webhook.md)) и сохраняйте
+    `chat_id` самостоятельно.
+
 ### События пользователей
 
 - `user_added` — пользователь добавлен в чат
