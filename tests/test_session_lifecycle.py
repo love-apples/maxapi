@@ -286,6 +286,32 @@ class TestUnauthorizedDoesNotCloseSession:
 
         assert str(exc_info.value) == "Неверный токен!"
 
+    async def test_401_releases_response_on_cancellation(
+        self, bot_with_mock_session
+    ):
+        """Отмена во время чтения тела 401 всё равно освобождает ответ.
+
+        CancelledError наследуется от BaseException и проходит мимо
+        `except Exception` внутри `_read_error_payload`.
+        """
+        response = _make_401()
+        response.text = AsyncMock(side_effect=asyncio.CancelledError())
+        bot_with_mock_session.session.request = AsyncMock(
+            return_value=response
+        )
+
+        conn = BaseConnection()
+        conn.bot = bot_with_mock_session
+
+        with pytest.raises(asyncio.CancelledError):
+            await conn.request(
+                method=HTTPMethod.GET,
+                path="/test",
+                is_return_raw=True,
+            )
+
+        response.release.assert_called_once()
+
     async def test_401_notifies_raw_response_subscribers(
         self, bot_with_mock_session
     ):

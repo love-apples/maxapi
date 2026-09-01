@@ -63,6 +63,30 @@ async def test_with_default_connector_does_not_mutate_source():
     await result["connector"].close()
 
 
+async def test_with_default_connector_treats_none_as_absent():
+    """`connector=None` не оставляется как есть — иначе коннектор течёт.
+
+    aiohttp на `None` создаёт коннектор сам, и при
+    `connector_owner=False` закрыть его было бы уже некому.
+    """
+    result = with_default_connector({"connector": None})
+
+    assert isinstance(result["connector"], TCPConnector)
+    assert result["connector_owner"] is True
+
+    await result["connector"].close()
+
+
+async def test_connector_kwargs_treats_none_as_absent():
+    """`connector=None` для временной сессии — тоже свой коннектор."""
+    result = connector_kwargs({"connector": None})
+
+    assert isinstance(result["connector"], TCPConnector)
+    assert result["connector_owner"] is True
+
+    await result["connector"].close()
+
+
 def test_connector_kwargs_does_not_leak_session_kwargs():
     """Для временной сессии возвращается только connector и владелец."""
     connector = object()

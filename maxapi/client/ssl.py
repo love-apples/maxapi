@@ -39,6 +39,12 @@ def with_default_connector(kwargs: dict[str, Any]) -> dict[str, Any]:
     Собственный дефолтный коннектор создаётся под каждую сессию, и
     закрыть его сессия обязана: ``connector_owner=True``.
 
+    Явный ``connector=None`` — принятый в aiohttp способ попросить
+    коннектор по умолчанию — равносилен отсутствию ключа: подставляем
+    свой, с доверенным CA. Оставить ``None`` нельзя: aiohttp создал бы
+    коннектор сам, и при ``connector_owner=False`` его никто никогда
+    не закрыл бы.
+
     Args:
         kwargs: Пользовательские параметры ``ClientSession``.
 
@@ -48,7 +54,7 @@ def with_default_connector(kwargs: dict[str, Any]) -> dict[str, Any]:
     """
 
     session_kwargs = dict(kwargs)
-    if "connector" in session_kwargs:
+    if session_kwargs.get("connector") is not None:
         session_kwargs["connector_owner"] = False
     else:
         session_kwargs["connector"] = create_default_connector()
@@ -64,6 +70,9 @@ def connector_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
     независимо от того, что передал пользователь. Созданный на месте
     дефолтный коннектор, наоборот, закрыть больше некому.
 
+    Явный ``connector=None`` равносилен отсутствию ключа — см.
+    :func:`with_default_connector`.
+
     Args:
         kwargs: Пользовательские параметры ``ClientSession``.
 
@@ -71,9 +80,10 @@ def connector_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
         Словарь с ключами ``connector`` и ``connector_owner``.
     """
 
-    if "connector" in kwargs:
+    connector = kwargs.get("connector")
+    if connector is not None:
         return {
-            "connector": kwargs["connector"],
+            "connector": connector,
             "connector_owner": False,
         }
     return {"connector": create_default_connector(), "connector_owner": True}

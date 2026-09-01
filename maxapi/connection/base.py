@@ -313,8 +313,13 @@ class BaseConnection(BotMixin):
             )
 
             if resp.status == 401:
-                raw = await _read_error_payload(resp)
-                resp.release()
+                # finally, а не последовательность: отмена во время
+                # чтения тела бросает CancelledError мимо except
+                # Exception, и ответ остался бы неосвобождённым
+                try:
+                    raw = await _read_error_payload(resp)
+                finally:
+                    resp.release()
                 _schedule_raw_response(bot, raw)
                 raise InvalidToken(_invalid_token_message(raw))
 
