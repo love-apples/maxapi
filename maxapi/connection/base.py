@@ -154,6 +154,33 @@ async def _read_error_payload(resp: ClientResponse) -> dict[str, Any]:
     return {"error": payload} if payload is not None else {}
 
 
+def _error_details(raw: dict[str, Any]) -> str:
+    """Отрендерить тело ошибки для текста исключения.
+
+    Не-JSON тело ``_read_error_payload`` кладёт одной строкой под ключ
+    ``error``. Её режем напрямую: ``str(raw)`` на многомегабайтной
+    странице от прокси заново материализовал бы её целиком (да ещё и
+    с экранированием) только ради того, чтобы отбросить всё после
+    ``ERROR_DETAILS_LIMIT``.
+
+    Args:
+        raw: Тело ответа.
+
+    Returns:
+        Диагностика, обрезанная до ``ERROR_DETAILS_LIMIT`` символов.
+    """
+
+    text = raw.get("error")
+    if len(raw) == 1 and isinstance(text, str):
+        details = text
+    else:
+        details = str(raw)
+
+    if len(details) > ERROR_DETAILS_LIMIT:
+        return f"{details[:ERROR_DETAILS_LIMIT]}…"
+    return details
+
+
 def _invalid_token_message(raw: dict[str, Any]) -> str:
     """Собрать текст ``InvalidToken`` с усечённой диагностикой.
 
@@ -170,10 +197,7 @@ def _invalid_token_message(raw: dict[str, Any]) -> str:
     if not raw:
         return message
 
-    details = str(raw)
-    if len(details) > ERROR_DETAILS_LIMIT:
-        details = f"{details[:ERROR_DETAILS_LIMIT]}…"
-    return f"{message} Ответ API: {details}"
+    return f"{message} Ответ API: {_error_details(raw)}"
 
 
 def _schedule_raw_response(bot: Bot, raw: Any) -> None:

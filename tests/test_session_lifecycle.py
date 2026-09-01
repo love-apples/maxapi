@@ -521,6 +521,53 @@ class TestInvalidTokenMessageIsBounded:
         message = str(exc_info.value)
         assert len(message) < 1000
         assert message.endswith("…")
+        # Строка режется напрямую, без материализации str(raw)
+        assert message.startswith("Неверный токен! Ответ API: xxx")
+        assert "{'error'" not in message
+
+    async def test_dict_body_keeps_dict_rendering(self, mock_bot_token):
+        """Разобранный JSON-объект по-прежнему рендерится целиком."""
+        bot = Bot(token=mock_bot_token)
+        session = MagicMock()
+        session.closed = False
+        raw = {"code": "verify.token", "message": "invalid access_token"}
+        session.request = AsyncMock(return_value=_make_401(json_data=raw))
+        bot.session = session
+
+        conn = BaseConnection()
+        conn.bot = bot
+
+        with pytest.raises(InvalidToken) as exc_info:
+            await conn.request(
+                method=HTTPMethod.GET,
+                path="/test",
+                is_return_raw=True,
+            )
+
+        assert str(raw) in str(exc_info.value)
+
+    async def test_huge_dict_body_is_truncated(self, mock_bot_token):
+        """Многокилобайтный JSON-объект тоже обрезается."""
+        bot = Bot(token=mock_bot_token)
+        session = MagicMock()
+        session.closed = False
+        raw = {"code": "verify.token", "message": "y" * 100_000}
+        session.request = AsyncMock(return_value=_make_401(json_data=raw))
+        bot.session = session
+
+        conn = BaseConnection()
+        conn.bot = bot
+
+        with pytest.raises(InvalidToken) as exc_info:
+            await conn.request(
+                method=HTTPMethod.GET,
+                path="/test",
+                is_return_raw=True,
+            )
+
+        message = str(exc_info.value)
+        assert len(message) < 1000
+        assert message.endswith("…")
 
     async def test_full_body_still_reaches_subscribers(self, mock_bot_token):
         """Подписчики RAW_API_RESPONSE получают тело без усечения."""
