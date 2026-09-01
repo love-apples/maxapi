@@ -80,6 +80,7 @@ async def _read_response_text(response: ClientResponse) -> str:
         text = await response.text()
     except Exception as e:
         logger_bot.warning("Не удалось прочитать тело ответа: %s", e)
+        response.release()
         return ""
 
     return text if isinstance(text, str) else ""
@@ -330,10 +331,17 @@ class BaseConnection(BotMixin):
             str: Сырой .text() ответ от сервера.
 
         Raises:
-            MaxUploadFileFailed: Если статус ответа не успешный.
+            MaxUploadFileFailed: Если статус ответа не успешный
+                или тело ответа не удалось прочитать.
         """
 
-        text = await response.text()
+        try:
+            text = await response.text()
+        except Exception as e:
+            # Ответ освобождается вызывающим async with session.post
+            raise MaxUploadFileFailed(
+                f"Не удалось прочитать ответ upload-сервера: {e}"
+            ) from e
 
         if not response.ok:
             raise MaxUploadFileFailed(

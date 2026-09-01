@@ -411,3 +411,49 @@ class TestRetryExhaustedKeepsBody:
             )
 
         assert len(created) == 1
+
+
+class TestUnreadableBody:
+    """Сбой чтения тела: ответ освобождается, исключения — из SDK."""
+
+    @pytest.mark.asyncio
+    async def test_request_releases_response_on_read_failure(
+        self, mock_bot_token
+    ):
+        """При сбое text() в request() вызывается release()."""
+        response = _make_response(200)
+        response.text = AsyncMock(side_effect=RuntimeError("conn lost"))
+        bot = _make_bot_with_response(mock_bot_token, response)
+
+        base = BaseConnection()
+        base.bot = bot
+
+        with pytest.raises(MaxApiError) as exc_info:
+            await base.request(
+                method=HTTPMethod.GET,
+                path="/test",
+                is_return_raw=True,
+            )
+
+        assert exc_info.value.code == 200
+        assert exc_info.value.raw == ""
+        response.release.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_upload_read_failure_raises_upload_failed(self, tmp_path):
+        """Сбой чтения ответа upload-сервера даёт MaxUploadFileFailed."""
+        test_file = tmp_path / "photo.png"
+        test_file.write_bytes(b"fake-png")
+
+        response = _make_upload_response(200)
+        response.text = AsyncMock(side_effect=RuntimeError("conn lost"))
+        conn = _make_upload_connection(response)
+
+        with pytest.raises(MaxUploadFileFailed) as exc_info:
+            await conn.upload_file(
+                url="https://upload.example.com",
+                path=str(test_file),
+                type=UploadType.IMAGE,
+            )
+
+        assert "conn lost" in str(exc_info.value)
