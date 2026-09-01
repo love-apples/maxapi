@@ -232,6 +232,60 @@ class TestUnauthorizedDoesNotCloseSession:
 
         assert str(exc_info.value) == "Неверный токен!"
 
+    async def test_401_scalar_json_body_is_wrapped(
+        self, bot_with_mock_session
+    ):
+        """Не-объектный JSON в теле 401 оборачивается в {"error": ...}."""
+        response = _make_401(json_data="access_token is revoked")
+        bot_with_mock_session.session.request = AsyncMock(
+            return_value=response
+        )
+
+        dispatcher = MagicMock()
+        dispatcher.handle_raw_response = AsyncMock()
+        bot_with_mock_session.dispatcher = dispatcher
+
+        conn = BaseConnection()
+        conn.bot = bot_with_mock_session
+
+        with pytest.raises(InvalidToken) as exc_info:
+            await conn.request(
+                method=HTTPMethod.GET,
+                path="/test",
+                is_return_raw=True,
+            )
+
+        assert "access_token is revoked" in str(exc_info.value)
+
+        await _drain_tasks()
+
+        dispatcher.handle_raw_response.assert_awaited_once_with(
+            UpdateType.RAW_API_RESPONSE,
+            {"error": "access_token is revoked"},
+        )
+
+    async def test_401_json_null_body_keeps_plain_message(
+        self, bot_with_mock_session
+    ):
+        """Тело `null` не превращается в {"error": None}."""
+        response = _make_401(json_data=None)
+        response.json = AsyncMock(return_value=None)
+        bot_with_mock_session.session.request = AsyncMock(
+            return_value=response
+        )
+
+        conn = BaseConnection()
+        conn.bot = bot_with_mock_session
+
+        with pytest.raises(InvalidToken) as exc_info:
+            await conn.request(
+                method=HTTPMethod.GET,
+                path="/test",
+                is_return_raw=True,
+            )
+
+        assert str(exc_info.value) == "Неверный токен!"
+
     async def test_401_notifies_raw_response_subscribers(
         self, bot_with_mock_session
     ):
