@@ -139,10 +139,15 @@ async def send_photo_by_token(event: MessageCreated):
     [`subscribe_webhook`](../methods/subscribe_webhook.md) — менять
     транспорт ради них не нужно.
 
+    Храните список в постоянном хранилище (БД, Redis, файл): после
+    перезапуска бота восстановить его через `GET /chats` уже нельзя, а
+    старые чаты новых событий не пришлют. `set` в примере ниже — только
+    для иллюстрации.
+
     ```python
     from maxapi.types import BotAdded, BotRemoved, BotStarted, BotStopped
 
-    known_chats: set[int] = set()
+    known_chats: set[int] = set()  # в проде — постоянное хранилище
 
 
     @dp.bot_added()
