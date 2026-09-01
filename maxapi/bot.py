@@ -17,13 +17,17 @@ from .methods.add_members_chat import AddMembersChat
 from .methods.change_info import ChangeInfo
 from .methods.delete_bot_from_chat import DeleteMeFromMessage
 from .methods.delete_chat import DeleteChat
+from .methods.delete_comment import DeleteComment
 from .methods.delete_message import DeleteMessage
 from .methods.delete_pin_message import DeletePinMessage
 from .methods.edit_chat import EditChat
+from .methods.edit_comment import EditComment
 from .methods.edit_message import EditMessage
 from .methods.get_chat_by_id import GetChatById
 from .methods.get_chat_by_link import GetChatByLink
 from .methods.get_chats import GetChats
+from .methods.get_comment import GetComment
+from .methods.get_comments import GetComments
 from .methods.get_list_admin_chat import GetListAdminChat
 from .methods.get_me import GetMe
 from .methods.get_me_from_chat import GetMeFromChat
@@ -40,6 +44,7 @@ from .methods.remove_admin import RemoveAdmin
 from .methods.remove_member_chat import RemoveMemberChat
 from .methods.send_action import SendAction
 from .methods.send_callback import SendCallback
+from .methods.send_comment import SendComment
 from .methods.send_message import SendMessage
 from .methods.set_commands import SetCommands
 from .methods.subscribe_webhook import SubscribeWebhook
@@ -59,8 +64,10 @@ if TYPE_CHECKING:
     from .methods.types.added_members_chat import AddedMembersChat
     from .methods.types.deleted_bot_from_chat import DeletedBotFromChat
     from .methods.types.deleted_chat import DeletedChat
+    from .methods.types.deleted_comment import DeletedComment
     from .methods.types.deleted_message import DeletedMessage
     from .methods.types.deleted_pin_message import DeletedPinMessage
+    from .methods.types.edited_comment import EditedComment
     from .methods.types.edited_message import EditedMessage
     from .methods.types.getted_list_admin_chat import GettedListAdminChat
     from .methods.types.getted_members_chat import GettedMembersChat
@@ -72,6 +79,7 @@ if TYPE_CHECKING:
     from .methods.types.removed_member_chat import RemovedMemberChat
     from .methods.types.sended_action import SendedAction
     from .methods.types.sended_callback import SendedCallback
+    from .methods.types.sended_comment import SendedComment
     from .methods.types.sended_message import SendedMessage
     from .methods.types.setted_commands import SettedCommands
     from .methods.types.subscribed import Subscribed
@@ -83,6 +91,7 @@ if TYPE_CHECKING:
     from .types.attachments.video import Video
     from .types.chats import Chat, ChatMember, Chats
     from .types.command import BotCommand
+    from .types.comment import CommentMessage, Comments
     from .types.input_media import InputMedia, InputMediaBuffer
     from .types.message import Message, Messages, NewMessageLink
     from .types.updates.message_callback import MessageForCallback
@@ -579,6 +588,158 @@ class Bot(BaseConnection):
         """
 
         return await GetMessage(bot=self, message_id=message_id).fetch()
+
+    async def send_comment(
+        self,
+        message_id: str,
+        text: str | None = None,
+        link: NewMessageLink | None = None,
+        format: TextFormat | None = None,
+    ) -> SendedComment:
+        """
+        Отправляет комментарий к посту в канале.
+
+        https://dev.max.ru/docs-api/methods/POST/messages/-messageId-/comments
+
+        Args:
+            message_id: ID поста (mid), к которому относится
+                комментарий.
+            text: Текст комментария.
+            link: Ссылка на комментарий (например, ответ).
+            format: Режим форматирования текста. В комментариях
+                не поддерживаются упоминания и гиперссылки.
+
+        Returns:
+            SendedComment: Отправленный комментарий.
+        """
+
+        return await SendComment(
+            bot=self,
+            message_id=message_id,
+            text=text,
+            link=link,
+            format=self.resolve_format(format),
+        ).fetch()
+
+    async def edit_comment(
+        self,
+        message_id: str,
+        comment_id: str,
+        text: str | None = None,
+        link: NewMessageLink | None = None,
+        format: TextFormat | None = None,
+    ) -> EditedComment:
+        """
+        Редактирует комментарий к посту в канале.
+
+        https://dev.max.ru/docs-api/methods/PUT/messages/-messageId-/comments
+
+        Args:
+            message_id: ID поста (mid), комментарий к которому
+                нужно отредактировать.
+            comment_id: ID редактируемого комментария.
+            text: Новый текст комментария.
+            link: Ссылка на комментарий (например, ответ).
+            format: Режим форматирования текста. В комментариях
+                не поддерживаются упоминания и гиперссылки.
+
+        Returns:
+            EditedComment: Результат редактирования.
+        """
+
+        return await EditComment(
+            bot=self,
+            message_id=message_id,
+            comment_id=comment_id,
+            text=text,
+            link=link,
+            format=self.resolve_format(format),
+        ).fetch()
+
+    async def delete_comment(
+        self,
+        message_id: str,
+        comment_id: str,
+    ) -> DeletedComment:
+        """
+        Удаляет комментарий к посту в канале.
+
+        https://dev.max.ru/docs-api/methods/DELETE/messages/-messageId-/comments
+
+        Args:
+            message_id: ID поста (mid), комментарий к которому
+                нужно удалить.
+            comment_id: ID удаляемого комментария.
+
+        Returns:
+            DeletedComment: Результат удаления.
+        """
+
+        return await DeleteComment(
+            bot=self,
+            message_id=message_id,
+            comment_id=comment_id,
+        ).fetch()
+
+    async def get_comments(
+        self,
+        message_id: str,
+        comment_ids: list[str] | None = None,
+        after: datetime | int | None = None,
+        before: datetime | int | None = None,
+        count: int | None = 50,
+    ) -> Comments:
+        """
+        Получает комментарии к посту в канале.
+
+        https://dev.max.ru/docs-api/methods/GET/messages/-messageId-/comments
+
+        Args:
+            message_id: ID поста (mid), к которому относятся
+                комментарии.
+            comment_ids: ID комментариев, которые нужно получить.
+                Если указан, пагинация игнорируется.
+            after: Начало периода (Unix timestamp в миллисекундах).
+            before: Конец периода (Unix timestamp в миллисекундах).
+            count: Количество комментариев. Если None, параметр
+                не отправляется.
+
+        Returns:
+            Comments: Список комментариев.
+        """
+
+        return await GetComments(
+            bot=self,
+            message_id=message_id,
+            comment_ids=comment_ids,
+            after=after,
+            before=before,
+            count=count,
+        ).fetch()
+
+    async def get_comment(
+        self,
+        message_id: str,
+        comment_id: str,
+    ) -> CommentMessage:
+        """
+        Получает один комментарий к посту по ID.
+
+        https://dev.max.ru/docs-api/methods/GET/messages/-messageId-/comments/-commentId-
+
+        Args:
+            message_id: ID поста (mid).
+            comment_id: ID комментария.
+
+        Returns:
+            CommentMessage: Объект комментария.
+        """
+
+        return await GetComment(
+            bot=self,
+            message_id=message_id,
+            comment_id=comment_id,
+        ).fetch()
 
     async def get_me(self) -> User:
         """

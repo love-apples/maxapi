@@ -127,13 +127,17 @@ nav:
     - Change_info: methods/change_info.md
     - Delete_bot_from_chat: methods/delete_bot_from_chat.md
     - Delete_chat: methods/delete_chat.md
+    - Delete_comment: methods/delete_comment.md
     - Delete_message: methods/delete_message.md
     - Delete_pin_message: methods/delete_pin_message.md
     - Edit_chat: methods/edit_chat.md
+    - Edit_comment: methods/edit_comment.md
     - Edit_message: methods/edit_message.md
     - Get_chat_by_id: methods/get_chat_by_id.md
     - Get_chat_by_link: methods/get_chat_by_link.md
     - Get_chats: methods/get_chats.md
+    - Get_comment: methods/get_comment.md
+    - Get_comments: methods/get_comments.md
     - Get_list_admin_chat: methods/get_list_admin_chat.md
     - Get_me: methods/get_me.md
     - Get_me_from_chat: methods/get_me_from_chat.md
@@ -151,6 +155,7 @@ nav:
     - Remove_member_chat: methods/remove_member_chat.md
     - Send_action: methods/send_action.md
     - Send_callback: methods/send_callback.md
+    - Send_comment: methods/send_comment.md
     - Send_message: methods/send_message.md
     - Set_commands: methods/set_commands.md
     - Subscribe_webhook: methods/subscribe_webhook.md
@@ -160,8 +165,10 @@ nav:
       - Added_members_chat: methods/types/added_members_chat.md
       - Deleted_bot_from_chat: methods/types/deleted_bot_from_chat.md
       - Deleted_chat: methods/types/deleted_chat.md
+      - Deleted_comment: methods/types/deleted_comment.md
       - Deleted_message: methods/types/deleted_message.md
       - Deleted_pin_message: methods/types/deleted_pin_message.md
+      - Edited_comment: methods/types/edited_comment.md
       - Edited_message: methods/types/edited_message.md
       - Getted_list_admin_chat: methods/types/getted_list_admin_chat.md
       - Getted_members_chat: methods/types/getted_members_chat.md
@@ -175,6 +182,7 @@ nav:
       - Removed_member_chat: methods/types/removed_member_chat.md
       - Sended_action: methods/types/sended_action.md
       - Sended_callback: methods/types/sended_callback.md
+      - Sended_comment: methods/types/sended_comment.md
       - Sended_message: methods/types/sended_message.md
       - Setted_commands: methods/types/setted_commands.md
       - Subscribed: methods/types/subscribed.md
@@ -183,6 +191,7 @@ nav:
     - Callback: types/callback.md
     - Chats: types/chats.md
     - Command: types/command.md
+    - Comment: types/comment.md
     - Errors: types/errors.md
     - Input_media: types/input_media.md
     - Message: types/message.md
