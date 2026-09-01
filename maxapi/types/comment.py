@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from ..enums.message_link_type import MessageLinkType
 from .bot_mixin import BotMixin
@@ -69,10 +69,11 @@ class CommentMessage(BaseModel, BotMixin):
         link: Комментарий, на который получен ответ. Может быть None.
         body: Информация о комментарии.
         post_message_id: ID поста (mid), к которому относится
-            комментарий. API не возвращает это поле в теле ответа —
-            оно заполняется библиотекой из контекста запроса, когда
-            комментарий получен через методы бота (get_comments,
-            get_comment, send_comment). Исключается из сериализации.
+            комментарий. Заполняется из recipient.post_id, если API
+            его вернул, иначе — библиотекой из контекста запроса,
+            когда комментарий получен через методы бота
+            (get_comments, get_comment, send_comment). Исключается
+            из сериализации.
         bot: Объект бота, исключается из сериализации.
     """
 
@@ -88,6 +89,13 @@ class CommentMessage(BaseModel, BotMixin):
 
     if TYPE_CHECKING:
         bot: Bot | None  # type: ignore
+
+    @model_validator(mode="after")
+    def _fill_post_message_id(self) -> CommentMessage:
+        """Заполняет post_message_id из recipient.post_id."""
+        if self.post_message_id is None:
+            self.post_message_id = self.recipient.post_id
+        return self
 
     def _ensure_post_message_id(self) -> str:
         if self.post_message_id is None:

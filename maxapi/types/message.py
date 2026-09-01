@@ -92,11 +92,15 @@ class Recipient(BaseModel):
         user_id: Идентификатор пользователя. Может быть None.
         chat_id: Идентификатор чата. Может быть None.
         chat_type: Тип получателя (диалог или чат).
+        post_id: Идентификатор поста в канале, к которому оставлен
+            комментарий. Возвращается только для методов группы
+            /comments. Может быть None.
     """
 
     user_id: int | None = None
     chat_id: int | None = None
     chat_type: ChatType
+    post_id: str | None = None
 
 
 class BaseMessageBody(BaseModel):

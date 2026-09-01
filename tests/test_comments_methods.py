@@ -395,6 +395,28 @@ async def test_comment_delete_shortcut(bot):
     assert kwargs["params"]["comment_id"] == COMMENT_ID
 
 
+async def test_post_message_id_filled_from_recipient(bot):
+    payload = {
+        **COMMENT_PAYLOAD,
+        "recipient": {
+            "chat_id": 10,
+            "chat_type": "channel",
+            "post_id": MESSAGE_ID,
+        },
+    }
+    comment = CommentMessage(**payload)
+    comment.bot = bot
+
+    assert comment.post_message_id == MESSAGE_ID
+
+    with _patched_request(DeletedComment(success=True)) as mocked_request:
+        await comment.delete()
+
+    kwargs = mocked_request.call_args.kwargs
+    assert kwargs["path"] == f"/messages/{MESSAGE_ID}/comments"
+    assert kwargs["params"]["comment_id"] == COMMENT_ID
+
+
 async def test_comment_shortcut_without_post_message_id(bot):
     comment = CommentMessage(**COMMENT_PAYLOAD)
     comment.bot = bot
