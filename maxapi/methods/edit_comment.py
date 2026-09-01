@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, cast
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
 from ..enums.http_method import HTTPMethod
+from ..enums.message_link_type import MessageLinkType
 from ..enums.parse_mode import TextFormat
 from .types.edited_comment import EditedComment
 
@@ -48,6 +49,11 @@ class EditComment(BaseConnection):
 
         if text is not None and not (len(text) < 4000):
             raise ValueError("text должен быть меньше 4000 символов")
+
+        if link is not None and link.type != MessageLinkType.REPLY:
+            raise ValueError(
+                "Для комментариев поддерживается только link.type = reply"
+            )
 
         # Поддержка передачи строки вместо enum: пользователь может
         # передать "html" или TextFormat.HTML — внутри всегда храним

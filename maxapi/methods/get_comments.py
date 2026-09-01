@@ -47,6 +47,11 @@ class GetComments(BaseConnection):
         if comment_ids is not None and not comment_ids:
             raise ValueError("comment_ids не должен быть пустым")
 
+        if comment_ids is not None and not all(comment_ids):
+            raise ValueError(
+                "comment_ids не должен содержать пустые идентификаторы"
+            )
+
         if count is not None and not (1 <= count <= 100):
             raise ValueError("count не должен быть меньше 1 или больше 100")
 

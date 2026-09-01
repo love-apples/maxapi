@@ -101,6 +101,33 @@ async def test_get_comments_validates_empty_comment_ids(bot):
         GetComments(bot=bot, message_id=MESSAGE_ID, comment_ids=[])
 
 
+async def test_get_comments_validates_blank_comment_id_element(bot):
+    with pytest.raises(ValueError, match="пустые идентификаторы"):
+        GetComments(bot=bot, message_id=MESSAGE_ID, comment_ids=["", "mid.x"])
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda bot, link: SendComment(
+            bot=bot, message_id=MESSAGE_ID, text="привет", link=link
+        ),
+        lambda bot, link: EditComment(
+            bot=bot,
+            message_id=MESSAGE_ID,
+            comment_id=COMMENT_ID,
+            text="привет",
+            link=link,
+        ),
+    ],
+)
+async def test_comment_methods_reject_forward_link(bot, factory):
+    link = NewMessageLink(type=MessageLinkType.FORWARD, mid="mid.parent")
+
+    with pytest.raises(ValueError, match="reply"):
+        factory(bot, link)
+
+
 async def test_get_comments_converts_datetime_to_milliseconds(bot):
     moment = datetime(2026, 9, 1, tzinfo=timezone.utc)
 

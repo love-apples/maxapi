@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, cast
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
 from ..enums.http_method import HTTPMethod
+from ..enums.message_link_type import MessageLinkType
 from ..enums.parse_mode import TextFormat
 from .types.sended_comment import SendedComment
 
@@ -47,6 +48,11 @@ class SendComment(BaseConnection):
         if text is None and link is None:
             raise ValueError(
                 "Нужно передать хотя бы один из параметров: text или link"
+            )
+
+        if link is not None and link.type != MessageLinkType.REPLY:
+            raise ValueError(
+                "Для комментариев поддерживается только link.type = reply"
             )
 
         # Поддержка передачи строки вместо enum: пользователь может
