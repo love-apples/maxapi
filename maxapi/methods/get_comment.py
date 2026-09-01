@@ -64,6 +64,9 @@ class GetComment(BaseConnection):
 
         comment = cast(CommentMessage, response)
 
+        # recipient.post_id в схеме API помечен Nullable, поэтому
+        # надёжный источник post_message_id — контекст запроса:
+        # message_id, по которому запрос реально выполнен.
         comment.post_message_id = self.message_id
 
         return comment

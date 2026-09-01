@@ -99,6 +99,9 @@ class SendComment(BaseConnection):
 
         sended_comment = cast(SendedComment, response)
 
+        # recipient.post_id в схеме API помечен Nullable, поэтому
+        # надёжный источник post_message_id — контекст запроса:
+        # message_id, по которому запрос реально выполнен.
         sended_comment.message.post_message_id = self.message_id
 
         return sended_comment
