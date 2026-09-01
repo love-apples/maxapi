@@ -92,7 +92,7 @@ class EditChat(BaseConnection):
                     "https://dev.max.ru/docs-api/methods/PATCH/chats/-chatId-"
                 )
 
-            json["icon"] = dump
+            json["icon"] = self.icon.model_dump(exclude_none=True)
 
         if self.title:
             json["title"] = self.title

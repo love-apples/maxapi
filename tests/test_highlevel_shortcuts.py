@@ -637,5 +637,19 @@ async def test_chat_edit_forwards_description_to_bot():
     set_call = bot.edit_chat.await_args_list[0].kwargs
     clear_call = bot.edit_chat.await_args_list[1].kwargs
 
-    assert set_call["description"] == "Новое описание"
-    assert clear_call["description"] == ""
+    assert set_call == {
+        "chat_id": 100,
+        "icon": None,
+        "title": None,
+        "pin": None,
+        "description": "Новое описание",
+        "notify": None,
+    }
+    assert clear_call == {
+        "chat_id": 100,
+        "icon": None,
+        "title": None,
+        "pin": None,
+        "description": "",
+        "notify": None,
+    }

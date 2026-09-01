@@ -198,6 +198,28 @@ async def test_edit_chat_raises_when_icon_fields_are_not_mutually_exclusive(
 
 
 @pytest.mark.asyncio
+async def test_edit_chat_icon_payload_omits_unset_fields(mock_bot_token):
+    bot = Bot(token=mock_bot_token)
+    bot.session = AsyncMock()
+    icon = PhotoAttachmentRequestPayload(url="https://x")
+
+    with patch.object(
+        BaseConnection,
+        "request",
+        new_callable=AsyncMock,
+        return_value={"chat_id": 1, "type": "chat", "title": "t"},
+    ) as mock_request:
+        await EditChat(
+            bot=bot,
+            chat_id=123,
+            icon=icon,
+        ).fetch()
+
+    sent_json = mock_request.await_args.kwargs["json"]
+    assert sent_json["icon"] == {"url": "https://x"}
+
+
+@pytest.mark.asyncio
 async def test_edit_chat_includes_description_in_payload(mock_bot_token):
     bot = Bot(token=mock_bot_token)
     bot.session = AsyncMock()
