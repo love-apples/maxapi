@@ -192,3 +192,39 @@ async def test_process_update_request_does_not_swallow_cancellation(bot):
         pytest.raises(asyncio.CancelledError),
     ):
         await process_update_request(events, bot)
+
+
+@pytest.mark.parametrize(
+    "broken",
+    [None, "строка вместо словаря", 42, ["вложенный", "список"]],
+    ids=["null", "str", "int", "list"],
+)
+async def test_process_update_request_survives_non_dict_element(bot, broken):
+    """Элемент пачки, который не словарь, не должен ронять разбор.
+
+    warn_unprocessable_event обращается к событию как к словарю
+    (event.get(...)), поэтому раньше, находясь вне per-event try, он
+    ронял AttributeError на всю пачку. Маркер при этом не сдвигался,
+    и polling бесконечно перезапрашивал ту же пачку — бот вставал
+    намертво. Битый элемент должен пропускаться, соседние —
+    обрабатываться.
+    """
+    bot.auto_requests = False
+
+    good = {
+        "update_type": "bot_started",
+        "timestamp": 1,
+        "chat_id": 1,
+        "user": {
+            "user_id": 1,
+            "first_name": "Тест",
+            "is_bot": False,
+            "last_activity_time": 1,
+        },
+        "user_locale": "ru",
+    }
+
+    res = await process_update_request({"updates": [broken, good]}, bot)
+
+    assert len(res) == 1
+    assert res[0].update_type == "bot_started"

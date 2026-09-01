@@ -133,16 +133,19 @@ async def process_update_request(
     for event in events.get("updates") or []:
         try:
             event_model = await get_update_model(event, bot)
+            if event_model is None:
+                # Классификация тоже внутри try: она обращается к
+                # event как к словарю, а элемент пачки может им не
+                # быть (например, null) — тогда пропускаем событие,
+                # а не роняем разбор всей пачки.
+                warn_unprocessable_event(event)
+                continue
         except Exception as exc:
             logger_dp.exception(
                 "Событие пропущено из-за ошибки разбора: %r | %s",
                 exc,
                 _dump_event_json(event),
             )
-            continue
-
-        if event_model is None:
-            warn_unprocessable_event(event)
             continue
 
         events_models.append(event_model)
