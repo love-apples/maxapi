@@ -343,7 +343,9 @@ class BaseConnection(BotMixin):
                 f"Не удалось прочитать ответ upload-сервера: {e}"
             ) from e
 
-        if not response.ok:
+        # response.ok в aiohttp означает status < 400 и пропускает
+        # 3xx — upload-сервер же обязан отвечать строго 2xx
+        if not 200 <= response.status < 300:
             raise MaxUploadFileFailed(
                 f"Ошибка при загрузке файла: HTTP {response.status}, "
                 f"ответ: {text}"

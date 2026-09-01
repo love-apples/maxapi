@@ -31,6 +31,7 @@ class TestUploadFileMimetypesFallback:
         test_file.write_bytes(b"fake-png-data")
 
         mock_response = AsyncMock()
+        mock_response.status = 200
         mock_response.text = AsyncMock(return_value='{"token":"t"}')
 
         mock_cm = AsyncMock()
@@ -60,6 +61,7 @@ class TestUploadFileMimetypesFallback:
         test_file.write_bytes(b"some-data")
 
         mock_response = AsyncMock()
+        mock_response.status = 200
         mock_response.text = AsyncMock(return_value='{"token":"t"}')
 
         mock_cm = AsyncMock()
@@ -95,6 +97,7 @@ class TestUploadFileTempSession:
         test_file.write_bytes(b"fake-pdf")
 
         mock_response = AsyncMock()
+        mock_response.status = 200
         mock_response.text = AsyncMock(return_value='{"token":"t"}')
 
         conn, bot = _make_connection_with_bot(session=None)
@@ -135,6 +138,7 @@ class TestUploadFileTempSession:
         test_file.write_bytes(b"data")
 
         mock_response = AsyncMock()
+        mock_response.status = 200
         mock_response.text = AsyncMock(return_value='{"token":"t"}')
 
         closed_session = Mock(spec=ClientSession)
@@ -175,6 +179,7 @@ class TestUploadFileTempSession:
         test_file.write_bytes(b"jpeg-data")
 
         mock_response = AsyncMock()
+        mock_response.status = 200
         mock_response.text = AsyncMock(return_value='{"token":"t"}')
 
         mock_cm = AsyncMock()
@@ -220,6 +225,7 @@ class TestUploadFileBufferPuremagicFallback:
             puremagic.magic_string(buffer[:4096])
 
         mock_response = AsyncMock()
+        mock_response.status = 200
         mock_response.ok = True
         mock_response.text = AsyncMock(return_value='{"token":"t"}')
 

@@ -8,6 +8,7 @@ from maxapi import Bot
 from maxapi.client.default import DefaultConnectionProperties
 from maxapi.connection.base import BaseConnection
 from maxapi.enums.http_method import HTTPMethod
+from maxapi.enums.update import UpdateType
 from maxapi.enums.upload_type import UploadType
 from maxapi.exceptions.max import MaxApiError, MaxUploadFileFailed
 
@@ -57,10 +58,14 @@ def _make_upload_connection(response):
 
 
 def _make_upload_response(status, *, text=""):
-    """Мок ответа upload-сервера."""
+    """Мок ответа upload-сервера.
+
+    ``ok`` повторяет семантику aiohttp (status < 400), чтобы тесты
+    ловили ошибочную трактовку 3xx как успешной загрузки.
+    """
     resp = MagicMock()
     resp.status = status
-    resp.ok = 200 <= status < 300
+    resp.ok = status < 400
     resp.text = AsyncMock(return_value=text)
     return resp
 
@@ -179,6 +184,24 @@ class TestUploadFileStatusCheck:
                 )
 
         assert "502" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_upload_file_raises_on_redirect_status(self, tmp_path):
+        """3xx от upload-сервера не считается успешной загрузкой."""
+        test_file = tmp_path / "photo.png"
+        test_file.write_bytes(b"fake-png")
+
+        response = _make_upload_response(302, text="Found")
+        conn = _make_upload_connection(response)
+
+        with pytest.raises(MaxUploadFileFailed) as exc_info:
+            await conn.upload_file(
+                url="https://upload.example.com",
+                path=str(test_file),
+                type=UploadType.IMAGE,
+            )
+
+        assert "302" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_upload_file_returns_body_on_success(self, tmp_path):
@@ -411,6 +434,12 @@ class TestRetryExhaustedKeepsBody:
             )
 
         assert len(created) == 1
+        # AsyncMock фиксирует аргументы в момент вызова, до await —
+        # проверяем и тип события, и распарсенное тело
+        bot.dispatcher.handle_raw_response.assert_called_once_with(
+            UpdateType.RAW_API_RESPONSE,
+            {"code": "service.unavailable"},
+        )
 
 
 class TestUnreadableBody:
