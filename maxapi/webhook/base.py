@@ -60,6 +60,16 @@ class BaseMaxWebhook(ABC):
         """Инициализировать диспетчер."""
         await self.dp.startup(self.bot)
 
+    async def _shutdown(self) -> None:
+        """Завершить работу диспетчера при остановке приложения.
+
+        Дожидается фоновых задач ``handle()``
+        (``use_create_task=True``) и освобождает ресурсы изоляции
+        событий. Подключается к lifecycle-хукам конкретного
+        веб-фреймворка в подклассах.
+        """
+        await self.dp.shutdown()
+
     async def _dispatch(self, event_json: dict[str, Any]) -> bool:
         """Распарсить и диспетчеризовать входящее обновление.
 

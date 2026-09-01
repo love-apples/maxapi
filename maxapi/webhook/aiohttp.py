@@ -44,6 +44,7 @@ class AiohttpMaxWebhook(BaseMaxWebhook):
         # Вариант 2 — подключить к существующему приложению:
         app = web.Application()
         app.on_startup.append(webhook.on_startup)
+        app.on_shutdown.append(webhook.on_shutdown)
         webhook.setup(app, path="/webhook")
     """
 
@@ -56,6 +57,17 @@ class AiohttpMaxWebhook(BaseMaxWebhook):
             app.on_startup.append(webhook.on_startup)
         """
         await self._startup()
+
+    async def on_shutdown(self, app: "web.Application") -> None:
+        """Завершить работу диспетчера при остановке приложения.
+
+        Дожидается фоновых задач ``handle()`` и освобождает
+        ресурсы изоляции событий. Добавьте в ``app.on_shutdown``
+        при подключении к существующему приложению::
+
+            app.on_shutdown.append(webhook.on_shutdown)
+        """
+        await self._shutdown()
 
     def setup(self, app: "web.Application", path: str = DEFAULT_PATH) -> None:
         """Зарегистрировать маршрут вебхука в aiohttp-приложении."""
@@ -93,6 +105,7 @@ class AiohttpMaxWebhook(BaseMaxWebhook):
 
         app = web.Application()
         app.on_startup.append(self.on_startup)
+        app.on_shutdown.append(self.on_shutdown)
         self.setup(app, path)
         return app
 

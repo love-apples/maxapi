@@ -1685,6 +1685,18 @@ class Dispatcher(BotMixin):
             self._ready = False
             logger_dp.info("Polling остановлен")
 
+        await self.shutdown()
+
+    async def shutdown(self) -> None:
+        """
+        Завершает работу диспетчера: дожидается фоновых задач
+        (``use_create_task=True``) и освобождает ресурсы изоляции
+        событий.
+
+        Вызывается автоматически из :meth:`stop_polling` и из
+        shutdown-хуков webhook-интеграций
+        (:class:`~maxapi.webhook.base.BaseMaxWebhook`). Идемпотентен.
+        """
         if self._background_tasks:
             logger_dp.info(
                 "Ожидаю завершения %d фоновых задач...",
