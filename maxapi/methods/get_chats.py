@@ -56,7 +56,7 @@ class GetChats(BaseConnection):
             "GetChats устарел: начиная с июня 2026 года GET /chats не "
             "поддерживается — https://dev.max.ru/docs-api/methods/GET/chats. "
             "Ведите список чатов сами по событиям bot_added, bot_started и "
-            "bot_removed (Long Polling или subscribe_webhook()).",
+            "bot_removed (Long Polling или bot.subscribe_webhook()).",
             DeprecationWarning,
             stacklevel=2,
         )
