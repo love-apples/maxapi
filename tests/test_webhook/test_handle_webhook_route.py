@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 pytest.importorskip("fastapi")
@@ -67,7 +69,8 @@ async def test_handle_webhook_unknown_update_logs_and_returns_ok(
     assert resp.json() == {"ok": True}
 
     expected_msg = UNKNOWN_UPDATE_DISCLAIMER.format(
-        update_type=payload.get("update_type")
+        update_type=payload.get("update_type"),
+        event_json=json.dumps(payload),
     )
     found = any(expected_msg in rec.getMessage() for rec in caplog.records)
     assert found
