@@ -75,6 +75,7 @@ nav:
   - Middleware: guides/middleware.md
   - Роутеры: guides/routers.md
   - Документирование обработчиков: guides/documentation_handlers.md
+  - Инспектор файлов (UrlStr): guides/file_inspector.md
 - Примеры: examples.md
 - API:
   - Bot: bot.md

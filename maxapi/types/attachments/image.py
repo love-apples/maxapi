@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from ...enums.attachment import AttachmentType
 from .attachment import Attachment
+from .url_str import UrlStr
 
 
 class PhotoToken(BaseModel):
@@ -27,7 +28,7 @@ class PhotoAttachmentRequestPayload(BaseModel):
         photos: Токены, полученные после загрузки изображений.
     """
 
-    url: str | None = None
+    url: UrlStr | str | None = None
     token: str | None = None
     photos: dict[str, PhotoToken] | str | None = None
 
