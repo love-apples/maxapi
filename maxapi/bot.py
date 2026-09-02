@@ -350,7 +350,6 @@ class Bot(BaseConnection):
         """
         if not self.session or self.session.closed:
             self.session = ClientSession(
-                base_url=self.api_url,
                 timeout=self.default_connection.timeout,
                 headers=self.headers,
                 **with_default_connector(self.default_connection.kwargs),
