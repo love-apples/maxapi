@@ -116,6 +116,9 @@ async def process_update_request(
     """Конвертировать словарь с обновлениями в список моделей.
 
     Нераспознанные события пропускаются с предупреждением в лог.
+    Ошибка разбора или обогащения одного события не прерывает
+    обработку остальной пачки: проблемное событие пропускается
+    с записью в лог.
 
     Args:
         events: Ответ API метода GET /updates.
@@ -127,10 +130,22 @@ async def process_update_request(
 
     events_models = []
 
-    for event in events["updates"]:
-        event_model = await get_update_model(event, bot)
-        if event_model is None:
-            warn_unprocessable_event(event)
+    for event in events.get("updates") or []:
+        try:
+            event_model = await get_update_model(event, bot)
+            if event_model is None:
+                # Классификация тоже внутри try: она обращается к
+                # event как к словарю, а элемент пачки может им не
+                # быть (например, null) — тогда пропускаем событие,
+                # а не роняем разбор всей пачки.
+                warn_unprocessable_event(event)
+                continue
+        except Exception as exc:
+            logger_dp.exception(
+                "Событие пропущено из-за ошибки разбора: %r | %s",
+                exc,
+                _dump_event_json(event),
+            )
             continue
 
         events_models.append(event_model)

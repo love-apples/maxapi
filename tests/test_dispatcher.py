@@ -1492,6 +1492,112 @@ class TestDispatchFetchedEvents:
 
         assert len(dispatcher._background_tasks) == 0  # задача завершена
 
+    async def test_marker_advances_after_successful_batch(
+        self, dispatcher, bot, fixture_message_created
+    ):
+        """Маркер сдвигается после успешной обработки пачки."""
+        dispatcher.bot = bot
+        _setup_for_handle(dispatcher, bot)
+        bot.marker_updates = 10
+
+        with patch(
+            "maxapi.dispatcher.process_update_request",
+            new=AsyncMock(return_value=[fixture_message_created]),
+        ):
+            await dispatcher._dispatch_fetched_events(
+                events={"updates": [], "marker": 42},
+                current_timestamp=0,
+                skip_updates=False,
+            )
+
+        assert bot.marker_updates == 42
+
+    async def test_marker_not_advanced_when_processing_fails(
+        self, dispatcher, bot
+    ):
+        """Маркер не сдвигается, если разбор пачки упал.
+
+        Регрессия на issue #196: маркер сдвигался ДО обработки, поэтому
+        упавшая пачка больше не приходила и события терялись.
+        """
+        dispatcher.bot = bot
+        _setup_for_handle(dispatcher, bot)
+        bot.marker_updates = 10
+
+        with (
+            patch(
+                "maxapi.dispatcher.process_update_request",
+                new=AsyncMock(side_effect=RuntimeError("boom")),
+            ),
+            patch("maxapi.dispatcher.GET_UPDATES_RETRY_DELAY", 0),
+        ):
+            await dispatcher._dispatch_fetched_events(
+                events={"updates": [], "marker": 42},
+                current_timestamp=0,
+                skip_updates=False,
+            )
+
+        assert bot.marker_updates == 10
+
+    async def test_cancellation_is_not_swallowed(self, dispatcher, bot):
+        """CancelledError пролетает сквозь общий except и не спит.
+
+        asyncio.CancelledError с Python 3.8 наследуется напрямую от
+        BaseException, поэтому `except Exception` его не ловит и
+        stop_polling отрабатывает штатно. Тест фиксирует инвариант.
+        """
+        dispatcher.bot = bot
+        _setup_for_handle(dispatcher, bot)
+        bot.marker_updates = 10
+
+        sleep_mock = AsyncMock()
+
+        with (
+            patch(
+                "maxapi.dispatcher.process_update_request",
+                new=AsyncMock(side_effect=asyncio.CancelledError),
+            ),
+            patch("maxapi.dispatcher.asyncio.sleep", sleep_mock),
+            pytest.raises(asyncio.CancelledError),
+        ):
+            await dispatcher._dispatch_fetched_events(
+                events={"updates": [], "marker": 42},
+                current_timestamp=0,
+                skip_updates=False,
+            )
+
+        sleep_mock.assert_not_awaited()
+        assert bot.marker_updates == 10
+
+    async def test_marker_not_advanced_on_connector_error(
+        self, dispatcher, bot
+    ):
+        """При ClientConnectorError маркер остаётся прежним."""
+        from unittest.mock import Mock
+
+        from aiohttp import ClientConnectorError
+
+        dispatcher.bot = bot
+        _setup_for_handle(dispatcher, bot)
+        bot.marker_updates = 10
+
+        err = ClientConnectorError(Mock(), ConnectionRefusedError("refused"))
+
+        with (
+            patch(
+                "maxapi.dispatcher.process_update_request",
+                new=AsyncMock(side_effect=err),
+            ),
+            patch("maxapi.dispatcher.CONNECTION_RETRY_DELAY", 0),
+        ):
+            await dispatcher._dispatch_fetched_events(
+                events={"updates": [], "marker": 42},
+                current_timestamp=0,
+                skip_updates=False,
+            )
+
+        assert bot.marker_updates == 10
+
 
 # ===========================================================================
 # call_handler — **data передаётся хендлеру
@@ -1774,11 +1880,14 @@ class TestDispatchFetchedEventsConnectorError:
         dispatcher.bot = bot
         _setup_for_handle(dispatcher, bot)
 
-        with patch(
-            "maxapi.dispatcher.process_update_request",
-            new=AsyncMock(
-                side_effect=RuntimeError("unexpected dispatch error")
+        with (
+            patch(
+                "maxapi.dispatcher.process_update_request",
+                new=AsyncMock(
+                    side_effect=RuntimeError("unexpected dispatch error")
+                ),
             ),
+            patch("maxapi.dispatcher.GET_UPDATES_RETRY_DELAY", 0),
         ):
             await dispatcher._dispatch_fetched_events(
                 events={"updates": [], "marker": 0},
