@@ -15,7 +15,11 @@ Async Python SDK + bot-фреймворк для мессенджера **MAX** 
   конфигурацию HTTP-соединения: `default_connection: DefaultConnectionProperties`.
 - `maxapi/client/default.py` — `DefaultConnectionProperties`: настройки aiohttp-клиента (таймауты,
   `max_retries`, `retry_on_statuses`, `retry_backoff_factor`).
-  Передаётся в `Bot(default_connection=DefaultConnectionProperties(...))`.
+  Передаётся в `Bot(default_connection=DefaultConnectionProperties(...))`. Остальные `**kwargs`
+  уходят в `ClientSession` через `client/ssl.py`. **Владение коннектором**: переданный
+  пользователем `connector` — чужой, `with_default_connector`/`connector_kwargs` проставляют ему
+  `connector_owner=False`, поэтому ни `close_session()`, ни временные сессии `upload_file*` его не
+  закрывают. Собственный дефолтный коннектор создаётся под каждую сессию с `connector_owner=True`.
 - `maxapi/methods/<verb>.py` — один класс на эндпоинт (`SendMessage`, `EditChat`, …). Конструктор
   валидирует/нормализует, `async def fetch()` собирает `params`/`json` и вызывает
   `super().request(method=HTTPMethod.X, path=ApiPath.Y, model=<PydanticResponse>, …)`. **Новый
@@ -23,8 +27,11 @@ Async Python SDK + bot-фреймворк для мессенджера **MAX** 
   `methods/send_message.py` как канонический пример (включая retry на `attachment.not.ready`).
 - `maxapi/connection/base.py` — `BaseConnection.request()`: единый HTTP-pipe c `aiohttp`,
   backoff-ретраями серверных 5xx и `ClientConnectionError`, парсингом ответа в pydantic-модель,
-  выбросом `MaxApiError`/`InvalidToken`/`MaxConnection`. `download_file` — потоковое скачивание
-  чанками `DOWNLOAD_CHUNK_SIZE=64KiB`.
+  выбросом `MaxApiError`/`InvalidToken`/`MaxConnection`. Разделяемую сессию `request()` **не
+  закрывает** — её жизненный цикл принадлежит `Bot` (`close_session`); на 401 тело ответа читается
+  в текст `InvalidToken`, уходит в `handle_raw_response` и ответ освобождается через
+  `resp.release()`. Сессия берётся внутри retry-цикла, а не до него. `download_file` — потоковое
+  скачивание чанками `DOWNLOAD_CHUNK_SIZE=64KiB`.
 - `maxapi/dispatcher.py` — `Dispatcher`/`Router` (Router = подкласс Dispatcher). Регистрация через
   `Event`-декораторы (`@dp.message_created(...)`, `@dp.bot_started()` …). `Dispatcher.handle()`
   строит **глобальный outer → роутерный outer → `_check_handler_match` → inner-цепочку (global
