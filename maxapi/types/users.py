@@ -26,6 +26,7 @@ class User(FetchableMixin, BaseModel, BotMixin, PeerShortcutMixin):
         username: Имя пользователя (ник). Может быть None.
         is_bot: Флаг, указывающий, является ли пользователь ботом.
         last_activity_time: Временная метка последней активности.
+            Может быть None для удалённых пользователей (DELETED USER).
         description: Описание пользователя. Может быть None.
         avatar_url: URL аватара пользователя. Может быть None.
         full_avatar_url: URL полного аватара пользователя.
@@ -39,7 +40,7 @@ class User(FetchableMixin, BaseModel, BotMixin, PeerShortcutMixin):
     last_name: str | None = None
     username: str | None = None
     is_bot: bool
-    last_activity_time: int
+    last_activity_time: int | None = None
     description: str | None = None
     avatar_url: str | None = None
     full_avatar_url: str | None = None

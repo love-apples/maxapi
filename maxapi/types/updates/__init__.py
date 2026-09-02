@@ -23,7 +23,28 @@ UNKNOWN_UPDATE_DISCLAIMER = (
     "Получен неизвестный тип обновления: {update_type}. "
     "Убедитесь, что используете актуальную версию maxapi. "
     "Если проблема сохраняется, создайте issue в репозитории проекта: "
-    "https://github.com/love-apples/maxapi/issues"
+    "https://github.com/love-apples/maxapi/issues "
+    "с описанием как воспроизвести проблему. "
+    "Payload события: {event_json}"
+)
+
+MALFORMED_UPDATE_DISCLAIMER = (
+    "Получено обновление известного типа '{update_type}' с "
+    "некорректным содержимым, оно будет пропущено. "
+    "Убедитесь, что используете актуальную версию maxapi. "
+    "Если проблема сохраняется, создайте issue в репозитории проекта: "
+    "https://github.com/love-apples/maxapi/issues "
+    "с описанием как воспроизвести проблему. "
+    "Payload события: {event_json}"
+)
+
+UNSUPPORTED_MESSAGE_UPDATE_DISCLAIMER = (
+    "Получено обновление известного типа 'message_created' с "
+    "некорректным содержимым, оно будет пропущено. "
+    "Это может быть неподдерживаемое сообщение на стороне MAX"
+    " — напишите в поддержку partner_support@max.ru "
+    "с описанием как воспроизвести проблему. "
+    "Payload события: {event_json}"
 )
 
 UpdateUnion = Annotated[
