@@ -30,14 +30,14 @@ class PhotoAttachmentPayload(BaseModel):
     Данные для фото-вложения.
 
     Attributes:
-        photo_id: Идентификатор фотографии.
-        token: Токен для доступа к фото.
-        url: URL фотографии.
+        photo_id (int): Идентификатор фотографии.
+        token (str): Токен для доступа к фото.
+        url (str): URL фотографии.
     """
 
-    photo_id: int
-    token: str
-    url: str
+    photo_id: int | None = None
+    token: str | None = None
+    url: str | None = None
 
 
 class OtherAttachmentPayload(BaseModel):

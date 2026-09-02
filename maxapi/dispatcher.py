@@ -1501,6 +1501,7 @@ class Dispatcher(BotMixin):
                 e,
                 exc_info=e.cause,
             )
+            raise e
         except MiddlewareException as e:
             if await self._process_error(
                 event_object=event_object,
@@ -1517,6 +1518,7 @@ class Dispatcher(BotMixin):
                 process_info,
                 e,
             )
+            raise e
         except Exception as e:
             logger_dp.exception(
                 "Ошибка при обработке события: router_id: %s | %s | %r",
@@ -1524,6 +1526,7 @@ class Dispatcher(BotMixin):
                 process_info,
                 e,
             )
+            raise e
 
     async def _fetch_updates_once(self, bot: Bot) -> dict | None:
         """
