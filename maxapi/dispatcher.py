@@ -160,6 +160,7 @@ class Dispatcher(BotMixin):
         ) = None
         self._global_mw_chain: HandlerCallable | None = None
         self._background_tasks: set[asyncio.Task] = set()
+        self._closing: bool = False
         self._ready: bool = False
 
         self.message_created = Event(
@@ -401,6 +402,7 @@ class Dispatcher(BotMixin):
         if self._ready:
             return
 
+        self._closing = False
         self.bot = bot
         self.bot.dispatcher = self
 
@@ -1256,6 +1258,31 @@ class Dispatcher(BotMixin):
                     exc,
                 )
 
+    def spawn_handle_task(self, event_object: UpdateUnion) -> asyncio.Task:
+        """
+        Создаёт фоновую задачу ``handle()`` и регистрирует её в пуле.
+
+        Единая точка постановки задач для polling
+        (``use_create_task=True``) и webhook-интеграций: без
+        регистрации в ``_background_tasks`` задачу может потерять GC,
+        а :meth:`shutdown` не дождётся её завершения.
+
+        Args:
+            event_object: Событие.
+
+        Returns:
+            Созданная задача.
+        """
+        if self._closing:
+            logger_dp.warning(
+                "Задача handle() создана во время shutdown: %s",
+                event_object.update_type,
+            )
+        task = asyncio.create_task(self.handle(event_object))
+        self._background_tasks.add(task)
+        task.add_done_callback(self._on_background_task_done)
+        return task
+
     @staticmethod
     def _get_middleware_title(chain: Any) -> str:
         """Определяет имя middleware для диагностики."""
@@ -1632,9 +1659,7 @@ class Dispatcher(BotMixin):
                     continue
 
                 if self.use_create_task:
-                    task = asyncio.create_task(self.handle(event))
-                    self._background_tasks.add(task)
-                    task.add_done_callback(self._on_background_task_done)
+                    self.spawn_handle_task(event)
                 else:
                     await self.handle(event)
 
@@ -1693,18 +1718,31 @@ class Dispatcher(BotMixin):
         (``use_create_task=True``) и освобождает ресурсы изоляции
         событий.
 
+        Дожидается в цикле до полного опустошения пула: задача,
+        добавленная конкурентным продюсером во время ожидания
+        текущего снимка ``_background_tasks``, будет дождана на
+        следующей итерации, а не останется вне ожидаемого набора.
+        Продюсеры должны быть остановлены до вызова
+        (:meth:`stop_polling` сбрасывает ``polling`` заранее;
+        webhook-интеграции вызывают shutdown после остановки приёма
+        запросов).
+
         Вызывается автоматически из :meth:`stop_polling` и из
         shutdown-хуков webhook-интеграций
         (:class:`~maxapi.webhook.base.BaseMaxWebhook`). Идемпотентен.
         """
-        if self._background_tasks:
+        self._closing = True
+
+        drained = False
+        while self._background_tasks:
+            pending = tuple(self._background_tasks)
             logger_dp.info(
                 "Ожидаю завершения %d фоновых задач...",
-                len(self._background_tasks),
+                len(pending),
             )
-            await asyncio.gather(
-                *self._background_tasks, return_exceptions=True
-            )
+            await asyncio.gather(*pending, return_exceptions=True)
+            drained = True
+        if drained:
             logger_dp.info("Все фоновые задачи завершены")
 
         await self.event_isolation.close()

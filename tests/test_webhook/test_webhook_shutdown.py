@@ -71,6 +71,58 @@ class TestDispatcherShutdown:
         await dp.shutdown()
         assert dp.event_isolation.closed
 
+    async def test_shutdown_drains_late_added_tasks(self):
+        """Задача, добавленная в пул во время drain, тоже будет
+        дождана до закрытия изоляции (drain-цикл до пустого пула)."""
+        dp = Dispatcher(
+            use_create_task=True,
+            event_isolation=_RecordingIsolation(),
+        )
+        done: list = []
+        loop = asyncio.get_running_loop()
+
+        async def _late() -> None:
+            await asyncio.sleep(0.01)
+            done.append("late")
+
+        async def _first() -> None:
+            # Пока shutdown() ждёт снимок пула с этой задачей,
+            # добавляем в пул новую — как конкурентный продюсер
+            late_task = loop.create_task(_late())
+            dp._background_tasks.add(late_task)
+            late_task.add_done_callback(dp._on_background_task_done)
+            await asyncio.sleep(0.01)
+            done.append("first")
+
+        first_task = loop.create_task(_first())
+        dp._background_tasks.add(first_task)
+        first_task.add_done_callback(dp._on_background_task_done)
+
+        await dp.shutdown()
+
+        assert sorted(done) == ["first", "late"]
+        assert dp._background_tasks == set()
+        assert dp.event_isolation.closed
+
+    async def test_spawn_handle_task_registers_in_pool(self, monkeypatch):
+        """spawn_handle_task() регистрирует задачу в пуле и
+        удаляет её по завершении."""
+        dp = Dispatcher(use_create_task=True)
+
+        async def fake_handle(event) -> None:
+            await asyncio.sleep(0)
+
+        monkeypatch.setattr(dp, "handle", fake_handle)
+
+        task = dp.spawn_handle_task(object())
+        assert task in dp._background_tasks
+
+        await task
+        # done-callback выполняется через call_soon — даём циклу
+        # шанс его отработать
+        await asyncio.sleep(0)
+        assert dp._background_tasks == set()
+
 
 class TestWebhookShutdownHooks:
     """Тесты подключения shutdown к lifecycle бэкендов."""
@@ -85,21 +137,26 @@ class TestWebhookShutdownHooks:
         assert done == [True]
         assert dp.event_isolation.closed
 
-    async def test_aiohttp_create_app_registers_on_shutdown(self):
-        """create_app() регистрирует on_shutdown-хук aiohttp."""
+    async def test_aiohttp_create_app_registers_on_cleanup(self):
+        """create_app() регистрирует on_cleanup-хук aiohttp.
+
+        Именно on_cleanup: on_shutdown срабатывает до ожидания
+        активных запросов, и drain был бы преждевременным.
+        """
         dp = Dispatcher(event_isolation=_RecordingIsolation())
         webhook = AiohttpMaxWebhook(dp=dp, bot=DummyBot(), secret="s")
 
         app = webhook.create_app(path="/hook")
 
-        assert webhook.on_shutdown in list(app.on_shutdown)
+        assert webhook.on_cleanup in list(app.on_cleanup)
+        assert not list(app.on_shutdown)
 
-    async def test_aiohttp_on_shutdown_closes_isolation(self):
-        """on_shutdown-хук aiohttp закрывает изоляцию."""
+    async def test_aiohttp_on_cleanup_closes_isolation(self):
+        """on_cleanup-хук aiohttp закрывает изоляцию."""
         dp, done = _dispatcher_with_pending_task()
         webhook = AiohttpMaxWebhook(dp=dp, bot=DummyBot(), secret="s")
 
-        await webhook.on_shutdown(app=None)
+        await webhook.on_cleanup(app=None)
 
         assert done == [True]
         assert dp.event_isolation.closed

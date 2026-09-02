@@ -44,7 +44,7 @@ class AiohttpMaxWebhook(BaseMaxWebhook):
         # Вариант 2 — подключить к существующему приложению:
         app = web.Application()
         app.on_startup.append(webhook.on_startup)
-        app.on_shutdown.append(webhook.on_shutdown)
+        app.on_cleanup.append(webhook.on_cleanup)
         webhook.setup(app, path="/webhook")
     """
 
@@ -58,14 +58,19 @@ class AiohttpMaxWebhook(BaseMaxWebhook):
         """
         await self._startup()
 
-    async def on_shutdown(self, app: "web.Application") -> None:
+    async def on_cleanup(self, app: "web.Application") -> None:
         """Завершить работу диспетчера при остановке приложения.
 
         Дожидается фоновых задач ``handle()`` и освобождает
-        ресурсы изоляции событий. Добавьте в ``app.on_shutdown``
-        при подключении к существующему приложению::
+        ресурсы изоляции событий. Именно ``on_cleanup``, а не
+        ``on_shutdown``: aiohttp вызывает ``on_shutdown`` до
+        ожидания активных HTTP-обработчиков, и запрос, всё ещё
+        выполняющий ``_dispatch()``, мог бы добавить задачу уже
+        после drain. ``on_cleanup`` срабатывает после завершения
+        активных запросов. Добавьте в ``app.on_cleanup`` при
+        подключении к существующему приложению::
 
-            app.on_shutdown.append(webhook.on_shutdown)
+            app.on_cleanup.append(webhook.on_cleanup)
         """
         await self._shutdown()
 
@@ -105,7 +110,7 @@ class AiohttpMaxWebhook(BaseMaxWebhook):
 
         app = web.Application()
         app.on_startup.append(self.on_startup)
-        app.on_shutdown.append(self.on_shutdown)
+        app.on_cleanup.append(self.on_cleanup)
         self.setup(app, path)
         return app
 
