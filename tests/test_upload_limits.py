@@ -35,6 +35,7 @@ def _make_connection_with_bot(*, session=None):
 def _make_mock_session():
     """Создаёт замоканную aiohttp-сессию для upload-запросов."""
     mock_response = AsyncMock()
+    mock_response.status = 200
     mock_response.text = AsyncMock(return_value='{"token":"t"}')
 
     mock_cm = AsyncMock()
