@@ -7,7 +7,6 @@ __all__ = [
     "BaseMaxWebhook",
 ]
 
-import asyncio
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
@@ -62,6 +61,16 @@ class BaseMaxWebhook(ABC):
         """Инициализировать диспетчер."""
         await self.dp.startup(self.bot)
 
+    async def _shutdown(self) -> None:
+        """Завершить работу диспетчера при остановке приложения.
+
+        Дожидается фоновых задач ``handle()``
+        (``use_create_task=True``) и освобождает ресурсы изоляции
+        событий. Подключается к lifecycle-хукам конкретного
+        веб-фреймворка в подклассах.
+        """
+        await self.dp.shutdown()
+
     async def _dispatch(self, event_json: dict[str, Any]) -> bool:
         """Распарсить и диспетчеризовать входящее обновление.
 
@@ -83,7 +92,7 @@ class BaseMaxWebhook(ABC):
             return False
 
         if self.dp.use_create_task:
-            asyncio.create_task(self.dp.handle(event_object))
+            self.dp.spawn_handle_task(event_object)
         else:
             await self.dp.handle(event_object)
 

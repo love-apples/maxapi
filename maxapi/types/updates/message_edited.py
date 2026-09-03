@@ -25,9 +25,22 @@ class MessageEdited(BaseUpdate):
         """
         Возвращает кортеж идентификаторов (chat_id, user_id).
 
+        Как и у :class:`MessageCreated`, ``user_id`` — автор
+        сообщения (``message.sender``), а не ``recipient.user_id``:
+        в групповых чатах у получателя нет ``user_id``, и раньше все
+        редакторы группы коллапсировали в один FSM-контекст
+        ``(chat_id, None)``.
+
+        .. versionchanged::
+            Ранее возвращался ``recipient.user_id``. Это меняет
+            гранулярность FSM-контекста (и ключа изоляции событий)
+            для ``message_edited`` в групповых чатах: контекст стал
+            per-автор, как у ``message_created``.
+
         Returns:
-            Tuple[Optional[int], Optional[int]]: Идентификаторы чата и
-                пользователя.
+            Идентификаторы чата и пользователя.
         """
 
-        return self.message.recipient.chat_id, self.message.recipient.user_id
+        chat_id = self.message.recipient.chat_id
+        user_id = self.message.sender.user_id if self.message.sender else None
+        return chat_id, user_id

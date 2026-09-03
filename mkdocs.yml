@@ -87,6 +87,7 @@ nav:
     - Overview: connection/index.md
   - Context:
     - Context: context/context.md
+    - Isolation: context/isolation.md
     - Overview: context/index.md
     - State_machine: context/state_machine.md
   - Enums:

@@ -96,9 +96,15 @@ class FastAPIMaxWebhook(BaseMaxWebhook):
         Передаётся напрямую в ``FastAPI(lifespan=webhook.lifespan)``.
         При компоновке с другими lifespan-менеджерами используйте
         ``contextlib.asynccontextmanager`` вручную.
+
+        При завершении приложения дожидается фоновых задач
+        ``handle()`` и освобождает ресурсы изоляции событий.
         """
         await self._startup()
-        yield
+        try:
+            yield
+        finally:
+            await self._shutdown()
 
     def setup(self, app: "FastAPI", path: str = DEFAULT_PATH) -> None:
         """Зарегистрировать маршрут вебхука в FastAPI-приложении."""

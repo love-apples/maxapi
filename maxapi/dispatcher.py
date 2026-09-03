@@ -14,6 +14,7 @@ from warnings import warn
 from aiohttp import ClientConnectorError
 
 from .context import BaseContext, ContextManager, MemoryContext
+from .context.isolation import BaseEventIsolation, DisabledEventIsolation
 from .enums.update import UpdateType
 from .exceptions.dispatcher import HandlerException, MiddlewareException
 from .exceptions.max import InvalidToken, MaxApiError, MaxConnection
@@ -99,6 +100,7 @@ class Dispatcher(BotMixin):
         storage: Any = MemoryContext,
         *,
         use_create_task: bool = False,
+        event_isolation: BaseEventIsolation | None = None,
         **storage_kwargs: Any,
     ) -> None:
         """
@@ -108,6 +110,11 @@ class Dispatcher(BotMixin):
             router_id: Идентификатор роутера для логов.
             use_create_task: Флаг, отвечающий за параллелизацию
                 обработок событий.
+            event_isolation: Изоляция обработки событий: сериализует
+                конкурентные апдейты одного пользователя
+                (см. :class:`~maxapi.context.SimpleEventIsolation`).
+                По умолчанию отключена
+                (:class:`~maxapi.context.DisabledEventIsolation`).
             storage: Класс контекста для хранения
                 данных (MemoryContext, RedisContext и т.д.).
             **storage_kwargs: Дополнительные аргументы для
@@ -117,6 +124,11 @@ class Dispatcher(BotMixin):
         self.router_id = router_id
         self.storage = storage
         self.storage_kwargs = storage_kwargs
+        self.event_isolation: BaseEventIsolation = (
+            event_isolation
+            if event_isolation is not None
+            else DisabledEventIsolation()
+        )
         self._fsm = ContextManager(self, self.__get_context)
 
         self.event_handlers: list[Handler] = []
@@ -148,6 +160,7 @@ class Dispatcher(BotMixin):
         ) = None
         self._global_mw_chain: HandlerCallable | None = None
         self._background_tasks: set[asyncio.Task] = set()
+        self._closing: bool = False
         self._ready: bool = False
 
         self.message_created = Event(
@@ -389,6 +402,7 @@ class Dispatcher(BotMixin):
         if self._ready:
             return
 
+        self._closing = False
         self.bot = bot
         self.bot.dispatcher = self
 
@@ -1248,6 +1262,31 @@ class Dispatcher(BotMixin):
                     exc,
                 )
 
+    def spawn_handle_task(self, event_object: UpdateUnion) -> asyncio.Task:
+        """
+        Создаёт фоновую задачу ``handle()`` и регистрирует её в пуле.
+
+        Единая точка постановки задач для polling
+        (``use_create_task=True``) и webhook-интеграций: без
+        регистрации в ``_background_tasks`` задачу может потерять GC,
+        а :meth:`shutdown` не дождётся её завершения.
+
+        Args:
+            event_object: Событие.
+
+        Returns:
+            Созданная задача.
+        """
+        if self._closing:
+            logger_dp.warning(
+                "Задача handle() создана во время shutdown: %s",
+                event_object.update_type,
+            )
+        task = asyncio.create_task(self.handle(event_object))
+        self._background_tasks.add(task)
+        task.add_done_callback(self._on_background_task_done)
+        return task
+
     @staticmethod
     def _get_middleware_title(chain: Any) -> str:
         """Определяет имя middleware для диагностики."""
@@ -1431,21 +1470,54 @@ class Dispatcher(BotMixin):
         Основной обработчик события. Применяет фильтры, middleware
         и вызывает нужный handler.
 
+        При включённой изоляции (``event_isolation``) вся обработка —
+        от чтения FSM-состояния до завершения хендлера и обработчиков
+        ошибок — выполняется под блокировкой по ключу
+        ``(chat_id, user_id)``: конкурентные апдейты одного
+        пользователя сериализуются.
+
         Args:
             event_object: Событие.
         """
-        router_id = None
         process_info = "нет данных"
 
         try:
             ids = event_object.get_ids()
-            memory_context = self.__get_context(*ids)
-            current_state = await memory_context.get_state()
-
             process_info = (
                 f"{event_object.update_type} | "
                 f"chat_id: {ids[0]}, user_id: {ids[1]}"
             )
+            async with self.event_isolation.lock(ids):
+                await self._handle_locked(
+                    event_object=event_object,
+                    ids=ids,
+                    process_info=process_info,
+                )
+        except Exception as e:
+            logger_dp.exception(
+                "Ошибка при обработке события: %s | %r",
+                process_info,
+                e,
+            )
+
+    async def _handle_locked(
+        self,
+        event_object: UpdateUnion,
+        ids: tuple[int | None, int | None],
+        process_info: str,
+    ) -> None:
+        """
+        Тело ``handle()``, выполняемое под блокировкой изоляции.
+
+        Args:
+            event_object: Событие.
+            ids: Ключ ``(chat_id, user_id)``.
+            process_info: Строка диагностики для логов.
+        """
+        router_id = None
+        try:
+            memory_context = self.__get_context(*ids)
+            current_state = await memory_context.get_state()
 
             kwargs: dict[str, Any] = {
                 "context": memory_context,
@@ -1518,13 +1590,6 @@ class Dispatcher(BotMixin):
             logger_dp.exception(
                 "Ошибка при обработке события: router_id: %s | %s | %r",
                 e.router_id,
-                process_info,
-                e,
-            )
-        except Exception as e:
-            logger_dp.exception(
-                "Ошибка при обработке события: router_id: %s | %s | %r",
-                router_id,
                 process_info,
                 e,
             )
@@ -1602,9 +1667,7 @@ class Dispatcher(BotMixin):
                     continue
 
                 if self.use_create_task:
-                    task = asyncio.create_task(self.handle(event))
-                    self._background_tasks.add(task)
-                    task.add_done_callback(self._on_background_task_done)
+                    self.spawn_handle_task(event)
                 else:
                     await self.handle(event)
 
@@ -1661,15 +1724,42 @@ class Dispatcher(BotMixin):
             self._ready = False
             logger_dp.info("Polling остановлен")
 
-        if self._background_tasks:
+        await self.shutdown()
+
+    async def shutdown(self) -> None:
+        """
+        Завершает работу диспетчера: дожидается фоновых задач
+        (``use_create_task=True``) и освобождает ресурсы изоляции
+        событий.
+
+        Дожидается в цикле до полного опустошения пула: задача,
+        добавленная конкурентным продюсером во время ожидания
+        текущего снимка ``_background_tasks``, будет дождана на
+        следующей итерации, а не останется вне ожидаемого набора.
+        Продюсеры должны быть остановлены до вызова
+        (:meth:`stop_polling` сбрасывает ``polling`` заранее;
+        webhook-интеграции вызывают shutdown после остановки приёма
+        запросов).
+
+        Вызывается автоматически из :meth:`stop_polling` и из
+        shutdown-хуков webhook-интеграций
+        (:class:`~maxapi.webhook.base.BaseMaxWebhook`). Идемпотентен.
+        """
+        self._closing = True
+
+        drained = False
+        while self._background_tasks:
+            pending = tuple(self._background_tasks)
             logger_dp.info(
                 "Ожидаю завершения %d фоновых задач...",
-                len(self._background_tasks),
+                len(pending),
             )
-            await asyncio.gather(
-                *self._background_tasks, return_exceptions=True
-            )
+            await asyncio.gather(*pending, return_exceptions=True)
+            drained = True
+        if drained:
             logger_dp.info("Все фоновые задачи завершены")
+
+        await self.event_isolation.close()
 
     async def startup(self, bot: Bot) -> None:
         """

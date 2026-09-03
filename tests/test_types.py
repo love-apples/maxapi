@@ -289,3 +289,34 @@ class TestUserRemovedGetIds:
         _chat_id, user_id = event.get_ids()
         assert user_id == 99
         assert user_id != 888
+
+
+class TestMessageEditedGetIds:
+    """Тесты для MessageEdited.get_ids()."""
+
+    def test_get_ids_uses_sender_user_id(self, fixture_message_edited):
+        """get_ids() возвращает (recipient.chat_id, sender.user_id),
+        как у MessageCreated."""
+        chat_id, user_id = fixture_message_edited.get_ids()
+        assert chat_id == fixture_message_edited.message.recipient.chat_id
+        assert user_id == fixture_message_edited.message.sender.user_id
+
+    def test_get_ids_group_chat_distinct_authors(self, fixture_message_edited):
+        """В группе (recipient.user_id is None) разные редакторы
+        получают разные ключи FSM-контекста, а не общий
+        (chat_id, None)."""
+        first = fixture_message_edited
+        first.message.recipient.user_id = None
+        second = first.model_copy(deep=True)
+        second.message.sender.user_id = first.message.sender.user_id + 1
+
+        assert first.get_ids()[0] == second.get_ids()[0]
+        assert first.get_ids() != second.get_ids()
+        assert first.get_ids()[1] is not None
+
+    def test_get_ids_without_sender(self, fixture_message_edited):
+        """Пост канала без sender даёт (chat_id, None)."""
+        fixture_message_edited.message.sender = None
+        chat_id, user_id = fixture_message_edited.get_ids()
+        assert chat_id == fixture_message_edited.message.recipient.chat_id
+        assert user_id is None
