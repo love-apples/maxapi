@@ -50,11 +50,12 @@ ERROR_DETAILS_LIMIT = 512
 
 
 class _RetryableServerError(Exception):
-    """Внутреннее исключение для retry при серверных ошибках."""
+    """Внутреннее исключение для retry при временных ошибках."""
 
     def __init__(self, status: int) -> None:
         self.status = status
-        super().__init__(f"Server error {status}")
+        kind = "Rate limit" if status == 429 else "Server error"
+        super().__init__(f"{kind} {status}")
 
 
 class NamedBytesIO(BytesIO):
@@ -84,8 +85,8 @@ def _on_backoff(details: Details) -> None:
     exc = details["exception"]  # type: ignore[typeddict-item,assignment]
     if isinstance(exc, _RetryableServerError):
         logger_bot.warning(
-            "Серверная ошибка %d, попытка %d, жду %.1fс",
-            exc.status,
+            "%s, попытка %d, жду %.1fс",
+            exc,
             tries,
             wait,
         )
@@ -269,7 +270,7 @@ class BaseConnection(BotMixin):
         при серверных ошибках.
 
         При получении HTTP-статуса из списка ``retry_on_statuses``
-        (по умолчанию 502, 503, 504) запрос повторяется до
+        (по умолчанию 429, 502, 503, 504) запрос повторяется до
         ``max_retries`` раз с экспоненциальной задержкой.
 
         Args:
@@ -339,7 +340,7 @@ class BaseConnection(BotMixin):
             raise MaxApiError(code=e.status, raw={"error": str(e)}) from e
 
         if not response.ok:
-            raw = await response.json()
+            raw = await _read_error_payload(response)
             _schedule_raw_response(bot, raw)
             raise MaxApiError(code=response.status, raw=raw)
 
