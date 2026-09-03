@@ -92,30 +92,36 @@ class Recipient(BaseModel):
         user_id: Идентификатор пользователя. Может быть None.
         chat_id: Идентификатор чата. Может быть None.
         chat_type: Тип получателя (диалог или чат).
+        post_id: Идентификатор поста в канале, к которому оставлен
+            комментарий. Возвращается только для методов группы
+            /comments. Может быть None.
     """
 
     user_id: int | None = None
     chat_id: int | None = None
     chat_type: ChatType
+    post_id: str | None = None
 
 
-class MessageBody(BaseModel):
+class BaseMessageBody(BaseModel):
     """
-    Модель тела сообщения.
+    Базовая модель тела сообщения или комментария.
+
+    Содержит общие поля и свойства ``html_text``, ``md_text`` и
+    ``text_decorated`` для преобразования текста с разметкой
+    ``markup`` в HTML/Markdown. Наследуется ``MessageBody`` и
+    ``CommentMessageBody``.
 
     Attributes:
         mid: Уникальный идентификатор сообщения.
         seq: Порядковый номер сообщения.
         text: Текст сообщения. Может быть None.
-        attachments: Список вложений. По умолчанию пустой список.
         markup: Список элементов разметки. По умолчанию пустой список.
     """
 
     mid: str
     seq: int
     text: str | None = None
-    attachments: list[Attachments] | None = Field(default_factory=list)  # type: ignore
-
     markup: list[MarkupUserMention | MarkupLink | MarkupElement] | None = (
         Field(default_factory=list)
     )  # type: ignore
@@ -271,6 +277,21 @@ class MessageBody(BaseModel):
             parts.append(wrap_chunk(current_chunk, current_tags))
 
         return Text(*parts)
+
+
+class MessageBody(BaseMessageBody):
+    """
+    Модель тела сообщения.
+
+    Attributes:
+        mid: Уникальный идентификатор сообщения.
+        seq: Порядковый номер сообщения.
+        text: Текст сообщения. Может быть None.
+        attachments: Список вложений. По умолчанию пустой список.
+        markup: Список элементов разметки. По умолчанию пустой список.
+    """
+
+    attachments: list[Attachments] | None = Field(default_factory=list)  # type: ignore
 
 
 class MessageStat(BaseModel):

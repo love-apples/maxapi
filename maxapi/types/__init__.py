@@ -22,11 +22,17 @@ __all__ = [
     "ClipboardButton",
     "Command",
     "CommandStart",
+    "CommentLinkedMessage",
+    "CommentMessage",
+    "CommentMessageBody",
+    "Comments",
     "ContactAttachmentPayload",
+    "DeletedComment",
     "DialogCleared",
     "DialogMuted",
     "DialogRemoved",
     "DialogUnmuted",
+    "EditedComment",
     "ErrorEvent",
     "FromUserRef",
     "Icon",
@@ -57,6 +63,7 @@ __all__ = [
     "Recipient",
     "RequestContactButton",
     "RequestGeoLocationButton",
+    "SendedComment",
     "SendedMessage",
     "ShareAttachmentPayload",
     "StickerAttachmentPayload",
@@ -92,6 +99,12 @@ from ..types.attachments.upload import AttachmentPayload, AttachmentUpload
 from ..types.callback import Callback
 from ..types.chats import Chat, ChatMember, Chats, Icon
 from ..types.command import BotCommand
+from ..types.comment import (
+    CommentLinkedMessage,
+    CommentMessage,
+    CommentMessageBody,
+    Comments,
+)
 from ..types.error_event import ErrorEvent
 from ..types.fetchable import ChatRef, FromUserRef, LazyRef
 from ..types.message import (
@@ -128,14 +141,29 @@ from ..types.users import ChatAdmin, User
 from .input_media import InputMedia, InputMediaBuffer
 
 if TYPE_CHECKING:
+    from ..methods.types.deleted_comment import DeletedComment
+    from ..methods.types.edited_comment import EditedComment
+    from ..methods.types.sended_comment import SendedComment
     from ..methods.types.sended_message import SendedMessage
+
+# Модели ответов методов реэкспортируются лениво, чтобы не создавать
+# циклический импорт maxapi.types -> maxapi.methods.types во время
+# инициализации пакета.
+_LAZY_METHOD_TYPES = {
+    "DeletedComment": "deleted_comment",
+    "EditedComment": "edited_comment",
+    "SendedComment": "sended_comment",
+    "SendedMessage": "sended_message",
+}
 
 
 def __getattr__(name: str) -> Any:
-    if name == "SendedMessage":
-        from ..methods.types.sended_message import (  # noqa: PLC0415
-            SendedMessage,
-        )
+    module_name = _LAZY_METHOD_TYPES.get(name)
+    if module_name is not None:
+        import importlib  # noqa: PLC0415
 
-        return SendedMessage
+        module = importlib.import_module(
+            f"..methods.types.{module_name}", __name__
+        )
+        return getattr(module, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
