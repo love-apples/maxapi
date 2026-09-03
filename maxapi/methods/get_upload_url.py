@@ -16,6 +16,25 @@ class GetUploadURL(BaseConnection):
 
     https://dev.max.ru/docs-api/methods/POST/uploads
 
+    Ограничения сервера MAX на загружаемые файлы (по типам):
+
+    | Тип | Форматы | Лимиты |
+    | --- | --- | --- |
+    | image | JPG/JPEG/PNG/GIF/TIFF/BMP/HEIC | до 50 МБ, ≤7680×7680 px |
+    | video | MP4, MOV, MKV, WEBM | до 250 МБ |
+    | audio | MP3, WAV, M4A и др. | до 256 МБ, ≤60 мин |
+    | file | TXT, DOC, PDF и др. | до 4 ГБ |
+
+    Для `image` и `audio` оба условия (размер и вторая
+    величина) проверяются одновременно — должны выполняться
+    оба. Актуальные значения в коде —
+    `maxapi.utils.upload_limits.UPLOAD_LIMITS`.
+
+    Библиотека при любой загрузке (`upload_media`,
+    `attachments`, `upload_file`) проверяет только размер и
+    лишь предупреждает в логе при превышении; окончательную
+    проверку выполняет сервер MAX.
+
     Attributes:
         bot: Экземпляр бота для выполнения запроса.
         type: Тип загружаемого файла (например, image,

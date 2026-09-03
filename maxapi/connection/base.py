@@ -36,6 +36,7 @@ from ..exceptions.max import (
 from ..loggers import logger_bot
 from ..types.bot_mixin import BotMixin
 from ..utils.runtime import bind_bot
+from ..utils.upload_limits import check_upload_size
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -473,6 +474,9 @@ class BaseConnection(BotMixin):
         """
         Загружает файл на сервер.
 
+        При превышении лимита загрузки MAX пишется предупреждение
+        в логгер `bot`, загрузка не прерывается.
+
         Args:
             url: URL загрузки.
             path: Путь к файлу.
@@ -490,6 +494,8 @@ class BaseConnection(BotMixin):
 
         path_object = Path(path)
         basename = path_object.name
+
+        check_upload_size(len(file_data), type, name=basename)
 
         form = FormData(quote_fields=False)
         form.add_field(
@@ -521,6 +527,9 @@ class BaseConnection(BotMixin):
         """
         Загружает файл из буфера.
 
+        При превышении лимита загрузки MAX пишется предупреждение
+        в логгер `bot`, загрузка не прерывается.
+
         Args:
             filename: Имя файла.
             url: URL загрузки.
@@ -533,6 +542,8 @@ class BaseConnection(BotMixin):
         Raises:
             MaxUploadFileFailed: Если upload-сервер вернул не-2xx ответ.
         """
+
+        check_upload_size(len(buffer), type, name=filename)
 
         try:
             matches = puremagic.magic_string(buffer[:4096])

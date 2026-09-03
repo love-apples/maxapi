@@ -249,4 +249,5 @@ nav:
     - Message: utils/message.md
     - Overview: utils/index.md
     - Updates: utils/updates.md
+    - Upload_limits: utils/upload_limits.md
     - Vcf: utils/vcf.md
