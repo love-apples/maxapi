@@ -1,5 +1,6 @@
 """Тесты retry-механизма для серверных ошибок (502, 503, 504)."""
 
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -18,12 +19,15 @@ from maxapi.exceptions.max import (
 )
 
 
-def _make_response(status, *, ok=None, json_data=None):
+def _make_response(status, *, ok=None, json_data=None, text=None):
     """Создаёт мок aiohttp-ответа с async-методами."""
     resp = MagicMock()
     resp.status = status
     resp.ok = ok if ok is not None else (200 <= status < 300)
     resp.read = AsyncMock()
+    if text is None:
+        text = "" if json_data is None else json.dumps(json_data)
+    resp.text = AsyncMock(return_value=text)
     if json_data is not None:
         resp.json = AsyncMock(return_value=json_data)
     return resp
@@ -454,7 +458,7 @@ class TestRetryResponseBodyConsumed:
     @pytest.mark.asyncio
     async def test_response_body_consumed_on_retry(self, mock_bot_token):
         """Тело ответа читается перед retry для освобождения
-        соединения."""
+        соединения и сохранения в ошибке."""
         conn = DefaultConnectionProperties(
             max_retries=1,
             retry_backoff_factor=0.01,
@@ -482,4 +486,4 @@ class TestRetryResponseBodyConsumed:
                 is_return_raw=True,
             )
 
-        error.read.assert_awaited_once()
+        error.text.assert_awaited_once()

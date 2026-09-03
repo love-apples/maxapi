@@ -560,7 +560,7 @@ class Dispatcher(BotMixin):
     @staticmethod
     async def call_handler(
         handler: Handler,
-        event_object: UpdateUnion | dict[str, Any],
+        event_object: UpdateUnion | dict[str, Any] | str,
         data: dict[str, Any],
     ) -> None:
         """
@@ -999,10 +999,14 @@ class Dispatcher(BotMixin):
             ) from e
 
     async def handle_raw_response(
-        self, event_type: UpdateType, raw_data: dict[str, Any]
+        self, event_type: UpdateType, raw_data: dict[str, Any] | str
     ) -> None:
         """
         Специальный метод для обработки сырых ответов API.
+
+        ``raw_data`` — разобранный JSON-объект ответа либо сырой текст,
+        если тело ответа не является JSON-объектом (например, HTML
+        от прокси при 502/503).
         """
         entries = (
             self._cached_router_entries

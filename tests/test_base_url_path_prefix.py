@@ -9,6 +9,7 @@ ApiPath именно такие), считается absolute-path reference и 
 set_api_url() с непустым path в базовом URL.
 """
 
+from json import dumps
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -23,7 +24,7 @@ def _make_response(status=200, json_data=None):
     resp = MagicMock()
     resp.status = status
     resp.ok = 200 <= status < 300
-    resp.json = AsyncMock(return_value=json_data or {})
+    resp.text = AsyncMock(return_value=dumps(json_data or {}))
     return resp
 
 

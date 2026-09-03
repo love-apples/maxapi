@@ -6,6 +6,7 @@ import mimetypes
 import re
 from datetime import datetime
 from io import BytesIO
+from json import loads
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import unquote
@@ -26,7 +27,12 @@ from ..client.ssl import connector_kwargs
 from ..enums.api_path import ApiPath
 from ..enums.update import UpdateType
 from ..exceptions.download_file import DownloadFileError
-from ..exceptions.max import InvalidToken, MaxApiError, MaxConnection
+from ..exceptions.max import (
+    InvalidToken,
+    MaxApiError,
+    MaxConnection,
+    MaxUploadFileFailed,
+)
 from ..loggers import logger_bot
 from ..types.bot_mixin import BotMixin
 from ..utils.runtime import bind_bot
@@ -50,11 +56,74 @@ ERROR_DETAILS_LIMIT = 512
 
 
 class _RetryableServerError(Exception):
-    """Внутреннее исключение для retry при серверных ошибках."""
+    """Внутреннее исключение для retry при серверных ошибках.
 
-    def __init__(self, status: int) -> None:
+    Attributes:
+        status: HTTP-статус ответа сервера.
+        body: Прочитанное тело ответа. Пустая строка, если тело
+            не читалось или прочитать его не удалось.
+    """
+
+    def __init__(self, status: int, body: str = "") -> None:
         self.status = status
+        self.body = body
         super().__init__(f"Server error {status}")
+
+
+async def _read_response_text(response: ClientResponse) -> str:
+    """Безопасно читает тело ответа и возвращает его как текст.
+
+    Args:
+        response: Ответ aiohttp.
+
+    Returns:
+        str: Тело ответа. Пустая строка, если тело прочитать
+            не удалось.
+    """
+    try:
+        text = await response.text()
+    except Exception as e:
+        logger_bot.warning("Не удалось прочитать тело ответа: %s", e)
+        response.release()
+        return ""
+
+    return text if isinstance(text, str) else ""
+
+
+def _decode_response_body(text: str) -> str | dict[str, Any]:
+    """Разбирает тело ответа в dict, если это JSON-объект.
+
+    Args:
+        text: Текст тела ответа.
+
+    Returns:
+        str | dict: Разобранный JSON-объект либо исходный текст,
+            если тело пустое или не является JSON-объектом.
+    """
+    parsed = _parse_json_object(text)
+
+    return text if parsed is None else parsed
+
+
+def _parse_json_object(text: str) -> dict[str, Any] | None:
+    """Парсит тело ответа как JSON-объект.
+
+    Args:
+        text: Текст тела ответа.
+
+    Returns:
+        dict | None: Разобранный JSON-объект либо None, если тело
+            пустое, не является валидным JSON или не является объектом.
+    """
+    if not text.strip():
+        return None
+
+    try:
+        parsed = loads(text)
+    except ValueError:
+        return None
+
+    return parsed if isinstance(parsed, dict) else None
 
 
 class NamedBytesIO(BytesIO):
@@ -288,7 +357,8 @@ class BaseConnection(BotMixin):
             RuntimeError: Если бот не инициализирован.
             MaxConnection: Ошибка соединения.
             InvalidToken: Ошибка авторизации (401).
-            MaxApiError: Ошибка API (после исчерпания retry).
+            MaxApiError: Ошибка API (после исчерпания retry), а также
+                если успешный ответ не содержит JSON-объекта.
         """
 
         bot = self._ensure_bot()
@@ -326,8 +396,9 @@ class BaseConnection(BotMixin):
                 raise InvalidToken(_invalid_token_message(raw))
 
             if resp.status in retry_statuses:
-                await resp.read()
-                raise _RetryableServerError(resp.status)
+                raise _RetryableServerError(
+                    resp.status, await _read_response_text(resp)
+                )
 
             return resp
 
@@ -336,23 +407,67 @@ class BaseConnection(BotMixin):
         except ClientConnectionError as e:
             raise MaxConnection(f"Ошибка при отправке запроса: {e}") from e
         except _RetryableServerError as e:
-            raise MaxApiError(code=e.status, raw={"error": str(e)}) from e
+            raw = _decode_response_body(e.body)
+            _schedule_raw_response(bot, raw)
+            raise MaxApiError(code=e.status, raw=raw) from e
+
+        text = await _read_response_text(response)
 
         if not response.ok:
-            raw = await response.json()
+            raw = _decode_response_body(text)
             _schedule_raw_response(bot, raw)
             raise MaxApiError(code=response.status, raw=raw)
 
-        raw = await response.json()
+        parsed = _parse_json_object(text)
 
-        _schedule_raw_response(bot, raw)
+        if parsed is None:
+            # API всегда отвечает JSON-объектом: пустое или не-JSON
+            # тело при 2xx — такой же сбой, как и не-2xx ответ
+            _schedule_raw_response(bot, text)
+            raise MaxApiError(code=response.status, raw=text)
+
+        _schedule_raw_response(bot, parsed)
 
         if is_return_raw:
-            return raw
+            return parsed
 
-        model = model(**raw)  # type: ignore
+        model = model(**parsed)  # type: ignore
 
         return bind_bot(model, bot)
+
+    @staticmethod
+    async def _read_upload_response(response: ClientResponse) -> str:
+        """
+        Проверяет статус ответа upload-сервера и возвращает его тело.
+
+        Args:
+            response: Ответ upload-сервера.
+
+        Returns:
+            str: Сырой .text() ответ от сервера.
+
+        Raises:
+            MaxUploadFileFailed: Если статус ответа не успешный
+                или тело ответа не удалось прочитать.
+        """
+
+        try:
+            text = await response.text()
+        except Exception as e:
+            # Ответ освобождается вызывающим async with session.post
+            raise MaxUploadFileFailed(
+                f"Не удалось прочитать ответ upload-сервера: {e}"
+            ) from e
+
+        # response.ok в aiohttp означает status < 400 и пропускает
+        # 3xx — upload-сервер же обязан отвечать строго 2xx
+        if not 200 <= response.status < 300:
+            raise MaxUploadFileFailed(
+                f"Ошибка при загрузке файла: HTTP {response.status}, "
+                f"ответ: {text}"
+            )
+
+        return text
 
     async def upload_file(self, url: str, path: str, type: UploadType) -> str:
         """
@@ -365,6 +480,9 @@ class BaseConnection(BotMixin):
 
         Returns:
             str: Сырой .text() ответ от сервера.
+
+        Raises:
+            MaxUploadFileFailed: Если upload-сервер вернул не-2xx ответ.
         """
 
         async with aiofiles.open(path, "rb") as f:
@@ -386,7 +504,7 @@ class BaseConnection(BotMixin):
         session = bot.session
         if session is not None and not session.closed:
             async with session.post(url=url, data=form) as response:
-                return await response.text()
+                return await self._read_upload_response(response)
         else:
             async with (
                 ClientSession(
@@ -395,7 +513,7 @@ class BaseConnection(BotMixin):
                 ) as temp_session,
                 temp_session.post(url=url, data=form) as response,
             ):
-                return await response.text()
+                return await self._read_upload_response(response)
 
     async def upload_file_buffer(
         self, filename: str, url: str, buffer: bytes, type: UploadType
@@ -411,6 +529,9 @@ class BaseConnection(BotMixin):
 
         Returns:
             str: Сырой .text() ответ от сервера.
+
+        Raises:
+            MaxUploadFileFailed: Если upload-сервер вернул не-2xx ответ.
         """
 
         try:
@@ -440,7 +561,7 @@ class BaseConnection(BotMixin):
         session = bot.session
         if session is not None and not session.closed:
             async with session.post(url=url, data=form) as response:
-                return await response.text()
+                return await self._read_upload_response(response)
         else:
             async with (
                 ClientSession(
@@ -449,7 +570,7 @@ class BaseConnection(BotMixin):
                 ) as temp_session,
                 temp_session.post(url=url, data=form) as response,
             ):
-                return await response.text()
+                return await self._read_upload_response(response)
 
     async def _fetch_response(self, url: str) -> ClientResponse:
         bot = self._ensure_bot()

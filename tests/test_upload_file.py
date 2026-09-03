@@ -2,6 +2,7 @@
 
 from unittest.mock import AsyncMock, Mock, patch
 
+import puremagic
 import pytest
 from aiohttp import ClientSession
 from maxapi.client.default import DefaultConnectionProperties
@@ -30,6 +31,7 @@ class TestUploadFileMimetypesFallback:
         test_file.write_bytes(b"fake-png-data")
 
         mock_response = AsyncMock()
+        mock_response.status = 200
         mock_response.text = AsyncMock(return_value='{"token":"t"}')
 
         mock_cm = AsyncMock()
@@ -59,6 +61,7 @@ class TestUploadFileMimetypesFallback:
         test_file.write_bytes(b"some-data")
 
         mock_response = AsyncMock()
+        mock_response.status = 200
         mock_response.text = AsyncMock(return_value='{"token":"t"}')
 
         mock_cm = AsyncMock()
@@ -94,6 +97,7 @@ class TestUploadFileTempSession:
         test_file.write_bytes(b"fake-pdf")
 
         mock_response = AsyncMock()
+        mock_response.status = 200
         mock_response.text = AsyncMock(return_value='{"token":"t"}')
 
         conn, bot = _make_connection_with_bot(session=None)
@@ -134,6 +138,7 @@ class TestUploadFileTempSession:
         test_file.write_bytes(b"data")
 
         mock_response = AsyncMock()
+        mock_response.status = 200
         mock_response.text = AsyncMock(return_value='{"token":"t"}')
 
         closed_session = Mock(spec=ClientSession)
@@ -174,6 +179,7 @@ class TestUploadFileTempSession:
         test_file.write_bytes(b"jpeg-data")
 
         mock_response = AsyncMock()
+        mock_response.status = 200
         mock_response.text = AsyncMock(return_value='{"token":"t"}')
 
         mock_cm = AsyncMock()
@@ -197,6 +203,58 @@ class TestUploadFileTempSession:
 
             mock_cs_cls.assert_not_called()
             mock_session.post.assert_called_once()
+
+
+class TestUploadFileBufferPuremagicFallback:
+    """Тесты фоллбэка mime-типа в upload_file_buffer."""
+
+    @pytest.mark.asyncio
+    async def test_unrecognizable_buffer_falls_back_to_type_wildcard(
+        self,
+    ):
+        """PureError на неопознаваемом буфере не летит наружу.
+
+        puremagic.magic_string бросает PureError (наследник
+        LookupError), если тип буфера определить не удалось —
+        должен сработать фоллбэк на mime-тип ``{type}/*``.
+        """
+        buffer = b"\x00\x01\x02unrecognizable-garbage"
+
+        # Санити-проверка: буфер действительно не опознаётся
+        with pytest.raises(puremagic.PureError):
+            puremagic.magic_string(buffer[:4096])
+
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.ok = True
+        mock_response.text = AsyncMock(return_value='{"token":"t"}')
+
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__.return_value = mock_response
+        mock_cm.__aexit__.return_value = False
+
+        mock_session = AsyncMock(spec=ClientSession)
+        mock_session.closed = False
+        mock_session.post = Mock(return_value=mock_cm)
+
+        conn, _bot = _make_connection_with_bot(session=mock_session)
+
+        with patch(
+            "maxapi.connection.base.FormData",
+        ) as mock_form_cls:
+            result = await conn.upload_file_buffer(
+                filename="sample",
+                url="https://upload.example.com",
+                buffer=buffer,
+                type=UploadType.FILE,
+            )
+
+        assert result == '{"token":"t"}'
+        add_field_kwargs = (
+            mock_form_cls.return_value.add_field.call_args.kwargs
+        )
+        assert add_field_kwargs["content_type"] == "file/*"
+        assert add_field_kwargs["filename"] == "sample"
 
 
 def assert_invalid_type_error(exc_info, invalid_value: str) -> None:

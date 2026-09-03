@@ -96,6 +96,7 @@ class TestCustomConnectorOwnership:
         def fake_post(self, *args, **kwargs):
             created.append(self)
             response = AsyncMock()
+            response.status = 200
             response.text = AsyncMock(return_value="ok")
             cm = AsyncMock()
             cm.__aenter__.return_value = response
@@ -465,7 +466,7 @@ class TestClosedSessionIsRetryable:
         ok = MagicMock()
         ok.status = 200
         ok.ok = True
-        ok.json = AsyncMock(return_value={"success": True})
+        ok.text = AsyncMock(return_value='{"success": true}')
 
         alive = MagicMock()
         alive.closed = False

@@ -500,6 +500,7 @@ class TestBaseConnectionUploadFallback:
         bot.session = None  # force the else-branch
 
         mock_response = AsyncMock()
+        mock_response.status = 200
         mock_response.text = AsyncMock(return_value='{"token":"abc"}')
 
         mock_cm = AsyncMock()
@@ -541,6 +542,7 @@ class TestBaseConnectionUploadFallback:
         some_buffer = b"\x00" * 32
 
         mock_response = MagicMock()
+        mock_response.status = 200
         mock_response.text = AsyncMock(return_value='{"token":"xyz"}')
 
         mock_context = AsyncMock()
@@ -589,6 +591,7 @@ class TestBaseConnectionUploadFallback:
         some_buffer = b"\x00" * 32
 
         mock_response = AsyncMock()
+        mock_response.status = 200
         mock_response.text = AsyncMock(return_value='{"token":"buf"}')
 
         mock_cm = AsyncMock()
@@ -633,6 +636,7 @@ class TestBaseConnectionUploadFallback:
         some_buffer = b"plain text content without magic bytes"
 
         mock_response = MagicMock()
+        mock_response.status = 200
         mock_response.text = AsyncMock(return_value='{"token":"txt"}')
 
         mock_context = AsyncMock()
