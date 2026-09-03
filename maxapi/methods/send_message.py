@@ -16,6 +16,7 @@ from ..types.attachments.upload import AttachmentUpload
 from ..types.input_media import InputMedia, InputMediaBuffer
 from ..types.message import NewMessageLink
 from ..utils.message import process_input_media
+from ..utils.params import bool_to_query
 from .types.sended_message import SendedMessage
 
 if TYPE_CHECKING:
@@ -124,9 +125,9 @@ class SendMessage(BaseConnection):
             params["user_id"] = self.user_id
 
         if self.disable_link_preview is not None:
-            params["disable_link_preview"] = str(
+            params["disable_link_preview"] = bool_to_query(
                 self.disable_link_preview
-            ).lower()
+            )
 
         if self.text is not None:
             json["text"] = self.text

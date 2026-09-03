@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, cast
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
 from ..enums.http_method import HTTPMethod
+from ..utils.params import bool_to_query
 from .types.removed_member_chat import RemovedMemberChat
 
 if TYPE_CHECKING:
@@ -53,7 +54,7 @@ class RemoveMemberChat(BaseConnection):
 
         params["chat_id"] = self.chat_id
         params["user_id"] = self.user_id
-        params["block"] = str(self.block).lower()
+        params["block"] = bool_to_query(self.block)
 
         response = await super().request(
             method=HTTPMethod.DELETE,

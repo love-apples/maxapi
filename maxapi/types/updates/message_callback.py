@@ -35,6 +35,10 @@ class MessageForCallback(BaseModel):
         link: Связь с другим сообщением.
         notify: Отправлять ли уведомление.
         format: Режим разбора текста.
+
+    Примечание: `disable_link_preview` намеренно не является полем
+    этой модели — это query-параметр `POST /answers`, который
+    передаётся через `Bot.send_callback` / `SendCallback`.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -119,6 +123,7 @@ class MessageCallback(BaseUpdate):
         *,
         notification: str | None = None,
         notify: bool = True,
+        disable_link_preview: bool | None = None,
         raise_if_not_exists: bool = True,
     ) -> SendedCallback:
         """
@@ -133,6 +138,7 @@ class MessageCallback(BaseUpdate):
             format: Режим разбора текста.
             notification: Текст уведомления.
             notify: Отправлять ли уведомление.
+            disable_link_preview: Отключить превью ссылок (True — без превью).
             raise_if_not_exists: Выдавать ошибку при отсутствии сообщения,
                 если пытаются изменить его содержимое.
 
@@ -155,6 +161,8 @@ class MessageCallback(BaseUpdate):
                     "исходное сообщение отсутствует"
                 )
 
+            # Без исходного сообщения превью нечего отключать —
+            # disable_link_preview на этом пути не передаётся.
             return await self.ack(notification=notification)
 
         bot = self._ensure_bot()
@@ -176,6 +184,7 @@ class MessageCallback(BaseUpdate):
             callback_id=self.callback.callback_id,
             message=message_for_callback,
             notification=notification,
+            disable_link_preview=disable_link_preview,
         )
 
     async def send(
@@ -250,6 +259,7 @@ class MessageCallback(BaseUpdate):
         format: ParseMode | None = None,
         *,
         notify: bool = True,
+        disable_link_preview: bool | None = None,
         raise_if_not_exists: bool = True,
     ) -> SendedCallback:
         """
@@ -265,6 +275,7 @@ class MessageCallback(BaseUpdate):
             link: Связь с другим сообщением.
             notify: Отправлять ли уведомление.
             format: Режим разбора текста.
+            disable_link_preview: Отключить превью ссылок (True — без превью).
             raise_if_not_exists: Выдавать ошибку при отсутствии сообщения,
                 если пытаются изменить его содержимое (new_text/link/format).
 
@@ -278,5 +289,6 @@ class MessageCallback(BaseUpdate):
             format=format,
             notification=notification,
             notify=notify,
+            disable_link_preview=disable_link_preview,
             raise_if_not_exists=raise_if_not_exists,
         )
