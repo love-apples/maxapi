@@ -16,8 +16,27 @@ class GetChats(BaseConnection):
 
     .. deprecated:: 1.1.0
         Начиная с июня 2026 года метод ``GET /chats`` больше не
-        поддерживается. API не предоставляет готового способа получить
-        список групповых чатов и каналов, в которые добавлен бот.
+        поддерживается. Готового списка чатов API не отдаёт ни
+        через Long Polling, ни через Webhook — его нужно
+        накапливать из событий.
+
+    Рекомендованный сценарий замены — накапливать ``chat_id``
+    самостоятельно:
+
+    1. Получайте события ``bot_added``, ``bot_started``,
+       ``bot_removed`` и ``bot_stopped`` — через Long Polling
+       (хендлеры ``@dp.bot_added()`` и другие при
+       ``dp.start_polling()``) или через Webhook
+       (``bot.subscribe_webhook(url, update_types=[
+       UpdateType.BOT_ADDED, UpdateType.BOT_STARTED,
+       UpdateType.BOT_REMOVED, UpdateType.BOT_STOPPED])``).
+    2. Извлекайте ``chat_id`` из входящих событий ``bot_added``
+       и ``bot_started``.
+    3. Храните ``chat_id`` самостоятельно: сохраняйте при
+       получении события, учитывайте возможные дубли и удаляйте
+       по ``bot_removed`` (для диалогов — по ``bot_stopped``).
+    4. Используйте накопленные ``chat_id`` в остальных методах
+       API, например ``bot.send_message()``.
 
     https://dev.max.ru/docs-api/methods/GET/chats
 
@@ -35,10 +54,11 @@ class GetChats(BaseConnection):
         marker: int | None = None,
     ):
         warnings.warn(
-            "GetChats устарел: начиная с июня 2026 года GET /chats "
-            "больше не поддерживается. API не предоставляет готового "
-            "способа получить список групповых чатов и каналов, "
-            "в которые добавлен бот.",
+            "GetChats устарел: начиная с июня 2026 года GET /chats не "
+            "поддерживается — https://dev.max.ru/docs-api/methods/GET/chats. "
+            "Ведите список чатов сами по событиям bot_added, bot_started, "
+            "bot_removed и bot_stopped (Long Polling или "
+            "bot.subscribe_webhook()).",
             DeprecationWarning,
             stacklevel=2,
         )

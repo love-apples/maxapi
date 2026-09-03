@@ -123,12 +123,52 @@ async def send_photo_by_token(event: MessageCreated):
 - `message_callback` — нажатие на callback-кнопку
 - `message_chat_created` — создание чата через сообщение (устарело)
 
-### События бота
+### События бота {#bot-events}
 
 - `bot_added` — бот добавлен в чат
 - `bot_removed` — бот удален из чата
 - `bot_started` — пользователь нажал кнопку "Начать" с ботом
 - `bot_stopped` — бот остановлен
+
+!!! info "Как вести список чатов бота"
+    Метод [`get_chats`](../methods/get_chats.md) устарел, а готового
+    списка чатов API не отдаёт. Накапливайте `chat_id` сами: сохраняйте
+    при `bot_added` и `bot_started`, удаляйте при `bot_removed` (для
+    диалогов — при `bot_stopped`). Эти события приходят и через Long
+    Polling, и через
+    [`subscribe_webhook`](../methods/subscribe_webhook.md) — менять
+    транспорт ради них не нужно.
+
+    Храните список в постоянном хранилище (БД, Redis, файл): после
+    перезапуска бота восстановить его через `GET /chats` уже нельзя, а
+    старые чаты новых событий не пришлют. `set` в примере ниже — только
+    для иллюстрации.
+
+    ```python
+    from maxapi.types import BotAdded, BotRemoved, BotStarted, BotStopped
+
+    known_chats: set[int] = set()  # в проде — постоянное хранилище
+
+
+    @dp.bot_added()
+    async def on_bot_added(event: BotAdded):
+        known_chats.add(event.chat_id)
+
+
+    @dp.bot_started()
+    async def on_bot_started(event: BotStarted):
+        known_chats.add(event.chat_id)
+
+
+    @dp.bot_removed()
+    async def on_bot_removed(event: BotRemoved):
+        known_chats.discard(event.chat_id)
+
+
+    @dp.bot_stopped()
+    async def on_bot_stopped(event: BotStopped):
+        known_chats.discard(event.chat_id)
+    ```
 
 ### События пользователей
 

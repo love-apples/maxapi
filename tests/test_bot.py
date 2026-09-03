@@ -12,6 +12,16 @@ from maxapi.enums.parse_mode import ParseMode, TextFormat
 from maxapi.enums.sender_action import SenderAction
 from maxapi.exceptions.max import InvalidToken
 
+GET_CHATS_DEPRECATION_HINTS = (
+    "GET /chats",
+    "subscribe_webhook",
+    "bot_added",
+    "bot_started",
+    "bot_removed",
+    "bot_stopped",
+    "https://dev.max.ru/docs-api/methods/GET/chats",
+)
+
 
 class TestBotInitialization:
     """Тесты инициализации Bot."""
@@ -266,10 +276,39 @@ class TestBotMethods:
         ) as mock_fetch:
             mock_fetch.return_value = Mock()
 
-            with pytest.deprecated_call(match="GET /chats"):
+            with pytest.deprecated_call(match="GET /chats") as record:
                 await bot.get_chats(count=5)
 
             mock_fetch.assert_awaited_once()
+
+        messages = [
+            str(w.message)
+            for w in record
+            if str(w.message).startswith("bot.get_chats() устарел")
+        ]
+
+        assert len(messages) == 1
+
+        for expected in GET_CHATS_DEPRECATION_HINTS:
+            assert expected in messages[0]
+
+    def test_get_chats_method_is_deprecated(self, bot):
+        """Тест предупреждения при создании метода GetChats."""
+        from maxapi.methods.get_chats import GetChats
+
+        with pytest.deprecated_call(match="GET /chats") as record:
+            GetChats(bot=bot, count=5)
+
+        messages = [
+            str(w.message)
+            for w in record
+            if str(w.message).startswith("GetChats устарел")
+        ]
+
+        assert len(messages) == 1
+
+        for expected in GET_CHATS_DEPRECATION_HINTS:
+            assert expected in messages[0]
 
     @pytest.mark.asyncio
     async def test_send_action_with_wrong_action_type(self, bot):
