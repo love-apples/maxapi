@@ -340,9 +340,23 @@ class Chat(
         icon: PhotoAttachmentRequestPayload | None = None,
         title: str | None = None,
         pin: Message | str | None = None,
+        description: str | None = None,
         notify: bool | None = None,
     ) -> Chat:
-        """Изменить данные чата через текущий объект."""
+        """
+        Изменить данные чата через текущий объект.
+
+        Args:
+            icon: Новая иконка чата.
+            title: Новое название чата (1-200 символов).
+            pin: Сообщение или его ID для закрепления.
+            description: Новое описание чата или канала
+                (0-16000 символов). Пустая строка удаляет описание.
+            notify: Флаг уведомления участников.
+
+        Returns:
+            Chat: Обновлённый объект чата.
+        """
 
         pin_message_id = None if pin is None else self._resolve_message_id(pin)
 
@@ -351,6 +365,7 @@ class Chat(
             icon=icon,
             title=title,
             pin=pin_message_id,
+            description=description,
             notify=notify,
         )
 

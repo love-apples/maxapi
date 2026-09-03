@@ -737,6 +737,7 @@ class Bot(BaseConnection):
         icon: PhotoAttachmentRequestPayload | None = None,
         title: str | None = None,
         pin: str | None = None,
+        description: str | None = None,
         *,
         notify: bool | None = None,
     ) -> Chat:
@@ -750,6 +751,8 @@ class Bot(BaseConnection):
             icon: Иконка.
             title: Новый заголовок (1-200 символов).
             pin: ID сообщения для закрепления.
+            description: Новое описание чата или канала
+                (0-16000 символов). Пустая строка удаляет описание.
             notify: Флаг уведомления.
 
         Returns:
@@ -762,6 +765,7 @@ class Bot(BaseConnection):
             icon=icon,
             title=title,
             pin=pin,
+            description=description,
             notify=self._resolve_notify(notify=notify),
         ).fetch()
 

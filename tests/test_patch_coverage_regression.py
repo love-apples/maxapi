@@ -195,3 +195,116 @@ async def test_edit_chat_raises_when_icon_fields_are_not_mutually_exclusive(
             chat_id=123,
             icon=icon,
         ).fetch()
+
+
+@pytest.mark.asyncio
+async def test_edit_chat_icon_payload_omits_unset_fields(mock_bot_token):
+    bot = Bot(token=mock_bot_token)
+    bot.session = AsyncMock()
+    icon = PhotoAttachmentRequestPayload(url="https://x")
+
+    with patch.object(
+        BaseConnection,
+        "request",
+        new_callable=AsyncMock,
+        return_value={"chat_id": 1, "type": "chat", "title": "t"},
+    ) as mock_request:
+        await EditChat(
+            bot=bot,
+            chat_id=123,
+            icon=icon,
+        ).fetch()
+
+    sent_json = mock_request.await_args.kwargs["json"]
+    assert sent_json["icon"] == {"url": "https://x"}
+
+
+@pytest.mark.asyncio
+async def test_edit_chat_includes_description_in_payload(mock_bot_token):
+    bot = Bot(token=mock_bot_token)
+    bot.session = AsyncMock()
+
+    with patch.object(
+        BaseConnection,
+        "request",
+        new_callable=AsyncMock,
+        return_value={"chat_id": 1, "type": "chat", "title": "t"},
+    ) as mock_request:
+        await EditChat(
+            bot=bot,
+            chat_id=123,
+            description="Новое описание",
+        ).fetch()
+
+    sent_json = mock_request.await_args.kwargs["json"]
+    assert sent_json["description"] == "Новое описание"
+
+
+@pytest.mark.asyncio
+async def test_edit_chat_sends_empty_description_to_clear_it(mock_bot_token):
+    bot = Bot(token=mock_bot_token)
+    bot.session = AsyncMock()
+
+    with patch.object(
+        BaseConnection,
+        "request",
+        new_callable=AsyncMock,
+        return_value={"chat_id": 1, "type": "chat", "title": "t"},
+    ) as mock_request:
+        await EditChat(
+            bot=bot,
+            chat_id=123,
+            description="",
+        ).fetch()
+
+    sent_json = mock_request.await_args.kwargs["json"]
+    assert sent_json["description"] == ""
+
+
+@pytest.mark.asyncio
+async def test_edit_chat_omits_description_when_not_passed(mock_bot_token):
+    bot = Bot(token=mock_bot_token)
+    bot.session = AsyncMock()
+
+    with patch.object(
+        BaseConnection,
+        "request",
+        new_callable=AsyncMock,
+        return_value={"chat_id": 1, "type": "chat", "title": "t"},
+    ) as mock_request:
+        await EditChat(
+            bot=bot,
+            chat_id=123,
+            title="t",
+        ).fetch()
+
+    sent_json = mock_request.await_args.kwargs["json"]
+    assert "description" not in sent_json
+
+
+def test_edit_chat_validates_description_length(mock_bot_token):
+    bot = Bot(token=mock_bot_token)
+
+    with pytest.raises(ValueError, match="description"):
+        EditChat(bot=bot, chat_id=123, description="x" * 16001)
+
+    method = EditChat(bot=bot, chat_id=123, description="x" * 16000)
+
+    assert method.description == "x" * 16000
+
+
+@pytest.mark.asyncio
+async def test_bot_edit_chat_passes_description_to_method(mock_bot_token):
+    bot = Bot(token=mock_bot_token)
+    bot.session = AsyncMock()
+
+    with patch.object(
+        BaseConnection,
+        "request",
+        new_callable=AsyncMock,
+        return_value={"chat_id": 1, "type": "chat", "title": "t"},
+    ) as mock_request:
+        await bot.edit_chat(chat_id=123, description="Описание из Bot")
+
+    sent_json = mock_request.await_args.kwargs["json"]
+    assert sent_json["description"] == "Описание из Bot"
