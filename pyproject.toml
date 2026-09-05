@@ -39,7 +39,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["maxapi*", "wiki*", "examples*"]
+include = ["maxapi*"]
 
 [project.optional-dependencies]
 fastapi = [
