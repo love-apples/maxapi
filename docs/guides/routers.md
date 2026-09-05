@@ -30,10 +30,11 @@ dp.include_routers(router)  # Множественное число, можно 
 ```python
 from maxapi import F
 from maxapi.enums.chat_type import ChatType
+from maxapi.types import Command
 
 router = Router()
-router.filter(...)  # Базовые фильтры
-router.filters.append(F.chat.type == ChatType.DIALOG)  # Личный диалог
+router.filter(Command("help"))  # Базовый фильтр (BaseFilter)
+router.filter(F.chat.type == ChatType.DIALOG)  # Личный диалог (MagicFilter)
 ```
 
 ## Middleware для роутера

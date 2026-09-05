@@ -760,20 +760,34 @@ class TestHandlePipeline:
 
         _setup_for_handle(dispatcher, bot)
         dispatcher._ready = True
-        # _prepare_handlers уже заполнил кеш; сбрасываем, чтобы
-        # покрыть ветку «кеш пуст → строится через _build_dispatch_entries()»
-        dispatcher._cached_router_entries = None
 
-        # Первый вызов строит и сохраняет список записей в кеш.
-        await dispatcher.handle(fixture_message_created)
+        # Кеш заполнен подготовкой обработчиков, а не первым событием.
         cached = dispatcher._cached_router_entries
         assert cached is not None
 
-        # Повторный вызов использует уже заполненный _cached_router_entries.
+        # Оба вызова используют один и тот же список записей.
+        await dispatcher.handle(fixture_message_created)
+        assert dispatcher._cached_router_entries is cached
         await dispatcher.handle(fixture_message_created)
         assert dispatcher._cached_router_entries is cached
 
         assert len(handled) == 2
+
+        # Поздняя регистрация — единственный повод пересобрать кеш.
+        @dispatcher.bot_started()
+        async def _late(event):
+            pass
+
+        await dispatcher.handle(fixture_message_created)
+        rebuilt = dispatcher._cached_router_entries
+        assert rebuilt is not None
+        assert rebuilt is not cached
+        assert len(handled) == 3
+
+        # Пересобранный кеш дальше тоже переиспользуется.
+        await dispatcher.handle(fixture_message_created)
+        assert dispatcher._cached_router_entries is rebuilt
+        assert len(handled) == 4
 
     async def test_iter_dispatch_entries_is_lazy(self, dispatcher, bot):
         """_iter_dispatch_entries() возвращает ленивый генератор,
