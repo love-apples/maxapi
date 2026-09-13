@@ -2368,7 +2368,28 @@ class Dispatcher(BotMixin):
                 "Ожидаю завершения %d фоновых задач...",
                 len(pending),
             )
-            await asyncio.gather(*pending, return_exceptions=True)
+            # Именно wait(), а не gather(): задачу из пула удаляет её
+            # done-callback, который мог ещё не выполниться (задача
+            # завершилась, а нас разбудили раньше). С Python 3.12
+            # gather() по уже завершённым задачам не уступает цикл
+            # событий, и while крутился бы вечно. wait() всегда
+            # уступает, а call_soon выполняет callback'и по порядку —
+            # к пробуждению задачи убраны из пула, их ошибки
+            # залогированы.
+            try:
+                await asyncio.wait(pending)
+            except asyncio.CancelledError:
+                # gather() отменял бы дочерние задачи вместе с собой;
+                # wait() этого не делает — сохраняем поведение: отмена
+                # shutdown() (например, по таймауту lifespan) отменяет
+                # и недождавшиеся фоновые задачи.
+                for task in pending:
+                    task.cancel()
+                # cancel() лишь запрашивает отмену: как и gather(),
+                # дожидаемся, пока задачи доработают cleanup и уйдут
+                # из пула, и только потом пробрасываем отмену.
+                await asyncio.wait(pending)
+                raise
             drained = True
         if drained:
             logger_dp.info("Все фоновые задачи завершены")
