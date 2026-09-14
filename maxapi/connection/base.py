@@ -57,7 +57,7 @@ ERROR_DETAILS_LIMIT = 512
 
 
 class _RetryableServerError(Exception):
-    """Внутреннее исключение для retry при серверных ошибках.
+    """Внутреннее исключение для retry при временных ошибках.
 
     Attributes:
         status: HTTP-статус ответа сервера.
@@ -68,7 +68,8 @@ class _RetryableServerError(Exception):
     def __init__(self, status: int, body: str = "") -> None:
         self.status = status
         self.body = body
-        super().__init__(f"Server error {status}")
+        kind = "Rate limit" if status == 429 else "Server error"
+        super().__init__(f"{kind} {status}")
 
 
 async def _read_response_text(response: ClientResponse) -> str:
@@ -154,8 +155,8 @@ def _on_backoff(details: Details) -> None:
     exc = details["exception"]  # type: ignore[typeddict-item,assignment]
     if isinstance(exc, _RetryableServerError):
         logger_bot.warning(
-            "Серверная ошибка %d, попытка %d, жду %.1fс",
-            exc.status,
+            "%s, попытка %d, жду %.1fс",
+            exc,
             tries,
             wait,
         )
@@ -339,7 +340,7 @@ class BaseConnection(BotMixin):
         при серверных ошибках.
 
         При получении HTTP-статуса из списка ``retry_on_statuses``
-        (по умолчанию 502, 503, 504) запрос повторяется до
+        (по умолчанию 429, 502, 503, 504) запрос повторяется до
         ``max_retries`` раз с экспоненциальной задержкой.
 
         Args:
