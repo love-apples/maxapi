@@ -127,6 +127,54 @@ def _parse_json_object(text: str) -> dict[str, Any] | None:
     return parsed if isinstance(parsed, dict) else None
 
 
+# MAX API иногда возвращает HTTP 200 с success=False и текстовым
+# описанием ошибки в message, без machine-readable code (например,
+# при попытке отправить/отредактировать сообщение со вложением,
+# которое сервер ещё не успел обработать).
+#
+# success=False сам по себе не является ошибкой библиотеки — часть
+# методов (например AddedMembersChat) легитимно возвращает
+# success=False вместе с деталями вроде failed_user_details, и это
+# не должно приводить к исключению. Поэтому здесь мы нормализуем
+# в raw["code"] только заранее известные подстроки message, и
+# исключение бросается исключительно для них — в этом единственном
+# месте, а не отдельными проверками текста ошибки в каждом методе.
+_ERROR_CODE_BY_MESSAGE_SUBSTRING: dict[str, str] = {
+    "attachment.file.not.processed": "attachment.file.not.processed",
+}
+
+#: Коды ошибок, при которых SendMessage/EditMessage повторяют
+#: запрос, ожидая обработки вложения сервером.
+RETRYABLE_ATTACHMENT_ERROR_CODES = frozenset(
+    {"attachment.not.ready", "attachment.file.not.processed"}
+)
+
+
+def _normalize_error_code(raw: dict[str, Any]) -> str | None:
+    """
+    Сопоставляет ``raw["message"]`` с известным ``code``, если сам
+    ``code`` в ответе отсутствует.
+
+    Args:
+        raw: Сырое тело ответа API.
+
+    Returns:
+        str: Нормализованный код ошибки, если ``message`` совпал
+            с одним из известных паттернов.
+        None: Если ``code`` уже присутствует или совпадений
+            не найдено — в этом случае success=False не считается
+            ошибкой библиотеки.
+    """
+    if raw.get("code"):
+        return None
+
+    message = raw.get("message") or ""
+    for substring, code in _ERROR_CODE_BY_MESSAGE_SUBSTRING.items():
+        if substring in message:
+            return code
+    return None
+
+
 class NamedBytesIO(BytesIO):
     """
     BytesIO с поддержкой атрибута .name для единообразия с файловыми объектами.
@@ -426,6 +474,13 @@ class BaseConnection(BotMixin):
             # тело при 2xx — такой же сбой, как и не-2xx ответ
             _schedule_raw_response(bot, text)
             raise MaxApiError(code=response.status, raw=text)
+
+        if parsed.get("success") is False:
+            normalized_code = _normalize_error_code(parsed)
+            if normalized_code is not None:
+                parsed["code"] = normalized_code
+                _schedule_raw_response(bot, parsed)
+                raise MaxApiError(code=400, raw=parsed)
 
         _schedule_raw_response(bot, parsed)
 

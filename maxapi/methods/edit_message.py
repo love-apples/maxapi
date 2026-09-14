@@ -5,7 +5,7 @@ import time
 import warnings
 from typing import TYPE_CHECKING, Any, cast
 
-from ..connection.base import BaseConnection
+from ..connection.base import RETRYABLE_ATTACHMENT_ERROR_CODES, BaseConnection
 from ..enums.api_path import ApiPath
 from ..enums.http_method import HTTPMethod
 from ..enums.parse_mode import ParseMode, TextFormat
@@ -162,7 +162,7 @@ class EditMessage(BaseConnection):
             except MaxApiError as e:
                 if (
                     isinstance(e.raw, dict)
-                    and e.raw.get("code") == "attachment.not.ready"
+                    and e.raw.get("code") in RETRYABLE_ATTACHMENT_ERROR_CODES
                 ):
                     elapsed = time.monotonic() - start_time
                     if (
