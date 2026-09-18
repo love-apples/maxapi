@@ -6,6 +6,9 @@ from aiohttp import ClientTimeout
 
 # 429 (лимит запросов MAX) в дефолт не входит: включается явно через
 # retry_on_statuses, чтобы не менять поведение существующих приложений.
+# Проверено на platform-api2.max.ru 2026-09-18: ответ 429 не содержит
+# Retry-After, тело — {"code": "too.many.requests", "message": "Too many
+# requests. Limit is: 10 calls per second."}.
 DEFAULT_RETRY_STATUSES: tuple[int, ...] = (502, 503, 504)
 
 
@@ -56,9 +59,8 @@ class DefaultConnectionProperties:
             задержки между попытками в секундах (по умолчанию 1.0).
             Верхние границы задержек: 1с, 2с, 4с; фактическая
             задержка случайна в диапазоне от 0 до границы
-            (full jitter). Если ответ со статусом из
-            ``retry_on_statuses`` содержит заголовок ``Retry-After``,
-            ждём указанное в нём время, но не больше 60 с.
+            (full jitter). Заголовок ``Retry-After`` не учитывается:
+            API MAX его не присылает.
         on_retry: Колбэк перед каждым повтором (см. ``RetryEvent``).
             Позволяет притормозить остальные запросы приложения
             или вернуть ``False`` и отменить повтор. Исключение

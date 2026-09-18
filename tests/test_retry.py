@@ -1,8 +1,6 @@
 """Тесты retry-механизма для временных ошибок (502, 503, 504, 429)."""
 
 import json
-from datetime import datetime, timedelta, timezone
-from email.utils import format_datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -13,12 +11,7 @@ from maxapi.client.default import (
     DefaultConnectionProperties,
     RetryEvent,
 )
-from maxapi.connection.base import (
-    RETRY_AFTER_MAX,
-    BaseConnection,
-    _parse_retry_after,
-    _retry_wait,
-)
+from maxapi.connection.base import BaseConnection
 from maxapi.enums.http_method import HTTPMethod
 from maxapi.exceptions.download_file import DownloadFileError
 from maxapi.exceptions.max import (
@@ -28,13 +21,10 @@ from maxapi.exceptions.max import (
 )
 
 
-def _make_response(
-    status, *, ok=None, json_data=None, text=None, headers=None
-):
+def _make_response(status, *, ok=None, json_data=None, text=None):
     """Создаёт мок aiohttp-ответа с async-методами."""
     resp = MagicMock()
     resp.status = status
-    resp.headers = headers or {}
     resp.ok = ok if ok is not None else (200 <= status < 300)
     resp.read = AsyncMock()
     if text is None:
@@ -588,8 +578,15 @@ class TestRateLimitStatus:
         assert exc_info.value.raw == "rate limit exceeded"
 
 
-class TestRetryAfterAndHook:
-    """Retry-After и пользовательский колбэк on_retry."""
+#: Тело ответа 429 живого API (platform-api2.max.ru, 2026-09-18).
+LIVE_429_BODY = (
+    '{"code":"too.many.requests",'
+    '"message":"Too many requests. Limit is: 10 calls per second."}'
+)
+
+
+class TestOnRetryHook:
+    """Пользовательский колбэк on_retry."""
 
     @staticmethod
     def _bot(mock_bot_token, **conn_kwargs):
@@ -605,28 +602,6 @@ class TestRetryAfterAndHook:
         base.bot = bot
         return bot, base
 
-    def test_wait_is_jittered_expo_without_retry_after(self):
-        """Без Retry-After задержка в пределах [0, factor * 2**n]."""
-        gen = _retry_wait(1.0)
-        next(gen)
-        for bound in (1, 2, 4):
-            assert 0 <= gen.send(Exception()) <= bound
-
-    @pytest.mark.asyncio
-    async def test_retry_after_header_is_respected(self, mock_bot_token):
-        """Задержка берётся из Retry-After, а не из backoff."""
-        bot, base = self._bot(mock_bot_token)
-        error = _make_response(429, headers={"Retry-After": "7"})
-        success = _make_response(200, json_data={"ok": True})
-        bot.session.request = AsyncMock(side_effect=[error, success])
-
-        with patch("asyncio.sleep", new_callable=AsyncMock) as sleep:
-            await base.request(
-                method=HTTPMethod.GET, path="/test", is_return_raw=True
-            )
-
-        sleep.assert_awaited_once_with(7.0)
-
     @pytest.mark.asyncio
     async def test_on_retry_receives_event(self, mock_bot_token):
         """Асинхронный колбэк получает статус, попытку, задержку и тело."""
@@ -636,20 +611,20 @@ class TestRetryAfterAndHook:
             events.append(event)
 
         bot, base = self._bot(mock_bot_token, on_retry=on_retry)
-        error = _make_response(
-            429, text="slow down", headers={"Retry-After": "3"}
-        )
+        error = _make_response(429, text=LIVE_429_BODY)
         success = _make_response(200, json_data={"ok": True})
         bot.session.request = AsyncMock(side_effect=[error, success])
 
-        with patch("asyncio.sleep", new_callable=AsyncMock):
+        with patch("asyncio.sleep", new_callable=AsyncMock) as sleep:
             await base.request(
                 method=HTTPMethod.GET, path="/test", is_return_raw=True
             )
 
+        (delay,) = sleep.await_args.args
         assert events == [
-            RetryEvent(status=429, attempt=1, delay=3.0, body="slow down")
+            RetryEvent(status=429, attempt=1, delay=delay, body=LIVE_429_BODY)
         ]
+        assert 0 <= delay <= 1
 
     @pytest.mark.asyncio
     async def test_on_retry_false_cancels_retry(self, mock_bot_token):
@@ -668,21 +643,6 @@ class TestRetryAfterAndHook:
         assert exc_info.value.code == 429
         assert bot.session.request.call_count == 1
         sleep.assert_not_awaited()
-
-    @pytest.mark.asyncio
-    async def test_huge_retry_after_is_capped(self, mock_bot_token):
-        """Огромный Retry-After не замораживает request()."""
-        bot, base = self._bot(mock_bot_token)
-        error = _make_response(429, headers={"Retry-After": "999999999"})
-        success = _make_response(200, json_data={"ok": True})
-        bot.session.request = AsyncMock(side_effect=[error, success])
-
-        with patch("asyncio.sleep", new_callable=AsyncMock) as sleep:
-            await base.request(
-                method=HTTPMethod.GET, path="/test", is_return_raw=True
-            )
-
-        sleep.assert_awaited_once_with(RETRY_AFTER_MAX)
 
     @pytest.mark.asyncio
     async def test_on_retry_exception_propagates(self, mock_bot_token):
@@ -706,11 +666,11 @@ class TestRetryAfterAndHook:
         assert bot.session.request.call_count == 1
 
     @pytest.mark.asyncio
-    async def test_fetch_response_respects_retry_after(self, mock_bot_token):
-        """_fetch_response учитывает Retry-After и вызывает on_retry."""
+    async def test_fetch_response_calls_on_retry(self, mock_bot_token):
+        """_fetch_response вызывает on_retry перед повтором."""
         events: list[RetryEvent] = []
         bot, base = self._bot(mock_bot_token, on_retry=events.append)
-        error = _make_response(503, headers={"Retry-After": "2"})
+        error = _make_response(503)
         success = _make_response(200)
         bot.session.request = AsyncMock(side_effect=[error, success])
 
@@ -718,8 +678,10 @@ class TestRetryAfterAndHook:
             response = await base._fetch_response("https://example.com/f")
 
         assert response is success
-        sleep.assert_awaited_once_with(2.0)
-        assert [(e.status, e.delay) for e in events] == [(503, 2.0)]
+        (delay,) = sleep.await_args.args
+        assert [(e.status, e.attempt, e.delay) for e in events] == [
+            (503, 1, delay)
+        ]
 
     @pytest.mark.asyncio
     async def test_fetch_response_on_retry_false(self, mock_bot_token):
@@ -734,64 +696,3 @@ class TestRetryAfterAndHook:
             await base._fetch_response("https://example.com/f")
 
         assert bot.session.request.call_count == 1
-
-
-class TestParseRetryAfter:
-    """Разбор заголовка Retry-After."""
-
-    @pytest.mark.parametrize(
-        ("value", "expected"),
-        [
-            ("0", 0.0),
-            ("5", 5.0),
-            (" 7 ", 7.0),
-            ("1.5", 1.5),
-            ("999999999", RETRY_AFTER_MAX),
-            ("1" * 400, RETRY_AFTER_MAX),
-        ],
-    )
-    def test_seconds(self, value, expected):
-        """Число секунд принимается и ограничивается потолком."""
-        assert _parse_retry_after(value) == expected
-
-    @pytest.mark.parametrize(
-        "value",
-        [
-            None,
-            "",
-            "   ",
-            "-5",
-            "inf",
-            "Infinity",
-            "nan",
-            "1e9",
-            "+5",
-            "abc",
-            "5s",
-            "\u0665",  # арабско-индийская цифра 5
-            "Mon, 99 Foo 2026 25:61:61 GMT",
-        ],
-    )
-    def test_invalid_values_are_ignored(self, value):
-        """Мусор, отрицательные и нечисловые значения отбрасываются."""
-        assert _parse_retry_after(value) is None
-
-    def test_http_date_in_future(self):
-        """HTTP-дата превращается в задержку до неё."""
-        when = datetime.now(timezone.utc) + timedelta(seconds=30)
-        delay = _parse_retry_after(format_datetime(when, usegmt=True))
-        assert delay is not None
-        assert 28 <= delay <= 30
-
-    def test_http_date_in_past_is_zero(self):
-        """HTTP-дата в прошлом даёт нулевую задержку."""
-        when = datetime.now(timezone.utc) - timedelta(hours=1)
-        assert _parse_retry_after(format_datetime(when, usegmt=True)) == 0.0
-
-    def test_far_future_http_date_is_capped(self):
-        """Дата в далёком будущем ограничивается потолком."""
-        when = datetime.now(timezone.utc) + timedelta(days=365)
-        assert (
-            _parse_retry_after(format_datetime(when, usegmt=True))
-            == RETRY_AFTER_MAX
-        )

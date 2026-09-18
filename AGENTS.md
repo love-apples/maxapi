@@ -30,8 +30,8 @@ Async Python SDK + bot-фреймворк для мессенджера **MAX** 
   `methods/send_message.py` как канонический пример (включая retry на `attachment.not.ready`).
 - `maxapi/connection/base.py` — `BaseConnection.request()`: единый HTTP-pipe c `aiohttp`,
   backoff-ретраями статусов из `retry_on_statuses` и `ClientConnectionError` (общий декоратор
-  `_retrying`; задержка из `Retry-After` с потолком `RETRY_AFTER_MAX`, иначе экспонента с full
-  jitter в `_retry_wait`), парсингом ответа в pydantic-модель,
+  `_retrying`, экспонента с full jitter; `Retry-After` API MAX не присылает, поэтому не
+  читается), парсингом ответа в pydantic-модель,
   выбросом `MaxApiError`/`InvalidToken`/`MaxConnection`. Разделяемую сессию `request()` **не
   закрывает** — её жизненный цикл принадлежит `Bot` (`close_session`); на 401 тело ответа читается
   в текст `InvalidToken`, уходит в `handle_raw_response` и ответ освобождается через
