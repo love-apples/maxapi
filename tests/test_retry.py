@@ -1,4 +1,4 @@
-"""Тесты retry-механизма для серверных ошибок (502, 503, 504)."""
+"""Тесты retry-механизма для временных ошибок (502, 503, 504, 429)."""
 
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -9,9 +9,11 @@ from maxapi import Bot
 from maxapi.client.default import (
     DEFAULT_RETRY_STATUSES,
     DefaultConnectionProperties,
+    RetryEvent,
 )
 from maxapi.connection.base import BaseConnection
 from maxapi.enums.http_method import HTTPMethod
+from maxapi.exceptions.download_file import DownloadFileError
 from maxapi.exceptions.max import (
     InvalidToken,
     MaxApiError,
@@ -487,3 +489,210 @@ class TestRetryResponseBodyConsumed:
             )
 
         error.text.assert_awaited_once()
+
+
+RATE_LIMIT_STATUSES = (429, *DEFAULT_RETRY_STATUSES)
+
+
+class TestRateLimitStatus:
+    """Тесты обработки 429 (превышение лимита запросов MAX)."""
+
+    @pytest.mark.asyncio
+    async def test_429_not_retried_by_default(self, mock_bot_token):
+        """С дефолтными настройками 429 сразу поднимает MaxApiError."""
+        bot = Bot(token=mock_bot_token)
+        session = MagicMock()
+        session.closed = False
+        session.request = AsyncMock(
+            return_value=_make_response(429, text="limit")
+        )
+        bot.session = session
+
+        base = BaseConnection()
+        base.bot = bot
+
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock) as sleep,
+            pytest.raises(MaxApiError) as exc_info,
+        ):
+            await base.request(method=HTTPMethod.GET, path="/test")
+
+        assert exc_info.value.code == 429
+        assert session.request.call_count == 1
+        sleep.assert_not_awaited()
+
+    @pytest.fixture
+    def bot_with_defaults(self, mock_bot_token):
+        """Бот с явно включённым retry 429 и мок-сессией."""
+        conn = DefaultConnectionProperties(
+            max_retries=2,
+            retry_on_statuses=RATE_LIMIT_STATUSES,
+            retry_backoff_factor=0.01,
+        )
+        bot = Bot(token=mock_bot_token, default_connection=conn)
+        session = MagicMock()
+        session.closed = False
+        session.close = AsyncMock()
+        bot.session = session
+        return bot
+
+    @pytest.mark.asyncio
+    async def test_retry_on_429_when_enabled(self, bot_with_defaults):
+        """429 повторяется, если включён в retry_on_statuses."""
+        error = _make_response(429)
+        success = _make_response(200, json_data={"ok": True})
+
+        bot_with_defaults.session.request = AsyncMock(
+            side_effect=[error, success]
+        )
+
+        base = BaseConnection()
+        base.bot = bot_with_defaults
+
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            result = await base.request(
+                method=HTTPMethod.GET,
+                path="/test",
+                is_return_raw=True,
+            )
+
+        assert result == {"ok": True}
+        assert bot_with_defaults.session.request.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_429_exhausted_raises_max_api_error(self, bot_with_defaults):
+        """После исчерпания попыток поднимается MaxApiError с кодом 429."""
+        error = _make_response(429, text="rate limit exceeded")
+        bot_with_defaults.session.request = AsyncMock(return_value=error)
+
+        base = BaseConnection()
+        base.bot = bot_with_defaults
+
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock),
+            pytest.raises(MaxApiError) as exc_info,
+        ):
+            await base.request(method=HTTPMethod.GET, path="/test")
+
+        assert exc_info.value.code == 429
+        assert exc_info.value.raw == "rate limit exceeded"
+
+
+#: Тело ответа 429 живого API (platform-api2.max.ru, 2026-09-18).
+LIVE_429_BODY = (
+    '{"code":"too.many.requests",'
+    '"message":"Too many requests. Limit is: 10 calls per second."}'
+)
+
+
+class TestOnRetryHook:
+    """Пользовательский колбэк on_retry."""
+
+    @staticmethod
+    def _bot(mock_bot_token, **conn_kwargs):
+        conn = DefaultConnectionProperties(
+            max_retries=2, retry_on_statuses=RATE_LIMIT_STATUSES, **conn_kwargs
+        )
+        bot = Bot(token=mock_bot_token, default_connection=conn)
+        session = MagicMock()
+        session.closed = False
+        session.close = AsyncMock()
+        bot.session = session
+        base = BaseConnection()
+        base.bot = bot
+        return bot, base
+
+    @pytest.mark.asyncio
+    async def test_on_retry_receives_event(self, mock_bot_token):
+        """Асинхронный колбэк получает статус, попытку, задержку и тело."""
+        events: list[RetryEvent] = []
+
+        async def on_retry(event: RetryEvent) -> None:
+            events.append(event)
+
+        bot, base = self._bot(mock_bot_token, on_retry=on_retry)
+        error = _make_response(429, text=LIVE_429_BODY)
+        success = _make_response(200, json_data={"ok": True})
+        bot.session.request = AsyncMock(side_effect=[error, success])
+
+        with patch("asyncio.sleep", new_callable=AsyncMock) as sleep:
+            await base.request(
+                method=HTTPMethod.GET, path="/test", is_return_raw=True
+            )
+
+        (delay,) = sleep.await_args.args
+        assert events == [
+            RetryEvent(status=429, attempt=1, delay=delay, body=LIVE_429_BODY)
+        ]
+        assert 0 <= delay <= 1
+
+    @pytest.mark.asyncio
+    async def test_on_retry_false_cancels_retry(self, mock_bot_token):
+        """Колбэк, вернувший False, сразу отдаёт MaxApiError без повтора."""
+        bot, base = self._bot(mock_bot_token, on_retry=lambda event: False)
+        bot.session.request = AsyncMock(
+            return_value=_make_response(429, text="limit")
+        )
+
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock) as sleep,
+            pytest.raises(MaxApiError) as exc_info,
+        ):
+            await base.request(method=HTTPMethod.GET, path="/test")
+
+        assert exc_info.value.code == 429
+        assert bot.session.request.call_count == 1
+        sleep.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_on_retry_exception_propagates(self, mock_bot_token):
+        """Исключение из on_retry уходит из request() как есть."""
+
+        class StopRetry(Exception):
+            pass
+
+        def on_retry(event: RetryEvent) -> None:
+            raise StopRetry
+
+        bot, base = self._bot(mock_bot_token, on_retry=on_retry)
+        bot.session.request = AsyncMock(return_value=_make_response(429))
+
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock),
+            pytest.raises(StopRetry),
+        ):
+            await base.request(method=HTTPMethod.GET, path="/test")
+
+        assert bot.session.request.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_fetch_response_calls_on_retry(self, mock_bot_token):
+        """_fetch_response вызывает on_retry перед повтором."""
+        events: list[RetryEvent] = []
+        bot, base = self._bot(mock_bot_token, on_retry=events.append)
+        error = _make_response(503)
+        success = _make_response(200)
+        bot.session.request = AsyncMock(side_effect=[error, success])
+
+        with patch("asyncio.sleep", new_callable=AsyncMock) as sleep:
+            response = await base._fetch_response("https://example.com/f")
+
+        assert response is success
+        (delay,) = sleep.await_args.args
+        assert [(e.status, e.attempt, e.delay) for e in events] == [
+            (503, 1, delay)
+        ]
+
+    @pytest.mark.asyncio
+    async def test_fetch_response_on_retry_false(self, mock_bot_token):
+        """Отмена повтора в _fetch_response даёт DownloadFileError."""
+        bot, base = self._bot(mock_bot_token, on_retry=lambda event: False)
+        bot.session.request = AsyncMock(return_value=_make_response(429))
+
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock),
+            pytest.raises(DownloadFileError, match="429"),
+        ):
+            await base._fetch_response("https://example.com/f")
+
+        assert bot.session.request.call_count == 1
