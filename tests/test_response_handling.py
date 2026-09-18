@@ -233,12 +233,7 @@ class TestRequestNonJsonBody:
         base = BaseConnection()
         base.bot = bot
 
-        # Тест про разбор тела, а не про повторы: без патча sleep
-        # дефолтный retry 429 реально ждёт несколько секунд
-        with (
-            patch("asyncio.sleep", new_callable=AsyncMock),
-            pytest.raises(MaxApiError) as exc_info,
-        ):
+        with pytest.raises(MaxApiError) as exc_info:
             await base.request(
                 method=HTTPMethod.GET,
                 path="/test",

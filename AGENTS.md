@@ -14,7 +14,10 @@ Async Python SDK + bot-фреймворк для мессенджера **MAX** 
   `after_upload_give_up_timeout`; настройки polling: `marker_updates`, `auto_check_subscriptions`;
   конфигурацию HTTP-соединения: `default_connection: DefaultConnectionProperties`.
 - `maxapi/client/default.py` — `DefaultConnectionProperties`: настройки aiohttp-клиента (таймауты,
-  `max_retries`, `retry_on_statuses`, `retry_backoff_factor`).
+  `max_retries`, `retry_on_statuses` (дефолт `502, 503, 504`; 429 включается только явно),
+  `retry_backoff_factor`, `on_retry`). `on_retry` — sync/async колбэк перед каждым повтором,
+  получает `RetryEvent(status, attempt, delay, body)`; `False` отменяет повтор, собственное
+  исключение колбэка уходит из `request()` как есть.
   Передаётся в `Bot(default_connection=DefaultConnectionProperties(...))`. Остальные `**kwargs`
   уходят в `ClientSession` через `client/ssl.py`. **Владение коннектором**: переданный
   пользователем `connector` — чужой, `with_default_connector`/`connector_kwargs` проставляют ему
@@ -26,7 +29,9 @@ Async Python SDK + bot-фреймворк для мессенджера **MAX** 
   API-метод = новый файл здесь + проксирующий метод в `Bot` + типы ответа в `methods/types/`**. См.
   `methods/send_message.py` как канонический пример (включая retry на `attachment.not.ready`).
 - `maxapi/connection/base.py` — `BaseConnection.request()`: единый HTTP-pipe c `aiohttp`,
-  backoff-ретраями серверных 5xx и `ClientConnectionError`, парсингом ответа в pydantic-модель,
+  backoff-ретраями статусов из `retry_on_statuses` и `ClientConnectionError` (общий декоратор
+  `_retrying`; задержка из `Retry-After` с потолком `RETRY_AFTER_MAX`, иначе экспонента с full
+  jitter в `_retry_wait`), парсингом ответа в pydantic-модель,
   выбросом `MaxApiError`/`InvalidToken`/`MaxConnection`. Разделяемую сессию `request()` **не
   закрывает** — её жизненный цикл принадлежит `Bot` (`close_session`); на 401 тело ответа читается
   в текст `InvalidToken`, уходит в `handle_raw_response` и ответ освобождается через

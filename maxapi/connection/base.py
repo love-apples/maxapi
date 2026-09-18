@@ -59,6 +59,11 @@ DOWNLOAD_CHUNK_SIZE = 65536
 #: уходит подписчикам ``RAW_API_RESPONSE`` без усечения.
 ERROR_DETAILS_LIMIT = 512
 
+#: Потолок ожидания по ``Retry-After`` в секундах.
+RETRY_AFTER_MAX = 60.0
+
+_RETRY_AFTER_SECONDS = re.compile(r"[0-9]+(?:\.[0-9]+)?")
+
 
 class _RetryableServerError(Exception):
     """Внутреннее исключение для retry при временных ошибках.
@@ -152,41 +157,48 @@ class NamedBytesIO(BytesIO):
         self.name = name  # Соответствует протоколу typing.BinaryIO
 
 
-def _parse_retry_after(response: ClientResponse) -> float | None:
-    """Читает заголовок ``Retry-After`` (секунды или HTTP-дата).
+def _parse_retry_after(value: str | None) -> float | None:
+    """Разбирает значение заголовка ``Retry-After``.
 
-    Документация MAX для 429 заголовок не описывает; поддержка нужна
-    на случай, если API начнёт его отдавать.
+    Принимаются только форматы RFC 9110: неотрицательное число секунд
+    или HTTP-дата. Всё остальное (``inf``, ``nan``, отрицательные
+    числа, мусор) отбрасывается. Результат ограничен сверху
+    ``RETRY_AFTER_MAX``: long polling идёт через тот же ``request()``,
+    и огромное значение заморозило бы диспетчер.
+
+    Документация MAX (dev.max.ru/docs-api) для 429 заголовок
+    не описывает.
 
     Args:
-        response: Ответ aiohttp.
+        value: Значение заголовка или None.
 
     Returns:
-        float | None: Задержка в секундах или None, если заголовка
-            нет или его не удалось разобрать.
+        float | None: Задержка в секундах из диапазона
+            ``[0, RETRY_AFTER_MAX]`` или None, если заголовка нет
+            или он некорректен.
     """
-    value = response.headers.get("Retry-After")
     if not isinstance(value, str):
         return None
-    try:
-        return max(0.0, float(value))
-    except ValueError:
-        pass
+    value = value.strip()
+    if _RETRY_AFTER_SECONDS.fullmatch(value):
+        return min(float(value), RETRY_AFTER_MAX)
     try:
         when = parsedate_to_datetime(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, IndexError):
         return None
     if when.tzinfo is None:
         when = when.replace(tzinfo=timezone.utc)
-    return max(0.0, (when - datetime.now(timezone.utc)).total_seconds())
+    delay = (when - datetime.now(timezone.utc)).total_seconds()
+    return min(max(0.0, delay), RETRY_AFTER_MAX)
 
 
 def _retry_wait(factor: float) -> Generator[float, Any, None]:
     """Генератор задержек для ``backoff``.
 
-    ``Retry-After`` из ответа сервера важнее расчётной задержки
-    и берётся как есть. Иначе — экспонента ``factor * 2**n``
-    с full jitter (как дефолт ``backoff``).
+    ``Retry-After`` из ответа сервера (для любого статуса из
+    ``retry_on_statuses``) важнее расчётной задержки и берётся как
+    есть, уже ограниченным ``RETRY_AFTER_MAX``. Иначе — экспонента
+    ``factor * 2**n`` с full jitter (как дефолт ``backoff``).
     """
     expo = backoff.expo(factor=factor)
     next(expo)  # первичная инициализация генератора
@@ -209,6 +221,8 @@ def _user_retry_hook(
     Если колбэк вернул ``False``, исходное исключение поднимается
     из обработчика: ``backoff`` прекращает повторы, а ``request()``
     превращает его в ``MaxApiError``/``MaxConnection`` как обычно.
+    Собственное исключение колбэка не оборачивается и уходит
+    вызывающему коду как есть.
     """
 
     async def hook(details: Details) -> None:
@@ -439,11 +453,11 @@ class BaseConnection(BotMixin):
         при временных HTTP-ошибках.
 
         При получении HTTP-статуса из списка ``retry_on_statuses``
-        (по умолчанию 429, 502, 503, 504) запрос повторяется до
-        ``max_retries`` раз. Задержка берётся из ``Retry-After``,
-        если сервер его прислал, иначе — экспонента с full jitter.
-        Перед каждым повтором вызывается ``on_retry`` из настроек
-        соединения, если он задан.
+        (по умолчанию 502, 503, 504) запрос повторяется до
+        ``max_retries`` раз. Задержка берётся из ``Retry-After``
+        (не больше ``RETRY_AFTER_MAX``), если сервер его прислал,
+        иначе — экспонента с full jitter. Перед каждым повтором
+        вызывается ``on_retry`` из настроек соединения, если он задан.
 
         Args:
             method: HTTP-метод (GET, POST и т.д.).
@@ -463,6 +477,8 @@ class BaseConnection(BotMixin):
             InvalidToken: Ошибка авторизации (401).
             MaxApiError: Ошибка API (после исчерпания retry), а также
                 если успешный ответ не содержит JSON-объекта.
+            Exception: Любое исключение, поднятое колбэком
+                ``on_retry``, пробрасывается как есть.
         """
 
         bot = self._ensure_bot()
@@ -497,7 +513,7 @@ class BaseConnection(BotMixin):
                 raise _RetryableServerError(
                     resp.status,
                     await _read_response_text(resp),
-                    _parse_retry_after(resp),
+                    _parse_retry_after(resp.headers.get("Retry-After")),
                 )
 
             return resp
@@ -693,7 +709,10 @@ class BaseConnection(BotMixin):
             if resp.status in conn.retry_on_statuses:
                 await resp.read()
                 raise _RetryableServerError(
-                    resp.status, retry_after=_parse_retry_after(resp)
+                    resp.status,
+                    retry_after=_parse_retry_after(
+                        resp.headers.get("Retry-After")
+                    ),
                 )
             return resp
 
