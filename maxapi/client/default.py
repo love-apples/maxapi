@@ -1,3 +1,5 @@
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from typing import Any
 
 from aiohttp import ClientTimeout
@@ -5,6 +7,30 @@ from aiohttp import ClientTimeout
 # 429 — превышение лимита запросов MAX: ответ временный, повтор с задержкой
 # уместен ровно так же, как при серверных 5xx.
 DEFAULT_RETRY_STATUSES: tuple[int, ...] = (429, 502, 503, 504)
+
+
+@dataclass(frozen=True)
+class RetryEvent:
+    """Сведения о неудачной попытке перед повтором запроса.
+
+    Attributes:
+        status: HTTP-статус ответа; ``None`` при ошибке соединения.
+        attempt: Номер неудачной попытки, начиная с 1.
+        delay: Задержка в секундах перед следующей попыткой.
+        body: Тело ответа сервера; пустая строка при ошибке
+            соединения.
+    """
+
+    status: int | None
+    attempt: int
+    delay: float
+    body: str = ""
+
+
+#: Колбэк, вызываемый перед каждым повтором. Может быть синхронным
+#: или асинхронным. Возврат ``False`` отменяет повтор: ошибка сразу
+#: уходит вызывающему коду (``MaxApiError`` или ``MaxConnection``).
+RetryCallback = Callable[[RetryEvent], "Awaitable[bool | None] | bool | None"]
 
 
 class DefaultConnectionProperties:
@@ -23,8 +49,14 @@ class DefaultConnectionProperties:
             выполняется повторная попытка
             (по умолчанию 429, 502, 503, 504).
         retry_backoff_factor: Множитель для экспоненциальной
-            задержки между попытками в секундах
-            (по умолчанию 1.0, задержки: 1с, 2с, 4с).
+            задержки между попытками в секундах (по умолчанию 1.0).
+            Верхние границы задержек: 1с, 2с, 4с; фактическая
+            задержка случайна в диапазоне от 0 до границы
+            (full jitter). Если ответ 429 содержит заголовок
+            ``Retry-After``, ждём ровно указанное в нём время.
+        on_retry: Колбэк перед каждым повтором (см. ``RetryEvent``).
+            Позволяет притормозить остальные запросы приложения
+            или вернуть ``False`` и отменить повтор.
         **kwargs: Дополнительные параметры, которые будут
             сохранены как есть.
 
@@ -34,6 +66,7 @@ class DefaultConnectionProperties:
         max_retries: Максимальное количество повторных попыток.
         retry_on_statuses: HTTP-статусы для retry.
         retry_backoff_factor: Множитель задержки.
+        on_retry: Колбэк перед повтором или None.
         kwargs: Дополнительные параметры.
     """
 
@@ -45,6 +78,7 @@ class DefaultConnectionProperties:
         max_retries: int = 3,
         retry_on_statuses: tuple[int, ...] = DEFAULT_RETRY_STATUSES,
         retry_backoff_factor: float = 1.0,
+        on_retry: RetryCallback | None = None,
         **kwargs: Any,
     ):
         """
@@ -59,6 +93,7 @@ class DefaultConnectionProperties:
             retry_on_statuses: HTTP-статусы
                 для retry.
             retry_backoff_factor: Множитель задержки.
+            on_retry: Колбэк перед каждым повтором.
             **kwargs: Дополнительные параметры.
         """
         self.timeout = ClientTimeout(total=timeout, sock_connect=sock_connect)
@@ -67,4 +102,5 @@ class DefaultConnectionProperties:
         self.max_retries = max_retries
         self.retry_on_statuses = retry_on_statuses
         self.retry_backoff_factor = retry_backoff_factor
+        self.on_retry = on_retry
         self.kwargs = kwargs

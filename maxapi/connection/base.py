@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import inspect
 import mimetypes
 import re
-from datetime import datetime
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from io import BytesIO
 from json import loads
 from pathlib import Path
@@ -23,6 +25,7 @@ from aiohttp import (
 )
 from puremagic.main import PureError
 
+from ..client.default import RetryEvent
 from ..client.ssl import connector_kwargs
 from ..enums.api_path import ApiPath
 from ..enums.update import UpdateType
@@ -39,12 +42,13 @@ from ..utils.runtime import bind_bot
 from ..utils.upload_limits import check_upload_size
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Callable, Generator
 
     from backoff.types import Details
     from pydantic import BaseModel
 
     from ..bot import Bot
+    from ..client.default import DefaultConnectionProperties
     from ..enums.http_method import HTTPMethod
     from ..enums.upload_type import UploadType
 
@@ -63,11 +67,16 @@ class _RetryableServerError(Exception):
         status: HTTP-статус ответа сервера.
         body: Прочитанное тело ответа. Пустая строка, если тело
             не читалось или прочитать его не удалось.
+        retry_after: Задержка из заголовка ``Retry-After`` в секундах
+            или None, если заголовка нет или он не разобран.
     """
 
-    def __init__(self, status: int, body: str = "") -> None:
+    def __init__(
+        self, status: int, body: str = "", retry_after: float | None = None
+    ) -> None:
         self.status = status
         self.body = body
+        self.retry_after = retry_after
         kind = "Rate limit" if status == 429 else "Server error"
         super().__init__(f"{kind} {status}")
 
@@ -141,6 +150,96 @@ class NamedBytesIO(BytesIO):
     ) -> None:
         super().__init__(buffer)
         self.name = name  # Соответствует протоколу typing.BinaryIO
+
+
+def _parse_retry_after(response: ClientResponse) -> float | None:
+    """Читает заголовок ``Retry-After`` (секунды или HTTP-дата).
+
+    Документация MAX для 429 заголовок не описывает; поддержка нужна
+    на случай, если API начнёт его отдавать.
+
+    Args:
+        response: Ответ aiohttp.
+
+    Returns:
+        float | None: Задержка в секундах или None, если заголовка
+            нет или его не удалось разобрать.
+    """
+    value = response.headers.get("Retry-After")
+    if not isinstance(value, str):
+        return None
+    try:
+        return max(0.0, float(value))
+    except ValueError:
+        pass
+    try:
+        when = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return max(0.0, (when - datetime.now(timezone.utc)).total_seconds())
+
+
+def _retry_wait(factor: float) -> Generator[float, Any, None]:
+    """Генератор задержек для ``backoff``.
+
+    ``Retry-After`` из ответа сервера важнее расчётной задержки
+    и берётся как есть. Иначе — экспонента ``factor * 2**n``
+    с full jitter (как дефолт ``backoff``).
+    """
+    expo = backoff.expo(factor=factor)
+    next(expo)  # первичная инициализация генератора
+    exc = yield  # type: ignore[misc]
+    while True:
+        delay = next(expo)
+        retry_after = getattr(exc, "retry_after", None)
+        exc = yield (
+            retry_after
+            if retry_after is not None
+            else backoff.full_jitter(delay)
+        )
+
+
+def _user_retry_hook(
+    conn: DefaultConnectionProperties,
+) -> Callable[[Details], Any]:
+    """Оборачивает ``conn.on_retry`` в обработчик ``on_backoff``.
+
+    Если колбэк вернул ``False``, исходное исключение поднимается
+    из обработчика: ``backoff`` прекращает повторы, а ``request()``
+    превращает его в ``MaxApiError``/``MaxConnection`` как обычно.
+    """
+
+    async def hook(details: Details) -> None:
+        if conn.on_retry is None:
+            return
+        exc = details["exception"]  # type: ignore[typeddict-item]
+        event = RetryEvent(
+            status=getattr(exc, "status", None),
+            attempt=details["tries"],
+            delay=details["wait"],  # type: ignore[typeddict-item]
+            body=getattr(exc, "body", ""),
+        )
+        result = conn.on_retry(event)
+        if inspect.isawaitable(result):
+            result = await result
+        if result is False:
+            raise exc
+
+    return hook
+
+
+def _retrying(conn: DefaultConnectionProperties) -> Callable[..., Any]:
+    """Декоратор повторов запроса по настройкам соединения."""
+    return backoff.on_exception(
+        _retry_wait,
+        (ClientConnectionError, _RetryableServerError),
+        max_tries=conn.max_retries + 1,
+        jitter=None,  # jitter применяется в _retry_wait
+        on_backoff=[_on_backoff, _user_retry_hook(conn)],
+        factor=conn.retry_backoff_factor,
+    )
 
 
 def _on_backoff(details: Details) -> None:
@@ -341,7 +440,10 @@ class BaseConnection(BotMixin):
 
         При получении HTTP-статуса из списка ``retry_on_statuses``
         (по умолчанию 429, 502, 503, 504) запрос повторяется до
-        ``max_retries`` раз с экспоненциальной задержкой.
+        ``max_retries`` раз. Задержка берётся из ``Retry-After``,
+        если сервер его прислал, иначе — экспонента с full jitter.
+        Перед каждым повтором вызывается ``on_retry`` из настроек
+        соединения, если он задан.
 
         Args:
             method: HTTP-метод (GET, POST и т.д.).
@@ -370,13 +472,7 @@ class BaseConnection(BotMixin):
         path_str = path.value if isinstance(path, ApiPath) else path
         url = bot.api_url + path_str
 
-        @backoff.on_exception(
-            backoff.expo,
-            (ClientConnectionError, _RetryableServerError),
-            max_tries=conn.max_retries + 1,
-            factor=conn.retry_backoff_factor,
-            on_backoff=_on_backoff,
-        )
+        @_retrying(conn)
         async def _do_request() -> Any:
             session = await bot.ensure_session()
             resp = await _session_request(
@@ -399,7 +495,9 @@ class BaseConnection(BotMixin):
 
             if resp.status in retry_statuses:
                 raise _RetryableServerError(
-                    resp.status, await _read_response_text(resp)
+                    resp.status,
+                    await _read_response_text(resp),
+                    _parse_retry_after(resp),
                 )
 
             return resp
@@ -588,19 +686,15 @@ class BaseConnection(BotMixin):
         bot = self._ensure_bot()
         conn = bot.default_connection
 
-        @backoff.on_exception(
-            backoff.expo,
-            (ClientConnectionError, _RetryableServerError),
-            max_tries=conn.max_retries + 1,
-            factor=conn.retry_backoff_factor,
-            on_backoff=_on_backoff,
-        )
+        @_retrying(conn)
         async def _do_request() -> Any:
             session = await bot.ensure_session()
             resp = await _session_request(session, "GET", url)
             if resp.status in conn.retry_on_statuses:
                 await resp.read()
-                raise _RetryableServerError(resp.status)
+                raise _RetryableServerError(
+                    resp.status, retry_after=_parse_retry_after(resp)
+                )
             return resp
 
         try:

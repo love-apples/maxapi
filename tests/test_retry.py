@@ -9,8 +9,9 @@ from maxapi import Bot
 from maxapi.client.default import (
     DEFAULT_RETRY_STATUSES,
     DefaultConnectionProperties,
+    RetryEvent,
 )
-from maxapi.connection.base import BaseConnection
+from maxapi.connection.base import BaseConnection, _retry_wait
 from maxapi.enums.http_method import HTTPMethod
 from maxapi.exceptions.max import (
     InvalidToken,
@@ -19,10 +20,13 @@ from maxapi.exceptions.max import (
 )
 
 
-def _make_response(status, *, ok=None, json_data=None, text=None):
+def _make_response(
+    status, *, ok=None, json_data=None, text=None, headers=None
+):
     """Создаёт мок aiohttp-ответа с async-методами."""
     resp = MagicMock()
     resp.status = status
+    resp.headers = headers or {}
     resp.ok = ok if ok is not None else (200 <= status < 300)
     resp.read = AsyncMock()
     if text is None:
@@ -546,3 +550,83 @@ class TestRateLimitStatus:
 
         assert exc_info.value.code == 429
         assert exc_info.value.raw == "rate limit exceeded"
+
+
+class TestRetryAfterAndHook:
+    """Retry-After и пользовательский колбэк on_retry."""
+
+    @staticmethod
+    def _bot(mock_bot_token, **conn_kwargs):
+        conn = DefaultConnectionProperties(max_retries=2, **conn_kwargs)
+        bot = Bot(token=mock_bot_token, default_connection=conn)
+        session = MagicMock()
+        session.closed = False
+        session.close = AsyncMock()
+        bot.session = session
+        base = BaseConnection()
+        base.bot = bot
+        return bot, base
+
+    def test_wait_is_jittered_expo_without_retry_after(self):
+        """Без Retry-After задержка в пределах [0, factor * 2**n]."""
+        gen = _retry_wait(1.0)
+        next(gen)
+        for bound in (1, 2, 4):
+            assert 0 <= gen.send(Exception()) <= bound
+
+    @pytest.mark.asyncio
+    async def test_retry_after_header_is_respected(self, mock_bot_token):
+        """Задержка берётся из Retry-After, а не из backoff."""
+        bot, base = self._bot(mock_bot_token)
+        error = _make_response(429, headers={"Retry-After": "7"})
+        success = _make_response(200, json_data={"ok": True})
+        bot.session.request = AsyncMock(side_effect=[error, success])
+
+        with patch("asyncio.sleep", new_callable=AsyncMock) as sleep:
+            await base.request(
+                method=HTTPMethod.GET, path="/test", is_return_raw=True
+            )
+
+        sleep.assert_awaited_once_with(7.0)
+
+    @pytest.mark.asyncio
+    async def test_on_retry_receives_event(self, mock_bot_token):
+        """Асинхронный колбэк получает статус, попытку, задержку и тело."""
+        events: list[RetryEvent] = []
+
+        async def on_retry(event: RetryEvent) -> None:
+            events.append(event)
+
+        bot, base = self._bot(mock_bot_token, on_retry=on_retry)
+        error = _make_response(
+            429, text="slow down", headers={"Retry-After": "3"}
+        )
+        success = _make_response(200, json_data={"ok": True})
+        bot.session.request = AsyncMock(side_effect=[error, success])
+
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            await base.request(
+                method=HTTPMethod.GET, path="/test", is_return_raw=True
+            )
+
+        assert events == [
+            RetryEvent(status=429, attempt=1, delay=3.0, body="slow down")
+        ]
+
+    @pytest.mark.asyncio
+    async def test_on_retry_false_cancels_retry(self, mock_bot_token):
+        """Колбэк, вернувший False, сразу отдаёт MaxApiError без повтора."""
+        bot, base = self._bot(mock_bot_token, on_retry=lambda event: False)
+        bot.session.request = AsyncMock(
+            return_value=_make_response(429, text="limit")
+        )
+
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock) as sleep,
+            pytest.raises(MaxApiError) as exc_info,
+        ):
+            await base.request(method=HTTPMethod.GET, path="/test")
+
+        assert exc_info.value.code == 429
+        assert bot.session.request.call_count == 1
+        sleep.assert_not_awaited()
