@@ -9,6 +9,7 @@ code (например, для attachment.file.not.processed). Нормализ�
 success=False вместе с деталями вроде failed_user_details.
 """
 
+import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -20,6 +21,7 @@ from maxapi.connection.base import (
     _normalize_error_code,
 )
 from maxapi.enums.http_method import HTTPMethod
+from maxapi.enums.update import UpdateType
 from maxapi.exceptions.max import MaxApiError
 from maxapi.methods.edit_message import EditMessage
 from maxapi.methods.send_message import SendMessage
@@ -53,9 +55,7 @@ class TestNormalizeErrorCode:
             "success": False,
             "message": "error: attachment.file.not.processed happened",
         }
-        assert (
-            _normalize_error_code(raw) == "attachment.file.not.processed"
-        )
+        assert _normalize_error_code(raw) == "attachment.file.not.processed"
 
     def test_existing_code_is_not_overwritten(self):
         """Если code уже есть в ответе — нормализация его не трогает."""
@@ -117,9 +117,39 @@ class TestRequestSuccessFalseHandling:
             )
 
         assert exc_info.value.code == 400
-        assert (
-            exc_info.value.raw["code"] == "attachment.file.not.processed"
+        assert exc_info.value.raw["code"] == "attachment.file.not.processed"
+
+    @pytest.mark.asyncio
+    async def test_raw_api_response_receives_unmodified_body(self, bot):
+        """RAW_API_RESPONSE получает ответ сервера как есть —
+        нормализованный code попадает только в MaxApiError.raw."""
+        server_body = {
+            "success": False,
+            "message": "attachment.file.not.processed: retry later",
+        }
+        response = _make_response(200, json_data=server_body)
+        bot.session.request = AsyncMock(return_value=response)
+        bot.dispatcher = MagicMock()
+        bot.dispatcher.handle_raw_response = AsyncMock()
+
+        base = BaseConnection()
+        base.bot = bot
+
+        with pytest.raises(MaxApiError) as exc_info:
+            await base.request(
+                method=HTTPMethod.PUT,
+                path="/messages",
+                is_return_raw=True,
+            )
+        # Диспетчер уведомляется в фоновой задаче
+        await asyncio.sleep(0)
+
+        bot.dispatcher.handle_raw_response.assert_awaited_once_with(
+            UpdateType.RAW_API_RESPONSE, server_body
         )
+        dispatched = bot.dispatcher.handle_raw_response.await_args.args[1]
+        assert "code" not in dispatched
+        assert exc_info.value.raw["code"] == "attachment.file.not.processed"
 
     @pytest.mark.asyncio
     async def test_unrelated_success_false_does_not_raise(self, bot):

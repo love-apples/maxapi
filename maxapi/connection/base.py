@@ -478,9 +478,11 @@ class BaseConnection(BotMixin):
         if parsed.get("success") is False:
             normalized_code = _normalize_error_code(parsed)
             if normalized_code is not None:
-                parsed["code"] = normalized_code
+                # Подписчики RAW_API_RESPONSE получают ответ сервера
+                # как есть, нормализованный code — только в исключении
                 _schedule_raw_response(bot, parsed)
-                raise MaxApiError(code=400, raw=parsed)
+                normalized_raw = {**parsed, "code": normalized_code}
+                raise MaxApiError(code=400, raw=normalized_raw)
 
         _schedule_raw_response(bot, parsed)
 
