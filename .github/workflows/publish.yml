@@ -33,7 +33,7 @@ jobs:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.0.1
+        uses: astral-sh/setup-uv@v10.1.0
         with:
           version: "latest-known"
           enable-cache: false
@@ -185,7 +185,7 @@ jobs:
       # используем (zizmor cache-poisoning): восстановленный из кеша
       # артефакт рядом с необратимой публикацией — лишний риск.
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.0.1
+        uses: astral-sh/setup-uv@v10.1.0
         with:
           version: "latest-known"
           enable-cache: false
