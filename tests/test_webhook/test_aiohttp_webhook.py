@@ -112,7 +112,10 @@ async def test_use_create_task_schedules_handle_as_task(monkeypatch):
     original_create_task = asyncio.create_task
 
     def spy_create_task(coro, **kwargs):
-        tasks_created.append(True)
+        # Веб-сервер тоже может создавать задачи (aiohttp >= 3.14
+        # делает это на каждый запрос) — считаем только наши.
+        if getattr(coro, "cr_code", None) is fake_handle.__code__:
+            tasks_created.append(True)
         return original_create_task(coro, **kwargs)
 
     monkeypatch.setattr(asyncio, "create_task", spy_create_task)

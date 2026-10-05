@@ -377,6 +377,7 @@ class TestBotIntegration:
         assert hasattr(subs, "subscriptions")
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_close_session_cleanup(self, integration_bot):
         """Интеграционный тест правильного закрытия сессии."""
         # Создаем сессию
