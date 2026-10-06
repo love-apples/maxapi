@@ -90,6 +90,8 @@ _KnownAttachments = Annotated[
     Field(discriminator="type"),
 ]
 
+_KNOWN_ATTACHMENT_TYPES = frozenset(AttachmentType)
+
 
 def _attachment_tag(value: Any) -> str:
     """Отделить известные типы вложений от новых, ещё не описанных."""
@@ -98,7 +100,7 @@ def _attachment_tag(value: Any) -> str:
         attachment_type = value.get("type")
     else:
         attachment_type = getattr(value, "type", None)
-    if attachment_type in AttachmentType._value2member_map_:
+    if attachment_type in _KNOWN_ATTACHMENT_TYPES:
         return "known"
     return "unknown"
 
