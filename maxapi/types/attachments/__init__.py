@@ -1,6 +1,6 @@
-from typing import Annotated
+from typing import Annotated, Any
 
-from pydantic import Field
+from pydantic import Discriminator, Field, Tag
 
 __all__ = [
     "Attachment",
@@ -36,11 +36,13 @@ __all__ = [
     "ShareAttachmentPayload",
     "Sticker",
     "StickerAttachmentPayload",
+    "UnknownAttachment",
     "Video",
     "VideoThumbnail",
     "VideoUrl",
 ]
 
+from ...enums.attachment import AttachmentType
 from ..input_media import InputMedia, InputMediaBuffer
 from .attachment import (
     Attachment,
@@ -71,10 +73,11 @@ from .image import Image, PhotoAttachmentRequestPayload, PhotoToken
 from .location import Location
 from .share import Share
 from .sticker import Sticker
+from .unknown import UnknownAttachment
 from .upload import AttachmentPayload, AttachmentUpload
 from .video import Video, VideoThumbnail, VideoUrl
 
-Attachments = Annotated[
+_KnownAttachments = Annotated[
     Audio
     | Video
     | File
@@ -85,6 +88,25 @@ Attachments = Annotated[
     | AttachmentButton
     | Contact,
     Field(discriminator="type"),
+]
+
+
+def _attachment_tag(value: Any) -> str:
+    """Отделить известные типы вложений от новых, ещё не описанных."""
+
+    if isinstance(value, dict):
+        attachment_type = value.get("type")
+    else:
+        attachment_type = getattr(value, "type", None)
+    if attachment_type in AttachmentType._value2member_map_:
+        return "known"
+    return "unknown"
+
+
+Attachments = Annotated[
+    Annotated[_KnownAttachments, Tag("known")]
+    | Annotated[UnknownAttachment, Tag("unknown")],
+    Discriminator(_attachment_tag),
 ]
 
 AttachmentInput = (
