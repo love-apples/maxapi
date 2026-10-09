@@ -49,6 +49,8 @@ Async Python SDK + bot-фреймворк для мессенджера **MAX** 
   `Bot(auto_requests=False)` тяжёлые поля остаются как `LazyRef`/`ChatRef`/`FromUserRef` (
   `types/fetchable.py`) — пользователь делает `await ref.fetch()` сам. Актуальные update-типы
   (помимо базовых): `dialog_cleared`, `dialog_muted`, `dialog_unmuted`, `dialog_removed`,
+  `comment_created`, `comment_edited`, `comment_removed` (поле `message` —
+  `CommentMessage`, приходят только боту-админу канала с `read_all_messages`),
   `raw_api_response`, `on_started` (pseudo-тип для `startup`-callback); `message_chat_created`
   помечен deprecated с 0.9.14.
 - `maxapi/filters/` — `BaseFilter` (async `__call__ → bool | dict`; возвращённый dict мёржится в
@@ -105,7 +107,7 @@ Async Python SDK + bot-фреймворк для мессенджера **MAX** 
 - Документация: MkDocs Material (`mkdocs.yml`, `docs/`), генерится из docstring через
   `mkdocstrings[python]`.
 - Каноничные сценарии использования — `examples/<NN>_*.py` (echo, formatting, keyboard, FSM,
-  media, admin, router, middleware, webhook, callback_payload).
+  media, admin, router, middleware, webhook, callback_payload, comment moderation).
 
 ## Design philosophy
 

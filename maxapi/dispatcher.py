@@ -228,6 +228,15 @@ class Dispatcher(BotMixin):
         self.dialog_removed = Event(
             update_type=UpdateType.DIALOG_REMOVED, router=self
         )
+        self.comment_created = Event(
+            update_type=UpdateType.COMMENT_CREATED, router=self
+        )
+        self.comment_edited = Event(
+            update_type=UpdateType.COMMENT_EDITED, router=self
+        )
+        self.comment_removed = Event(
+            update_type=UpdateType.COMMENT_REMOVED, router=self
+        )
         self.raw_api_response = Event(
             update_type=UpdateType.RAW_API_RESPONSE, router=self
         )

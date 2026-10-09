@@ -13,12 +13,16 @@ from maxapi.enums.chat_type import ChatType
 from maxapi.enums.update import UpdateType
 from maxapi.types.callback import Callback
 from maxapi.types.chats import Chat
+from maxapi.types.comment import CommentMessage, CommentMessageBody
 from maxapi.types.message import Message, MessageBody, Recipient
 from maxapi.types.updates.bot_added import BotAdded
 from maxapi.types.updates.bot_removed import BotRemoved
 from maxapi.types.updates.bot_started import BotStarted
 from maxapi.types.updates.bot_stopped import BotStopped
 from maxapi.types.updates.chat_title_changed import ChatTitleChanged
+from maxapi.types.updates.comment_created import CommentCreated
+from maxapi.types.updates.comment_edited import CommentEdited
+from maxapi.types.updates.comment_removed import CommentRemoved
 from maxapi.types.updates.dialog_cleared import DialogCleared
 from maxapi.types.updates.dialog_muted import DialogMuted
 from maxapi.types.updates.dialog_removed import DialogRemoved
@@ -264,4 +268,50 @@ def fixture_chat_title_changed(user_obj, faker) -> ChatTitleChanged:
         chat_id=faker.random_int(min=1, max=99999),
         user=user_obj,
         title=faker.sentence(),
+    )
+
+
+@pytest.fixture
+def comment_obj(user_obj, faker) -> CommentMessage:
+    return CommentMessage(
+        sender=user_obj,
+        recipient=Recipient(
+            chat_id=-faker.random_int(min=1, max=99999),
+            chat_type=ChatType.CHANNEL,
+            post_id=f"mid.{faker.uuid4()}",
+        ),
+        timestamp=int(faker.date_time().timestamp()),
+        body=CommentMessageBody(
+            mid=f"mid.{faker.uuid4()}", seq=1, text=faker.sentence()
+        ),
+    )
+
+
+@pytest.fixture
+def fixture_comment_created(comment_obj, faker) -> CommentCreated:
+    return CommentCreated(
+        update_type=UpdateType.COMMENT_CREATED,
+        timestamp=int(faker.date_time().timestamp()),
+        message=comment_obj,
+    )
+
+
+@pytest.fixture
+def fixture_comment_edited(comment_obj, faker) -> CommentEdited:
+    return CommentEdited(
+        update_type=UpdateType.COMMENT_EDITED,
+        timestamp=int(faker.date_time().timestamp()),
+        message=comment_obj,
+    )
+
+
+@pytest.fixture
+def fixture_comment_removed(user_obj, faker) -> CommentRemoved:
+    return CommentRemoved(
+        update_type=UpdateType.COMMENT_REMOVED,
+        timestamp=int(faker.date_time().timestamp()),
+        message_id=f"mid.{faker.uuid4()}",
+        chat_id=-faker.random_int(min=1, max=99999),
+        user_id=user_obj.user_id,
+        post_id=f"mid.{faker.uuid4()}",
     )

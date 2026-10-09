@@ -27,6 +27,9 @@ class UpdateType(StrEnum):
     DIALOG_MUTED = auto()
     DIALOG_UNMUTED = auto()
     DIALOG_REMOVED = auto()
+    COMMENT_CREATED = auto()
+    COMMENT_EDITED = auto()
+    COMMENT_REMOVED = auto()
     RAW_API_RESPONSE = auto()
 
     # Для начинки диспатчера

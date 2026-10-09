@@ -60,6 +60,9 @@ _FIXTURE_NAME_BY_UPDATE: dict[UpdateType, str] = {
     UpdateType.DIALOG_UNMUTED: "fixture_dialog_unmuted",
     UpdateType.DIALOG_REMOVED: "fixture_dialog_removed",
     UpdateType.CHAT_TITLE_CHANGED: "fixture_chat_title_changed",
+    UpdateType.COMMENT_CREATED: "fixture_comment_created",
+    UpdateType.COMMENT_EDITED: "fixture_comment_edited",
+    UpdateType.COMMENT_REMOVED: "fixture_comment_removed",
 }
 
 

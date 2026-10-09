@@ -7,6 +7,9 @@ from ...types.updates.bot_removed import BotRemoved
 from ...types.updates.bot_started import BotStarted
 from ...types.updates.bot_stopped import BotStopped
 from ...types.updates.chat_title_changed import ChatTitleChanged
+from ...types.updates.comment_created import CommentCreated
+from ...types.updates.comment_edited import CommentEdited
+from ...types.updates.comment_removed import CommentRemoved
 from ...types.updates.dialog_cleared import DialogCleared
 from ...types.updates.dialog_muted import DialogMuted
 from ...types.updates.dialog_unmuted import DialogUnmuted
@@ -53,6 +56,9 @@ UpdateUnion = Annotated[
     | BotStarted
     | BotStopped
     | ChatTitleChanged
+    | CommentCreated
+    | CommentEdited
+    | CommentRemoved
     | DialogCleared
     | DialogMuted
     | DialogRemoved

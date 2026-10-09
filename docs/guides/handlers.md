@@ -179,6 +179,25 @@ async def send_photo_by_token(event: MessageCreated):
 
 - `chat_title_changed` — изменено название чата
 
+### События комментариев
+
+Приходят, только если бот — администратор канала с правом
+`read_all_messages`.
+
+- `comment_created` — новый комментарий к посту канала
+- `comment_edited` — комментарий изменён
+- `comment_removed` — комментарий удалён
+
+В `comment_created` и `comment_edited` поле `event.message` —
+`CommentMessage`: шорткаты `reply()`, `edit()` и `delete()` работают
+сразу, ID поста берётся из `recipient.post_id`.
+
+```python
+@dp.comment_created(F.message.body.text.contains("http"))
+async def drop_links(event: CommentCreated):
+    await event.message.delete()
+```
+
 ### События диалога
 
 - `dialog_cleared` — диалог очищен
