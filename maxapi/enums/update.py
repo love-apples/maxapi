@@ -13,6 +13,7 @@ class UpdateType(StrEnum):
 
     MESSAGE_CREATED = auto()
     BOT_ADDED = auto()
+    BOT_ADMIN_PERMISSIONS_CHANGED = auto()
     BOT_REMOVED = auto()
     BOT_STARTED = auto()
     CHAT_TITLE_CHANGED = auto()
@@ -27,6 +28,9 @@ class UpdateType(StrEnum):
     DIALOG_MUTED = auto()
     DIALOG_UNMUTED = auto()
     DIALOG_REMOVED = auto()
+    COMMENT_CREATED = auto()
+    COMMENT_EDITED = auto()
+    COMMENT_REMOVED = auto()
     RAW_API_RESPONSE = auto()
 
     # Для начинки диспатчера

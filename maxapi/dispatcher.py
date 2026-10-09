@@ -207,6 +207,9 @@ class Dispatcher(BotMixin):
         self.errors = ErrorEventObserver(router=self)
         self.error = self.errors
         self.bot_added = Event(update_type=UpdateType.BOT_ADDED, router=self)
+        self.bot_admin_permissions_changed = Event(
+            update_type=UpdateType.BOT_ADMIN_PERMISSIONS_CHANGED, router=self
+        )
         self.bot_removed = Event(
             update_type=UpdateType.BOT_REMOVED, router=self
         )
@@ -227,6 +230,15 @@ class Dispatcher(BotMixin):
         )
         self.dialog_removed = Event(
             update_type=UpdateType.DIALOG_REMOVED, router=self
+        )
+        self.comment_created = Event(
+            update_type=UpdateType.COMMENT_CREATED, router=self
+        )
+        self.comment_edited = Event(
+            update_type=UpdateType.COMMENT_EDITED, router=self
+        )
+        self.comment_removed = Event(
+            update_type=UpdateType.COMMENT_REMOVED, router=self
         )
         self.raw_api_response = Event(
             update_type=UpdateType.RAW_API_RESPONSE, router=self

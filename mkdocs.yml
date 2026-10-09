@@ -225,10 +225,14 @@ nav:
         - Request_geo_location_button: types/attachments/buttons/request_geo_location_button.md
     - Updates:
       - Bot_added: types/updates/bot_added.md
+      - Bot_admin_permissions_changed: types/updates/bot_admin_permissions_changed.md
       - Bot_removed: types/updates/bot_removed.md
       - Bot_started: types/updates/bot_started.md
       - Bot_stopped: types/updates/bot_stopped.md
       - Chat_title_changed: types/updates/chat_title_changed.md
+      - Comment_created: types/updates/comment_created.md
+      - Comment_edited: types/updates/comment_edited.md
+      - Comment_removed: types/updates/comment_removed.md
       - Dialog_cleared: types/updates/dialog_cleared.md
       - Dialog_muted: types/updates/dialog_muted.md
       - Dialog_removed: types/updates/dialog_removed.md
