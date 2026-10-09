@@ -13,6 +13,7 @@ class UpdateType(StrEnum):
 
     MESSAGE_CREATED = auto()
     BOT_ADDED = auto()
+    BOT_ADMIN_PERMISSIONS_CHANGED = auto()
     BOT_REMOVED = auto()
     BOT_STARTED = auto()
     CHAT_TITLE_CHANGED = auto()

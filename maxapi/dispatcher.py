@@ -207,6 +207,9 @@ class Dispatcher(BotMixin):
         self.errors = ErrorEventObserver(router=self)
         self.error = self.errors
         self.bot_added = Event(update_type=UpdateType.BOT_ADDED, router=self)
+        self.bot_admin_permissions_changed = Event(
+            update_type=UpdateType.BOT_ADMIN_PERMISSIONS_CHANGED, router=self
+        )
         self.bot_removed = Event(
             update_type=UpdateType.BOT_REMOVED, router=self
         )

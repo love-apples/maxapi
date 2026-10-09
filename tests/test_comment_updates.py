@@ -176,7 +176,7 @@ class TestEnrich:
         result = await enrich_event(fixture_comment_removed, bot)
 
         assert result.from_user is None
-        assert "Не удалось получить участника канала" in caplog.text
+        assert "Не удалось получить участника" in caplog.text
 
     async def test_auto_requests_false_builds_lazy_refs(
         self, bot, fixture_comment_created, fixture_comment_removed

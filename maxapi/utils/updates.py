@@ -8,6 +8,9 @@ from ..enums.chat_type import ChatType
 from ..exceptions.max import MaxApiError, MaxConnection
 from ..types.fetchable import ChatRef, FromUserRef
 from ..types.updates.bot_added import BotAdded
+from ..types.updates.bot_admin_permissions_changed import (
+    BotAdminPermissionsChanged,
+)
 from ..types.updates.bot_removed import BotRemoved
 from ..types.updates.bot_started import BotStarted
 from ..types.updates.bot_stopped import BotStopped
@@ -147,14 +150,14 @@ async def _resolve_from_user(event: UpdateUnion, bot: Bot) -> None:
         elif event.chat and event.chat.type == ChatType.DIALOG:
             event.from_user = event.chat
 
-    elif isinstance(event, CommentRemoved):
+    elif isinstance(event, (CommentRemoved, BotAdminPermissionsChanged)):
         try:
             event.from_user = await bot.get_chat_member(
                 chat_id=event.chat_id, user_id=event.user_id
             )
         except MaxApiError as exc:
             logger.warning(
-                "Не удалось получить участника канала: code=%s chat_id=%s",
+                "Не удалось получить участника: code=%s chat_id=%s",
                 exc.code,
                 event.chat_id,
             )
@@ -245,7 +248,7 @@ def _build_from_user_value(event: UpdateUnion, bot: Bot) -> Any | None:
             user_id=event.user_id,
         )
 
-    if isinstance(event, CommentRemoved):
+    if isinstance(event, (CommentRemoved, BotAdminPermissionsChanged)):
         return FromUserRef(
             bot=bot,
             fetcher=lambda: bot.get_chat_member(

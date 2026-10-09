@@ -50,6 +50,9 @@ _FIXTURE_NAME_BY_UPDATE: dict[UpdateType, str] = {
     UpdateType.MESSAGE_CALLBACK: "fixture_message_callback",
     UpdateType.MESSAGE_CHAT_CREATED: "fixture_message_chat_created",
     UpdateType.BOT_ADDED: "fixture_bot_added",
+    UpdateType.BOT_ADMIN_PERMISSIONS_CHANGED: (
+        "fixture_bot_admin_permissions_changed"
+    ),
     UpdateType.BOT_REMOVED: "fixture_bot_removed",
     UpdateType.BOT_STARTED: "fixture_bot_started",
     UpdateType.BOT_STOPPED: "fixture_bot_stopped",

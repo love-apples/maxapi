@@ -3,6 +3,9 @@ from typing import Annotated
 from pydantic import Field, TypeAdapter
 
 from ...types.updates.bot_added import BotAdded
+from ...types.updates.bot_admin_permissions_changed import (
+    BotAdminPermissionsChanged,
+)
 from ...types.updates.bot_removed import BotRemoved
 from ...types.updates.bot_started import BotStarted
 from ...types.updates.bot_stopped import BotStopped
@@ -52,6 +55,7 @@ UNSUPPORTED_MESSAGE_UPDATE_DISCLAIMER = (
 
 UpdateUnion = Annotated[
     BotAdded
+    | BotAdminPermissionsChanged
     | BotRemoved
     | BotStarted
     | BotStopped

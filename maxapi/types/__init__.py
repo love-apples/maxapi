@@ -5,6 +5,7 @@ __all__ = [
     "AttachmentPayload",
     "AttachmentUpload",
     "BotAdded",
+    "BotAdminPermissionsChanged",
     "BotCommand",
     "BotRemoved",
     "BotStarted",
@@ -125,6 +126,9 @@ from ..types.message import (
 from ..types.subscription import Subscription
 from ..types.updates import UpdateUnion
 from ..types.updates.bot_added import BotAdded
+from ..types.updates.bot_admin_permissions_changed import (
+    BotAdminPermissionsChanged,
+)
 from ..types.updates.bot_removed import BotRemoved
 from ..types.updates.bot_started import BotStarted
 from ..types.updates.bot_stopped import BotStopped

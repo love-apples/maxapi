@@ -179,6 +179,22 @@ async def send_photo_by_token(event: MessageCreated):
 
 - `chat_title_changed` — изменено название чата
 
+### Права бота
+
+- `bot_admin_permissions_changed` — боту выдали или отозвали права
+  администратора либо изменили их набор. По данным MAX API событие
+  приходит только через Webhook: подпишитесь на него в
+  `bot.subscribe_webhook(update_types=[...])`. Через Long Polling
+  оно пока не доставляется.
+
+```python
+@dp.bot_admin_permissions_changed()
+async def on_perms(event: BotAdminPermissionsChanged):
+    perms = event.permissions or []
+    if ChatPermission.READ_ALL_MESSAGES not in perms:
+        logger.warning("Модерация комментариев в %s отключена", event.chat_id)
+```
+
 ### События комментариев
 
 Приходят, только если бот — администратор канала с правом

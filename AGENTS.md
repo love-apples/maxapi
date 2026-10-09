@@ -49,6 +49,7 @@ Async Python SDK + bot-фреймворк для мессенджера **MAX** 
   `Bot(auto_requests=False)` тяжёлые поля остаются как `LazyRef`/`ChatRef`/`FromUserRef` (
   `types/fetchable.py`) — пользователь делает `await ref.fetch()` сам. Актуальные update-типы
   (помимо базовых): `dialog_cleared`, `dialog_muted`, `dialog_unmuted`, `dialog_removed`,
+  `bot_admin_permissions_changed` (по данным MAX API — только Webhook),
   `comment_created`, `comment_edited`, `comment_removed` (поле `message` —
   `CommentMessage`, приходят только боту-админу канала с `read_all_messages`),
   `raw_api_response`, `on_started` (pseudo-тип для `startup`-callback); `message_chat_created`

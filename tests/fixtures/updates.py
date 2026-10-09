@@ -8,6 +8,7 @@
 """
 
 import pytest
+from maxapi.enums.chat_permission import ChatPermission
 from maxapi.enums.chat_status import ChatStatus
 from maxapi.enums.chat_type import ChatType
 from maxapi.enums.update import UpdateType
@@ -16,6 +17,9 @@ from maxapi.types.chats import Chat
 from maxapi.types.comment import CommentMessage, CommentMessageBody
 from maxapi.types.message import Message, MessageBody, Recipient
 from maxapi.types.updates.bot_added import BotAdded
+from maxapi.types.updates.bot_admin_permissions_changed import (
+    BotAdminPermissionsChanged,
+)
 from maxapi.types.updates.bot_removed import BotRemoved
 from maxapi.types.updates.bot_started import BotStarted
 from maxapi.types.updates.bot_stopped import BotStopped
@@ -314,4 +318,20 @@ def fixture_comment_removed(user_obj, faker) -> CommentRemoved:
         chat_id=-faker.random_int(min=1, max=99999),
         user_id=user_obj.user_id,
         post_id=f"mid.{faker.uuid4()}",
+    )
+
+
+@pytest.fixture
+def fixture_bot_admin_permissions_changed(
+    user_obj, bot_user_obj, faker
+) -> BotAdminPermissionsChanged:
+    return BotAdminPermissionsChanged(
+        update_type=UpdateType.BOT_ADMIN_PERMISSIONS_CHANGED,
+        timestamp=int(faker.date_time().timestamp()),
+        chat_id=-faker.random_int(min=1, max=99999),
+        user_id=user_obj.user_id,
+        bot_id=bot_user_obj.user_id,
+        is_channel=True,
+        is_admin=True,
+        permissions=[ChatPermission.READ_ALL_MESSAGES, ChatPermission.WRITE],
     )
