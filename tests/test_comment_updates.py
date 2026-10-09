@@ -7,6 +7,7 @@
   - диспетчеризацию через @dp.comment_*.
 """
 
+from asyncio.exceptions import TimeoutError as AsyncioTimeoutError
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -14,7 +15,7 @@ from maxapi import F
 from maxapi.enums.chat_type import ChatType
 from maxapi.enums.message_link_type import MessageLinkType
 from maxapi.enums.update import UpdateType
-from maxapi.exceptions.max import MaxApiError
+from maxapi.exceptions.max import MaxApiError, MaxConnection
 from maxapi.types.fetchable import ChatRef, FromUserRef
 from maxapi.types.updates import UpdateUnionAdapter
 from maxapi.types.updates.comment_created import CommentCreated
@@ -177,6 +178,28 @@ class TestEnrich:
 
         assert result.from_user is None
         assert "Не удалось получить участника" in caplog.text
+
+    @pytest.mark.parametrize(
+        "fixture_name",
+        ["fixture_comment_removed", "fixture_bot_admin_permissions_changed"],
+    )
+    @pytest.mark.parametrize(
+        "error",
+        [MaxConnection("connection lost"), AsyncioTimeoutError()],
+        ids=["max_connection", "timeout"],
+    )
+    async def test_member_network_error_is_logged(
+        self, request, bot, fixture_name, error, caplog
+    ):
+        """Сетевая ошибка get_chat_member не всплывает и пишется в лог."""
+        event = request.getfixturevalue(fixture_name)
+        bot.get_chat_by_id = AsyncMock(return_value=MagicMock())
+        bot.get_chat_member = AsyncMock(side_effect=error)
+
+        result = await enrich_event(event, bot)
+
+        assert result.from_user is None
+        assert "get_chat_member" in caplog.text
 
     async def test_auto_requests_false_builds_lazy_refs(
         self, bot, fixture_comment_created, fixture_comment_removed
