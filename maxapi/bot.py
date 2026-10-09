@@ -1237,6 +1237,12 @@ class Bot(BaseConnection):
 
         https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members
 
+        Note:
+            По changelog MAX API с 9 сентября 2026 работа метода
+            ограничена, а в описании API указано, что могут
+            потребоваться дополнительные права. Проверяйте поле
+            success и failed_user_details в ответе.
+
         Args:
             chat_id: ID группового чата.
             user_ids: Список ID пользователей.

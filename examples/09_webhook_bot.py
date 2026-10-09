@@ -7,6 +7,7 @@ Webhook-бот с FastAPI — пример интеграции в продак�
 - Подписку на webhook при запуске через bot.subscribe_webhook()
 - Кастомный GET-маршрут /healthz рядом с webhook-ом
 - Проверку секрета (X-Max-Bot-Api-Secret) для безопасности
+- Событие bot_admin_permissions_changed, доступное только через webhook
 - Запуск через uvicorn.Server (запускается в main() через asyncio.run)
 
 Требования:
@@ -45,6 +46,9 @@ from maxapi import Bot, Dispatcher, F
 from maxapi.enums.sender_action import SenderAction
 from maxapi.enums.update import UpdateType
 from maxapi.filters.command import Command, CommandStart
+from maxapi.types.updates.bot_admin_permissions_changed import (
+    BotAdminPermissionsChanged,
+)
 from maxapi.types.updates.bot_started import BotStarted
 from maxapi.types.updates.message_callback import MessageCallback
 from maxapi.types.updates.message_created import MessageCreated
@@ -91,12 +95,26 @@ async def on_dp_started() -> None:
                 UpdateType.MESSAGE_CREATED,
                 UpdateType.MESSAGE_CALLBACK,
                 UpdateType.BOT_STARTED,
+                # Приходит только через webhook, в polling его нет
+                UpdateType.BOT_ADMIN_PERMISSIONS_CHANGED,
             ],
             secret=WEBHOOK_SECRET,
         )
         log.info("Подписка на webhook зарегистрирована успешно.")
     except Exception as exc:
         log.error("Не удалось зарегистрировать webhook: %s", exc)
+
+
+@dp.bot_admin_permissions_changed()
+async def on_admin_permissions_changed(
+    event: BotAdminPermissionsChanged,
+) -> None:
+    """Залогировать изменение прав бота в чате или канале."""
+    if not event.is_admin:
+        log.warning("Бот больше не администратор в чате %s", event.chat_id)
+        return
+    perms = ", ".join(event.permissions or []) or "нет"
+    log.info("Права бота в чате %s: %s", event.chat_id, perms)
 
 
 @dp.bot_started()

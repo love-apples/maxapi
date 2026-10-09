@@ -216,7 +216,7 @@ def fake_user(faker):
             "first_name": faker.first_name(),
             "last_name": faker.last_name(),
             "is_bot": False,
-            "last_activity_time": int(faker.date_time().timestamp()),
+            "last_activity_time": int(faker.unix_time()),
         }
         data.update(overrides)
         return data
