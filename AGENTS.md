@@ -54,6 +54,10 @@ Async Python SDK + bot-фреймворк для мессенджера **MAX** 
   `CommentMessage`, приходят только боту-админу канала с `read_all_messages`),
   `raw_api_response`, `on_started` (pseudo-тип для `startup`-callback); `message_chat_created`
   помечен deprecated с 0.9.14.
+  Вложения сообщения — union `Attachments` (`types/attachments/__init__.py`): известный `type`
+  валидируется строго по модели, неизвестный (новые типы MAX, которых нет в
+  `AttachmentType`) — в `UnknownAttachment` с сохранением всех полей, чтобы сообщение не
+  отбрасывалось. Новый тип вложения = модель + значение в `AttachmentType` + union.
 - `maxapi/filters/` — `BaseFilter` (async `__call__ → bool | dict`; возвращённый dict мёржится в
   kwargs хендлера), `BaseMiddleware` (`async __call__(handler, event, data)`), `Handler` (
   классифицирует переданные в декоратор `*args` по типу: `MagicFilter` → `filters`, `BaseFilter` →
