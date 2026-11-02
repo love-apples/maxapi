@@ -179,6 +179,7 @@ class Dispatcher(BotMixin):
 
         self.bot: Bot | None = None
         self.on_started_func: Callable | None = None
+        self.on_shutdown_func: Callable | None = None
         self.polling = False
         self.use_create_task = use_create_task
         self._cached_router_entries: list[_DispatchEntry] | None = None
@@ -265,6 +266,9 @@ class Dispatcher(BotMixin):
             update_type=UpdateType.USER_REMOVED, router=self
         )
         self.on_started = Event(update_type=UpdateType.ON_STARTED, router=self)
+        self.on_shutdown = Event(
+            update_type=UpdateType.ON_SHUTDOWN, router=self
+        )
 
     @property
     def fsm(self) -> ContextManager:
@@ -2287,8 +2291,12 @@ class Dispatcher(BotMixin):
     async def shutdown(self) -> None:
         """
         Завершает работу диспетчера: дожидается фоновых задач
-        (``use_create_task=True``) и освобождает ресурсы изоляции
-        событий.
+        (``use_create_task=True``), вызывает колбэк, зарегистрированный
+        через ``@dp.on_shutdown()``, и освобождает ресурсы изоляции
+        событий. Пользовательский колбэк выполняется после всех
+        обработчиков, но до закрытия изоляции. Если он поднимет
+        исключение, изоляция всё равно будет закрыта, а исключение
+        проброшено вызывающему.
 
         Дожидается в цикле до полного опустошения пула: задача,
         добавленная конкурентным продюсером во время ожидания
@@ -2406,7 +2414,11 @@ class Dispatcher(BotMixin):
         if drained:
             logger_dp.info("Все фоновые задачи завершены")
 
-        await self.event_isolation.close()
+        try:
+            if self.on_shutdown_func:
+                await self.on_shutdown_func()
+        finally:
+            await self.event_isolation.close()
 
     async def startup(self, bot: Bot) -> None:
         """
@@ -2629,6 +2641,9 @@ class Event:
                     "самого on_started.",
                 )
             self.router.on_started_func = func_event
+
+        elif self.update_type == UpdateType.ON_SHUTDOWN:
+            self.router.on_shutdown_func = func_event
 
         else:
             self.router.event_handlers.append(

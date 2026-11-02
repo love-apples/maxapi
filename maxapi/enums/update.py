@@ -35,3 +35,4 @@ class UpdateType(StrEnum):
 
     # Для начинки диспатчера
     ON_STARTED = auto()
+    ON_SHUTDOWN = auto()

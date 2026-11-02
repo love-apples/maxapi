@@ -534,6 +534,23 @@ class TestStopPollingSafety:
         assert handled == ["первый", "второй"]
         assert dispatcher._background_tasks == set()
 
+    async def test_stop_calls_on_shutdown(self, dispatcher, polling_bot):
+        """stop_polling вызывает зарегистрированный shutdown-колбэк."""
+        started = asyncio.Event()
+        calls: list[str] = []
+        polling_bot.get_updates = _hanging_updates(started, [])
+
+        @dispatcher.on_shutdown()
+        async def _on_shutdown():
+            calls.append("shutdown")
+
+        task = asyncio.create_task(dispatcher.start_polling(polling_bot))
+        await asyncio.wait_for(started.wait(), STOP_TIMEOUT)
+        await asyncio.wait_for(dispatcher.stop_polling(), STOP_TIMEOUT)
+
+        assert calls == ["shutdown"]
+        assert task.done()
+
     async def test_stop_without_start(self, dispatcher):
         """stop_polling без запуска polling не падает."""
         await asyncio.wait_for(dispatcher.stop_polling(), STOP_TIMEOUT)
@@ -1060,6 +1077,11 @@ class TestReentrantShutdown:
         handled: list[str] = []
         after_shutdown: list[str] = []
         closed_inside: list[int] = []
+        shutdown_calls: list[str] = []
+
+        @dispatcher.on_shutdown()
+        async def _on_shutdown():
+            shutdown_calls.append("shutdown")
 
         @dispatcher.message_created()
         async def _handler(event: MessageCreated):
@@ -1098,6 +1120,7 @@ class TestReentrantShutdown:
         await _await_background(dispatcher)
 
         assert handled == ["вебхук", "фоновый"]
+        assert shutdown_calls == []
 
     async def test_background_stop_warns_about_skipped_drain(
         self, polling_bot, fixture_message_created, caplog

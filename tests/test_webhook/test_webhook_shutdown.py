@@ -6,6 +6,7 @@ handle() и освободить ресурсы изоляции событий.
 
 import asyncio
 
+import pytest
 from maxapi import Dispatcher
 from maxapi.context import SimpleEventIsolation
 from maxapi.webhook.aiohttp import AiohttpMaxWebhook
@@ -19,16 +20,21 @@ class DummyBot:
 class _RecordingIsolation(SimpleEventIsolation):
     """Изоляция, фиксирующая вызов close()."""
 
-    def __init__(self) -> None:
+    def __init__(self, events: list[str] | None = None) -> None:
         super().__init__()
         self.closed = False
+        self.events = events
 
     async def close(self) -> None:
         self.closed = True
+        if self.events is not None:
+            self.events.append("close")
         await super().close()
 
 
-def _dispatcher_with_pending_task() -> tuple[Dispatcher, list]:
+def _dispatcher_with_pending_task(
+    events: list[str] | None = None,
+) -> tuple[Dispatcher, list]:
     """Диспетчер с незавершённой фоновой задачей в пуле.
 
     Returns:
@@ -37,7 +43,7 @@ def _dispatcher_with_pending_task() -> tuple[Dispatcher, list]:
     """
     dp = Dispatcher(
         use_create_task=True,
-        event_isolation=_RecordingIsolation(),
+        event_isolation=_RecordingIsolation(events),
     )
     done: list = []
 
@@ -62,6 +68,34 @@ class TestDispatcherShutdown:
         await dp.shutdown()
 
         assert done == [True]
+        assert dp.event_isolation.closed
+
+    async def test_on_shutdown_runs_after_tasks_before_isolation_close(self):
+        """Пользовательский cleanup идёт после задач, но до close()."""
+        events: list[str] = []
+        dp, done = _dispatcher_with_pending_task(events)
+
+        @dp.on_shutdown()
+        async def _on_shutdown():
+            assert done == [True]
+            events.append("shutdown")
+
+        await dp.shutdown()
+
+        assert events == ["shutdown", "close"]
+
+    async def test_on_shutdown_error_still_closes_isolation(self):
+        """Ошибка cleanup пробрасывается, изоляция всё равно закрыта."""
+        dp = Dispatcher(event_isolation=_RecordingIsolation())
+
+        @dp.on_shutdown()
+        async def _on_shutdown():
+            msg = "cleanup failed"
+            raise RuntimeError(msg)
+
+        with pytest.raises(RuntimeError, match="cleanup failed"):
+            await dp.shutdown()
+
         assert dp.event_isolation.closed
 
     async def test_shutdown_is_idempotent(self):
@@ -130,11 +164,17 @@ class TestWebhookShutdownHooks:
     async def test_base_shutdown_delegates_to_dispatcher(self):
         """BaseMaxWebhook._shutdown() вызывает dp.shutdown()."""
         dp, done = _dispatcher_with_pending_task()
+        calls: list[str] = []
+
+        @dp.on_shutdown()
+        async def _on_shutdown():
+            calls.append("shutdown")
 
         webhook = AiohttpMaxWebhook(dp=dp, bot=DummyBot(), secret="s")
         await webhook._shutdown()
 
         assert done == [True]
+        assert calls == ["shutdown"]
         assert dp.event_isolation.closed
 
     async def test_aiohttp_create_app_registers_on_cleanup(self):

@@ -67,6 +67,14 @@ class TestEventRegister:
         dp.on_started.register(started)
         assert dp.on_started_func is started
 
+    def test_on_shutdown_sets_func(self, dp):
+        """Регистрация через on_shutdown устанавливает on_shutdown_func."""
+
+        async def shutdown(): ...
+
+        dp.on_shutdown.register(shutdown)
+        assert dp.on_shutdown_func is shutdown
+
     def test_multiple_event_types(self, dp):
         """Регистрация разных событий — обработчики не мешают друг другу."""
 
