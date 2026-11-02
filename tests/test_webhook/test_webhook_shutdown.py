@@ -85,17 +85,41 @@ class TestDispatcherShutdown:
         assert events == ["shutdown", "close"]
 
     async def test_on_shutdown_error_still_closes_isolation(self):
-        """Ошибка cleanup пробрасывается, изоляция всё равно закрыта."""
+        """Ошибка cleanup пробрасывается один раз, изоляция закрыта."""
         dp = Dispatcher(event_isolation=_RecordingIsolation())
+        calls: list[str] = []
 
         @dp.on_shutdown()
         async def _on_shutdown():
+            calls.append("shutdown")
             msg = "cleanup failed"
             raise RuntimeError(msg)
 
         with pytest.raises(RuntimeError, match="cleanup failed"):
             await dp.shutdown()
+        await dp.shutdown()
 
+        assert calls == ["shutdown"]
+        assert dp.event_isolation.closed
+
+    async def test_concurrent_shutdown_does_not_repeat_failed_callback(self):
+        """Конкурентный shutdown не повторяет упавший cleanup."""
+        dp = Dispatcher(event_isolation=_RecordingIsolation())
+        calls: list[str] = []
+
+        @dp.on_shutdown()
+        async def _on_shutdown():
+            calls.append("shutdown")
+            msg = "cleanup failed"
+            raise RuntimeError(msg)
+
+        results = await asyncio.gather(
+            dp.shutdown(), dp.shutdown(), return_exceptions=True
+        )
+
+        assert calls == ["shutdown"]
+        assert sum(isinstance(result, RuntimeError) for result in results) == 1
+        assert sum(result is None for result in results) == 1
         assert dp.event_isolation.closed
 
     async def test_shutdown_is_idempotent(self):

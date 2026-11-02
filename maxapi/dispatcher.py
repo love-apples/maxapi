@@ -2431,7 +2431,7 @@ class Dispatcher(BotMixin):
                     await self.on_shutdown_func()
             finally:
                 await self.event_isolation.close()
-            self._shutdown_complete = True
+                self._shutdown_complete = True
 
     async def startup(self, bot: Bot) -> None:
         """
