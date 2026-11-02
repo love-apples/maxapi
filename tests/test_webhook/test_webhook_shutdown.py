@@ -122,6 +122,43 @@ class TestDispatcherShutdown:
         assert sum(result is None for result in results) == 1
         assert dp.event_isolation.closed
 
+    @pytest.mark.parametrize("method_name", ["shutdown", "stop_polling"])
+    async def test_on_shutdown_same_task_reentry_does_not_deadlock(
+        self, method_name
+    ):
+        """Повторный вход из cleanup не блокирует его самого."""
+        dp = Dispatcher(event_isolation=_RecordingIsolation())
+        entered = asyncio.Event()
+        release = asyncio.Event()
+        second_started = asyncio.Event()
+        calls: list[str] = []
+
+        @dp.on_shutdown()
+        async def _on_shutdown():
+            calls.append("enter")
+            await getattr(dp, method_name)()
+            calls.append("exit")
+            entered.set()
+            await release.wait()
+
+        first = asyncio.create_task(dp.shutdown())
+        await asyncio.wait_for(entered.wait(), 1)
+
+        async def _second_shutdown():
+            second_started.set()
+            await dp.shutdown()
+
+        second = asyncio.create_task(_second_shutdown())
+        await asyncio.wait_for(second_started.wait(), 1)
+        await asyncio.sleep(0)
+        assert not second.done()
+
+        release.set()
+        await asyncio.wait_for(asyncio.gather(first, second), 1)
+
+        assert calls == ["enter", "exit"]
+        assert dp.event_isolation.closed
+
     async def test_shutdown_is_idempotent(self):
         """Повторный shutdown() не повторяет пользовательский cleanup."""
         dp = Dispatcher(event_isolation=_RecordingIsolation())

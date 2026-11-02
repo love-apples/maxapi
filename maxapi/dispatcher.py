@@ -188,6 +188,7 @@ class Dispatcher(BotMixin):
         self._closing: bool = False
         self._shutdown_complete: bool = False
         self._shutdown_lock = asyncio.Lock()
+        self._shutdown_task: asyncio.Task | None = None
         self._deferred_shutdown: bool = False
         self._polling_task: asyncio.Task | None = None
         self._polling_active: bool = False
@@ -2350,7 +2351,9 @@ class Dispatcher(BotMixin):
         shutdown-хуков webhook-интеграций
         (:class:`~maxapi.webhook.base.BaseMaxWebhook`). Идемпотентен:
         конкурентные и повторные вызовы выполняют только один цикл
-        уборки. Следующий :meth:`startup` разрешает новый цикл.
+        уборки. Рекурсивный вызов из самого ``on_shutdown`` возвращается
+        немедленно, не ожидая собственный lock. Следующий
+        :meth:`startup` разрешает новый цикл.
         """
         self._closing = True
 
@@ -2390,6 +2393,9 @@ class Dispatcher(BotMixin):
                 )
             return
 
+        if current is self._shutdown_task:
+            return
+
         async with self._shutdown_lock:
             if self._shutdown_complete:
                 return
@@ -2426,12 +2432,20 @@ class Dispatcher(BotMixin):
             if drained:
                 logger_dp.info("Все фоновые задачи завершены")
 
+            await self._finalize_shutdown()
+
+    async def _finalize_shutdown(self) -> None:
+        """Вызвать пользовательский cleanup и закрыть изоляцию событий."""
+        self._shutdown_task = asyncio.current_task()
+        try:
             try:
                 if self.on_shutdown_func:
                     await self.on_shutdown_func()
             finally:
                 await self.event_isolation.close()
                 self._shutdown_complete = True
+        finally:
+            self._shutdown_task = None
 
     async def startup(self, bot: Bot) -> None:
         """
