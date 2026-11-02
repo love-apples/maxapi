@@ -7,6 +7,7 @@ from ..enums.api_path import ApiPath
 from ..enums.http_method import HTTPMethod
 from ..enums.message_link_type import MessageLinkType
 from ..enums.parse_mode import TextFormat
+from ..utils.params import bool_to_query
 from .types.sended_comment import SendedComment
 
 if TYPE_CHECKING:
@@ -29,6 +30,7 @@ class SendComment(BaseConnection):
         format: Режим форматирования текста
             (например, Markdown, HTML). В комментариях не
             поддерживаются упоминания и гиперссылки.
+        disable_link_preview: Отключить превью ссылок.
     """
 
     def __init__(
@@ -38,6 +40,8 @@ class SendComment(BaseConnection):
         text: str | None = None,
         link: NewMessageLink | None = None,
         format: TextFormat | None = None,
+        *,
+        disable_link_preview: bool | None = None,
     ):
         if len(message_id) < 1:
             raise ValueError("message_id не должен быть меньше 1 символа")
@@ -67,6 +71,7 @@ class SendComment(BaseConnection):
         self.text = text
         self.link = link
         self.format = format
+        self.disable_link_preview = disable_link_preview
 
     async def fetch(self) -> SendedComment:
         """
@@ -77,6 +82,13 @@ class SendComment(BaseConnection):
         """
 
         bot = self._ensure_bot()
+
+        params = bot.params.copy()
+
+        if self.disable_link_preview is not None:
+            params["disable_link_preview"] = bool_to_query(
+                self.disable_link_preview
+            )
 
         json: dict[str, Any] = {}
 
@@ -93,7 +105,7 @@ class SendComment(BaseConnection):
             method=HTTPMethod.POST,
             path=ApiPath.MESSAGES + "/" + self.message_id + ApiPath.COMMENTS,
             model=SendedComment,
-            params=bot.params,
+            params=params,
             json=json,
         )
 

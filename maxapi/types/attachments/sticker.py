@@ -1,7 +1,9 @@
 from typing import Literal
 
 from ...enums.attachment import AttachmentType
-from .attachment import Attachment
+from .attachment import Attachment, StickerAttachmentRequestPayload
+
+__all__ = ["Sticker", "StickerAttachmentRequestPayload"]
 
 
 class Sticker(Attachment):

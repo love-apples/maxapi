@@ -17,6 +17,7 @@ __all__ = [
     "ClipboardButton",
     "Contact",
     "ContactAttachmentPayload",
+    "ContactAttachmentRequestPayload",
     "File",
     "Image",
     "InlineButtonUnion",
@@ -36,6 +37,7 @@ __all__ = [
     "ShareAttachmentPayload",
     "Sticker",
     "StickerAttachmentPayload",
+    "StickerAttachmentRequestPayload",
     "Video",
     "VideoThumbnail",
     "VideoUrl",
@@ -46,10 +48,12 @@ from .attachment import (
     Attachment,
     ButtonsPayload,
     ContactAttachmentPayload,
+    ContactAttachmentRequestPayload,
     OtherAttachmentPayload,
     PhotoAttachmentPayload,
     ShareAttachmentPayload,
     StickerAttachmentPayload,
+    StickerAttachmentRequestPayload,
 )
 from .audio import Audio
 from .buttons import (

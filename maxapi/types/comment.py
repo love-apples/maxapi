@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from ..enums.message_link_type import MessageLinkType
 from .bot_mixin import BotMixin
-from .message import BaseMessageBody, NewMessageLink, Recipient
+from .message import BaseMessageBody, MessageStat, NewMessageLink, Recipient
 from .users import User
 
 if TYPE_CHECKING:
@@ -68,6 +68,7 @@ class CommentMessage(BaseModel, BotMixin):
             timestamp в миллисекундах.
         link: Комментарий, на который получен ответ. Может быть None.
         body: Информация о комментарии.
+        stat: Статистика просмотров. Может быть None.
         post_message_id: ID поста (mid), к которому относится
             комментарий. Заполняется из recipient.post_id, если API
             его вернул, иначе — библиотекой из контекста запроса,
@@ -82,6 +83,7 @@ class CommentMessage(BaseModel, BotMixin):
     timestamp: int
     link: CommentLinkedMessage | None = None
     body: CommentMessageBody
+    stat: MessageStat | None = None
     post_message_id: str | None = Field(default=None, exclude=True)
     bot: Any | None = Field(  # pyright: ignore[reportRedeclaration]
         default=None, exclude=True
@@ -111,6 +113,8 @@ class CommentMessage(BaseModel, BotMixin):
         self,
         text: str | None = None,
         format: TextFormat | None = None,
+        *,
+        disable_link_preview: bool | None = None,
     ) -> SendedComment:
         """
         Отправляет ответ на текущий комментарий
@@ -120,6 +124,8 @@ class CommentMessage(BaseModel, BotMixin):
             text: Текст комментария.
             format: Режим форматирования текста. В комментариях
                 не поддерживаются упоминания и гиперссылки.
+            disable_link_preview: Отключить превью ссылок
+                (True — без превью).
 
         Returns:
             SendedComment: Результат выполнения метода
@@ -131,6 +137,7 @@ class CommentMessage(BaseModel, BotMixin):
             text=text,
             link=NewMessageLink(type=MessageLinkType.REPLY, mid=self.body.mid),
             format=format,
+            disable_link_preview=disable_link_preview,
         )
 
     async def edit(

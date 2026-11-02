@@ -105,6 +105,34 @@ class ButtonsPayload(BaseModel):
         )
 
 
+class ContactAttachmentRequestPayload(BaseModel):
+    """
+    Данные контакта для отправки в сообщении.
+
+    Attributes:
+        name: Имя контакта.
+        contact_id: Идентификатор пользователя MAX.
+        vcf_info: Данные контакта в формате vCard.
+        vcf_phone: Номер телефона контакта.
+    """
+
+    name: str | None = None
+    contact_id: int | None = None
+    vcf_info: str | None = None
+    vcf_phone: str | None = None
+
+
+class StickerAttachmentRequestPayload(BaseModel):
+    """
+    Данные стикера для отправки в сообщении.
+
+    Attributes:
+        code: Код стикера.
+    """
+
+    code: str
+
+
 AttachmentPayload = (
     AttachmentUpload
     | PhotoAttachmentPayload
@@ -112,7 +140,9 @@ AttachmentPayload = (
     | ShareAttachmentPayload
     | ButtonsPayload
     | ContactAttachmentPayload
+    | ContactAttachmentRequestPayload
     | StickerAttachmentPayload
+    | StickerAttachmentRequestPayload
 )
 
 

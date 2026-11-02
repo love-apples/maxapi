@@ -69,8 +69,8 @@ class SendMessage(BaseConnection):
         disable_link_preview: bool | None = None,
         sleep_after_input_media: bool | None = True,
     ):
-        if text is not None and not (len(text) < 4000):
-            raise ValueError("text должен быть меньше 4000 символов")
+        if text is not None and len(text) > 4000:
+            raise ValueError("text должен быть не длиннее 4000 символов")
 
         super().__init__()
         self.bot = bot

@@ -31,6 +31,7 @@ __all__ = [
     "CommentRemoved",
     "Comments",
     "ContactAttachmentPayload",
+    "ContactAttachmentRequestPayload",
     "DeletedComment",
     "DialogCleared",
     "DialogMuted",
@@ -71,6 +72,7 @@ __all__ = [
     "SendedMessage",
     "ShareAttachmentPayload",
     "StickerAttachmentPayload",
+    "StickerAttachmentRequestPayload",
     "Subscription",
     "UpdateUnion",
     "User",
@@ -83,10 +85,12 @@ from ..types.attachments.attachment import (
     Attachment,
     ButtonsPayload,
     ContactAttachmentPayload,
+    ContactAttachmentRequestPayload,
     OtherAttachmentPayload,
     PhotoAttachmentPayload,
     ShareAttachmentPayload,
     StickerAttachmentPayload,
+    StickerAttachmentRequestPayload,
 )
 from ..types.attachments.buttons.callback_button import CallbackButton
 from ..types.attachments.buttons.chat_button import ChatButton
