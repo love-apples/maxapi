@@ -99,10 +99,18 @@ class TestDispatcherShutdown:
         assert dp.event_isolation.closed
 
     async def test_shutdown_is_idempotent(self):
-        """Повторный shutdown() не падает."""
+        """Повторный shutdown() не повторяет пользовательский cleanup."""
         dp = Dispatcher(event_isolation=_RecordingIsolation())
+        calls: list[str] = []
+
+        @dp.on_shutdown()
+        async def _on_shutdown():
+            calls.append("shutdown")
+
         await dp.shutdown()
         await dp.shutdown()
+
+        assert calls == ["shutdown"]
         assert dp.event_isolation.closed
 
     async def test_shutdown_drains_late_added_tasks(self):

@@ -186,6 +186,8 @@ class Dispatcher(BotMixin):
         self._global_mw_chain: HandlerCallable | None = None
         self._background_tasks: set[asyncio.Task] = set()
         self._closing: bool = False
+        self._shutdown_complete: bool = False
+        self._shutdown_lock = asyncio.Lock()
         self._deferred_shutdown: bool = False
         self._polling_task: asyncio.Task | None = None
         self._polling_active: bool = False
@@ -590,10 +592,12 @@ class Dispatcher(BotMixin):
             bot: Экземпляр бота.
         """
 
-        # Сбрасываем признак завершения до раннего выхода: повторный
+        # Сбрасываем признаки завершения до раннего выхода: повторный
         # startup() после shutdown() (webhook-сценарий) не проходит
-        # подготовку заново, но диспетчер снова принимает события.
+        # подготовку заново, но диспетчер снова принимает события, а
+        # следующий shutdown() должен выполнить новый цикл уборки.
         self._closing = False
+        self._shutdown_complete = False
 
         if self._ready:
             # Регистрации между shutdown() и повторным startup()
@@ -2309,7 +2313,8 @@ class Dispatcher(BotMixin):
 
         Реентрантный вызов (из обработчика — обычно через
         :meth:`stop_polling`) только выставляет признак завершения:
-        дренировать фоновые задачи и закрывать изоляцию нельзя. Другие
+        дренировать фоновые задачи, вызывать ``on_shutdown`` и закрывать
+        изоляцию нельзя. Другие
         обработчики того же пользователя ждут блокировку
         ``event_isolation``, которую удерживает вызывающий, — ожидание
         их завершения замкнуло бы кольцо. Оставшиеся задачи доработают
@@ -2343,7 +2348,9 @@ class Dispatcher(BotMixin):
 
         Вызывается автоматически из :meth:`stop_polling` и из
         shutdown-хуков webhook-интеграций
-        (:class:`~maxapi.webhook.base.BaseMaxWebhook`). Идемпотентен.
+        (:class:`~maxapi.webhook.base.BaseMaxWebhook`). Идемпотентен:
+        конкурентные и повторные вызовы выполняют только один цикл
+        уборки. Следующий :meth:`startup` разрешает новый цикл.
         """
         self._closing = True
 
@@ -2372,53 +2379,59 @@ class Dispatcher(BotMixin):
             elif others := self._background_tasks - {current}:
                 logger_dp.warning(
                     "shutdown вызван из обработчика: дренаж фоновых "
-                    "задач (%d) и закрытие изоляции пропущены",
+                    "задач (%d), on_shutdown и закрытие изоляции "
+                    "пропущены",
                     len(others),
                 )
             else:
                 logger_dp.debug(
                     "shutdown вызван из обработчика: дренировать "
-                    "нечего, изоляция не закрыта",
+                    "нечего, on_shutdown и закрытие изоляции пропущены",
                 )
             return
 
-        drained = False
-        while pending := tuple(self._background_tasks):
-            logger_dp.info(
-                "Ожидаю завершения %d фоновых задач...",
-                len(pending),
-            )
-            # Именно wait(), а не gather(): задачу из пула удаляет её
-            # done-callback, который мог ещё не выполниться (задача
-            # завершилась, а нас разбудили раньше). С Python 3.12
-            # gather() по уже завершённым задачам не уступает цикл
-            # событий, и while крутился бы вечно. wait() всегда
-            # уступает, а call_soon выполняет callback'и по порядку —
-            # к пробуждению задачи убраны из пула, их ошибки
-            # залогированы.
-            try:
-                await asyncio.wait(pending)
-            except asyncio.CancelledError:
-                # gather() отменял бы дочерние задачи вместе с собой;
-                # wait() этого не делает — сохраняем поведение: отмена
-                # shutdown() (например, по таймауту lifespan) отменяет
-                # и недождавшиеся фоновые задачи.
-                for task in pending:
-                    task.cancel()
-                # cancel() лишь запрашивает отмену: как и gather(),
-                # дожидаемся, пока задачи доработают cleanup и уйдут
-                # из пула, и только потом пробрасываем отмену.
-                await asyncio.wait(pending)
-                raise
-            drained = True
-        if drained:
-            logger_dp.info("Все фоновые задачи завершены")
+        async with self._shutdown_lock:
+            if self._shutdown_complete:
+                return
 
-        try:
-            if self.on_shutdown_func:
-                await self.on_shutdown_func()
-        finally:
-            await self.event_isolation.close()
+            drained = False
+            while pending := tuple(self._background_tasks):
+                logger_dp.info(
+                    "Ожидаю завершения %d фоновых задач...",
+                    len(pending),
+                )
+                # Именно wait(), а не gather(): задачу из пула удаляет её
+                # done-callback, который мог ещё не выполниться (задача
+                # завершилась, а нас разбудили раньше). С Python 3.12
+                # gather() по уже завершённым задачам не уступает цикл
+                # событий, и while крутился бы вечно. wait() всегда
+                # уступает, а call_soon выполняет callback'и по порядку —
+                # к пробуждению задачи убраны из пула, их ошибки
+                # залогированы.
+                try:
+                    await asyncio.wait(pending)
+                except asyncio.CancelledError:
+                    # gather() отменял бы дочерние задачи вместе с собой;
+                    # wait() этого не делает — сохраняем поведение: отмена
+                    # shutdown() (например, по таймауту lifespan) отменяет
+                    # и недождавшиеся фоновые задачи.
+                    for task in pending:
+                        task.cancel()
+                    # cancel() лишь запрашивает отмену: как и gather(),
+                    # дожидаемся, пока задачи доработают cleanup и уйдут
+                    # из пула, и только потом пробрасываем отмену.
+                    await asyncio.wait(pending)
+                    raise
+                drained = True
+            if drained:
+                logger_dp.info("Все фоновые задачи завершены")
+
+            try:
+                if self.on_shutdown_func:
+                    await self.on_shutdown_func()
+            finally:
+                await self.event_isolation.close()
+            self._shutdown_complete = True
 
     async def startup(self, bot: Bot) -> None:
         """

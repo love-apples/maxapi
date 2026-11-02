@@ -571,9 +571,14 @@ class TestStopPollingSafety:
         assert task.done()
 
     async def test_concurrent_stops(self, dispatcher, polling_bot):
-        """Конкурентные stop_polling завершаются оба."""
+        """Конкурентные stop_polling выполняют один цикл уборки."""
         started = asyncio.Event()
+        shutdown_calls: list[str] = []
         polling_bot.get_updates = _hanging_updates(started, [])
+
+        @dispatcher.on_shutdown()
+        async def _on_shutdown():
+            shutdown_calls.append("shutdown")
 
         task = asyncio.create_task(dispatcher.start_polling(polling_bot))
         await asyncio.wait_for(started.wait(), STOP_TIMEOUT)
@@ -586,10 +591,16 @@ class TestStopPollingSafety:
         )
 
         assert task.done()
+        assert shutdown_calls == ["shutdown"]
 
     async def test_restart_after_stop(self, dispatcher, polling_bot):
         """После остановки polling можно запустить заново."""
         stop_events = []
+        shutdown_calls: list[str] = []
+
+        @dispatcher.on_shutdown()
+        async def _on_shutdown():
+            shutdown_calls.append("shutdown")
 
         @dispatcher.message_created(Command("ping"))
         async def _handler(event: MessageCreated):
@@ -618,6 +629,7 @@ class TestStopPollingSafety:
             assert task.done()
 
         assert stop_events[0] is not stop_events[1]
+        assert shutdown_calls == ["shutdown", "shutdown"]
 
     async def test_second_start_polling_is_rejected(
         self, dispatcher, polling_bot
