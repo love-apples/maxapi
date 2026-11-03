@@ -170,6 +170,8 @@ async def test_chat_high_level_shortcuts_delegate_to_bot():
         from_time=None,
         to_time=None,
         count=10,
+        before=None,
+        after=None,
     )
     bot.delete_me_from_chat.assert_awaited_once_with(100)
     bot.delete_chat.assert_awaited_once_with(100)

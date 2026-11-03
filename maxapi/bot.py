@@ -543,6 +543,9 @@ class Bot(BaseConnection):
         from_time: datetime | int | None = None,
         to_time: datetime | int | None = None,
         count: int | None = 50,
+        *,
+        before: datetime | int | None = None,
+        after: datetime | int | None = None,
     ) -> Messages:
         """
         Получает сообщения из чата или по списку идентификаторов.
@@ -555,10 +558,14 @@ class Bot(BaseConnection):
         Args:
             chat_id: ID чата, из которого нужно получить сообщения.
             message_ids: ID сообщений, которые нужно получить.
-            from_time: Начало периода.
-            to_time: Конец периода.
+            from_time: Начало периода (миллисекунды). Устарело,
+                используйте after.
+            to_time: Конец периода (миллисекунды). Устарело,
+                используйте before.
             count: Количество сообщений. Если None, параметр
                 не отправляется.
+            before: Конец периода (Unix timestamp в миллисекундах).
+            after: Начало периода (Unix timestamp в миллисекундах).
 
         Returns:
             Messages: Список сообщений.
@@ -571,6 +578,8 @@ class Bot(BaseConnection):
             from_time=from_time,
             to_time=to_time,
             count=count,
+            before=before,
+            after=after,
         ).fetch()
 
     async def get_message(self, message_id: str) -> Message:
@@ -594,6 +603,8 @@ class Bot(BaseConnection):
         text: str | None = None,
         link: NewMessageLink | None = None,
         format: TextFormat | None = None,
+        *,
+        disable_link_preview: bool | None = None,
     ) -> SendedComment:
         """
         Отправляет комментарий к посту в канале.
@@ -607,6 +618,8 @@ class Bot(BaseConnection):
             link: Ссылка на комментарий (например, ответ).
             format: Режим форматирования текста. В комментариях
                 не поддерживаются упоминания и гиперссылки.
+            disable_link_preview: Отключить превью ссылок
+                (True — без превью).
 
         Returns:
             SendedComment: Отправленный комментарий.
@@ -618,6 +631,9 @@ class Bot(BaseConnection):
             text=text,
             link=link,
             format=self.resolve_format(format),
+            disable_link_preview=self._resolve_disable_link_preview(
+                disable_link_preview=disable_link_preview
+            ),
         ).fetch()
 
     async def edit_comment(

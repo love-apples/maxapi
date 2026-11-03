@@ -62,8 +62,8 @@ class EditMessage(BaseConnection):
         notify: bool | None = None,
         sleep_after_input_media: bool | None = True,
     ):
-        if text is not None and len(text) >= 4000:
-            raise ValueError("text должен быть меньше 4000 символов")
+        if text is not None and len(text) > 4000:
+            raise ValueError("text должен быть не длиннее 4000 символов")
 
         super().__init__()
         self.bot = bot
@@ -108,7 +108,7 @@ class EditMessage(BaseConnection):
 
         params = bot.params.copy()
 
-        json: dict[str, Any] = {"attachments": []}
+        json: dict[str, Any] = {}
 
         params["message_id"] = self.message_id
 
@@ -117,7 +117,8 @@ class EditMessage(BaseConnection):
 
         has_input_media = False
 
-        if self.attachments:
+        if self.attachments is not None:
+            json["attachments"] = []
             for att in self.attachments:
                 if isinstance(att, (InputMedia, InputMediaBuffer)):
                     has_input_media = True
