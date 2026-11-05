@@ -6,6 +6,7 @@ handle() и освободить ресурсы изоляции событий.
 
 import asyncio
 
+import pytest
 from maxapi import Dispatcher
 from maxapi.context import SimpleEventIsolation
 from maxapi.webhook.aiohttp import AiohttpMaxWebhook
@@ -19,16 +20,21 @@ class DummyBot:
 class _RecordingIsolation(SimpleEventIsolation):
     """Изоляция, фиксирующая вызов close()."""
 
-    def __init__(self) -> None:
+    def __init__(self, events: list[str] | None = None) -> None:
         super().__init__()
         self.closed = False
+        self.events = events
 
     async def close(self) -> None:
         self.closed = True
+        if self.events is not None:
+            self.events.append("close")
         await super().close()
 
 
-def _dispatcher_with_pending_task() -> tuple[Dispatcher, list]:
+def _dispatcher_with_pending_task(
+    events: list[str] | None = None,
+) -> tuple[Dispatcher, list]:
     """Диспетчер с незавершённой фоновой задачей в пуле.
 
     Returns:
@@ -37,7 +43,7 @@ def _dispatcher_with_pending_task() -> tuple[Dispatcher, list]:
     """
     dp = Dispatcher(
         use_create_task=True,
-        event_isolation=_RecordingIsolation(),
+        event_isolation=_RecordingIsolation(events),
     )
     done: list = []
 
@@ -64,11 +70,108 @@ class TestDispatcherShutdown:
         assert done == [True]
         assert dp.event_isolation.closed
 
-    async def test_shutdown_is_idempotent(self):
-        """Повторный shutdown() не падает."""
+    async def test_on_shutdown_runs_after_tasks_before_isolation_close(self):
+        """Пользовательский cleanup идёт после задач, но до close()."""
+        events: list[str] = []
+        dp, done = _dispatcher_with_pending_task(events)
+
+        @dp.on_shutdown()
+        async def _on_shutdown():
+            assert done == [True]
+            events.append("shutdown")
+
+        await dp.shutdown()
+
+        assert events == ["shutdown", "close"]
+
+    async def test_on_shutdown_error_still_closes_isolation(self):
+        """Ошибка cleanup пробрасывается один раз, изоляция закрыта."""
         dp = Dispatcher(event_isolation=_RecordingIsolation())
+        calls: list[str] = []
+
+        @dp.on_shutdown()
+        async def _on_shutdown():
+            calls.append("shutdown")
+            msg = "cleanup failed"
+            raise RuntimeError(msg)
+
+        with pytest.raises(RuntimeError, match="cleanup failed"):
+            await dp.shutdown()
+        await dp.shutdown()
+
+        assert calls == ["shutdown"]
+        assert dp.event_isolation.closed
+
+    async def test_concurrent_shutdown_does_not_repeat_failed_callback(self):
+        """Конкурентный shutdown не повторяет упавший cleanup."""
+        dp = Dispatcher(event_isolation=_RecordingIsolation())
+        calls: list[str] = []
+
+        @dp.on_shutdown()
+        async def _on_shutdown():
+            calls.append("shutdown")
+            msg = "cleanup failed"
+            raise RuntimeError(msg)
+
+        results = await asyncio.gather(
+            dp.shutdown(), dp.shutdown(), return_exceptions=True
+        )
+
+        assert calls == ["shutdown"]
+        assert sum(isinstance(result, RuntimeError) for result in results) == 1
+        assert sum(result is None for result in results) == 1
+        assert dp.event_isolation.closed
+
+    @pytest.mark.parametrize("method_name", ["shutdown", "stop_polling"])
+    async def test_on_shutdown_same_task_reentry_does_not_deadlock(
+        self, method_name
+    ):
+        """Повторный вход из cleanup не блокирует его самого."""
+        dp = Dispatcher(event_isolation=_RecordingIsolation())
+        entered = asyncio.Event()
+        release = asyncio.Event()
+        second_started = asyncio.Event()
+        calls: list[str] = []
+
+        @dp.on_shutdown()
+        async def _on_shutdown():
+            calls.append("enter")
+            await getattr(dp, method_name)()
+            calls.append("exit")
+            entered.set()
+            await release.wait()
+
+        first = asyncio.create_task(dp.shutdown())
+        await asyncio.wait_for(entered.wait(), 1)
+
+        async def _second_shutdown():
+            second_started.set()
+            await dp.shutdown()
+
+        second = asyncio.create_task(_second_shutdown())
+        await asyncio.wait_for(second_started.wait(), 1)
+        await asyncio.sleep(0)
+        assert not second.done()
+
+        release.set()
+        await asyncio.wait_for(asyncio.gather(first, second), 1)
+
+        assert calls == ["enter", "exit"]
+        assert dp.event_isolation.closed
+
+    async def test_shutdown_is_idempotent(self):
+        """Повторный shutdown() не повторяет пользовательский cleanup."""
+        dp = Dispatcher(event_isolation=_RecordingIsolation())
+        calls: list[str] = []
+
+        @dp.on_shutdown()
+        async def _on_shutdown():
+            calls.append("shutdown")
+
         await dp.shutdown()
         await dp.shutdown()
+
+        assert calls == ["shutdown"]
         assert dp.event_isolation.closed
 
     async def test_shutdown_drains_late_added_tasks(self):
@@ -130,11 +233,17 @@ class TestWebhookShutdownHooks:
     async def test_base_shutdown_delegates_to_dispatcher(self):
         """BaseMaxWebhook._shutdown() вызывает dp.shutdown()."""
         dp, done = _dispatcher_with_pending_task()
+        calls: list[str] = []
+
+        @dp.on_shutdown()
+        async def _on_shutdown():
+            calls.append("shutdown")
 
         webhook = AiohttpMaxWebhook(dp=dp, bot=DummyBot(), secret="s")
         await webhook._shutdown()
 
         assert done == [True]
+        assert calls == ["shutdown"]
         assert dp.event_isolation.closed
 
     async def test_aiohttp_create_app_registers_on_cleanup(self):
