@@ -1835,6 +1835,54 @@ class TestRouterLevelFilters:
 
         assert enriched.get("router_key") == "router_val"
 
+    @pytest.mark.parametrize(
+        ("source_has_handler", "expected_filter_calls"),
+        [(False, []), (True, ["source"])],
+        ids=["without_handlers", "handler_mismatch"],
+    )
+    async def test_router_filter_data_does_not_leak_to_next_router(
+        self,
+        dispatcher,
+        bot,
+        fixture_message_created,
+        source_has_handler,
+        expected_filter_calls,
+    ):
+        """Данные фильтров роутера не попадают в следующий роутер."""
+        from maxapi.filters.filter import BaseFilter
+
+        filter_calls: list[str] = []
+        received_args: list[list[str] | None] = []
+
+        class InjectArgs(BaseFilter):
+            async def __call__(self, event):
+                filter_calls.append("source")
+                return {"args": ["из_роутера_A"]}
+
+        source = Router(router_id="source")
+        source.base_filters.append(InjectArgs())
+
+        if source_has_handler:
+
+            @source.message_created(F.text == "__NEVER_MATCH__")
+            async def _source_handler(event: MessageCreated):
+                raise AssertionError("Хендлер source не должен вызываться")
+
+        target = Router(router_id="target")
+
+        @target.message_created()
+        async def _target_handler(
+            event: MessageCreated, args: list[str] | None = None
+        ):
+            received_args.append(args)
+
+        dispatcher.include_routers(source, target)
+        _setup_for_handle(dispatcher, bot)
+        await dispatcher.handle(fixture_message_created)
+
+        assert filter_calls == expected_filter_calls
+        assert received_args == [None]
+
 
 # ===========================================================================
 # Middleware на уровне роутера

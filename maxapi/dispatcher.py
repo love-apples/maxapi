@@ -1475,16 +1475,6 @@ class Dispatcher(BotMixin):
         ) in entries:
             router_id = router.router_id or id(router)
 
-            router_filter_result = await self._check_router_filters(
-                event=event_object,
-                filters=router_filters,
-                base_filters=router_base_filters,
-                data=data,
-            )
-            if router_filter_result is None:
-                continue
-            data.update(router_filter_result)
-
             matching_handlers = self._find_matching_handlers(
                 router=router,
                 event_type=event_object.update_type,
@@ -1493,10 +1483,20 @@ class Dispatcher(BotMixin):
             if not matching_handlers:
                 continue
 
+            router_filter_result = await self._check_router_filters(
+                event=event_object,
+                filters=router_filters,
+                base_filters=router_base_filters,
+                data=data,
+            )
+            if router_filter_result is None:
+                continue
+            router_data = {**data, **router_filter_result}
+
             if await self._dispatch_to_router(
                 router=router,
                 event_object=event_object,
-                data=data,
+                data=router_data,
                 matching_handlers=matching_handlers,
                 router_outer_middlewares=router_outer_middlewares,
                 memory_context=memory_context,
