@@ -27,5 +27,5 @@ pip install git+https://github.com/love-apples/maxapi.git
 
 ## Требования
 
-- Python 3.10+
+- Python 3.10+ (в CI проверяются версии 3.10–3.15)
 - Токен бота MAX

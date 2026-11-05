@@ -19,6 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Communications :: Chat",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
@@ -28,10 +29,12 @@ dependencies = [
     # Нижние границы проверяются ногой lowest-direct в CI:
     # backoff 2.2 — details["exception"] в on_backoff; magic_filter 1.0.4 —
     # MagicT; pydantic 2.12 — сериализация computed-поля url поверх alias
-    # (и первые wheel-ы pydantic-core под Python 3.14).
+    # и первые wheel-ы pydantic-core под Python 3.14; pydantic 2.14 —
+    # официальная поддержка и wheel-ы pydantic-core под Python 3.15.
     "backoff>=2.2,<3",
     "magic_filter>=1.0.4,<2",
-    "pydantic>=2.12,<3",
+    "pydantic>=2.12,<3; python_version < '3.15'",
+    "pydantic>=2.14,<3; python_version >= '3.15'",
     "aiofiles>=24.1,<26",
     "puremagic>=1.30,<2",
 ]

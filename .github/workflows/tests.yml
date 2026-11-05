@@ -40,7 +40,7 @@ jobs:
       # дорабатывают, чтобы видеть все сломанные комбинации сразу.
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
         dependency-resolution: ["lowest-direct", "highest"]
     steps:
       - name: Checkout repository
@@ -80,8 +80,8 @@ jobs:
           uv run --no-sync pytest tests/ -v -m "not integration" \
             --cov=maxapi --cov-report=xml --cov-report=term
 
-      # Один общий токен бота: гоняем на одной ноге, иначе десять
-      # параллельных прогонов упираются в лимиты реального API.
+      # Один общий токен бота: гоняем на одной ноге, иначе параллельные
+      # прогоны упираются в лимиты реального API.
       - name: Run integration tests
         if: >-
           ${{ matrix.python-version == '3.11'
