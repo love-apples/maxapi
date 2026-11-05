@@ -71,7 +71,7 @@ if TYPE_CHECKING:
     from .methods.types.edited_message import EditedMessage
     from .methods.types.getted_list_admin_chat import GettedListAdminChat
     from .methods.types.getted_members_chat import GettedMembersChat
-    from .methods.types.getted_pineed_message import GettedPin
+    from .methods.types.getted_pinned_message import GettedPin
     from .methods.types.getted_subscriptions import GettedSubscriptions
     from .methods.types.getted_upload_url import GettedUploadUrl
     from .methods.types.pinned_message import PinnedMessage

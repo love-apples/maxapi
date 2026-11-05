@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, cast
 from ..connection.base import BaseConnection
 from ..enums.api_path import ApiPath
 from ..enums.http_method import HTTPMethod
-from .types.getted_pineed_message import GettedPin
+from .types.getted_pinned_message import GettedPin
 
 if TYPE_CHECKING:
     from ..bot import Bot
