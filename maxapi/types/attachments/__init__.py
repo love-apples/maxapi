@@ -100,7 +100,10 @@ def _attachment_tag(value: Any) -> str:
         attachment_type = value.get("type")
     else:
         attachment_type = getattr(value, "type", None)
-    if attachment_type in _KNOWN_ATTACHMENT_TYPES:
+    if (
+        isinstance(attachment_type, str)
+        and attachment_type in _KNOWN_ATTACHMENT_TYPES
+    ):
         return "known"
     return "unknown"
 

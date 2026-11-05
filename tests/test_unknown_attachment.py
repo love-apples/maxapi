@@ -32,3 +32,10 @@ def test_unknown_type_is_kept_as_is():
 def test_known_type_with_bad_payload_still_fails():
     with pytest.raises(ValidationError):
         _body({"type": "location", "latitude": "not-a-number"})
+
+
+@pytest.mark.parametrize("attachment_type", [[], {}, None, 42, True])
+def test_non_string_type_raises_validation_error(attachment_type):
+    """Некорректный тип отклоняется штатной валидацией."""
+    with pytest.raises(ValidationError):
+        _body({"type": attachment_type, "payload": {}})
