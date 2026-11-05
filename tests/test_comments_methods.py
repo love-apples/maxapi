@@ -462,3 +462,51 @@ def test_comment_result_types_are_reexported():
     assert LazyDeletedComment is DeletedComment
     assert LazyEditedComment is EditedComment
     assert LazySendedComment is SendedComment
+
+
+async def test_send_comment_puts_disable_link_preview_in_params(bot):
+    method = SendComment(
+        bot=bot,
+        message_id=MESSAGE_ID,
+        text="привет",
+        disable_link_preview=True,
+    )
+
+    with _patched_request() as mocked_request:
+        await method.fetch()
+
+    kwargs = mocked_request.call_args.kwargs
+    assert kwargs["params"]["disable_link_preview"] == "true"
+    assert "disable_link_preview" not in kwargs["json"]
+
+
+async def test_bot_send_comment_uses_default_disable_link_preview(bot):
+    bot.disable_link_preview = True
+
+    with _patched_request() as mocked_request:
+        await bot.send_comment(message_id=MESSAGE_ID, text="привет")
+
+    assert (
+        mocked_request.call_args.kwargs["params"]["disable_link_preview"]
+        == "true"
+    )
+
+
+async def test_comment_reply_passes_disable_link_preview(bot):
+    comment = _enriched_comment(bot)
+
+    with _patched_request() as mocked_request:
+        await comment.reply("ответ", disable_link_preview=True)
+
+    assert (
+        mocked_request.call_args.kwargs["params"]["disable_link_preview"]
+        == "true"
+    )
+
+
+def test_comment_message_parses_stat():
+    comment = CommentMessage(**{**COMMENT_PAYLOAD, "stat": {"views": 42}})
+
+    assert comment.stat is not None
+    assert comment.stat.views == 42
+    assert comment.model_dump()["stat"] == {"views": 42}

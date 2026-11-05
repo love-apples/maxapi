@@ -5,6 +5,7 @@ __all__ = [
     "AttachmentPayload",
     "AttachmentUpload",
     "BotAdded",
+    "BotAdminPermissionsChanged",
     "BotCommand",
     "BotRemoved",
     "BotStarted",
@@ -22,11 +23,15 @@ __all__ = [
     "ClipboardButton",
     "Command",
     "CommandStart",
+    "CommentCreated",
+    "CommentEdited",
     "CommentLinkedMessage",
     "CommentMessage",
     "CommentMessageBody",
+    "CommentRemoved",
     "Comments",
     "ContactAttachmentPayload",
+    "ContactAttachmentRequestPayload",
     "DeletedComment",
     "DialogCleared",
     "DialogMuted",
@@ -67,6 +72,7 @@ __all__ = [
     "SendedMessage",
     "ShareAttachmentPayload",
     "StickerAttachmentPayload",
+    "StickerAttachmentRequestPayload",
     "Subscription",
     "UpdateUnion",
     "User",
@@ -79,10 +85,12 @@ from ..types.attachments.attachment import (
     Attachment,
     ButtonsPayload,
     ContactAttachmentPayload,
+    ContactAttachmentRequestPayload,
     OtherAttachmentPayload,
     PhotoAttachmentPayload,
     ShareAttachmentPayload,
     StickerAttachmentPayload,
+    StickerAttachmentRequestPayload,
 )
 from ..types.attachments.buttons.callback_button import CallbackButton
 from ..types.attachments.buttons.chat_button import ChatButton
@@ -122,10 +130,16 @@ from ..types.message import (
 from ..types.subscription import Subscription
 from ..types.updates import UpdateUnion
 from ..types.updates.bot_added import BotAdded
+from ..types.updates.bot_admin_permissions_changed import (
+    BotAdminPermissionsChanged,
+)
 from ..types.updates.bot_removed import BotRemoved
 from ..types.updates.bot_started import BotStarted
 from ..types.updates.bot_stopped import BotStopped
 from ..types.updates.chat_title_changed import ChatTitleChanged
+from ..types.updates.comment_created import CommentCreated
+from ..types.updates.comment_edited import CommentEdited
+from ..types.updates.comment_removed import CommentRemoved
 from ..types.updates.dialog_cleared import DialogCleared
 from ..types.updates.dialog_muted import DialogMuted
 from ..types.updates.dialog_removed import DialogRemoved

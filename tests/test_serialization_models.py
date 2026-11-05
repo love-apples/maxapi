@@ -40,7 +40,7 @@ def make_simple_message(fake_user, faker) -> Message:
     msg = Message(
         sender=sender,
         recipient=recipient,
-        timestamp=int(faker.date_time().timestamp()),
+        timestamp=int(faker.unix_time()),
         body=body,
     )
     return msg

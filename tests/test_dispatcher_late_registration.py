@@ -155,6 +155,14 @@ class TestLateRegistration:
         late = Router("late")
         late.filter(TraceFilter("late", order))
 
+        @early.message_created()
+        async def _early_handler(event: MessageCreated):
+            raise AssertionError("Фильтр early не должен пропускать событие")
+
+        @late.message_created()
+        async def _late_handler(event: MessageCreated):
+            raise AssertionError("Фильтр late не должен пропускать событие")
+
         @dispatcher.message_created()
         async def _dp_handler(event: MessageCreated):
             order.append("dp")

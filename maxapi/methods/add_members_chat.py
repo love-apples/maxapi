@@ -15,6 +15,11 @@ class AddMembersChat(BaseConnection):
 
     https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members
 
+    Note:
+        По changelog MAX API с 9 сентября 2026 работа метода
+        ограничена, а в описании API указано, что могут потребоваться
+        дополнительные права.
+
     Attributes:
         bot: Экземпляр бота, через который выполняется запрос.
         chat_id: Идентификатор группового чата.

@@ -193,3 +193,41 @@ async def test_message_helpers_pass_format_to_bot():
     assert reply_call["format"] == TextFormat.HTML
     assert forward_call["format"] == TextFormat.MARKDOWN
     assert edit_call["format"] == TextFormat.HTML
+
+
+async def test_edit_message_preserves_attachments_when_none(bot):
+    method = EditMessage(bot=bot, message_id="msg_1", text="new text")
+
+    with patch.object(
+        BaseConnection, "request", new=AsyncMock(return_value=Mock())
+    ) as mocked_request:
+        await method.fetch()
+
+    assert "attachments" not in mocked_request.call_args.kwargs["json"]
+
+
+async def test_edit_message_clears_attachments_when_empty_list(bot):
+    method = EditMessage(
+        bot=bot,
+        message_id="msg_1",
+        text="new text",
+        attachments=[],
+    )
+
+    with patch.object(
+        BaseConnection, "request", new=AsyncMock(return_value=Mock())
+    ) as mocked_request:
+        await method.fetch()
+
+    assert mocked_request.call_args.kwargs["json"]["attachments"] == []
+
+
+@pytest.mark.parametrize("method_class", [SendMessage, EditMessage])
+def test_message_methods_accept_exactly_4000_characters(bot, method_class):
+    kwargs = (
+        {"chat_id": 1} if method_class is SendMessage else {"message_id": "m1"}
+    )
+
+    method_class(bot=bot, text="a" * 4000, **kwargs)
+    with pytest.raises(ValueError, match="4000"):
+        method_class(bot=bot, text="a" * 4001, **kwargs)

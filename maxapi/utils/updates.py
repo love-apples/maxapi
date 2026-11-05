@@ -8,10 +8,16 @@ from ..enums.chat_type import ChatType
 from ..exceptions.max import MaxApiError, MaxConnection
 from ..types.fetchable import ChatRef, FromUserRef
 from ..types.updates.bot_added import BotAdded
+from ..types.updates.bot_admin_permissions_changed import (
+    BotAdminPermissionsChanged,
+)
 from ..types.updates.bot_removed import BotRemoved
 from ..types.updates.bot_started import BotStarted
 from ..types.updates.bot_stopped import BotStopped
 from ..types.updates.chat_title_changed import ChatTitleChanged
+from ..types.updates.comment_created import CommentCreated
+from ..types.updates.comment_edited import CommentEdited
+from ..types.updates.comment_removed import CommentRemoved
 from ..types.updates.dialog_cleared import DialogCleared
 from ..types.updates.dialog_muted import DialogMuted
 from ..types.updates.dialog_removed import DialogRemoved
@@ -49,7 +55,9 @@ def _extract_chat_id(event: UpdateUnion) -> int | None:
 
     chat_id = getattr(event, "chat_id", None)
 
-    if chat_id is None and isinstance(event, (MessageCreated, MessageEdited)):
+    if chat_id is None and isinstance(
+        event, (MessageCreated, MessageEdited, CommentCreated, CommentEdited)
+    ):
         chat_id = event.message.recipient.chat_id
 
     elif chat_id is None and isinstance(event, MessageCallback):
@@ -99,7 +107,9 @@ async def _resolve_chat(event: UpdateUnion, bot: Bot) -> None:
 def _resolve_from_user_from_payload(event: UpdateUnion) -> Any | None:
     """Определяет from_user без дополнительных API-запросов."""
 
-    if isinstance(event, (MessageCreated, MessageEdited)):
+    if isinstance(
+        event, (MessageCreated, MessageEdited, CommentCreated, CommentEdited)
+    ):
         return getattr(event.message, "sender", None)
 
     if isinstance(event, MessageCallback):
@@ -139,6 +149,24 @@ async def _resolve_from_user(event: UpdateUnion, bot: Bot) -> None:
                 )
         elif event.chat and event.chat.type == ChatType.DIALOG:
             event.from_user = event.chat
+
+    elif isinstance(event, (CommentRemoved, BotAdminPermissionsChanged)):
+        try:
+            event.from_user = await bot.get_chat_member(
+                chat_id=event.chat_id, user_id=event.user_id
+            )
+        except MaxApiError as exc:
+            logger.warning(
+                "Не удалось получить участника: code=%s chat_id=%s",
+                exc.code,
+                event.chat_id,
+            )
+        except (MaxConnection, AsyncioTimeoutError) as exc:
+            logger.warning(
+                "get_chat_member: %r chat_id=%s",
+                exc,
+                event.chat_id,
+            )
 
     elif isinstance(event, UserRemoved) and event.admin_id:
         try:
@@ -215,6 +243,18 @@ def _build_from_user_value(event: UpdateUnion, bot: Bot) -> Any | None:
         return FromUserRef(
             bot=bot,
             fetcher=lambda: _fetch_from_user_for_message_removed(event, bot),
+            setter=lambda value: setattr(event, "from_user", value),
+            chat_id=event.chat_id,
+            user_id=event.user_id,
+        )
+
+    if isinstance(event, (CommentRemoved, BotAdminPermissionsChanged)):
+        return FromUserRef(
+            bot=bot,
+            fetcher=lambda: bot.get_chat_member(
+                chat_id=event.chat_id,
+                user_id=event.user_id,
+            ),
             setter=lambda value: setattr(event, "from_user", value),
             chat_id=event.chat_id,
             user_id=event.user_id,

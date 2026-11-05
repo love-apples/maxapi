@@ -50,6 +50,9 @@ _FIXTURE_NAME_BY_UPDATE: dict[UpdateType, str] = {
     UpdateType.MESSAGE_CALLBACK: "fixture_message_callback",
     UpdateType.MESSAGE_CHAT_CREATED: "fixture_message_chat_created",
     UpdateType.BOT_ADDED: "fixture_bot_added",
+    UpdateType.BOT_ADMIN_PERMISSIONS_CHANGED: (
+        "fixture_bot_admin_permissions_changed"
+    ),
     UpdateType.BOT_REMOVED: "fixture_bot_removed",
     UpdateType.BOT_STARTED: "fixture_bot_started",
     UpdateType.BOT_STOPPED: "fixture_bot_stopped",
@@ -60,6 +63,9 @@ _FIXTURE_NAME_BY_UPDATE: dict[UpdateType, str] = {
     UpdateType.DIALOG_UNMUTED: "fixture_dialog_unmuted",
     UpdateType.DIALOG_REMOVED: "fixture_dialog_removed",
     UpdateType.CHAT_TITLE_CHANGED: "fixture_chat_title_changed",
+    UpdateType.COMMENT_CREATED: "fixture_comment_created",
+    UpdateType.COMMENT_EDITED: "fixture_comment_edited",
+    UpdateType.COMMENT_REMOVED: "fixture_comment_removed",
 }
 
 
@@ -210,7 +216,7 @@ def fake_user(faker):
             "first_name": faker.first_name(),
             "last_name": faker.last_name(),
             "is_bot": False,
-            "last_activity_time": int(faker.date_time().timestamp()),
+            "last_activity_time": int(faker.unix_time()),
         }
         data.update(overrides)
         return data

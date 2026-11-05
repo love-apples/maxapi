@@ -431,6 +431,8 @@ class Chat(
         from_time: datetime | int | None = None,
         to_time: datetime | int | None = None,
         count: int | None = 50,
+        before: datetime | int | None = None,
+        after: datetime | int | None = None,
     ) -> Messages:
         """Получить историю сообщений текущего чата."""
 
@@ -440,6 +442,8 @@ class Chat(
             from_time=from_time,
             to_time=to_time,
             count=count,
+            before=before,
+            after=after,
         )
 
     async def leave(self) -> DeletedBotFromChat:

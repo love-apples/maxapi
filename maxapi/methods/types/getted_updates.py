@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 _SERVICE_UPDATE_TYPES = frozenset(
     {
         UpdateType.ON_STARTED,
+        UpdateType.ON_SHUTDOWN,
         UpdateType.RAW_API_RESPONSE,
     }
 )

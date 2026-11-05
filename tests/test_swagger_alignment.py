@@ -245,15 +245,16 @@ async def test_get_messages_sends_message_ids_as_comma_list(bot):
     assert "chat_id" not in params
 
 
-async def test_get_messages_sends_datetime_bounds_as_unix_seconds(bot):
+async def test_get_messages_sends_datetime_bounds_as_unix_milliseconds(bot):
     from_time = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
     to_time = datetime(2026, 1, 3, 3, 4, 5, tzinfo=timezone.utc)
-    method = GetMessages(
-        bot=bot,
-        chat_id=1,
-        from_time=from_time,
-        to_time=to_time,
-    )
+    with pytest.warns(DeprecationWarning, match="используйте"):
+        method = GetMessages(
+            bot=bot,
+            chat_id=1,
+            from_time=from_time,
+            to_time=to_time,
+        )
 
     with patch.object(
         BaseConnection, "request", new=AsyncMock(return_value=Mock())
@@ -261,8 +262,8 @@ async def test_get_messages_sends_datetime_bounds_as_unix_seconds(bot):
         await method.fetch()
 
     params = mocked_request.call_args.kwargs["params"]
-    assert params["from"] == int(from_time.timestamp())
-    assert params["to"] == int(to_time.timestamp())
+    assert params["from"] == int(from_time.timestamp() * 1000)
+    assert params["to"] == int(to_time.timestamp() * 1000)
 
 
 async def test_get_messages_omits_none_count(bot):
@@ -477,3 +478,64 @@ def test_quote_markup_roundtrip_to_text_helpers():
 
     assert body.html_text == "<blockquote>quote</blockquote>"
     assert body.md_text == "> quote"
+
+
+async def test_get_messages_sends_before_and_after(bot):
+    method = GetMessages(bot=bot, chat_id=1, after=1000, before=2000)
+
+    with patch.object(
+        BaseConnection, "request", new=AsyncMock(return_value=Mock())
+    ) as mocked_request:
+        await method.fetch()
+
+    params = mocked_request.call_args.kwargs["params"]
+    assert params["after"] == 1000
+    assert params["before"] == 2000
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"from_time": 1000, "after": 1000},
+        {"to_time": 2000, "before": 2000},
+    ],
+)
+def test_get_messages_rejects_legacy_and_current_bounds(bot, kwargs):
+    with pytest.raises(ValueError, match="только один"):
+        GetMessages(bot=bot, chat_id=1, **kwargs)
+
+
+def test_contact_request_payload_is_not_dropped():
+    from maxapi.types import ContactAttachmentRequestPayload
+    from maxapi.types.attachments.attachment import Attachment
+
+    attachment = Attachment(
+        type=AttachmentType.CONTACT,
+        payload={
+            "name": "Alice",
+            "contact_id": 42,
+            "vcf_phone": "+79000000000",
+        },
+    )
+
+    assert isinstance(attachment.payload, ContactAttachmentRequestPayload)
+    assert attachment.model_dump(exclude_none=True)["payload"] == {
+        "name": "Alice",
+        "contact_id": 42,
+        "vcf_phone": "+79000000000",
+    }
+
+
+def test_sticker_request_payload_is_not_dropped():
+    from maxapi.types import StickerAttachmentRequestPayload
+    from maxapi.types.attachments.attachment import Attachment
+
+    attachment = Attachment(
+        type=AttachmentType.STICKER,
+        payload={"code": "sticker-code"},
+    )
+
+    assert isinstance(attachment.payload, StickerAttachmentRequestPayload)
+    assert attachment.model_dump(exclude_none=True)["payload"] == {
+        "code": "sticker-code"
+    }

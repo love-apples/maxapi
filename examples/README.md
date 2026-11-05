@@ -363,6 +363,21 @@ python examples/01_echo_bot.py
 
 ---
 
+### 16. Модерация комментариев канала
+
+**Файл:** [`16_comment_moderation_bot.py`](16_comment_moderation_bot.py)
+
+Бот удаляет комментарии к постам канала со ссылками и стоп-словами,
+повторно проверяет отредактированные и логирует удалённые. Нужны
+права администратора канала с `read_all_messages`.
+
+**Что изучите:**
+- `@dp.comment_created` / `@dp.comment_edited` / `@dp.comment_removed`
+- `event.message.delete()` и `event.message.reply()` для комментария
+- MagicFilter по тексту комментария
+
+---
+
 ## Структура примера
 
 Каждый файл следует единой структуре:
