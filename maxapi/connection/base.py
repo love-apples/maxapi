@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import inspect
 import mimetypes
 import re
 from datetime import datetime
@@ -23,6 +24,7 @@ from aiohttp import (
 )
 from puremagic.main import PureError
 
+from ..client.default import RetryEvent
 from ..client.ssl import connector_kwargs
 from ..enums.api_path import ApiPath
 from ..enums.update import UpdateType
@@ -39,12 +41,13 @@ from ..utils.runtime import bind_bot
 from ..utils.upload_limits import check_upload_size
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Callable
 
     from backoff.types import Details
     from pydantic import BaseModel
 
     from ..bot import Bot
+    from ..client.default import DefaultConnectionProperties
     from ..enums.http_method import HTTPMethod
     from ..enums.upload_type import UploadType
 
@@ -57,7 +60,7 @@ ERROR_DETAILS_LIMIT = 512
 
 
 class _RetryableServerError(Exception):
-    """Внутреннее исключение для retry при серверных ошибках.
+    """Внутреннее исключение для retry при временных ошибках.
 
     Attributes:
         status: HTTP-статус ответа сервера.
@@ -68,7 +71,8 @@ class _RetryableServerError(Exception):
     def __init__(self, status: int, body: str = "") -> None:
         self.status = status
         self.body = body
-        super().__init__(f"Server error {status}")
+        kind = "Rate limit" if status == 429 else "Server error"
+        super().__init__(f"{kind} {status}")
 
 
 async def _read_response_text(response: ClientResponse) -> str:
@@ -142,6 +146,48 @@ class NamedBytesIO(BytesIO):
         self.name = name  # Соответствует протоколу typing.BinaryIO
 
 
+def _user_retry_hook(
+    conn: DefaultConnectionProperties,
+) -> Callable[[Details], Any]:
+    """Оборачивает ``conn.on_retry`` в обработчик ``on_backoff``.
+
+    Если колбэк вернул ``False``, исходное исключение поднимается
+    из обработчика: ``backoff`` прекращает повторы, а ``request()``
+    превращает его в ``MaxApiError``/``MaxConnection`` как обычно.
+    Собственное исключение колбэка не оборачивается и уходит
+    вызывающему коду как есть.
+    """
+
+    async def hook(details: Details) -> None:
+        if conn.on_retry is None:
+            return
+        exc = details["exception"]  # type: ignore[typeddict-item]
+        event = RetryEvent(
+            status=getattr(exc, "status", None),
+            attempt=details["tries"],
+            delay=details["wait"],  # type: ignore[typeddict-item]
+            body=getattr(exc, "body", ""),
+        )
+        result = conn.on_retry(event)
+        if inspect.isawaitable(result):
+            result = await result
+        if result is False:
+            raise exc
+
+    return hook
+
+
+def _retrying(conn: DefaultConnectionProperties) -> Callable[..., Any]:
+    """Декоратор повторов запроса по настройкам соединения."""
+    return backoff.on_exception(
+        backoff.expo,
+        (ClientConnectionError, _RetryableServerError),
+        max_tries=conn.max_retries + 1,
+        factor=conn.retry_backoff_factor,
+        on_backoff=[_on_backoff, _user_retry_hook(conn)],
+    )
+
+
 def _on_backoff(details: Details) -> None:
     """Логирование при retry.
 
@@ -154,8 +200,8 @@ def _on_backoff(details: Details) -> None:
     exc = details["exception"]  # type: ignore[typeddict-item,assignment]
     if isinstance(exc, _RetryableServerError):
         logger_bot.warning(
-            "Серверная ошибка %d, попытка %d, жду %.1fс",
-            exc.status,
+            "%s, попытка %d, жду %.1fс",
+            exc,
             tries,
             wait,
         )
@@ -336,11 +382,13 @@ class BaseConnection(BotMixin):
     ) -> Any | BaseModel:
         """
         Выполняет HTTP-запрос к API с автоматическим retry
-        при серверных ошибках.
+        при временных HTTP-ошибках.
 
         При получении HTTP-статуса из списка ``retry_on_statuses``
         (по умолчанию 502, 503, 504) запрос повторяется до
-        ``max_retries`` раз с экспоненциальной задержкой.
+        ``max_retries`` раз с экспоненциальной задержкой (full jitter).
+        Перед каждым повтором вызывается ``on_retry`` из настроек
+        соединения, если он задан.
 
         Args:
             method: HTTP-метод (GET, POST и т.д.).
@@ -360,6 +408,8 @@ class BaseConnection(BotMixin):
             InvalidToken: Ошибка авторизации (401).
             MaxApiError: Ошибка API (после исчерпания retry), а также
                 если успешный ответ не содержит JSON-объекта.
+            Exception: Любое исключение, поднятое колбэком
+                ``on_retry``, пробрасывается как есть.
         """
 
         bot = self._ensure_bot()
@@ -369,13 +419,7 @@ class BaseConnection(BotMixin):
         path_str = path.value if isinstance(path, ApiPath) else path
         url = bot.api_url + path_str
 
-        @backoff.on_exception(
-            backoff.expo,
-            (ClientConnectionError, _RetryableServerError),
-            max_tries=conn.max_retries + 1,
-            factor=conn.retry_backoff_factor,
-            on_backoff=_on_backoff,
-        )
+        @_retrying(conn)
         async def _do_request() -> Any:
             session = await bot.ensure_session()
             resp = await _session_request(
@@ -587,13 +631,7 @@ class BaseConnection(BotMixin):
         bot = self._ensure_bot()
         conn = bot.default_connection
 
-        @backoff.on_exception(
-            backoff.expo,
-            (ClientConnectionError, _RetryableServerError),
-            max_tries=conn.max_retries + 1,
-            factor=conn.retry_backoff_factor,
-            on_backoff=_on_backoff,
-        )
+        @_retrying(conn)
         async def _do_request() -> Any:
             session = await bot.ensure_session()
             resp = await _session_request(session, "GET", url)
