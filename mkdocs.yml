@@ -173,7 +173,7 @@ nav:
       - Edited_message: methods/types/edited_message.md
       - Getted_list_admin_chat: methods/types/getted_list_admin_chat.md
       - Getted_members_chat: methods/types/getted_members_chat.md
-      - Getted_pineed_message: methods/types/getted_pineed_message.md
+      - Getted_pinned_message: methods/types/getted_pinned_message.md
       - Getted_subscriptions: methods/types/getted_subscriptions.md
       - Getted_updates: methods/types/getted_updates.md
       - Getted_upload_url: methods/types/getted_upload_url.md
