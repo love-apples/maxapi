@@ -208,6 +208,97 @@ class TestUploadFileTempSession:
 class TestUploadFileBufferPuremagicFallback:
     """Тесты фоллбэка mime-типа в upload_file_buffer."""
 
+    @pytest.mark.parametrize(
+        (
+            "filename",
+            "mime_from_name",
+            "buffer",
+            "expected_filename",
+            "expected_mime",
+        ),
+        [
+            pytest.param(
+                "Отчёт.xlsx",
+                None,
+                b"PK\x03\x04",
+                "Отчёт.xlsx",
+                (
+                    "application/vnd.openxmlformats-officedocument."
+                    "spreadsheetml.sheet"
+                ),
+                id="xlsx-without-system-mime",
+            ),
+            pytest.param(
+                "slides.pptx",
+                None,
+                b"PK\x03\x04",
+                "slides.pptx",
+                (
+                    "application/vnd.openxmlformats-officedocument."
+                    "presentationml.presentation"
+                ),
+                id="pptx-without-system-mime",
+            ),
+            pytest.param(
+                "photo.bin",
+                "application/octet-stream",
+                b"\x89PNG\r\n\x1a\n",
+                "photo.bin",
+                "image/png",
+                id="generic-mime",
+            ),
+            pytest.param(
+                "document.unknownext",
+                None,
+                b"%PDF-1.7",
+                "document.unknownext",
+                "application/pdf",
+                id="unknown-extension",
+            ),
+            pytest.param(
+                "document",
+                None,
+                b"%PDF-1.7",
+                "document.pdf",
+                "application/pdf",
+                id="no-extension",
+            ),
+        ],
+    )
+    async def test_filename_and_mime_in_multipart(
+        self,
+        filename,
+        mime_from_name,
+        buffer,
+        expected_filename,
+        expected_mime,
+    ):
+        """Имя и MIME файлов из буфера передаются в multipart."""
+        mock_response = AsyncMock(status=200)
+        mock_response.text.return_value = '{"token":"t"}'
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__.return_value = mock_response
+        mock_session = Mock(spec=ClientSession, closed=False)
+        mock_session.post.return_value = mock_cm
+        conn, _bot = _make_connection_with_bot(session=mock_session)
+
+        with patch(
+            "maxapi.connection.base.mimetypes.guess_type",
+            return_value=(mime_from_name, None),
+        ):
+            await conn.upload_file_buffer(
+                filename=filename,
+                url="https://upload.example.com",
+                buffer=buffer,
+                type=UploadType.FILE,
+            )
+
+        form = mock_session.post.call_args.kwargs["data"]
+        ((disposition, headers, data),) = form._fields
+        assert disposition["filename"] == expected_filename
+        assert headers["Content-Type"] == expected_mime
+        assert data == buffer
+
     @pytest.mark.asyncio
     async def test_unrecognizable_buffer_falls_back_to_type_wildcard(
         self,
