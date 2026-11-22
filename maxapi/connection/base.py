@@ -530,6 +530,11 @@ class BaseConnection(BotMixin):
         При превышении лимита загрузки MAX пишется предупреждение
         в логгер `bot`, загрузка не прерывается.
 
+        MIME-тип определяется по расширению имени файла. Для сжатых
+        файлов, неизвестных расширений и общего MIME-типа используется
+        сигнатура буфера с учётом имени файла. Расширение добавляется
+        только к имени без расширения.
+
         Args:
             filename: Имя файла.
             url: URL загрузки.
@@ -545,26 +550,29 @@ class BaseConnection(BotMixin):
 
         check_upload_size(len(buffer), type, name=filename)
 
-        try:
-            matches = puremagic.magic_string(buffer[:4096])
-            if matches:
-                mime_type = matches[0].mime_type
-                ext = mimetypes.guess_extension(mime_type) or ""
-            else:
-                mime_type = f"{type.value}/*"
-                ext = ""
-        except (OSError, ValueError, AttributeError, PureError):
-            mime_type = f"{type.value}/*"
-            ext = ""
+        mime_type, encoding = mimetypes.guess_type(filename)
+        # Для сжатого файла guess_type возвращает MIME вложенного файла.
+        if encoding:
+            mime_type = None
 
-        basename = f"{filename}{ext}"
+        if not mime_type or mime_type == "application/octet-stream":
+            try:
+                matches = puremagic.magic_string(
+                    buffer[:4096], filename=filename
+                )
+                if matches and matches[0].mime_type:
+                    mime_type = matches[0].mime_type
+                    if not Path(filename).suffix:
+                        filename += mimetypes.guess_extension(mime_type) or ""
+            except (OSError, ValueError, AttributeError, PureError):
+                pass
 
         form = FormData(quote_fields=False)
         form.add_field(
             name="data",
             value=buffer,
-            filename=basename,
-            content_type=mime_type,
+            filename=filename,
+            content_type=mime_type or f"{type.value}/*",
         )
 
         bot = self._ensure_bot()
